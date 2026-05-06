@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A1XX — Money Mission OS v1</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e0e0e0;min-height:100vh;padding:2rem 1.5rem}
+.wrap{max-width:900px;margin:0 auto}
+.label{font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+
+/* HEADER */
+.header{margin-bottom:1.5rem}
+.brand{font-size:11px;color:#444;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.mission-name{font-size:22px;font-weight:600;color:#f0f0f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mission-meta{font-size:13px;color:#555;margin-top:4px}
+.tag{font-size:10px;border-radius:4px;padding:2px 8px;opacity:0;transition:opacity .4s;font-weight:600}
+.tag.green{color:#7ec845;background:#111f08;border:0.5px solid #2a4015}
+.tag.blue{color:#5b9cf6;background:#0a1628;border:0.5px solid #1a3050}
+.tag.orange{color:#d4a017;background:#150e00;border:0.5px solid #3a2800}
+.tag.show{opacity:1}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;margin-top:6px}
+.pill-dot{width:7px;height:7px;border-radius:50%}
+
+/* WEEKLY BANNER */
+.weekly-banner{background:#0d1000;border:0.5px solid #2a3a10;border-radius:10px;padding:12px 16px;margin-bottom:1.5rem;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.wb-left{display:flex;align-items:flex-start;gap:10px}
+.wb-icon{font-size:16px;margin-top:1px}
+.wb-title{font-size:12px;font-weight:700;color:#7ec845;margin-bottom:2px}
+.wb-sub{font-size:11px;color:#4a6a20;line-height:1.5}
+.wb-updated{font-size:12px;font-weight:700;color:#639922}
+
+/* INPUTS */
+.input-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.input-group{display:flex;flex-direction:column;gap:5px}
+.input-row{display:flex;align-items:center;gap:6px}
+.pfx{font-size:13px;color:#444;min-width:10px}
+input[type=number],input[type=text],input[type=password],textarea{border:0.5px solid #1e1e1e;border-radius:8px;background:#111;color:#e0e0e0;outline:none;width:100%;transition:border-color .2s;font-family:inherit}
+input[type=number],input[type=text],input[type=password]{height:38px;font-size:13px;padding:0 12px}
+textarea{font-size:12px;padding:10px 12px;resize:vertical;min-height:70px;line-height:1.6}
+input:hover,textarea:hover{border-color:#2a2a2a}
+input:focus,textarea:focus{border-color:#333}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 16px;border:0.5px solid #1e1e1e;border-radius:8px;background:#111;color:#e0e0e0;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s,border-color .2s;white-space:nowrap}
+.btn:hover{background:#181818;border-color:#2a2a2a}
+.btn:active{transform:scale(.98)}
+.btn.primary{border-color:#2a4015;color:#7ec845}
+.btn.primary:hover{background:#111f08}
+.btn.undo{border-color:#2a1800;color:#d4a017;display:none}
+.btn.undo.visible{display:inline-flex}
+.btn.undo:hover{background:#150e00}
+.btn.notion{border-color:#1a3050;color:#5b9cf6}
+.btn.notion:hover{background:#0a1628}
+.btn.export{border-color:#2a2010;color:#d4a017}
+.btn.export:hover{background:#1a1408}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* SETUP */
+.setup-box{background:#0e0e0e;border:0.5px solid #1e1e1e;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;display:none}
+.setup-box.open{display:block}
+.setup-note{font-size:11px;color:#444;line-height:1.8;margin-bottom:14px}
+.setup-note a{color:#5b9cf6;text-decoration:none}
+.setup-note strong{color:#666}
+.setup-fields{display:flex;flex-direction:column;gap:8px}
+.setup-field label{font-size:11px;color:#555;display:block;margin-bottom:4px}
+.setup-field input{font-family:monospace}
+
+/* SECTIONS */
+.section{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:12px;margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+.section:hover{border-color:#1e1e1e}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:14px 1.25rem;cursor:pointer;user-select:none;transition:background .2s}
+.section-header:hover{background:#111}
+.section-header-left{display:flex;align-items:center;gap:10px}
+.section-title{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.1em}
+.section-badge{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700}
+.badge-weekly{background:#0d1000;color:#639922;border:0.5px solid #2a4015}
+.badge-new{background:#0d1020;color:#5b9cf6;border:0.5px solid #1a3050}
+.chevron{font-size:11px;color:#333;transition:transform .25s;font-weight:700}
+.chevron.open{transform:rotate(180deg)}
+.section-body{padding:0 1.25rem 1.25rem}
+.section-body.collapsed{display:none}
+
+/* CARDS */
+.card-grid{display:grid;gap:10px;margin-bottom:10px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:10px;padding:14px;transition:border-color .2s,background .2s}
+.card:hover{border-color:#252525;background:#111}
+.card.clickable{cursor:pointer}
+.card.clickable:hover{border-color:#333}
+.card.selected{border-color:#d4a017;background:#100e00}
+.card.on-track{border-color:#1a3010}
+.card.behind{border-color:#2a0a0a}
+.card-label{font-size:10px;color:#444;margin-bottom:7px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.card-value{font-size:22px;font-weight:600;color:#f0f0f0;line-height:1}
+.card-value.green{color:#7ec845}
+.card-value.red{color:#e05555}
+.card-value.amber{color:#d4a017}
+.card-value.blue{color:#5b9cf6}
+.card-value.purple{color:#9b6df5}
+.card-value.dim{color:#888;font-size:18px}
+.card-sub{font-size:11px;color:#444;margin-top:5px}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;margin-top:6px;font-weight:700}
+.badge.green{background:#111f08;color:#7ec845;border:0.5px solid #2a4015}
+.badge.red{background:#150505;color:#e05555;border:0.5px solid #3a1010}
+.badge.amber{background:#150e00;color:#d4a017;border:0.5px solid #3a2800}
+.badge.blue{background:#050f20;color:#5b9cf6;border:0.5px solid #1a3050}
+.hint{font-size:9px;color:#3a3a3a;margin-top:4px;transition:color .2s}
+.card:hover .hint{color:#444}
+
+/* BREAKDOWN */
+.breakdown{background:#080808;border:0.5px solid #d4a01744;border-radius:12px;padding:1.25rem;margin-bottom:10px;display:none}
+.breakdown.open{display:block;animation:fadeSlide .2s ease}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.breakdown-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.breakdown-title{font-size:14px;font-weight:600;color:#f0f0f0}
+.breakdown-close{font-size:20px;color:#333;cursor:pointer;transition:color .15s}
+.breakdown-close:hover{color:#888}
+.math-block{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:8px;padding:12px;margin-bottom:10px}
+.math-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}
+.math-row.total{border-top:0.5px solid #1a1a1a;margin-top:6px;padding-top:8px;font-weight:700}
+.math-row.sub{padding-left:12px;font-size:11px}
+.math-label{color:#555}
+.math-value{color:#e0e0e0;font-weight:500}
+.math-value.green{color:#7ec845}
+.math-value.red{color:#e05555}
+.math-value.amber{color:#d4a017}
+.plain-english{background:#0a1200;border:0.5px solid #1a2a00;border-radius:8px;padding:12px;margin-bottom:10px}
+.plain-label{font-size:10px;color:#639922;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.plain-text{font-size:12px;color:#777;line-height:1.7}
+.plain-text strong{color:#aaa}
+.paths{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:8px;padding:12px}
+.paths-label{font-size:10px;color:#d4a017;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.path-item{display:flex;gap:8px;padding:5px 0;font-size:12px;border-bottom:0.5px solid #111}
+.path-item:last-child{border-bottom:none}
+.path-num{color:#d4a017;font-weight:700;min-width:16px}
+.path-text{color:#666;line-height:1.5}
+.path-text strong{color:#aaa}
+
+/* HORMOZI */
+.hormozi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.h-card{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:10px;padding:14px;transition:border-color .2s,background .2s}
+.h-card:hover{border-color:#252525;background:#111}
+.constraint-box{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:10px;padding:14px;margin-top:12px}
+.constraint-inner{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.constraint-icon{font-size:24px}
+.constraint-label{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:3px}
+.constraint-title{font-size:14px;font-weight:600;color:#f0f0f0}
+.constraint-desc{font-size:12px;color:#555;margin-top:3px;line-height:1.5}
+
+/* EXPENSES */
+.exp-summary{background:#0a0a0a;border:0.5px solid #1a1a1a;border-radius:8px;padding:12px;margin-top:14px}
+.exp-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px}
+.exp-row.total{border-top:0.5px solid #1a1a1a;margin-top:6px;padding-top:8px;font-weight:700}
+.exp-label{color:#555}
+.exp-value{color:#e0e0e0;font-weight:500}
+.exp-value.red{color:#e05555}
+.exp-value.green{color:#7ec845}
+.exp-value.amber{color:#d4a017}
+.exp-note{font-size:10px;color:#2a2a2a;margin-top:8px;line-height:1.6}
+.exp-note strong{color:#444}
+
+/* STREAMS */
+.stream-grid{display:flex;flex-direction:column;gap:10px}
+.stream-row{display:grid;grid-template-columns:140px 1fr 90px;align-items:center;gap:10px}
+.stream-name{font-size:12px;color:#666}
+.stream-track{height:5px;background:#1a1a1a;border-radius:3px;overflow:hidden}
+.stream-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.stream-pct{font-size:11px;color:#444;text-align:right}
+
+/* WEEKLY TOTALS CHECK */
+function checkWeeklyTotals(rev){
+  var weekTotal=0;
+  for(var i=0;i<8;i++){var el=document.getElementById('wk-'+i);weekTotal+=el?parseFloat(el.value)||0:0;}
+  var chk=document.getElementById('stream-check');
+  if(weekTotal===0||rev===0)return;
+  var diff=Math.abs(weekTotal-rev);
+  if(diff>50){
+    var existing=chk.textContent;
+    if(!existing.includes('Weekly bars')){
+      chk.style.color='#d4a017';
+      chk.textContent=(existing?existing+' · ':'')+'Weekly bars total '+fmt(weekTotal)+' vs revenue '+fmt(rev)+' — update your weekly log to match.';
+    }
+  }
+}
+
+/* DM FUNNEL */
+.funnel-card{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:8px;padding:10px 12px;text-align:center}
+.funnel-num{font-size:20px;font-weight:600;color:#f0f0f0;margin-bottom:2px}
+.funnel-label{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.funnel-insight{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:8px;padding:12px;margin-top:10px;font-size:12px;color:#555;line-height:1.7}
+.funnel-insight strong{color:#d4a017}
+.cycle-totals{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;padding-top:14px;border-top:0.5px solid #1a1a1a}
+.cycle-total-card{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:8px;padding:12px}
+.ct-val{font-size:22px;font-weight:600;color:#9b6df5;margin-bottom:3px}
+.ct-label{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.ct-sub{font-size:11px;color:#333;margin-top:3px}
+
+/* CHART */
+.chart-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.chart-views{display:flex;gap:4px}
+.view-btn{height:28px;padding:0 12px;border:0.5px solid #1e1e1e;border-radius:6px;background:#111;color:#555;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s}
+.view-btn:hover{border-color:#2a2a2a;color:#888}
+.view-btn.active{border-color:#2a4015;background:#111f08;color:#7ec845}
+#weekly-chart{width:100%;height:160px;display:block}
+
+/* WEEKLY EXPLAINER */
+.weekly-explainer{background:#0e0e0e;border:0.5px solid #1e1e1e;border-radius:8px;padding:12px;margin-bottom:14px}
+.we-title{font-size:11px;font-weight:700;color:#888;margin-bottom:8px}
+.we-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.we-item{font-size:11px;line-height:1.7}
+.we-yes{color:#639922}
+.we-no{color:#e05555}
+.we-note{font-size:11px;color:#333;line-height:1.6}
+.we-note strong{color:#555}
+
+/* PROGRESS */
+.prog-row{margin-bottom:14px}
+.prog-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.prog-name{font-size:12px;font-weight:500;color:#888}
+.prog-pct{font-size:11px;color:#444}
+.prog-track{height:4px;background:#161616;border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;transition:width .5s ease}
+.prog-detail{display:flex;justify-content:space-between;margin-top:4px}
+.prog-detail span{font-size:10px;color:#333}
+
+/* NOTES */
+.notes-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.notes-header{font-size:11px;color:#555;margin-bottom:6px;font-weight:600}
+.notes-saved{font-size:10px;color:#2a4015;margin-top:6px;display:none}
+
+/* CYCLES */
+.cycles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cycle-card{background:#0e0e0e;border-radius:8px;padding:10px 12px;border:0.5px solid #1a1a1a;cursor:pointer;transition:all .2s}
+.cycle-card:hover{border-color:#2a2a2a;background:#141414;transform:translateY(-1px)}
+.cycle-card.active{border-color:#2a4015;background:#0d1808}
+.cycle-card.past{opacity:.35}
+.cycle-card.selected{border-color:#d4a017}
+.cycle-num{font-size:9px;font-weight:700;color:#333;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em}
+.cycle-card.active .cycle-num{color:#4a7a1e}
+.cycle-name{font-size:11px;font-weight:600;color:#ccc}
+.cycle-card.active .cycle-name{color:#7ec845}
+.cycle-date{font-size:9px;color:#333;margin-top:2px}
+.cycle-tap{font-size:8px;color:#222;margin-top:4px}
+.cycle-card:hover .cycle-tap{color:#444}
+
+/* KPI PANEL */
+.kpi-panel{background:#080808;border:0.5px solid #d4a01744;border-radius:12px;padding:1.25rem;margin-top:10px;display:none;animation:fadeSlide .2s ease}
+.kpi-panel.open{display:block}
+.kpi-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.kpi-title{font-size:14px;font-weight:600;color:#f0f0f0}
+.kpi-badge{font-size:10px;color:#d4a017;background:#150e00;border:0.5px solid #3a2800;border-radius:4px;padding:2px 8px;margin-top:4px;display:inline-block}
+.kpi-close{font-size:20px;color:#333;cursor:pointer;transition:color .15s}
+.kpi-close:hover{color:#888}
+.kpi-desc{font-size:12px;color:#444;line-height:1.7;margin-bottom:14px}
+.kpi-list{display:flex;flex-direction:column;gap:6px}
+.kpi-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#0e0e0e;border-radius:8px;border:0.5px solid #1a1a1a;transition:border-color .2s}
+.kpi-item:hover{border-color:#252525}
+.kpi-left{display:flex;align-items:center;gap:10px}
+.kpi-icon{font-size:13px;width:18px}
+.kpi-name{font-size:12px;color:#888}
+.kpi-target{font-size:12px;font-weight:600;color:#d4a017}
+.kpi-freq{font-size:10px;color:#333;margin-top:1px}
+
+/* COUNTDOWN */
+.countdown-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.countdown-card{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:10px;padding:16px;text-align:center;transition:border-color .2s}
+.countdown-card:hover{border-color:#252525}
+.countdown-big{font-size:28px;font-weight:700;color:#f0f0f0;line-height:1;margin-bottom:6px}
+.countdown-big.green{color:#7ec845}
+.countdown-big.amber{color:#d4a017}
+.countdown-big.red{color:#e05555}
+.countdown-label{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.countdown-sub{font-size:11px;color:#444;margin-top:6px;line-height:1.5}
+
+.status-bar{font-size:11px;color:#333;margin-top:1rem;min-height:16px;transition:color .3s}
+.status-bar.ok{color:#639922}
+.status-bar.err{color:#e05555}
+
+@media(max-width:640px){
+  .g4,.hormozi-grid{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:1fr}
+  .cycles,.countdown-grid,.notes-grid,.cycle-totals{grid-template-columns:1fr}
+  .input-grid{grid-template-columns:1fr 1fr}
+  .stream-row{grid-template-columns:100px 1fr 60px}
+  .we-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="brand">A1XX Business OS — Money Mission Tracker v1</div>
+  <div class="mission-name">
+    <span id="mission-title">Cycle 1 — Foundation</span>
+    <span class="tag green" id="saved-tag">Saved</span>
+    <span class="tag orange" id="undo-tag">Restored</span>
+    <span class="tag blue" id="notion-tag">Synced</span>
+  </div>
+  <div class="mission-meta" id="mission-sub">Loading...</div>
+  <div class="pill"><div class="pill-dot" id="pill-dot" style="background:#639922"></div><span id="pill-text" style="color:#639922;font-size:12px">Loading...</span></div>
+</div>
+
+<!-- WEEKLY BANNER -->
+<div class="weekly-banner">
+  <div class="wb-left">
+    <div class="wb-icon">📅</div>
+    <div>
+      <div class="wb-title">Weekly Update Tracker — Fill In Every Sunday</div>
+      <div class="wb-sub">Update once a week during your weekly review. Daily tracking happens in your head and notes — this is your weekly business snapshot and score card.<br><span style="color:#8a4a10">⚠ Data lives in your browser — connect Google Sheets above for permanent backup.</span></div>
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div class="wb-updated" id="wb-last">Never updated</div>
+    <div style="font-size:10px;color:#3a5010;margin-top:2px">Last saved</div>
+  </div>
+</div>
+
+<!-- TOP INPUTS -->
+<div class="input-grid">
+  <div class="input-group">
+    <div class="label">Total revenue collected ($)</div>
+    <div class="input-row"><span class="pfx">$</span><input type="number" id="rev-input" value="179" min="0" oninput="recalc()"/></div>
+  </div>
+  <div class="input-group">
+    <div class="label">This week's target ($)</div>
+    <div class="input-row"><span class="pfx">$</span><input type="number" id="week-input" value="400" min="0" oninput="recalc()"/></div>
+  </div>
+  <div class="input-group">
+    <div class="label">Monthly ad spend ($)</div>
+    <div class="input-row"><span class="pfx">$</span><input type="number" id="adspend-input" value="150" min="0" oninput="recalc()"/></div>
+  </div>
+</div>
+
+<div class="btn-row">
+  <button class="btn primary" onclick="update()">💾 Save Weekly Update</button>
+  <button class="btn undo" id="undo-btn" onclick="restoreUndo()">↩ Undo Last Save</button>
+  <button class="btn notion" onclick="fetchNotion()" id="notion-btn">Sync Notion ↗</button>
+  <button class="btn export" onclick="exportCSV()">Export CSV ↓</button>
+  <button class="btn" onclick="toggleSetup()">Notion setup ⚙</button>
+  <button class="btn" onclick="toggleSheetsSetup()">Sheets backup ⚙</button>
+  <button class="btn" id="archive-btn" onclick="archiveCycle()" style="border-color:#1a2a3a;color:#5b9cf6">📦 Archive Cycle</button>
+</div>
+
+<!-- NOTION SETUP -->
+<div class="setup-box" id="setup-box">
+  <div class="label" style="margin-bottom:10px">Connect to Notion Revenue Log</div>
+  <div class="setup-note">One-time setup. Saved in your browser only.<br>1. <a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a> → New integration → copy secret.<br>2. Notion → Revenue Log → 3 dots → Connections → add your integration.<br>3. Copy database ID from URL: notion.so/<strong>[this part]</strong>?v=...</div>
+  <div class="setup-fields">
+    <div class="setup-field"><label>Integration Secret</label><input type="password" id="notion-key" placeholder="secret_xxxxxxxxxx"/></div>
+    <div class="setup-field"><label>Revenue Log Database ID</label><input type="text" id="notion-db" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"/></div>
+  </div>
+  <div class="btn-row" style="margin-top:10px;margin-bottom:0"><button class="btn notion" onclick="saveSetup()">Save ↗</button></div>
+</div>
+
+<!-- GOOGLE SHEETS SETUP -->
+<div class="setup-box" id="sheets-setup-box">
+  <div class="label" style="margin-bottom:10px">Connect to Google Sheets — Permanent Backup</div>
+  <div class="setup-note">
+    One-time setup. Saves all your data permanently to Google Drive.<br><br>
+    <strong>Step 1:</strong> Go to your Google Drive → BUSINESS → VAULTS → ARCHIVES folder → create a new Google Sheet, name it <strong>A1XX Money Mission Tracker</strong><br>
+    <strong>Step 2:</strong> Inside that Sheet, click <strong>Extensions → Apps Script</strong><br>
+    <strong>Step 3:</strong> Delete everything in the editor, paste the Apps Script code (downloaded separately), click <strong>Deploy → New deployment → Web app → Anyone → Deploy</strong><br>
+    <strong>Step 4:</strong> Copy the Web App URL and paste it below
+  </div>
+  <div class="setup-fields">
+    <div class="setup-field"><label>Google Apps Script Web App URL</label><input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/..."/></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+    <button class="btn notion" onclick="saveSheetsSetup()">Save ↗</button>
+    <button class="btn" onclick="testSheetsConnection()">Test connection</button>
+    <span id="sheets-status" style="font-size:11px;color:#444"></span>
+  </div>
+  <div style="font-size:10px;color:#2a2a2a;margin-top:10px;line-height:1.7">Once connected, every <strong>Save Weekly Update</strong> automatically writes to your Google Sheet. Use <strong>Archive Cycle</strong> at the end of each cycle to save a permanent cycle snapshot before the tracker moves to the next cycle.</div>
+</div>
+
+<!-- BUSINESS INTELLIGENCE -->
+<div class="section" id="sec-bi">
+  <div class="section-header" onclick="toggleSec('bi')">
+    <div class="section-header-left"><div class="section-title">Business Intelligence</div><span class="section-badge badge-weekly">Weekly</span></div>
+    <div class="chevron open" id="chev-bi">▼</div>
+  </div>
+  <div class="section-body" id="body-bi">
+    <div class="hormozi-grid">
+      <div class="h-card"><div class="card-label">True Net Profit</div><div class="card-value" id="h-net">—</div><div class="card-sub" id="h-net-sub">After all expenses</div></div>
+      <div class="h-card"><div class="card-label">Profit Margin</div><div class="card-value" id="h-margin">—</div><div class="card-sub" id="h-margin-sub">True margin after costs</div></div>
+      <div class="h-card"><div class="card-label">ROAS</div><div class="card-value" id="h-roas">—</div><div class="card-sub">Revenue per $1 ad spend</div><div class="badge" id="h-roas-badge"></div></div>
+      <div class="h-card"><div class="card-label">Cost Per Client (est.)</div><div class="card-value" id="h-cpa">—</div><div class="card-sub" id="h-cpa-sub">Update live below</div></div>
+      <div class="h-card"><div class="card-label">LTV Projection (est.)</div><div class="card-value blue" id="h-ltv">—</div><div class="card-sub">Deal × 2.4 — updates as data grows</div></div>
+      <div class="h-card"><div class="card-label">Pipeline Value</div><div class="card-value" id="h-pipeline">—</div><div class="card-sub" id="h-pipeline-sub">Update live below</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:0">
+      <div class="input-group"><div class="label">Sessions closed this cycle</div><input type="number" id="sessions-input" value="0" min="0" oninput="recalc()"/></div>
+      <div class="input-group"><div class="label">Warm leads in pipeline</div><input type="number" id="leads-input" value="0" min="0" oninput="recalc()"/></div>
+      <div class="input-group"><div class="label">Avg deal value ($)</div><input type="number" id="deal-input" value="400" min="0" oninput="recalc()"/></div>
+    </div>
+    <div class="constraint-box" id="constraint-box">
+      <div class="constraint-inner">
+        <div class="constraint-icon" id="c-icon">🔍</div>
+        <div><div class="constraint-label">Bottleneck Identifier</div><div class="constraint-title" id="c-title">Fill in DM Funnel below to identify bottleneck</div><div class="constraint-desc" id="c-desc"></div></div>
+        <div style="margin-left:auto"><div class="badge" id="c-badge"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PACE + STAT CARDS (always visible) -->
+<div class="card-grid g4">
+  <div class="card" id="pace-card-daily">
+    <div class="card-label">Daily revenue pace</div>
+    <div class="card-value" id="pace-daily">—</div>
+    <div class="card-sub" id="pace-daily-sub"></div>
+    <div class="badge" id="pace-badge"></div>
+  </div>
+  <div class="card">
+    <div class="card-label">Projected cycle total</div>
+    <div class="card-value" id="pace-proj">—</div>
+    <div class="card-sub" id="pace-proj-sub"></div>
+  </div>
+  <div class="card">
+    <div class="card-label">Daily $ needed</div>
+    <div class="card-value amber" id="pace-needed">—</div>
+    <div class="card-sub" id="pace-needed-sub"></div>
+  </div>
+  <div class="card">
+    <div class="card-label">Ad spend / day</div>
+    <div class="card-value" id="ad-daily">—</div>
+    <div class="card-sub" id="ad-daily-sub"></div>
+  </div>
+</div>
+
+<div class="card-grid g4">
+  <div class="card clickable" id="sc-0" onclick="toggleBreakdown(0)">
+    <div class="card-label">Revenue to date</div>
+    <div class="card-value green" id="c-rev">$179</div>
+    <div class="card-sub">This cycle</div>
+    <div class="hint">tap for breakdown ↓</div>
+  </div>
+  <div class="card clickable" id="sc-1" onclick="toggleBreakdown(1)">
+    <div class="card-label">To week target</div>
+    <div class="card-value" id="c-week">$221</div>
+    <div class="card-sub" id="c-week-sub">of $400</div>
+    <div class="hint">tap for fastest path ↓</div>
+  </div>
+  <div class="card clickable" id="sc-2" onclick="toggleBreakdown(2)">
+    <div class="card-label">To cycle target</div>
+    <div class="card-value" id="c-cycle">$3,821</div>
+    <div class="card-sub" id="c-cycle-sub">of $4,000</div>
+    <div class="hint">tap for pace math ↓</div>
+  </div>
+  <div class="card clickable" id="sc-3" onclick="toggleBreakdown(3)">
+    <div class="card-label">True net profit</div>
+    <div class="card-value" id="c-net">—</div>
+    <div class="card-sub" id="c-net-sub">after all expenses</div>
+    <div class="hint">tap for profit math ↓</div>
+  </div>
+</div>
+
+<!-- BREAKDOWN PANEL -->
+<div class="breakdown" id="breakdown-panel">
+  <div class="breakdown-header">
+    <div class="breakdown-title" id="bd-title">Breakdown</div>
+    <div class="breakdown-close" onclick="closeBreakdown()">×</div>
+  </div>
+  <div id="bd-content"></div>
+</div>
+
+<!-- PROGRESS -->
+<div class="section" id="sec-prog">
+  <div class="section-header" onclick="toggleSec('prog')">
+    <div class="section-header-left"><div class="section-title">Progress</div><span class="section-badge badge-weekly">Weekly</span></div>
+    <div class="chevron open" id="chev-prog">▼</div>
+  </div>
+  <div class="section-body" id="body-prog">
+    <div class="prog-row">
+      <div class="prog-header"><span class="prog-name">This week</span><span class="prog-pct" id="pct-week">—</span></div>
+      <div class="prog-track"><div class="prog-fill" id="bar-week"></div></div>
+      <div class="prog-detail"><span id="det-week"></span><span id="det-week-r"></span></div>
+    </div>
+    <div class="prog-row">
+      <div class="prog-header"><span class="prog-name" id="bar-cycle-label">Cycle 1</span><span class="prog-pct" id="pct-cycle">—</span></div>
+      <div class="prog-track"><div class="prog-fill" id="bar-cycle"></div></div>
+      <div class="prog-detail"><span id="det-cycle"></span><span id="det-cycle-r"></span></div>
+    </div>
+    <div class="prog-row" style="margin-bottom:0">
+      <div class="prog-header"><span class="prog-name">$100K mission</span><span class="prog-pct" id="pct-goal">—</span></div>
+      <div class="prog-track"><div class="prog-fill" id="bar-goal"></div></div>
+      <div class="prog-detail"><span id="det-goal"></span><span id="det-goal-r"></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPENSES -->
+<div class="section" id="sec-exp">
+  <div class="section-header" onclick="toggleSec('exp')">
+    <div class="section-header-left"><div class="section-title">Expenses</div><span class="section-badge badge-new">New</span></div>
+    <div class="chevron" id="chev-exp">▼</div>
+  </div>
+  <div class="section-body collapsed" id="body-exp">
+    <div style="font-size:11px;color:#333;margin-bottom:14px;line-height:1.7">Ad spend is already entered above. Software is tracked monthly (fixed recurring cost). Services and Other are tracked weekly — add what you spend each week and the cycle total builds automatically.</div>
+
+    <div style="margin-bottom:16px">
+      <div class="label">Software & Tools / month <span style="color:#2a2a2a;font-weight:400;text-transform:none;letter-spacing:0">(recurring — update when subscriptions change)</span></div>
+      <div class="input-row" style="max-width:200px"><span class="pfx">$</span><input type="number" id="software-input" value="0" min="0" oninput="recalc()"/></div>
+      <div style="font-size:10px;color:#2a2a2a;margin-top:4px">HoneyBook · ManyChat · ClickFunnels · Canva · all subscriptions combined</div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="label">Services & Freelancers — weekly <span style="color:#2a2a2a;font-weight:400;text-transform:none;letter-spacing:0">(engineers, mix/master, studio fees you pay)</span></div>
+        <div style="font-size:11px;color:#639922;font-weight:600">Cycle total: <span id="sv-cycle-total">$0</span></div>
+      </div>
+      <div id="sv-week-inputs" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px"></div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="label">Other Expenses — weekly <span style="color:#2a2a2a;font-weight:400;text-transform:none;letter-spacing:0">(equipment, design, anything else)</span></div>
+        <div style="font-size:11px;color:#639922;font-weight:600">Cycle total: <span id="ot-cycle-total">$0</span></div>
+      </div>
+      <div id="ot-week-inputs" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px"></div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <div class="label" style="margin-bottom:8px">Weekly expense breakdown</div>
+      <canvas id="expense-chart" style="width:100%;height:120px;display:block"></canvas>
+    </div>
+
+    <div class="exp-summary">
+      <div class="exp-row"><span class="exp-label">Gross Revenue</span><span class="exp-value" id="exp-rev">—</span></div>
+      <div class="exp-row sub"><span class="exp-label">↳ Ad Spend (prorated)</span><span class="exp-value red" id="exp-ad">—</span></div>
+      <div class="exp-row sub"><span class="exp-label">↳ Software & Tools (prorated)</span><span class="exp-value red" id="exp-software">—</span></div>
+      <div class="exp-row sub"><span class="exp-label">↳ Services & Freelancers</span><span class="exp-value red" id="exp-services">—</span></div>
+      <div class="exp-row sub"><span class="exp-label">↳ Other Expenses</span><span class="exp-value red" id="exp-other">—</span></div>
+      <div class="exp-row total"><span class="exp-label">Total Expenses This Cycle</span><span class="exp-value red" id="exp-total">—</span></div>
+      <div class="exp-row total"><span class="exp-label">True Net Profit</span><span class="exp-value" id="exp-net">—</span></div>
+      <div class="exp-row"><span class="exp-label">True Profit Margin</span><span class="exp-value" id="exp-margin">—</span></div>
+      <div class="exp-note">Monthly recurring expenses (software + ad spend) are prorated based on days elapsed in this cycle. Services and other expenses are entered as actual amounts spent this cycle. <strong>Update the software total when your subscription costs change.</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- INCOME STREAMS -->
+<div class="section" id="sec-streams">
+  <div class="section-header" onclick="toggleSec('streams')">
+    <div class="section-header-left"><div class="section-title">Income Streams</div><span class="section-badge badge-weekly">Weekly</span></div>
+    <div class="chevron" id="chev-streams">▼</div>
+  </div>
+  <div class="section-body collapsed" id="body-streams">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      <div class="input-group"><div class="label">Studio commission</div><div class="input-row"><span class="pfx">$</span><input type="number" id="s-studio" value="0" min="0" oninput="updateStreams()"/></div></div>
+      <div class="input-group"><div class="label">Mix & master</div><div class="input-row"><span class="pfx">$</span><input type="number" id="s-mix" value="0" min="0" oninput="updateStreams()"/></div></div>
+      <div class="input-group"><div class="label">Rappreneur OS</div><div class="input-row"><span class="pfx">$</span><input type="number" id="s-os" value="0" min="0" oninput="updateStreams()"/></div></div>
+      <div class="input-group"><div class="label">Production deals</div><div class="input-row"><span class="pfx">$</span><input type="number" id="s-deals" value="0" min="0" oninput="updateStreams()"/></div></div>
+      <div class="input-group"><div class="label">Custom beats</div><div class="input-row"><span class="pfx">$</span><input type="number" id="s-beats" value="0" min="0" oninput="updateStreams()"/></div></div>
+      <div class="input-group"><div class="label">Other</div><div class="input-row"><span class="pfx">$</span><input type="number" id="s-other" value="0" min="0" oninput="updateStreams()"/></div></div>
+    </div>
+    <div class="stream-grid" id="stream-grid"></div>
+    <div style="font-size:11px;color:#333;margin-top:10px" id="stream-check"></div>
+  </div>
+</div>
+
+<!-- DM FUNNEL -->
+<div class="section" id="sec-funnel">
+  <div class="section-header" onclick="toggleSec('funnel')">
+    <div class="section-header-left"><div class="section-title">DM Funnel Converter</div><span class="section-badge badge-weekly">Weekly</span></div>
+    <div class="chevron" id="chev-funnel">▼</div>
+  </div>
+  <div class="section-body collapsed" id="body-funnel">
+    <div style="font-size:11px;color:#333;margin-bottom:12px">Enter your weekly DM totals. Update every Sunday with 7-day numbers.</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+      <div class="input-group"><div class="label">DMs sent</div><input type="number" id="dm-sent" value="0" min="0" oninput="updateFunnel()"/></div>
+      <div class="input-group"><div class="label">Responded</div><input type="number" id="dm-resp" value="0" min="0" oninput="updateFunnel()"/></div>
+      <div class="input-group"><div class="label">Offer made</div><input type="number" id="dm-offer" value="0" min="0" oninput="updateFunnel()"/></div>
+      <div class="input-group"><div class="label">Closed (paid)</div><input type="number" id="dm-close" value="0" min="0" oninput="updateFunnel()"/></div>
+    </div>
+    <div class="card-grid g4" style="margin-bottom:10px">
+      <div class="funnel-card"><div class="funnel-num" id="f-resp-rate">—</div><div class="funnel-label">Response rate</div></div>
+      <div class="funnel-card"><div class="funnel-num" id="f-offer-rate">—</div><div class="funnel-label">Offer rate</div></div>
+      <div class="funnel-card"><div class="funnel-num" id="f-close-rate">—</div><div class="funnel-label">Close rate</div></div>
+      <div class="funnel-card"><div class="funnel-num" id="f-rev-per-dm">—</div><div class="funnel-label">Revenue / DM</div></div>
+    </div>
+    <div class="funnel-insight" id="funnel-insight">Enter your weekly DM numbers above.</div>
+
+    <div class="cycle-totals">
+      <div class="cycle-total-card">
+        <div class="ct-val" id="cum-dms-val">—</div>
+        <div class="ct-label">Total DMs this cycle</div>
+        <div class="ct-sub">Enter cumulative below</div>
+        <div class="input-row" style="margin-top:8px"><input type="number" id="cum-dms" value="0" min="0" oninput="updateCumTotals()"/></div>
+      </div>
+      <div class="cycle-total-card">
+        <div class="ct-val" id="cum-posts-val">—</div>
+        <div class="ct-label">Total posts this cycle</div>
+        <div class="ct-sub">Enter cumulative below</div>
+        <div class="input-row" style="margin-top:8px"><input type="number" id="cum-posts" value="0" min="0" oninput="updateCumTotals()"/></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WEEKLY REVENUE LOG -->
+<div class="section" id="sec-weekly">
+  <div class="section-header" onclick="toggleSec('weekly')">
+    <div class="section-header-left"><div class="section-title">Weekly Revenue Log — Cycle 1</div><span class="section-badge badge-weekly">Weekly</span></div>
+    <div class="chevron" id="chev-weekly">▼</div>
+  </div>
+  <div class="section-body collapsed" id="body-weekly">
+    <div class="weekly-explainer">
+      <div class="we-title">What goes in these fields?</div>
+      <div class="we-grid">
+        <div>
+          <div class="we-item we-yes">✅ Studio commission received</div>
+          <div class="we-item we-yes">✅ HoneyBook invoices paid</div>
+          <div class="we-item we-yes">✅ OS memberships collected</div>
+          <div class="we-item we-yes">✅ Mix & master fees received</div>
+        </div>
+        <div>
+          <div class="we-item we-no">❌ Leads or applications</div>
+          <div class="we-item we-no">❌ DMs sent or ad spend</div>
+          <div class="we-item we-no">❌ Booked but not yet paid</div>
+          <div class="we-item we-no">❌ Expenses of any kind</div>
+        </div>
+      </div>
+      <div class="we-note">Enter <strong>actual cash collected</strong> each week — money that hit your account or HoneyBook. Update every Sunday. Each week's number is a standalone snapshot, not cumulative.</div>
+    </div>
+    <div class="chart-toolbar">
+      <div style="font-size:11px;color:#444">Cash collected per week ($ received)</div>
+      <div class="chart-views">
+        <button class="view-btn active" onclick="setView('bar',event)">Bar</button>
+        <button class="view-btn" onclick="setView('line',event)">Line</button>
+        <button class="view-btn" onclick="setView('cumulative',event)">Running Total</button>
+      </div>
+    </div>
+    <canvas id="weekly-chart"></canvas>
+    <div id="week-inputs" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- WEEKLY NOTES -->
+<div class="section" id="sec-notes">
+  <div class="section-header" onclick="toggleSec('notes')">
+    <div class="section-header-left"><div class="section-title">Weekly Notes</div><span class="section-badge badge-new">New</span></div>
+    <div class="chevron" id="chev-notes">▼</div>
+  </div>
+  <div class="section-body collapsed" id="body-notes">
+    <div style="font-size:11px;color:#333;margin-bottom:12px">Log your key win and biggest lesson every Sunday. Over time this becomes a record of what's actually moving the business.</div>
+    <div class="notes-grid">
+      <div>
+        <div class="notes-header">🏆 This week's biggest win</div>
+        <textarea id="note-win" placeholder="What happened this week that you're proud of? A booking closed, a conversation that went well, a piece of content that got traction..."></textarea>
+      </div>
+      <div>
+        <div class="notes-header">📖 This week's biggest lesson</div>
+        <textarea id="note-lesson" placeholder="What didn't go as planned? What would you do differently? What did you learn about the business this week..."></textarea>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#2a2a2a;margin-top:8px">Notes are saved automatically when you hit Save Weekly Update.</div>
+  </div>
+</div>
+
+<!-- CYCLE ROADMAP -->
+<div class="section" id="sec-cycles">
+  <div class="section-header" onclick="toggleSec('cycles')">
+    <div class="section-header-left"><div class="section-title">8-Cycle Roadmap</div></div>
+    <div class="chevron open" id="chev-cycles">▼</div>
+  </div>
+  <div class="section-body" id="body-cycles">
+    <div style="font-size:11px;color:#333;margin-bottom:12px">Click any cycle to see action-based KPIs for that phase</div>
+    <div class="cycles" id="cycles-grid"></div>
+    <div class="kpi-panel" id="kpi-panel">
+      <div class="kpi-header">
+        <div><div class="kpi-title" id="kpi-title"></div><div class="kpi-badge" id="kpi-badge"></div></div>
+        <div class="kpi-close" onclick="closeKPI()">×</div>
+      </div>
+      <div class="kpi-desc" id="kpi-desc"></div>
+      <div class="kpi-list" id="kpi-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- $100K COUNTDOWN -->
+<div class="section" id="sec-countdown">
+  <div class="section-header" onclick="toggleSec('countdown')">
+    <div class="section-header-left"><div class="section-title">$100K Mission Countdown</div></div>
+    <div class="chevron open" id="chev-countdown">▼</div>
+  </div>
+  <div class="section-body" id="body-countdown">
+    <div class="countdown-grid">
+      <div class="countdown-card">
+        <div class="countdown-big" id="cd-date">—</div>
+        <div class="countdown-label">Projected $100K date</div>
+        <div class="countdown-sub" id="cd-date-sub"></div>
+      </div>
+      <div class="countdown-card">
+        <div class="countdown-big" id="cd-days">—</div>
+        <div class="countdown-label">Days at current pace</div>
+        <div class="countdown-sub" id="cd-days-sub"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar" id="status-bar"></div>
+</div>
+
+<script>
+var STORE='a1xx_v7';
+var NOTION_S='a1xx_notion_v1';
+var SEC_S='a1xx_sec_v2';
+var chartView='bar';
+var undoState=null;
+
+var CYCLES=[
+  {num:1,name:'Foundation',start:'2026-05-04',end:'2026-06-28',target:4000,desc:'Fast money focus. Sign studio partners, drive ATL bookings, get the system live and earning.',kpis:[{icon:'🤝',name:'Studio partners signed',target:'3 partners',freq:'Total by Jun 28'},{icon:'🎙️',name:'ATL bookings closed',target:'15 sessions',freq:'3–5 per month'},{icon:'💬',name:'DMs sent to rappers',target:'200/week',freq:'40 per day, 5 days'},{icon:'📱',name:'HOW I reels posted',target:'55 posts',freq:'5 per week min'},{icon:'🎓',name:'Rappreneur OS conversions',target:'5 members',freq:'Post-session upsell'},{icon:'💰',name:'Revenue collected',target:'$4,000',freq:'$87/day target'}]},
+  {num:2,name:'Momentum',start:'2026-06-29',end:'2026-08-23',target:10500,desc:'ATL funnel proven. Scale outreach. Rappreneur OS becomes a real revenue stream.',kpis:[{icon:'🤝',name:'Studio partners active',target:'5 partners',freq:'2 new this cycle'},{icon:'🎙️',name:'ATL bookings closed',target:'25 sessions',freq:'8–9 per month'},{icon:'💬',name:'DMs sent',target:'250/week',freq:'50 per day'},{icon:'📱',name:'Content posted',target:'55 posts',freq:'5 per week'},{icon:'🎓',name:'OS members total',target:'20 members',freq:'Upsell every session'},{icon:'💎',name:'BANGIN+ memberships',target:'10 members',freq:'From OS warm leads'}]},
+  {num:3,name:'Traction',start:'2026-08-24',end:'2026-10-18',target:18000,desc:'Three income streams running. ATL sessions, OS, and first Production Deals.',kpis:[{icon:'🤝',name:'Studio partners active',target:'8 partners',freq:'3 new this cycle'},{icon:'🎙️',name:'ATL bookings closed',target:'35 sessions',freq:'12 per month'},{icon:'🔥',name:'Production deal calls',target:'6 calls',freq:'2 per month'},{icon:'📱',name:'Content posted',target:'60 posts',freq:'5 per week'},{icon:'🎓',name:'OS members total',target:'40 members',freq:'Monday calls driving retention'},{icon:'💰',name:'Revenue collected',target:'$18,000',freq:'$200/day target'}]},
+  {num:4,name:'Growth',start:'2026-10-19',end:'2026-12-13',target:28000,desc:'Production deals become real revenue. OS growing. Studio is consistent baseline.',kpis:[{icon:'💎',name:'Production deals closed',target:'3–4 deals',freq:'Single $997 → EP $2,500'},{icon:'🤝',name:'Studio partners active',target:'10 partners',freq:'ATL market covered'},{icon:'📱',name:'Content posted',target:'65 posts',freq:'5/week + YouTube'},{icon:'🎓',name:'OS members total',target:'65 members',freq:'Content driving signups'},{icon:'▶️',name:'YouTube videos',target:'8 videos',freq:'2 per month'},{icon:'💰',name:'Revenue collected',target:'$28,000',freq:'$311/day target'}]},
+  {num:5,name:'Scale',start:'2026-12-14',end:'2027-02-07',target:45000,desc:'All streams scaled. High-ticket deals + recurring OS + studio = $500+/day.',kpis:[{icon:'💎',name:'Production deals closed',target:'6 deals',freq:'2 per month min'},{icon:'🎙️',name:'ATL bookings',target:'60 sessions',freq:'20 per month'},{icon:'🎓',name:'OS members total',target:'90 members',freq:'Webinar driving signups'},{icon:'📱',name:'Content posted',target:'70 posts',freq:'5 per week'},{icon:'💰',name:'Revenue collected',target:'$45,000',freq:'$500/day target'},{icon:'🎤',name:'Webinars run',target:'3 webinars',freq:'1 per month'}]},
+  {num:6,name:'Acceleration',start:'2027-02-08',end:'2027-04-04',target:62000,desc:'Business runs on systems. All three streams producing consistently.',kpis:[{icon:'💎',name:'Production deals closed',target:'8 deals',freq:'3 per month'},{icon:'🎓',name:'OS members total',target:'120 members',freq:'Churn below 5%'},{icon:'🎙️',name:'ATL bookings',target:'75 sessions',freq:'25 per month'},{icon:'📱',name:'Content posted',target:'70 posts',freq:'5 per week'},{icon:'💰',name:'Revenue collected',target:'$62,000',freq:'$689/day target'}]},
+  {num:7,name:'Peak',start:'2027-04-05',end:'2027-05-30',target:82000,desc:'Final push. All systems at full capacity. Execute and collect.',kpis:[{icon:'💎',name:'Production deals closed',target:'10 deals',freq:'3–4 per month'},{icon:'🎓',name:'OS members total',target:'150 members',freq:'Retention is priority'},{icon:'🎙️',name:'ATL bookings',target:'90 sessions',freq:'30 per month'},{icon:'💰',name:'Revenue collected',target:'$82,000',freq:'$911/day target'},{icon:'🔥',name:'Cycle 8 prep',target:'Systems locked',freq:'No new experiments'}]},
+  {num:8,name:'$100K Close',start:'2027-06-01',end:'2027-07-27',target:100000,desc:'Finish line. No pivots, no new ideas. Execute and close.',kpis:[{icon:'🏆',name:'Mission complete',target:'$100,000',freq:'Total all cycles'},{icon:'💎',name:'Production deals closed',target:'4+ deals',freq:'Close everything in pipeline'},{icon:'🎓',name:'OS members active',target:'150+ members',freq:'All-time high'},{icon:'💰',name:'Daily revenue pace',target:'$1,111/day',freq:'To close $100K on time'},{icon:'🎯',name:'Next mission launched',target:'$100K → $300K',freq:'Plan Cycle 9'}]}
+];
+var STREAMS=[{id:'s-studio',name:'Studio commission',color:'#639922'},{id:'s-mix',name:'Mix & master',color:'#3a7bd5'},{id:'s-os',name:'Rappreneur OS',color:'#9b6df5'},{id:'s-deals',name:'Production deals',color:'#d4a017'},{id:'s-beats',name:'Custom beats',color:'#e05555'},{id:'s-other',name:'Other',color:'#555'}];
+
+/* UTILS */
+function pd(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function fmt(n){return '$'+Math.round(n).toLocaleString();}
+function pct(a,b){return b===0?0:Math.min(100,Math.max(0,Math.round(a/b*100)));}
+function fmtS(s){return pd(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function getCycleIdx(){var t=new Date();t.setHours(0,0,0,0);for(var i=0;i<CYCLES.length;i++){var s=pd(CYCLES[i].start),e=pd(CYCLES[i].end);if(t>=s&&t<=e)return i;}return t<pd(CYCLES[0].start)?0:CYCLES.length-1;}
+function daysElapsed(ci){var t=new Date();t.setHours(0,0,0,0);return Math.max(1,Math.ceil((t-pd(CYCLES[ci].start))/864e5)+1);}
+function daysLeft(ci){var t=new Date();t.setHours(0,0,0,0);return Math.max(0,Math.ceil((pd(CYCLES[ci].end)-t)/864e5));}
+function totalDays(ci){return Math.ceil((pd(CYCLES[ci].end)-pd(CYCLES[ci].start))/864e5)+1;}
+function setBar(id,p,color){var el=document.getElementById(id);if(!el)return;el.style.width=Math.max(p,0.4)+'%';el.style.background=color;}
+function setStatus(m,t){var s=document.getElementById('status-bar');s.textContent=m;s.className='status-bar'+(t?' '+t:'');}
+function flashTag(id){var t=document.getElementById(id);t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+
+/* EXPENSE CALCULATIONS */
+function getWeekExpArr(prefix){
+  var arr=[];
+  for(var i=0;i<8;i++){var el=document.getElementById(prefix+'-'+i);arr.push(el?parseFloat(el.value)||0:0);}
+  return arr;
+}
+function sumArr(a){return a.reduce(function(s,v){return s+v;},0);}
+
+function getExpenses(){
+  var ci=getCycleIdx();
+  var elapsed=daysElapsed(ci);
+  var ad=parseFloat(document.getElementById('adspend-input').value)||0;
+  var sw=parseFloat(document.getElementById('software-input').value)||0;
+  var svArr=getWeekExpArr('sv');
+  var otArr=getWeekExpArr('ot');
+  var sv=sumArr(svArr);
+  var ot=sumArr(otArr);
+  var adP=Math.round(ad/30*elapsed*100)/100;
+  var swP=Math.round(sw/30*elapsed*100)/100;
+  var total=adP+swP+sv+ot;
+  return{adP:adP,swP:swP,sv:sv,ot:ot,total:total,svArr:svArr,otArr:otArr};
+}
+
+function buildExpenseInputs(ci){
+  var c=CYCLES[ci],start=pd(c.start);
+  var saved=getSaved();
+  ['sv','ot'].forEach(function(prefix){
+    var container=document.getElementById(prefix+'-week-inputs');
+    if(!container)return;
+    container.innerHTML='';
+    for(var i=0;i<8;i++){
+      var wd=new Date(start);wd.setDate(wd.getDate()+i*7);
+      var lbl=wd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      var savedArr=(saved&&saved[prefix+'Weeks'])||[];
+      var val=savedArr[i]||0;
+      var g=document.createElement('div');g.style.cssText='display:flex;flex-direction:column;gap:4px;align-items:center';
+      g.innerHTML='<div style="font-size:9px;color:#444;text-align:center">'+lbl+'</div><input type="number" id="'+prefix+'-'+i+'" value="'+val+'" min="0" style="text-align:center;padding:0 4px;font-size:11px;width:100%" oninput="updateExpTotals()"/>';
+      container.appendChild(g);
+    }
+  });
+  updateExpTotals();
+}
+
+function updateExpTotals(){
+  var svArr=getWeekExpArr('sv');
+  var otArr=getWeekExpArr('ot');
+  var svTotal=sumArr(svArr);
+  var otTotal=sumArr(otArr);
+  var svEl=document.getElementById('sv-cycle-total');
+  var otEl=document.getElementById('ot-cycle-total');
+  if(svEl)svEl.textContent=fmt(svTotal);
+  if(otEl)otEl.textContent=fmt(otTotal);
+  drawExpenseChart(svArr,otArr);
+  recalc();
+}
+
+function drawExpenseChart(svArr,otArr){
+  var canvas=document.getElementById('expense-chart');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth||860;
+  var h=120;canvas.height=h;
+  var combined=svArr.map(function(v,i){return v+(otArr[i]||0);});
+  var max=Math.max.apply(null,combined.concat([1]));
+  var w=canvas.width,pad={t:16,b:24,l:8,r:8};
+  var iW=w-pad.l-pad.r,iH=h-pad.t-pad.b;
+  ctx.clearRect(0,0,w,h);
+  var bw=Math.floor(iW/8),gap=3;
+  for(var i=0;i<8;i++){
+    var x=pad.l+i*bw+gap,bi=bw-gap*2;
+    var sv=svArr[i]||0,ot=otArr[i]||0,tot=sv+ot;
+    if(tot===0){
+      ctx.fillStyle='#111';
+      var stub=2;
+      ctx.fillRect(x,pad.t+iH-stub,bi,stub);
+    } else {
+      var svH=Math.round((sv/max)*iH);
+      var otH=Math.round((ot/max)*iH);
+      if(ot>0){ctx.fillStyle='#1a1a2a';ctx.fillRect(x,pad.t+iH-otH,bi,otH);}
+      if(sv>0){ctx.fillStyle='#2a1010';ctx.fillRect(x,pad.t+iH-svH-otH,bi,svH);}
+      ctx.fillStyle='#e05555';ctx.font='bold 9px -apple-system,sans-serif';ctx.textAlign='center';
+      ctx.fillText(tot>=1000?(tot/1000).toFixed(1)+'k':'$'+Math.round(tot),x+bi/2,pad.t+iH-svH-otH-4);
+    }
+    ctx.fillStyle='#333';ctx.font='9px -apple-system,sans-serif';ctx.textAlign='center';
+    ctx.fillText('W'+(i+1),x+bi/2,h-pad.b+14);
+  }
+  // legend
+  ctx.fillStyle='#2a1010';ctx.fillRect(pad.l,4,10,8);
+  ctx.fillStyle='#555';ctx.font='9px -apple-system,sans-serif';ctx.textAlign='left';ctx.fillText('Services',pad.l+14,12);
+  ctx.fillStyle='#1a1a2a';ctx.fillRect(pad.l+70,4,10,8);
+  ctx.fillStyle='#555';ctx.fillText('Other',pad.l+84,12);
+}
+
+/* SECTIONS */
+function toggleSec(id){
+  var body=document.getElementById('body-'+id);
+  var chev=document.getElementById('chev-'+id);
+  if(!body||!chev)return;
+  var isOpen=!body.classList.contains('collapsed');
+  if(isOpen){body.classList.add('collapsed');chev.classList.remove('open');}
+  else{body.classList.remove('collapsed');chev.classList.add('open');}
+  saveSections();
+}
+function saveSections(){
+  var state={};
+  ['bi','prog','exp','streams','funnel','weekly','notes','cycles','countdown'].forEach(function(id){
+    var b=document.getElementById('body-'+id);
+    if(b)state[id]=!b.classList.contains('collapsed');
+  });
+  localStorage.setItem(SEC_S,JSON.stringify(state));
+}
+function loadSections(){
+  try{
+    var state=JSON.parse(localStorage.getItem(SEC_S));
+    if(!state)return;
+    Object.keys(state).forEach(function(id){
+      var body=document.getElementById('body-'+id);
+      var chev=document.getElementById('chev-'+id);
+      if(!body||!chev)return;
+      if(state[id]){body.classList.remove('collapsed');chev.classList.add('open');}
+      else{body.classList.add('collapsed');chev.classList.remove('open');}
+    });
+  }catch(e){}
+}
+
+/* CHART */
+function setView(v,e){chartView=v;document.querySelectorAll('.view-btn').forEach(function(b){b.classList.remove('active');});if(e&&e.target)e.target.classList.add('active');drawChart();}
+function drawChart(){
+  var canvas=document.getElementById('weekly-chart');if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth||860;var h=160;canvas.height=h;
+  var ci=getCycleIdx(),c=CYCLES[ci];
+  var vals=[];for(var i=0;i<8;i++){var el=document.getElementById('wk-'+i);vals.push(el?parseFloat(el.value)||0:0);}
+  var w=canvas.width,pad={t:20,b:28,l:8,r:8};
+  var iW=w-pad.l-pad.r,iH=h-pad.t-pad.b;
+  ctx.clearRect(0,0,w,h);
+  if(chartView==='bar'){
+    var max=Math.max.apply(null,vals.concat([1]));
+    var bw=Math.floor(iW/8),gap=3;
+    vals.forEach(function(v,i){
+      var bh=Math.round((v/max)*iH);
+      var x=pad.l+i*bw+gap,y=pad.t+iH-bh,bi=bw-gap*2;
+      ctx.fillStyle=v>0?'#1a3010':'#111';
+      ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,bi,bh,2);else ctx.rect(x,y,bi,bh);ctx.fill();
+      if(v>0){ctx.fillStyle='#639922';ctx.font='bold 9px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText(v>=1000?(v/1000).toFixed(1)+'k':'$'+v,x+bi/2,y-5);}
+      ctx.fillStyle='#333';ctx.font='9px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('W'+(i+1),x+bi/2,h-pad.b+14);
+    });
+  }else if(chartView==='line'){
+    var max2=Math.max.apply(null,vals.concat([1])),bw2=Math.floor(iW/8);
+    if(vals.some(function(v){return v>0;})){
+      ctx.strokeStyle='#639922';ctx.lineWidth=2;ctx.beginPath();var first=true;
+      vals.forEach(function(v,i){if(v>0){var x=pad.l+i*bw2+bw2/2,y=pad.t+iH-(v/max2)*iH;if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);}});
+      ctx.stroke();
+      vals.forEach(function(v,i){
+        var x=pad.l+i*bw2+bw2/2;
+        if(v>0){var y=pad.t+iH-(v/max2)*iH;ctx.fillStyle='#7ec845';ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();ctx.fillStyle='#639922';ctx.font='bold 9px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('$'+Math.round(v),x,y-8);}
+        ctx.fillStyle='#333';ctx.font='9px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('W'+(i+1),x,h-pad.b+14);
+      });
+    }
+  }else{
+    var cum=0,cvals=vals.map(function(v){cum+=v;return cum;});
+    var max3=Math.max(c.target,Math.max.apply(null,cvals.concat([1]))),bw3=Math.floor(iW/8);
+    var ty=pad.t+iH-(c.target/max3)*iH;
+    ctx.strokeStyle='#2a4015';ctx.lineWidth=1;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(pad.l,ty);ctx.lineTo(w-pad.r,ty);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#2a4015';ctx.font='9px -apple-system,sans-serif';ctx.textAlign='left';ctx.fillText('Target '+fmt(c.target),pad.l+4,ty-4);
+    if(cvals.some(function(v){return v>0;})){
+      ctx.strokeStyle='#5b9cf6';ctx.lineWidth=2;ctx.beginPath();var f2=true;
+      cvals.forEach(function(v,i){if(v>0){var x=pad.l+i*bw3+bw3/2,y=pad.t+iH-(v/max3)*iH;if(f2){ctx.moveTo(x,y);f2=false;}else ctx.lineTo(x,y);}});
+      ctx.stroke();
+      cvals.forEach(function(v,i){
+        var x=pad.l+i*bw3+bw3/2;
+        if(v>0){var y=pad.t+iH-(v/max3)*iH;ctx.fillStyle=v>=c.target?'#7ec845':'#5b9cf6';ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();ctx.fillStyle=v>=c.target?'#639922':'#5b9cf6';ctx.font='bold 9px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText(v>=1000?(v/1000).toFixed(1)+'k':'$'+Math.round(v),x,y-8);}
+        ctx.fillStyle='#333';ctx.font='9px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('W'+(i+1),x,h-pad.b+14);
+      });
+    }
+  }
+}
+function buildWeekInputs(ci){
+  var c=CYCLES[ci],start=pd(c.start);
+  var container=document.getElementById('week-inputs');container.innerHTML='';
+  var saved=getSaved();
+  for(var i=0;i<8;i++){
+    var wd=new Date(start);wd.setDate(wd.getDate()+i*7);
+    var lbl=wd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    var wv=(saved&&saved.weeks&&saved.weeks[i])||0;
+    var g=document.createElement('div');g.style.cssText='display:flex;flex-direction:column;gap:4px;align-items:center';
+    g.innerHTML='<div style="font-size:9px;color:#444;text-align:center">'+lbl+'</div><input type="number" id="wk-'+i+'" value="'+wv+'" min="0" style="text-align:center;padding:0 4px;font-size:11px" oninput="drawChart()"/>';
+    container.appendChild(g);
+  }
+  drawChart();
+}
+
+/* STREAMS */
+function updateStreams(){
+  var total=STREAMS.reduce(function(s,st){return s+(parseFloat(document.getElementById(st.id).value)||0);},0);
+  var rev=parseFloat(document.getElementById('rev-input').value)||0;
+  var g=document.getElementById('stream-grid');g.innerHTML='';
+  STREAMS.forEach(function(st){
+    var val=parseFloat(document.getElementById(st.id).value)||0;
+    var p=total>0?Math.round(val/total*100):0;
+    var row=document.createElement('div');row.className='stream-row';
+    row.innerHTML='<div class="stream-name">'+st.name+'</div><div class="stream-track"><div class="stream-fill" style="width:'+p+'%;background:'+st.color+'"></div></div><div class="stream-pct">'+fmt(val)+' ('+p+'%)</div>';
+    g.appendChild(row);
+  });
+  var diff=Math.round(total-rev);
+  var chk=document.getElementById('stream-check');
+  if(total===0){chk.textContent='';}
+  else if(Math.abs(diff)<=1){chk.style.color='#639922';chk.textContent='✓ Streams match revenue total — good';}
+  else{chk.style.color='#e05555';chk.style.fontWeight='600';chk.textContent='⚠ MISMATCH: Streams are '+fmt(Math.abs(diff))+(diff>0?' over':' under')+' your revenue total of '+fmt(rev)+'. Streams should add up to '+fmt(rev)+'. Adjust the inputs above until they match.';}
+}
+
+/* FUNNEL */
+function updateFunnel(){
+  var sent=parseFloat(document.getElementById('dm-sent').value)||0;
+  var resp=parseFloat(document.getElementById('dm-resp').value)||0;
+  var offer=parseFloat(document.getElementById('dm-offer').value)||0;
+  var close=parseFloat(document.getElementById('dm-close').value)||0;
+  var rev=parseFloat(document.getElementById('rev-input').value)||0;
+  var wk=parseFloat(document.getElementById('week-input').value)||400;
+  var rr=sent>0?Math.round(resp/sent*100):0;
+  var or=resp>0?Math.round(offer/resp*100):0;
+  var cr=offer>0?Math.round(close/offer*100):0;
+  var rpdm=sent>0?(rev/sent).toFixed(2):0;
+  document.getElementById('f-resp-rate').textContent=rr+'%';
+  document.getElementById('f-offer-rate').textContent=or+'%';
+  document.getElementById('f-close-rate').textContent=cr+'%';
+  document.getElementById('f-rev-per-dm').textContent='$'+rpdm;
+  var ins=document.getElementById('funnel-insight');
+  if(sent===0){ins.textContent='Enter your weekly DM totals above. Update every Sunday.';return;}
+  var avgDeal=close>0?Math.round(rev/close):200;
+  var dmsNeeded=rr>0&&cr>0?Math.ceil((wk-rev)/avgDeal/((rr/100)*(or>0?or/100:0.3)*(cr>0?cr/100:0.2))):0;
+  var msg='This week: <strong>'+rr+'%</strong> response → <strong>'+or+'%</strong> to offers → <strong>'+cr+'%</strong> closed. ';
+  if(close>0)msg+='Avg deal: <strong>'+fmt(avgDeal)+'</strong>. ';
+  if(dmsNeeded>0)msg+='Send ~<strong>'+dmsNeeded+' more DMs</strong> to hit week target.';
+  if(rr<10)msg+='<br><strong>Bottleneck: Hook</strong> — under 10% response. Fix your opener first.';
+  else if(or<30)msg+='<br><strong>Bottleneck: Qualification</strong> — responding but not getting to offers. Build trust faster.';
+  else if(cr<20)msg+='<br><strong>Bottleneck: Close</strong> — offers aren\'t converting. Tighten the pitch.';
+  ins.innerHTML=msg;
+  updateConstraint(rr,cr);
+}
+
+function updateConstraint(rr,cr){
+  var rev=parseFloat(document.getElementById('rev-input').value)||0;
+  var exp=getExpenses();
+  var margin=rev>0?Math.round((rev-exp.total)/rev*100):100;
+  var dmSent=parseFloat(document.getElementById('dm-sent').value)||0;
+  var cb=document.getElementById('constraint-box');
+  var icon=document.getElementById('c-icon'),ct=document.getElementById('c-title'),cd=document.getElementById('c-desc'),cbg=document.getElementById('c-badge');
+  if(dmSent===0){icon.textContent='🔍';ct.textContent='Fill in DM Funnel below to identify your bottleneck';cd.textContent='';cbg.textContent='';cb.style.borderColor='#1a1a1a';return;}
+  if(dmSent<20){icon.textContent='📊';ct.textContent='Not enough data yet — send at least 20 DMs first';cd.textContent='The bottleneck identifier needs a minimum of 20 DMs to give you a meaningful diagnosis. Keep sending and check back once you have more volume.';cbg.textContent='Need more data';cbg.className='badge blue';cb.style.borderColor='#1a3050';return;}
+  if(rr<10){icon.textContent='📡';ct.textContent='Traffic Problem — Fix your hook';cd.textContent='Under 10% response rate. Your opener isn\'t landing. Fix the first DM before sending more volume.';cbg.textContent='Hook issue';cbg.className='badge red';cb.style.borderColor='#3a1010';}
+  else if(cr<15){icon.textContent='🎯';ct.textContent='Sales Problem — Fix the offer';cd.textContent='People respond but don\'t buy. Build trust faster and tighten the pitch before scaling DM volume.';cbg.textContent='Conversion issue';cbg.className='badge amber';cb.style.borderColor='#3a2800';}
+  else if(margin<40&&rev>0){icon.textContent='💸';ct.textContent='Cost Problem — Margins need attention';cd.textContent='Close rate is solid but true margin is thin. Push Tier 2 over Tier 1, upsell OS after every session, or trim expenses.';cbg.textContent='Margin issue';cbg.className='badge amber';cb.style.borderColor='#3a2800';}
+  else{icon.textContent='✅';ct.textContent='System working — Scale what\'s converting';cd.textContent='No major bottleneck. Increase DM volume, ad spend, and studio partner outreach to multiply what\'s already working.';cbg.textContent='Scale now';cbg.className='badge green';cb.style.borderColor='#1a3010';}
+}
+
+function updateCumTotals(){
+  var dms=parseFloat(document.getElementById('cum-dms').value)||0;
+  var posts=parseFloat(document.getElementById('cum-posts').value)||0;
+  document.getElementById('cum-dms-val').textContent=dms.toLocaleString();
+  document.getElementById('cum-posts-val').textContent=posts.toLocaleString();
+}
+
+/* CYCLES */
+var selectedCycle=null;
+function buildCycles(aci){
+  var t=new Date();t.setHours(0,0,0,0);
+  var g=document.getElementById('cycles-grid');g.innerHTML='';
+  CYCLES.forEach(function(c,i){
+    var isPast=t>pd(c.end)&&i!==aci;
+    var cls='cycle-card'+(i===aci?' active':isPast?' past':' future')+(selectedCycle===i?' selected':'');
+    var d=document.createElement('div');d.className=cls;
+    d.innerHTML='<div class="cycle-num">Cycle '+c.num+'</div><div class="cycle-name">'+c.name+'</div><div class="cycle-date">'+fmtS(c.start)+' – '+fmtS(c.end)+'</div><div class="cycle-tap">tap for KPIs</div>';
+    d.onclick=(function(x){return function(){toggleKPI(x);};})(i);
+    g.appendChild(d);
+  });
+}
+function toggleKPI(idx){
+  if(selectedCycle===idx){closeKPI();return;}
+  selectedCycle=idx;buildCycles(getCycleIdx());
+  var c=CYCLES[idx];
+  document.getElementById('kpi-title').textContent='Cycle '+c.num+' — '+c.name;
+  document.getElementById('kpi-badge').textContent=fmtS(c.start)+' – '+fmtS(c.end)+' · Target: '+fmt(c.target);
+  document.getElementById('kpi-desc').textContent=c.desc;
+  var list=document.getElementById('kpi-list');list.innerHTML='';
+  c.kpis.forEach(function(k){
+    var el=document.createElement('div');el.className='kpi-item';
+    el.innerHTML='<div class="kpi-left"><span class="kpi-icon">'+k.icon+'</span><span class="kpi-name">'+k.name+'</span></div><div style="text-align:right"><div class="kpi-target">'+k.target+'</div><div class="kpi-freq">'+k.freq+'</div></div>';
+    list.appendChild(el);
+  });
+  document.getElementById('kpi-panel').classList.add('open');
+  setTimeout(function(){document.getElementById('kpi-panel').scrollIntoView({behavior:'smooth',block:'nearest'});},100);
+}
+function closeKPI(){selectedCycle=null;document.getElementById('kpi-panel').classList.remove('open');buildCycles(getCycleIdx());}
+
+/* BREAKDOWNS */
+var bdMode=null;
+function toggleBreakdown(n){if(bdMode===n){closeBreakdown();return;}bdMode=n;for(var i=0;i<4;i++)document.getElementById('sc-'+i).classList.remove('selected');document.getElementById('sc-'+n).classList.add('selected');document.getElementById('breakdown-panel').classList.add('open');renderBreakdown(n);}
+function closeBreakdown(){bdMode=null;document.getElementById('breakdown-panel').classList.remove('open');for(var i=0;i<4;i++)document.getElementById('sc-'+i).classList.remove('selected');}
+function renderBreakdown(n){
+  var rev=parseFloat(document.getElementById('rev-input').value)||0;
+  var wk=parseFloat(document.getElementById('week-input').value)||400;
+  var ci=getCycleIdx(),c=CYCLES[ci];
+  var elapsed=daysElapsed(ci),left=daysLeft(ci),total=totalDays(ci);
+  var pace=elapsed>0?rev/elapsed:0;
+  var exp=getExpenses();
+  var net=rev-exp.total;
+  var margin=rev>0?Math.round(net/rev*100):0;
+  var t=document.getElementById('bd-title'),ct=document.getElementById('bd-content');
+  if(n===0){
+    t.textContent='Revenue Breakdown';
+    ct.innerHTML=mb([['Days elapsed',elapsed+' days'],['Revenue collected',fmt(rev)],['Total expenses','-'+fmt(exp.total)],['True net profit',fmt(net),'green'],['Daily average pace',fmt(pace)+'/day']])+pb('You\'ve collected <strong>'+fmt(rev)+'</strong> over '+elapsed+' day'+(elapsed!==1?'s':'')+'. After <strong>'+fmt(exp.total)+'</strong> in total expenses, your actual take-home is <strong>'+fmt(net)+'</strong> at a <strong>'+margin+'% margin</strong>. '+(pace>=87?'You\'re running above the $87/day target — keep the pace.':'You\'re below $87/day. Push harder on studio outreach and DMs.'))+fp('Revenue paths',[
+      '<strong>Tier 1 session</strong> → $45–60 commission. Stack 3–4 per week.',
+      '<strong>Tier 2 session</strong> → $297–372 net. One per week changes the picture.',
+      '<strong>OS sale</strong> → $97 per member. 3 post-session conversions = $291.',
+      '<strong>Mix & master</strong> → $100/song. Easy upsell after any session.'
+    ]);
+  }else if(n===1){
+    var gap=Math.max(0,wk-rev);
+    t.textContent='Week Target Breakdown';
+    ct.innerHTML=mb([['Week target',fmt(wk)],['Revenue collected',fmt(rev)],['Gap remaining',fmt(gap),'amber'],['Fastest path',gap<=297?'1 Tier 2 session closes it':'Multiple moves needed']])+pb('You need <strong>'+fmt(gap)+'</strong> more to hit <strong>'+fmt(wk)+'</strong>. '+(gap<=0?'Target hit — set a higher one next week.':'The fastest single move is a Tier 2 booking at $297 net.'))+fp('Fastest ways to close '+fmt(gap),[
+      '1 Tier 2 booking at $797 → <strong>$297–372 net</strong> (closes the gap alone)',
+      '4 Tier 1 sessions × $55 = <strong>$220</strong> in commission',
+      '2 OS sales at $97 = <strong>$194</strong> from warm session leads',
+      'Follow up every warm lead from the last 2 weeks — the money is in the follow-up'
+    ]);
+  }else if(n===2){
+    var cgap=Math.max(0,c.target-rev),proj=Math.round(pace*total);
+    t.textContent='Cycle Target Breakdown';
+    ct.innerHTML=mb([['Cycle target',fmt(c.target)],['Revenue collected',fmt(rev)],['Gap remaining',fmt(cgap),'amber'],['Days remaining',left+' days'],['Needed per day',fmt(left>0?cgap/left:0)+'/day'],['Projected total at this pace',fmt(proj),proj>=c.target?'green':'red']])+pb('You need <strong>'+fmt(cgap)+'</strong> more in '+left+' days — that\'s <strong>'+fmt(left>0?cgap/left:0)+' per day</strong>. At your current pace you\'re projected to finish at <strong>'+fmt(proj)+'</strong>. '+(proj>=c.target?'You\'re on track.':'You need to push. The fastest lever is signing one more studio partner.'))+fp('How to close the cycle gap',[
+      'Sign 1 more studio partner → adds a whole new booking channel immediately',
+      '3× Tier 2 sessions at $297 net = <strong>$891</strong> in three sessions',
+      '5× OS conversions at $97 = <strong>$485</strong> from existing warm session leads',
+      '1 Production deal consult → even a Single at $997 changes the whole cycle'
+    ]);
+  }else{
+    t.textContent='True Profit Math Breakdown';
+    ct.innerHTML=mb([['Gross revenue',fmt(rev)],['Ad spend prorated','-'+fmt(exp.adP)],['Software & tools prorated','-'+fmt(exp.swP)],['Services & freelancers','-'+fmt(exp.sv)],['Other expenses','-'+fmt(exp.ot)],['Total expenses','-'+fmt(exp.total),'red'],['True net profit',fmt(net),net>0?'green':'red'],['True profit margin',margin+'%',margin>=70?'green':margin>=40?'amber':'red']])+pb('Your real take-home after <strong>all expenses</strong> is <strong>'+fmt(net)+'</strong> — a <strong>'+margin+'% margin</strong>. '+(margin>=70?'Excellent. Keep expenses tight and let revenue scale.':margin>=40?'Solid. As revenue grows, margin improves naturally — avoid adding fixed expenses before revenue justifies it.':'Thin. Prioritize Tier 2 over Tier 1 (better margin per session), maximize upsells, and keep expenses lean.'))+fp('How to protect and grow margin',[
+      'Tier 2 at 37%+ margin > Tier 1 at thin commission — push Tier 2 first every time',
+      'OS conversion after every session is pure margin — zero ad cost, zero service cost',
+      'Review software expenses quarterly — cut anything you\'re not actively using',
+      'As revenue grows past $2K/month, margin improves dramatically on fixed costs'
+    ]);
+  }
+}
+function mb(rows){var h='<div class="math-block">';rows.forEach(function(r,i){h+='<div class="math-row'+(i===rows.length-1?' total':'')+'"><span class="math-label">'+r[0]+'</span><span class="math-value'+(r[2]?' '+r[2]:'')+'">'+r[1]+'</span></div>';});return h+'</div>';}
+function pb(txt){return '<div class="plain-english"><div class="plain-label">In plain terms</div><div class="plain-text">'+txt+'</div></div>';}
+function fp(title,paths){var h='<div class="paths"><div class="paths-label">'+title+'</div>';paths.forEach(function(p,i){h+='<div class="path-item"><span class="path-num">'+(i+1)+'</span><span class="path-text">'+p+'</span></div>';});return h+'</div>';}
+
+/* EXPORT */
+function exportCSV(){
+  var rev=parseFloat(document.getElementById('rev-input').value)||0;
+  var wk=parseFloat(document.getElementById('week-input').value)||400;
+  var ci=getCycleIdx(),c=CYCLES[ci];
+  var elapsed=daysElapsed(ci),left=daysLeft(ci),total=totalDays(ci);
+  var pace=elapsed>0?rev/elapsed:0;
+  var exp=getExpenses();var net=rev-exp.total;var margin=rev>0?Math.round(net/rev*100):0;
+  var rows=[['A1XX Money Mission — Weekly Export','Date: '+new Date().toLocaleDateString(),''],['','',''],['METRIC','VALUE','NOTES'],
+    ['Cycle','Cycle '+c.num+' — '+c.name,''],['Dates',fmtS(c.start)+' – '+fmtS(c.end),''],['Days Elapsed',elapsed,''],['Days Remaining',left,''],['','',''],
+    ['REVENUE & PROFIT','',''],['Gross Revenue',rev,'Cash collected'],['Total Expenses',exp.total,'All expenses'],['True Net Profit',net,''],['Profit Margin',margin+'%',''],['Week Target',wk,''],['To Week Target',Math.max(0,wk-rev),''],['Cycle Target',c.target,''],['To Cycle Target',Math.max(0,c.target-rev),''],['To $100K',Math.max(0,100000-rev),''],['Daily Pace',pace.toFixed(2),''],['Projected Cycle Total',Math.round(pace*total),''],['','',''],
+    ['EXPENSES','',''],['Ad Spend (monthly budget)',document.getElementById('adspend-input').value,''],['Ad Spend Prorated This Cycle',exp.adP,''],['Software & Tools (monthly)',document.getElementById('software-input').value,''],['Software Prorated This Cycle',exp.swP,''],['Services & Freelancers',exp.sv,'This cycle actual'],['Other Expenses',exp.ot,'This cycle actual'],['','',''],
+    ['INCOME STREAMS','','']];
+  STREAMS.forEach(function(st){rows.push([st.name,parseFloat(document.getElementById(st.id).value)||0,'']);});
+  rows.push(['','',''],['DM FUNNEL','','']);
+  [{id:'dm-sent',l:'DMs Sent'},{id:'dm-resp',l:'Responded'},{id:'dm-offer',l:'Offer Made'},{id:'dm-close',l:'Closed'}].forEach(function(x){rows.push([x.l,parseFloat(document.getElementById(x.id).value)||0,'']);});
+  rows.push(['Total DMs This Cycle',document.getElementById('cum-dms').value,''],['Total Posts This Cycle',document.getElementById('cum-posts').value,'']);
+  rows.push(['Sessions Closed This Cycle',document.getElementById('sessions-input').value,''],['','',''],['WEEKLY REVENUE','','']);
+  for(var i=0;i<8;i++){rows.push(['Week '+(i+1),document.getElementById('wk-'+i)?parseFloat(document.getElementById('wk-'+i).value)||0:0,'Cash received']);}
+  rows.push(['','',''],['NOTES','',''],['Big Win This Week',document.getElementById('note-win').value.replace(/\n/g,' '),''],['Biggest Lesson',document.getElementById('note-lesson').value.replace(/\n/g,' '),'']);
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='a1xx-weekly-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+  setStatus('Exported — Google Sheets: File → Import → Upload the CSV file','ok');
+}
+
+/* NOTION */
+function saveSetup(){var k=document.getElementById('notion-key').value.trim(),db=document.getElementById('notion-db').value.trim();if(!k||!db){setStatus('Enter both fields.','err');return;}localStorage.setItem(NOTION_S,JSON.stringify({key:k,db:db}));document.getElementById('setup-box').classList.remove('open');setStatus('Notion connection saved.','ok');}
+function toggleSetup(){document.getElementById('setup-box').classList.toggle('open');}
+function loadSetup(){try{var d=JSON.parse(localStorage.getItem(NOTION_S));if(d){document.getElementById('notion-key').value=d.key||'';document.getElementById('notion-db').value=d.db||'';}}catch(e){}}
+async function fetchNotion(){
+  var btn=document.getElementById('notion-btn'),cfg;try{cfg=JSON.parse(localStorage.getItem(NOTION_S));}catch(e){}
+  if(!cfg||!cfg.key||!cfg.db){document.getElementById('setup-box').classList.add('open');setStatus('Set up Notion first.','err');return;}
+  btn.disabled=true;btn.textContent='Syncing...';
+  try{
+    var res=await fetch('https://api.notion.com/v1/databases/'+cfg.db+'/query',{method:'POST',headers:{'Authorization':'Bearer '+cfg.key,'Notion-Version':'2022-06-28','Content-Type':'application/json'},body:JSON.stringify({page_size:100})});
+    if(!res.ok)throw new Error('Status '+res.status);
+    var data=await res.json();var total=0;
+    data.results.forEach(function(row){var p=row.properties;for(var k in p){if(p[k].type==='number'&&p[k].number!==null&&(k.toLowerCase().includes('amount')||k.toLowerCase().includes('revenue')||k.toLowerCase().includes('total'))){total+=p[k].number||0;}}});
+    document.getElementById('rev-input').value=Math.round(total);
+    recalc();flashTag('notion-tag');setStatus('Synced — '+data.results.length+' entries, '+fmt(total),'ok');
+  }catch(e){setStatus('Sync failed: '+e.message,'err');}
+  btn.disabled=false;btn.textContent='Sync Notion ↗';
+}
+
+/* STORAGE */
+function captureState(){
+  var weeks=[];for(var i=0;i<8;i++){var el=document.getElementById('wk-'+i);weeks.push(el?parseFloat(el.value)||0:0);}
+  var svW=getWeekExpArr('sv'),otW=getWeekExpArr('ot');
+  return{rev:parseFloat(document.getElementById('rev-input').value)||0,wk:parseFloat(document.getElementById('week-input').value)||400,ad:parseFloat(document.getElementById('adspend-input').value)||0,sw:parseFloat(document.getElementById('software-input').value)||141,svWeeks:svW,otWeeks:otW,sessions:parseFloat(document.getElementById('sessions-input').value)||0,leads:parseFloat(document.getElementById('leads-input').value)||0,deal:parseFloat(document.getElementById('deal-input').value)||400,streams:STREAMS.map(function(s){return parseFloat(document.getElementById(s.id).value)||0;}),dms:[parseFloat(document.getElementById('dm-sent').value)||0,parseFloat(document.getElementById('dm-resp').value)||0,parseFloat(document.getElementById('dm-offer').value)||0,parseFloat(document.getElementById('dm-close').value)||0],cumDms:parseFloat(document.getElementById('cum-dms').value)||0,cumPosts:parseFloat(document.getElementById('cum-posts').value)||0,weeks:weeks,noteWin:document.getElementById('note-win').value,noteLesson:document.getElementById('note-lesson').value};
+}
+function applyState(d){
+  if(!d)return;
+  var map={rev:'rev-input',wk:'week-input',ad:'adspend-input',sw:'software-input',sessions:'sessions-input',leads:'leads-input',deal:'deal-input',cumDms:'cum-dms',cumPosts:'cum-posts'};
+  Object.keys(map).forEach(function(k){if(d[k]!==undefined)document.getElementById(map[k]).value=d[k];});
+  if(d.streams)STREAMS.forEach(function(s,i){if(d.streams[i]!==undefined)document.getElementById(s.id).value=d.streams[i];});
+  var dmIds=['dm-sent','dm-resp','dm-offer','dm-close'];
+  if(d.dms)dmIds.forEach(function(id,i){document.getElementById(id).value=d.dms[i]||0;});
+  if(d.noteWin!==undefined)document.getElementById('note-win').value=d.noteWin;
+  if(d.noteLesson!==undefined)document.getElementById('note-lesson').value=d.noteLesson;
+  if(d.weeks)for(var i=0;i<8;i++){var el=document.getElementById('wk-'+i);if(el&&d.weeks[i]!==undefined)el.value=d.weeks[i];}
+  if(d.svWeeks)for(var i=0;i<8;i++){var el=document.getElementById('sv-'+i);if(el&&d.svWeeks[i]!==undefined)el.value=d.svWeeks[i];}
+  if(d.otWeeks)for(var i=0;i<8;i++){var el=document.getElementById('ot-'+i);if(el&&d.otWeeks[i]!==undefined)el.value=d.otWeeks[i];}
+}
+function getSaved(){try{return JSON.parse(localStorage.getItem(STORE));}catch(e){return null;}}
+function saveAll(){
+  var state=captureState();
+  state.ts=Date.now();
+  localStorage.setItem(STORE,JSON.stringify(state));
+  updateLastSaved(state.ts);
+}
+function loadAll(){
+  var d=getSaved();
+  if(d){applyState(d);if(d.ts)updateLastSaved(d.ts);}
+}
+function updateLastSaved(ts){
+  if(!ts){document.getElementById('wb-last').textContent='Never updated';return;}
+  var d=new Date(ts),now=new Date(),diffDays=Math.floor((now-d)/864e5);
+  var el=document.getElementById('wb-last');
+  if(diffDays===0)el.textContent='Updated today at '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  else if(diffDays===1)el.textContent='Updated yesterday';
+  else if(diffDays<=7)el.textContent=diffDays+' days ago';
+  else el.textContent=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+/* UNDO */
+function restoreUndo(){
+  if(!undoState)return;
+  applyState(undoState);
+  recalc();
+  flashTag('undo-tag');
+  setStatus('Restored previous save. Hit Save Weekly Update to confirm.','ok');
+}
+
+/* SAVE + RECALC */
+function update(){
+  undoState=captureState();
+  document.getElementById('undo-btn').classList.add('visible');
+  saveAll();
+  saveToSheets('weekly_save');
+  flashTag('saved-tag');
+  recalc();
+}
+
+function recalc(){
+  var ci=getCycleIdx(),c=CYCLES[ci];
+  var rev=parseFloat(document.getElementById('rev-input').value)||0;
+  var wk=parseFloat(document.getElementById('week-input').value)||400;
+  var ad=parseFloat(document.getElementById('adspend-input').value)||0;
+  var elapsed=daysElapsed(ci),left=daysLeft(ci),total=totalDays(ci);
+  var pace=elapsed>0?rev/elapsed:0;
+  var proj=Math.round(pace*total);
+  var exp=getExpenses();
+  var net=rev-exp.total;
+  var margin=rev>0?Math.round(net/rev*100):0;
+  var goal=100000,onTrack=proj>=c.target*0.9;
+
+  /* Header */
+  document.getElementById('mission-title').textContent='Cycle '+c.num+' — '+c.name;
+  document.getElementById('mission-sub').textContent=fmtS(c.start)+' – '+fmtS(c.end)+' · Studio Partner Push';
+  document.getElementById('pill-dot').style.background=onTrack?'#639922':'#d4a017';
+  document.getElementById('pill-text').textContent=left+' days left · '+(onTrack?'On track':'Needs push');
+  document.getElementById('pill-text').style.color=onTrack?'#639922':'#d4a017';
+
+  /* Pace cards */
+  var pc=document.getElementById('pace-card-daily');
+  document.getElementById('pace-daily').textContent=fmt(pace);
+  document.getElementById('pace-daily').className='card-value '+(onTrack?'green':'red');
+  document.getElementById('pace-daily-sub').textContent=(elapsed<7?'⚠ ':'')+fmt(pace)+'/day · '+elapsed+' day'+(elapsed!==1?'s':'')+' elapsed';
+  document.getElementById('pace-daily-sub').style.color=elapsed<7?'#d4a017':'#444';
+  var pb2=document.getElementById('pace-badge');
+  if(onTrack){pb2.textContent='On track';pb2.className='badge green';pc.className='card on-track';}
+  else{pb2.textContent='Needs push';pb2.className='badge red';pc.className='card behind';}
+  document.getElementById('pace-proj').textContent=fmt(proj);
+  document.getElementById('pace-proj').className='card-value '+(proj>=c.target?'green':proj>=c.target*0.7?'amber':'red');
+  document.getElementById('pace-proj-sub').textContent=(elapsed<14?'⚠ Early estimate · ':'')+'by '+fmtS(c.end)+' at this pace';
+  var needed=left>0?Math.max(0,(c.target-rev)/left):0;
+  document.getElementById('pace-needed').textContent=fmt(needed);
+  document.getElementById('pace-needed-sub').textContent='/day to hit '+fmt(c.target);
+  document.getElementById('ad-daily').textContent=fmt(ad/30);
+  document.getElementById('ad-daily').className='card-value '+(ad>0?'amber':'dim');
+  document.getElementById('ad-daily-sub').textContent=fmt(ad)+'/mo · break-even: '+fmt(ad/30*2)+'/day';
+
+  /* Stat cards */
+  document.getElementById('c-rev').textContent=fmt(rev);
+  document.getElementById('c-week').textContent=fmt(Math.max(0,wk-rev));
+  document.getElementById('c-week-sub').textContent='of '+fmt(wk);
+  document.getElementById('c-cycle').textContent=fmt(Math.max(0,c.target-rev));
+  document.getElementById('c-cycle-sub').textContent='of '+fmt(c.target);
+  document.getElementById('c-net').textContent=fmt(net);
+  document.getElementById('c-net').className='card-value '+(net>0?'green':'red');
+  document.getElementById('c-net-sub').textContent='after '+fmt(exp.total)+' expenses';
+
+  /* Progress */
+  var pw=pct(rev,wk),pc2=pct(rev,c.target),pg=pct(rev,goal);
+  document.getElementById('pct-week').textContent=pw+'%';
+  document.getElementById('pct-cycle').textContent=pc2+'%';
+  document.getElementById('pct-goal').textContent=pg+'%';
+  document.getElementById('bar-cycle-label').textContent='Cycle '+c.num+' — '+c.name;
+  setBar('bar-week',pw,pw>=75?'#639922':pw>=40?'#d4a017':'#e05555');
+  setBar('bar-cycle',pc2,'#639922');
+  setBar('bar-goal',pg,'#3a7bd5');
+  document.getElementById('det-week').textContent=fmt(rev)+' of '+fmt(wk);
+  document.getElementById('det-week-r').textContent=fmt(Math.max(0,wk-rev))+' to go';
+  document.getElementById('det-cycle').textContent=fmt(rev)+' of '+fmt(c.target);
+  document.getElementById('det-cycle-r').textContent=fmt(Math.max(0,c.target-rev))+' to go';
+  document.getElementById('det-goal').textContent=fmt(rev)+' of '+fmt(goal);
+  document.getElementById('det-goal-r').textContent=fmt(Math.max(0,goal-rev))+' to go';
+
+  /* Expenses summary */
+  document.getElementById('exp-rev').textContent=fmt(rev);
+  document.getElementById('exp-ad').textContent='-'+fmt(exp.adP);
+  document.getElementById('exp-software').textContent='-'+fmt(exp.swP);
+  document.getElementById('exp-services').textContent='-'+fmt(exp.sv);
+  document.getElementById('exp-other').textContent='-'+fmt(exp.ot);
+  document.getElementById('exp-total').textContent='-'+fmt(exp.total);
+  document.getElementById('exp-total').className='exp-value red';
+  document.getElementById('exp-net').textContent=fmt(net);
+  document.getElementById('exp-net').className='exp-value '+(net>0?'green':'red');
+  document.getElementById('exp-margin').textContent=margin+'%';
+  document.getElementById('exp-margin').className='exp-value '+(margin>=70?'green':margin>=40?'amber':'red');
+
+  /* Business intelligence */
+  document.getElementById('h-net').textContent=fmt(net);
+  document.getElementById('h-net').className='card-value '+(net>0?'green':'red');
+  document.getElementById('h-net-sub').textContent='gross '+fmt(rev)+' – expenses '+fmt(exp.total);
+  document.getElementById('h-margin').textContent=rev>0?margin+'%':'—';
+  document.getElementById('h-margin').className='card-value '+(margin>=70?'green':margin>=40?'amber':'red');
+  document.getElementById('h-margin-sub').textContent=rev>0?'Keeping '+margin+' cents of every dollar':'';
+  var adP=exp.adP;
+  var roas=adP>0?(rev/adP).toFixed(2):0;var roasN=parseFloat(roas);
+  document.getElementById('h-roas').textContent=adP>0?roas+':1':'—';
+  document.getElementById('h-roas').className='card-value '+(roasN>=3?'green':roasN>=2?'amber':'red');
+  var rb=document.getElementById('h-roas-badge');
+  if(adP===0){rb.textContent='No ad spend yet';rb.className='badge blue';}
+  else if(roasN>=3){rb.textContent='Strong ROAS';rb.className='badge green';}
+  else if(roasN>=2){rb.textContent='OK ROAS';rb.className='badge amber';}
+  else{rb.textContent='Weak ROAS';rb.className='badge red';}
+  var sessions=parseFloat(document.getElementById('sessions-input').value)||0;
+  var leads=parseFloat(document.getElementById('leads-input').value)||0;
+  var dealVal=parseFloat(document.getElementById('deal-input').value)||400;
+  var cpa=sessions>0?(exp.total/sessions).toFixed(0):0;
+  document.getElementById('h-cpa').textContent=cpa>0?fmt(cpa):'—';
+  document.getElementById('h-cpa').className='card-value '+(cpa>0&&cpa<dealVal*0.3?'green':cpa>0&&cpa<dealVal*0.6?'amber':cpa>0?'red':'dim');
+  document.getElementById('h-cpa-sub').textContent=sessions>0?sessions+' sessions — total expenses ÷ clients':'Enter sessions above';
+  var ltv=Math.round(dealVal*2.4);
+  document.getElementById('h-ltv').textContent=fmt(ltv);
+  var pipeline=Math.round(leads*dealVal);
+  document.getElementById('h-pipeline').textContent=pipeline>0?fmt(pipeline):'—';
+  document.getElementById('h-pipeline').className='card-value '+(pipeline>0?'amber':'dim');
+  document.getElementById('h-pipeline-sub').textContent=leads>0?leads+' leads × '+fmt(dealVal)+' — updates live':'Enter leads above';
+
+  /* $100K countdown */
+  var dTo=pace>0?Math.ceil((goal-rev)/pace):9999;
+  var dt=new Date();dt.setDate(dt.getDate()+dTo);
+  document.getElementById('cd-date').textContent=pace>0?dt.toLocaleDateString('en-US',{month:'short',year:'numeric'}):'—';
+  document.getElementById('cd-date').className='countdown-big '+(dTo<500?'green':dTo<900?'amber':'red');
+  document.getElementById('cd-date-sub').textContent=pace>0?(elapsed<14?'⚠ Early estimate — check back after week 2. ':'')+'At '+fmt(pace)+'/day — '+dt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}):'Enter revenue to calculate';
+  document.getElementById('cd-days').textContent=pace>0?Math.round(dTo).toLocaleString():'—';
+  document.getElementById('cd-days').className='countdown-big '+(dTo<500?'green':dTo<900?'amber':'red');
+  document.getElementById('cd-days-sub').textContent=pace>0?Math.round(dTo/7)+' weeks · need '+fmt(needed)+'/day for Cycle 8 schedule':'';
+
+  buildCycles(ci);
+  updateStreams();
+  checkWeeklyTotals(rev);
+  updateFunnel();
+  updateCumTotals();
+  drawChart();
+  if(bdMode!==null)renderBreakdown(bdMode);
+}
+
+/* GOOGLE SHEETS BACKEND */
+var SHEETS_KEY='a1xx_sheets_url_v1';
+
+function saveSheetsSetup(){
+  var url=document.getElementById('sheets-url').value.trim();
+  if(!url){document.getElementById('sheets-status').textContent='Paste the Web App URL first.';return;}
+  localStorage.setItem(SHEETS_KEY,url);
+  document.getElementById('sheets-setup-box').classList.remove('open');
+  document.getElementById('sheets-status').textContent='';
+  setStatus('Google Sheets connected. Every save will now back up automatically.','ok');
+}
+function toggleSheetsSetup(){
+  document.getElementById('sheets-setup-box').classList.toggle('open');
+  var saved=localStorage.getItem(SHEETS_KEY);
+  if(saved)document.getElementById('sheets-url').value=saved;
+}
+async function testSheetsConnection(){
+  var url=localStorage.getItem(SHEETS_KEY)||document.getElementById('sheets-url').value.trim();
+  if(!url){document.getElementById('sheets-status').textContent='Enter URL first.';return;}
+  document.getElementById('sheets-status').textContent='Testing...';
+  try{
+    fetch(url,{method:'POST',body:JSON.stringify({type:'test',date:new Date().toLocaleDateString()}),mode:'no-cors',redirect:'follow'});
+    setTimeout(function(){document.getElementById('sheets-status').style.color='#639922';document.getElementById('sheets-status').textContent='✓ Request sent — check your Sheet for a test row.';},800);
+  }catch(e){document.getElementById('sheets-status').style.color='#e05555';document.getElementById('sheets-status').textContent='Connection failed: '+e.message;}
+}
+
+function buildSheetsPayload(type){
+  var state=captureState();
+  var exp=getExpenses();
+  var ci=getCycleIdx(),c=CYCLES[ci];
+  var rev=state.rev,net=rev-exp.total,margin=rev>0?Math.round(net/rev*100):0;
+  var elapsed=daysElapsed(ci),left=daysLeft(ci);
+  var pace=elapsed>0?rev/elapsed:0;
+  return{
+    type:type,
+    timestamp:new Date().toISOString(),
+    date:new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'}),
+    cycleNum:c.num,
+    cycleName:c.name,
+    cycleDates:fmtS(c.start)+' – '+fmtS(c.end),
+    cycleTarget:c.target,
+    daysElapsed:elapsed,
+    daysLeft:left,
+    revenue:rev,
+    weekTarget:state.wk,
+    adSpend:state.ad,
+    software:state.sw,
+    services:exp.sv,
+    otherExp:exp.ot,
+    totalExpenses:Math.round(exp.total),
+    netProfit:Math.round(net),
+    margin:margin,
+    roas:exp.adP>0?Math.round(rev/exp.adP*100)/100:0,
+    dailyPace:Math.round(pace*100)/100,
+    projectedTotal:Math.round(pace*(daysLeft(ci)+daysElapsed(ci))),
+    sessions:state.sessions||0,
+    leads:state.leads||0,
+    dealVal:state.deal||0,
+    dmSent:state.dms?state.dms[0]:0,
+    dmResp:state.dms?state.dms[1]:0,
+    dmOffer:state.dms?state.dms[2]:0,
+    dmClose:state.dms?state.dms[3]:0,
+    cumDms:state.cumDms||0,
+    cumPosts:state.cumPosts||0,
+    studioCommission:state.streams?state.streams[0]:0,
+    mixMaster:state.streams?state.streams[1]:0,
+    rapreneurOS:state.streams?state.streams[2]:0,
+    productionDeals:state.streams?state.streams[3]:0,
+    customBeats:state.streams?state.streams[4]:0,
+    otherIncome:state.streams?state.streams[5]:0,
+    noteWin:(state.noteWin||'').replace(/
+/g,' '),
+    noteLesson:(state.noteLesson||'').replace(/
+/g,' '),
+    weeklyRevenue:state.weeks||[],
+    weeklyServices:state.svWeeks||[],
+    weeklyOther:state.otWeeks||[]
+  };
+}
+
+function saveToSheets(type){
+  var url=localStorage.getItem(SHEETS_KEY);
+  if(!url)return;
+  var payload=buildSheetsPayload(type||'weekly_save');
+  try{
+    fetch(url,{method:'POST',body:JSON.stringify(payload),mode:'no-cors',redirect:'follow'});
+  }catch(e){console.log('Sheets save failed silently:',e);}
+}
+
+function archiveCycle(){
+  var ci=getCycleIdx(),c=CYCLES[ci];
+  var confirmed=confirm('Archive Cycle '+c.num+' — '+c.name+'?\n\nThis saves a permanent snapshot of all Cycle '+c.num+' data to your Google Sheet before the cycle moves forward.\n\nMake sure all your numbers are up to date before archiving.');
+  if(!confirmed)return;
+  var url=localStorage.getItem(SHEETS_KEY);
+  if(!url){
+    alert('Connect Google Sheets first (Sheets backup ⚙ button) so your archive has somewhere to go.');
+    toggleSheetsSetup();
+    return;
+  }
+  saveToSheets('cycle_archive');
+  document.getElementById('archive-btn').textContent='✓ Archived';
+  document.getElementById('archive-btn').style.borderColor='#2a4015';
+  document.getElementById('archive-btn').style.color='#7ec845';
+  setTimeout(function(){document.getElementById('archive-btn').textContent='📦 Archive Cycle';document.getElementById('archive-btn').style.borderColor='#1a2a3a';document.getElementById('archive-btn').style.color='#5b9cf6';},3000);
+  setStatus('Cycle '+c.num+' archived to Google Sheets — BUSINESS → VAULTS → ARCHIVES → A1XX Money Mission Tracker','ok');
+}
+
+/* INIT */
+loadAll();loadSetup();loadSections();
+var ci0=getCycleIdx();buildWeekInputs(ci0);buildExpenseInputs(ci0);
+recalc();
+window.addEventListener('resize',function(){drawChart();var svA=getWeekExpArr('sv'),otA=getWeekExpArr('ot');drawExpenseChart(svA,otA);});
+</script>
+</body>
+</html>
