@@ -360,7 +360,7 @@ input:focus{border-color:#333}
 <!-- SHEETS SETUP -->
 <div class="setup-panel" id="setup-sheets">
   <div class="setup-panel-title">Connect Google Sheets + Calendar</div>
-  <div class="setup-note">Paste your Apps Script Web App URL below. This powers automatic Sheets backup and Google Calendar reading.</div>
+  <div class="setup-note">Paste your Apps Script Web App URL below. This powers automatic Sheets backup, Google Calendar reading, and Notion content loading.</div>
   <div class="setup-field"><label>Apps Script Web App URL</label><input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/.../exec"/></div>
   <div class="setup-field"><label>Notion Integration Secret (for content calendar)</label><input type="password" id="notion-secret" placeholder="secret_xxxxxxxxxx"/></div>
   <div class="btn-row"><button class="btn blue" onclick="saveSheets()">Save ↗</button><button class="btn" onclick="testSheets()">Test connection</button></div>
@@ -651,7 +651,7 @@ input:focus{border-color:#333}
 <div class="rolodex-group">
   <div class="rolodex-group-label">Content</div>
   <div class="rolodex-grid">
-    <a class="rolodex-item" href="https://www.notion.so/bab4403b6207421894669c954037775a" target="_blank"><div class="ri-icon amber">📅</div><div><div class="ri-name">Content Calendar</div><div class="ri-type">Notion · Scheduled Posts</div></div></a>
+    <a class="rolodex-item" href="https://www.notion.so/1a06115281da81bcb7eccecbcba9ed8e" target="_blank"><div class="ri-icon amber">📅</div><div><div class="ri-name">Content Calendar</div><div class="ri-type">Notion · Scheduled Posts</div></div></a>
     <a class="rolodex-item" href="https://www.notion.so/2c86115281da81d6bc69f76ae05e297e" target="_blank"><div class="ri-icon blue">💡</div><div><div class="ri-name">Content Planner</div><div class="ri-type">Notion · Idea Bank</div></div></a>
     <a class="rolodex-item" href="https://www.notion.so/3576115281da81c4ae74fb84163328cb" target="_blank"><div class="ri-icon purple">🎵</div><div><div class="ri-name">Music & Production</div><div class="ri-type">Notion · Songs & Beats</div></div></a>
   </div>
@@ -681,6 +681,8 @@ var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var TODOIST_KEY='a1xx_todoist_v1';
 var NOTION_KEY='a1xx_notion_v1';
+var NOTION_CONTENT_DB='1a061152-81da-81bc-b7ec-cecbcba9ed8e';
+var NOTION_CONTENT_URL='https://www.notion.so/1a06115281da81bcb7eccecbcba9ed8e';
 var GOLDEN_KEY='a1xx_golden';
 var CHECK_KEY='a1xx_checks_v1';
 var STREAK_KEY='a1xx_streak';
@@ -932,62 +934,109 @@ function buildWeekStrip(calEvents,notionPieces){
 ══════════════════════════════════════════════════════════ */
 async function loadContentToday(){
   var ns=getStore(NOTION_KEY);
+  var appUrl=localStorage.getItem(SHEETS_KEY);
   var ccEl=document.getElementById('cc-body');
   var ccCard=document.getElementById('content-card');
   var syncEl=document.getElementById('sync-notion');
   if(!ns||!ns.key){
-    ccEl.innerHTML='<div style="font-size:12px;color:#444">Set up Notion in Sheets ⚙ above to see today\'s scheduled content.</div>';
+    ccEl.innerHTML='<div style="font-size:12px;color:#444">Set up the Notion secret in Sheets ⚙ above to see today\'s scheduled content.</div>';
     ccCard.classList.add('empty');
     syncEl.textContent='Content: not set up';syncEl.className='sync-pill err';
+    return null;
+  }
+  if(!appUrl){
+    ccEl.innerHTML='<div style="font-size:12px;color:#444">Add your Apps Script URL in Sheets ⚙. Notion content has to load through Apps Script, not directly from the browser.</div>';
+    ccCard.classList.add('empty');
+    syncEl.textContent='Content: needs Apps Script';syncEl.className='sync-pill err';
     return null;
   }
   var today=new Date().toISOString().split('T')[0];
   document.getElementById('cc-date').textContent=today;
   try{
-    var res=await fetch('https://api.notion.com/v1/databases/bab4403b-6207-4218-9466-9c954037775a/query',{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+ns.key,'Notion-Version':'2022-06-28','Content-Type':'application/json'},
-      body:JSON.stringify({filter:{property:'Publish Date',date:{equals:today}},page_size:5})
-    });
-    if(!res.ok)throw new Error('Notion '+res.status);
-    var data=await res.json();
-    if(!data||!data.results||data.results.length===0){
-      ccEl.innerHTML='<div style="font-size:12px;color:#444">No content scheduled for today. <a href="https://www.notion.so/bab4403b6207421894669c954037775a" target="_blank" style="color:#5b9cf6">Open content calendar →</a></div>';
+    var data=await fetchNotionContent(appUrl,today,ns.key,NOTION_CONTENT_DB);
+    var pieces=normalizeNotionContent(data);
+    if(!pieces.length){
+      ccEl.innerHTML='<div style="font-size:12px;color:#444">No content scheduled for today. <a href="'+NOTION_CONTENT_URL+'" target="_blank" style="color:#5b9cf6">Open content calendar →</a></div>';
       ccCard.classList.add('empty');
       syncEl.textContent='Content: none today';syncEl.className='sync-pill ok';
       return [];
     }
-    if(!data.results||!data.results[0]){ccEl.innerHTML='<div style="font-size:12px;color:#444">No results found.</div>';ccCard.classList.add('empty');return[];}
-    var p=data.results[0];
-    var props=p.properties;
-    var title=props['Content Title']&&props['Content Title'].title&&props['Content Title'].title[0]?props['Content Title'].title[0].plain_text:'Untitled';
-    var hook=props['Hook']&&props['Hook'].rich_text&&props['Hook'].rich_text[0]?props['Hook'].rich_text[0].plain_text:'';
-    var format=props['Format']&&props['Format'].select?props['Format'].select.name:'';
-    var platform=props['Platform']&&props['Platform'].multi_select?props['Platform'].multi_select.map(function(x){return x.name;}).join(', '):'';
-    var campaign=props['Campaign']&&props['Campaign'].select?props['Campaign'].select.name:'';
-    var cta=props['CTA']&&props['CTA'].rich_text&&props['CTA'].rich_text[0]?props['CTA'].rich_text[0].plain_text:'';
-    var notionUrl='https://www.notion.so/'+p.id.replace(/-/g,'');
+    var p=pieces[0];
     ccCard.classList.remove('empty');
     var tagsHtml='';
-    if(format)tagsHtml+='<span class="cc-tag format">'+format+'</span>';
-    if(platform)tagsHtml+='<span class="cc-tag platform">'+platform+'</span>';
-    if(campaign)tagsHtml+='<span class="cc-tag campaign">'+campaign+'</span>';
-    ccEl.innerHTML='<div class="cc-title">'+title+'</div>'
-      +(hook?'<div class="cc-hook">Hook: "'+hook+'"</div>':'')
-      +(cta?'<div class="cc-hook" style="margin-bottom:8px">CTA: '+cta+'</div>':'')
+    if(p.format)tagsHtml+='<span class="cc-tag format">'+escapeHtml(p.format)+'</span>';
+    if(p.platform)tagsHtml+='<span class="cc-tag platform">'+escapeHtml(p.platform)+'</span>';
+    if(p.campaign)tagsHtml+='<span class="cc-tag campaign">'+escapeHtml(p.campaign)+'</span>';
+    ccEl.innerHTML='<div class="cc-title">'+escapeHtml(p.title||'Untitled')+'</div>'
+      +(p.hook?'<div class="cc-hook">Hook: "'+escapeHtml(p.hook)+'"</div>':'')
+      +(p.cta?'<div class="cc-hook" style="margin-bottom:8px">CTA: '+escapeHtml(p.cta)+'</div>':'')
       +'<div class="cc-meta">'+tagsHtml+'</div>'
-      +'<a class="cc-open" href="'+notionUrl+'" target="_blank">Open in Notion →</a>';
+      +'<a class="cc-open" href="'+escapeHtml(p.url||NOTION_CONTENT_URL)+'" target="_blank">Open in Notion →</a>';
     syncEl.textContent='Content: loaded';syncEl.className='sync-pill ok';
-    return data.results.map(function(r){
-      var d=r.properties['Publish Date'];
-      return{date:d&&d.date?d.date.start:null,url:'https://www.notion.so/'+r.id.replace(/-/g,'')};
-    });
+    return pieces;
   }catch(e){
-    ccEl.innerHTML='<div style="font-size:12px;color:#444">Couldn\'t load from Notion: '+e.message+'. <a href="https://www.notion.so/bab4403b6207421894669c954037775a" target="_blank" style="color:#5b9cf6">Open calendar →</a></div>';
+    ccEl.innerHTML='<div style="font-size:12px;color:#444">Couldn\'t load content: '+escapeHtml(e.message)+'. Update your Apps Script with the Notion content handler, then redeploy. <a href="'+NOTION_CONTENT_URL+'" target="_blank" style="color:#5b9cf6">Open calendar →</a></div>';
     ccCard.classList.add('empty');
     syncEl.textContent='Content: error';syncEl.className='sync-pill err';
     return null;
   }
+}
+
+async function fetchNotionContent(appUrl,date,secret,databaseId){
+  var sep=appUrl.indexOf('?')>=0?'&':'?';
+  var qs='action=content&date='+encodeURIComponent(date)+'&notionSecret='+encodeURIComponent(secret)+'&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
+  var res=await fetch(appUrl+sep+qs,{method:'GET',redirect:'follow'});
+  if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
+  var text=await res.text();
+  var data;
+  try{data=JSON.parse(text);}
+  catch(jsonErr){throw new Error('Apps Script did not return JSON');}
+  if(data&&data.error)throw new Error(data.error);
+  return data;
+}
+
+function normalizeNotionContent(data){
+  var items=Array.isArray(data)?data:(data.items||data.content||data.results||[]);
+  return items.map(function(item){
+    if(item.properties)return notionPageToContent(item);
+    return {
+      date:item.date||item.publishDate||null,
+      title:item.title||item.name||'Untitled',
+      hook:item.hook||'',
+      format:item.format||'',
+      platform:Array.isArray(item.platform)?item.platform.join(', '):(item.platform||''),
+      campaign:item.campaign||'',
+      cta:item.cta||'',
+      url:item.url||''
+    };
+  }).filter(function(item){return item&&item.date;});
+}
+
+function notionPageToContent(page){
+  var props=page.properties||{};
+  return {
+    date:getNotionDate(props['Publish Date']),
+    title:getNotionText(props['Content Title'])||getNotionText(props.Name)||'Untitled',
+    hook:getNotionText(props.Hook),
+    format:getNotionSelect(props.Format),
+    platform:getNotionMultiSelect(props.Platform),
+    campaign:getNotionSelect(props.Campaign),
+    cta:getNotionText(props.CTA),
+    url:page.url||('https://www.notion.so/'+page.id.replace(/-/g,''))
+  };
+}
+
+function getNotionDate(prop){return prop&&prop.date?prop.date.start:null;}
+function getNotionSelect(prop){return prop&&prop.select?prop.select.name:'';}
+function getNotionMultiSelect(prop){return prop&&prop.multi_select?prop.multi_select.map(function(x){return x.name;}).join(', '):'';}
+function getNotionText(prop){
+  if(!prop)return '';
+  var arr=prop.title||prop.rich_text||[];
+  return arr&&arr[0]?arr.map(function(x){return x.plain_text||'';}).join(''):'';
+}
+
+function escapeHtml(value){
+  return String(value||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});
 }
 
 /* ══════════════════════════════════════════════════════════
