@@ -45,6 +45,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .coach-title{font-size:16px;font-weight:600;color:#f0f0f0}
 .coach-pulse{font-size:11px;color:#639922;text-align:right;line-height:1.5}
 .coach-line{background:#10190a;border:0.5px solid #1d3010;border-radius:8px;padding:9px 11px;font-size:12px;color:#8fbf66;line-height:1.55;margin-bottom:10px}
+.mode-brief{background:#0b0d0a;border:0.5px solid #1a1f16;border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.mode-brief-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px}
+.mode-name{font-size:12px;font-weight:700;color:#f0f0f0;text-transform:uppercase;letter-spacing:.06em}
+.mode-time{font-size:10px;color:#526944;white-space:nowrap}
+.mode-summary{font-size:11px;color:#777;line-height:1.55;margin-bottom:8px}
+.mode-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:8px}
+.mode-box{background:#080808;border:0.5px solid #171717;border-radius:8px;padding:8px 9px}
+.mode-box-label{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.mode-box-text{font-size:11px;color:#888;line-height:1.45}
 .coach-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .coach-action{background:#0b0f08;border:0.5px solid #1d2815;border-radius:10px;padding:10px;cursor:pointer;transition:all .2s;min-height:86px}
 .coach-action:hover{border-color:#2a4015;background:#0f170a}
@@ -408,6 +417,7 @@ input:focus{border-color:#333}
     <div class="coach-pulse" id="coach-pulse">Loading...</div>
   </div>
   <div class="coach-line" id="coach-line">Reading today’s calendar, content, tasks, and cycle pace...</div>
+  <div class="mode-brief" id="mode-brief"></div>
   <div class="coach-actions" id="coach-actions"></div>
   <div class="coach-stats">
     <div class="coach-stat"><div class="coach-stat-label">Tasks done</div><div class="coach-stat-value" id="coach-tasks">0/0</div></div>
@@ -764,6 +774,14 @@ var PRIORITY_LABELS=['','P3 — Manager','P2 — Maker','P1 — Do Now'];
 var EXCLUDE_PROJECTS=['Personal + Routine','Personal & Routine','Personal','Routine'];
 var EXCLUDE_LABELS=['morning','personal','break','work'];
 
+var MODE_BRIEFS={
+  outreach:{name:'Outreach',time:'60–90 min',summary:'Grow your network and pipeline by starting conversations and keeping warm leads alive.',goal:'Generate consistent new leads and keep current ones warm.',target:'Start 20–25 new conversations. Add 5 follow-ups if replies are warm.',examples:'DM 25 artists · send 5 follow-ups · comment with value · log replies'},
+  clients:{name:'Clients',time:'60–90 min',summary:'Deliver results that keep people paying and build trust through communication.',goal:'Give a client one tangible result or one clear update.',target:'Deliver at least 1 promised result or next step.',examples:'Export stems · update client · prep call notes · refine onboarding'},
+  focus:{name:'Focus',time:'90–120 min',summary:'Deep, uninterrupted work on the highest-value creative or business deliverable.',goal:'Complete one asset that pushes the mission forward.',target:'Finish 1 key deliverable before switching modes.',examples:'Produce a beat · edit a long video · publish a page · build a funnel'},
+  busy:{name:'Busy',time:'45–60 min',summary:'Keep systems, content, and communication clean without hiding in admin.',goal:'Remove clutter and keep operations smooth.',target:'Clear 2–3 admin tasks, then get back to money or making.',examples:'Reply to emails · schedule content · update links · clean backlog'},
+  prep:{name:'Pre-flight',time:'10–20 min',summary:'Set the day before the day starts pulling on you.',goal:'Choose the money move, the content move, and the follow-up move.',target:'Pick today’s top three before Maker Time.',examples:'Review calendar · pick content · set DM target · open the right task list'}
+};
+
 var todoistTasks=[];
 var localChecks={};
 var goldenStart=14*60,goldenEnd=15*60;
@@ -1009,14 +1027,64 @@ function toggleCoachAction(id){
   renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
 }
 
-function buildCoachActions(contentPieces){
+function detectCoachMode(block,calEvents){
+  var text=(block?block.name+' '+block.sub:'')+' '+(calEvents||[]).map(function(e){return e.title||'';}).join(' ');
+  text=text.toLowerCase();
+  if(/\b(outreach|dm|dms|money|sales|follow|lead|pipeline|crm)\b/.test(text))return 'outreach';
+  if(/\b(client|session|delivery|deliver|mix|master|stems|feedback)\b/.test(text))return 'clients';
+  if(/\b(focus|maker|content|video|beat|funnel|create|creative|produce|production)\b/.test(text))return 'focus';
+  if(/\b(busy|admin|email|schedule|manager|ops|operations|cleanup|backlog)\b/.test(text))return 'busy';
+  return block?'focus':'prep';
+}
+
+function getRelatedTasksForMode(mode){
+  var words={
+    outreach:['dm','follow','lead','sales','pipeline','crm','artist','outreach'],
+    clients:['client','session','deliver','mix','master','stems','feedback','invoice'],
+    focus:['content','video','beat','funnel','edit','produce','script','record'],
+    busy:['email','schedule','admin','upload','link','update','organize','cleanup']
+  }[mode]||[];
+  return (todoistTasks||[]).filter(function(t){
+    var txt=(t.content+' '+(t.labels||[]).join(' ')).toLowerCase();
+    return words.some(function(w){return txt.indexOf(w)>=0;});
+  }).slice(0,3);
+}
+
+function buildCoachActions(contentPieces,mode){
   var actions=[];
   var mainContent=contentPieces&&contentPieces[0];
   var title=mainContent&&mainContent.title&&mainContent.title!=='Untitled'?mainContent.title:'today’s strongest content piece';
-  actions.push({id:'make',title:'Produce or move content',meta:'Push '+title+' forward before the day gets noisy.'});
-  actions.push({id:'dms',title:'Send 40 DMs',meta:'Money Time target. Warm leads, studio partners, follow-ups.'});
-  actions.push({id:'collect',title:'Collect or create cash',meta:'Invoice, follow up, pitch, book a call, or close one paid step.'});
+  if(mode==='outreach'){
+    actions.push({id:'dms',title:'Start 25 conversations',meta:'New artist DMs first. Follow-ups second. Track replies.'});
+    actions.push({id:'followups',title:'Send 5 follow-ups',meta:'Warm leads, studio partners, replies, booked-but-not-paid.'});
+    actions.push({id:'log',title:'Log pipeline results',meta:'Capture replies, objections, booked calls, and next steps.'});
+  }else if(mode==='clients'){
+    actions.push({id:'deliver',title:'Deliver one promised result',meta:'Move one client project forward in a visible way.'});
+    actions.push({id:'update-client',title:'Send one client update',meta:'Keep trust warm. Tell them what happened and what is next.'});
+    actions.push({id:'review-client',title:'Review next deadlines',meta:'Know the next deliverable before the next client asks.'});
+  }else if(mode==='busy'){
+    actions.push({id:'clear-admin',title:'Clear 3 admin tasks',meta:'Email, links, uploads, scheduling. Keep it tight.'});
+    actions.push({id:'prep-tomorrow',title:'Prep tomorrow’s small tasks',meta:'Queue the easy wins so tomorrow starts cleaner.'});
+    actions.push({id:'system-clean',title:'Clean one system leak',meta:'Fix one recurring friction point, then leave admin.'});
+  }else{
+    actions.push({id:'make',title:'Produce or move content',meta:'Push '+title+' forward before the day gets noisy.'});
+    actions.push({id:'deep-work',title:'Finish one key deliverable',meta:'Beat, long video, funnel page, script, or system asset.'});
+    actions.push({id:'sprint',title:'Run one 50-minute sprint',meta:'No wandering. One output or one clear next step.'});
+  }
   return actions;
+}
+
+function renderModeBrief(mode){
+  var brief=MODE_BRIEFS[mode]||MODE_BRIEFS.focus;
+  var related=getRelatedTasksForMode(mode);
+  var relText=related.length?related.map(function(t){return t.content;}).join(' · '):'No matching Todoist tasks yet. Use the campaign actions.';
+  var el=document.getElementById('mode-brief');if(!el)return;
+  el.innerHTML='<div class="mode-brief-top"><div class="mode-name">'+escapeHtml(brief.name)+' Mode</div><div class="mode-time">'+escapeHtml(brief.time)+'</div></div>'
+    +'<div class="mode-summary">'+escapeHtml(brief.summary)+'</div>'
+    +'<div class="mode-grid">'
+    +'<div class="mode-box"><div class="mode-box-label">Pressure</div><div class="mode-box-text">'+escapeHtml(brief.target)+'</div></div>'
+    +'<div class="mode-box"><div class="mode-box-label">Related tasks</div><div class="mode-box-text">'+escapeHtml(relText)+'</div></div>'
+    +'</div>';
 }
 
 function renderDailyCoach(contentPieces,calEvents){
@@ -1032,21 +1100,21 @@ function renderDailyCoach(contentPieces,calEvents){
   var taskEl=document.getElementById('coach-tasks');if(taskEl)taskEl.textContent=doneTasks+'/'+totalTasks;
   var blockIdx=getCurrentBlock();
   var block=blockIdx>=0&&blockIdx<TIME_BLOCKS.length?TIME_BLOCKS[blockIdx]:null;
+  var modeKey=detectCoachMode(block,calEvents||[]);
+  var modeBrief=MODE_BRIEFS[modeKey]||MODE_BRIEFS.focus;
   var rev=parseFloat(document.getElementById('w-rev').value)||0;
   var wk=parseFloat(document.getElementById('w-wk').value)||400;
   var gap=Math.max(0,wk-rev);
   var contentCount=(contentPieces||[]).length,calCount=(calEvents||[]).length;
   var pulse=document.getElementById('coach-pulse');
-  if(pulse)pulse.innerHTML=(block?block.name:'Pre-flight')+'<br>'+contentCount+' content · '+calCount+' calendar';
+  if(pulse)pulse.innerHTML=modeBrief.name+' Mode<br>'+contentCount+' content · '+calCount+' calendar';
   var line=document.getElementById('coach-line');
   if(line){
-    var mode=block&&block.cls==='money'?'You are in money mode. Do not organize the system. Create pressure: DMs, follow-ups, invoices, calls.':
-      block&&block.cls==='maker'?'You are in maker mode. Move one content piece from idea to asset before checking anything else.':
-      'Today needs proof, not planning. Make content, create conversations, and collect cash.';
-    line.textContent=mode+' Weekly gap: '+fmt(gap)+'. Today: '+fmt(d.money||0)+' collected, '+(d.dms||0)+' DMs, '+(d.moves||0)+' business moves.';
+    line.textContent=modeBrief.goal+' Weekly gap: '+fmt(gap)+'. Today: '+fmt(d.money||0)+' collected, '+(d.dms||0)+' DMs, '+(d.moves||0)+' business moves.';
   }
+  renderModeBrief(modeKey);
   var wrap=document.getElementById('coach-actions');if(!wrap)return;
-  var actions=buildCoachActions(contentPieces||[]);
+  var actions=buildCoachActions(contentPieces||[],modeKey);
   wrap.innerHTML=actions.map(function(a){
     var done=d.done&&d.done[a.id];
     return '<div class="coach-action'+(done?' done':'')+'" onclick="toggleCoachAction(\''+a.id+'\')">'
