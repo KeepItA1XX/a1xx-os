@@ -75,10 +75,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cc-title{font-size:15px;font-weight:500;color:#f0f0f0;margin-bottom:6px}
 .cc-hook{font-size:12px;color:#888;line-height:1.5;margin-bottom:8px}
 .cc-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.cc-list{display:flex;flex-direction:column;gap:10px}
+.cc-piece{background:#07111f;border:0.5px solid #142942;border-radius:10px;padding:12px}
+.cc-piece.main{background:#081a2d;border-color:#1a3050}
+.cc-piece-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px}
+.cc-rank{font-size:10px;font-weight:700;color:#5b9cf6;background:#0a1628;border:0.5px solid #1a3050;border-radius:4px;padding:2px 7px;white-space:nowrap}
+.cc-summary{font-size:12px;color:#777;line-height:1.55;margin-bottom:8px}
+.cc-detail{font-size:11px;color:#666;line-height:1.55;margin-bottom:8px}
 .cc-tag{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600}
 .cc-tag.format{background:#0a1628;color:#5b9cf6;border:0.5px solid #1a3050}
 .cc-tag.platform{background:#0d1808;color:#639922;border:0.5px solid #1a3010}
 .cc-tag.campaign{background:#150e00;color:#d4a017;border:0.5px solid #2a2000}
+.cc-tag.status{background:#111;color:#888;border:0.5px solid #222}
 .cc-open{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;background:#0a1628;border:0.5px solid #1a3050;border-radius:8px;color:#5b9cf6;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .2s}
 .cc-open:hover{background:#0d1e38}
 
@@ -963,18 +971,9 @@ async function loadContentToday(){
       syncEl.textContent='Content: none today';syncEl.className='sync-pill ok';
       return [];
     }
-    var p=pieces[0];
     ccCard.classList.remove('empty');
-    var tagsHtml='';
-    if(p.format)tagsHtml+='<span class="cc-tag format">'+escapeHtml(p.format)+'</span>';
-    if(p.platform)tagsHtml+='<span class="cc-tag platform">'+escapeHtml(p.platform)+'</span>';
-    if(p.campaign)tagsHtml+='<span class="cc-tag campaign">'+escapeHtml(p.campaign)+'</span>';
-    ccEl.innerHTML='<div class="cc-title">'+escapeHtml(p.title||'Untitled')+'</div>'
-      +(p.hook?'<div class="cc-hook">Hook: "'+escapeHtml(p.hook)+'"</div>':'')
-      +(p.cta?'<div class="cc-hook" style="margin-bottom:8px">CTA: '+escapeHtml(p.cta)+'</div>':'')
-      +'<div class="cc-meta">'+tagsHtml+'</div>'
-      +'<a class="cc-open" href="'+escapeHtml(p.url||NOTION_CONTENT_URL)+'" target="_blank">Open in Notion →</a>';
-    syncEl.textContent='Content: loaded';syncEl.className='sync-pill ok';
+    ccEl.innerHTML='<div class="cc-list">'+pieces.slice(0,3).map(renderContentPiece).join('')+'</div>';
+    syncEl.textContent='Content: '+pieces.length+' ready';syncEl.className='sync-pill ok';
     return pieces;
   }catch(e){
     ccEl.innerHTML='<div style="font-size:12px;color:#444">Couldn\'t load content: '+escapeHtml(e.message)+'. Update your Apps Script with the Notion content handler, then redeploy. <a href="'+NOTION_CONTENT_URL+'" target="_blank" style="color:#5b9cf6">Open calendar →</a></div>';
@@ -1018,15 +1017,51 @@ function normalizeNotionContent(data){
   }).filter(function(item){return item&&item.date;});
 }
 
+function renderContentPiece(p,idx){
+  var tagsHtml='';
+  if(p.format)tagsHtml+='<span class="cc-tag format">'+escapeHtml(p.format)+'</span>';
+  if(p.platform)tagsHtml+='<span class="cc-tag platform">'+escapeHtml(p.platform)+'</span>';
+  if(p.campaign)tagsHtml+='<span class="cc-tag campaign">'+escapeHtml(p.campaign)+'</span>';
+  if(p.status)tagsHtml+='<span class="cc-tag status">'+escapeHtml(p.status)+'</span>';
+  if(p.stage&&p.stage!==p.status)tagsHtml+='<span class="cc-tag status">'+escapeHtml(p.stage)+'</span>';
+  var detail=[];
+  if(p.publishDate)detail.push('Publishes '+formatContentDate(p.publishDate));
+  if(p.productionDate&&p.productionDate!==p.date)detail.push('Produce '+formatContentDate(p.productionDate));
+  if(p.owner)detail.push('Owner: '+p.owner);
+  var body='<div class="cc-piece'+(idx===0?' main':'')+'">'
+    +'<div class="cc-piece-head"><div><div class="cc-title">'+escapeHtml(p.title||'Untitled')+'</div></div><div class="cc-rank">'+(idx===0?'Primary':'Option '+(idx+1))+'</div></div>'
+    +(p.summary?'<div class="cc-summary">'+escapeHtml(p.summary)+'</div>':'')
+    +(p.hook?'<div class="cc-hook">Hook: "'+escapeHtml(p.hook)+'"</div>':'')
+    +(p.cta?'<div class="cc-hook">CTA: '+escapeHtml(p.cta)+'</div>':'')
+    +(detail.length?'<div class="cc-detail">'+escapeHtml(detail.join(' · '))+'</div>':'')
+    +'<div class="cc-meta">'+tagsHtml+'</div>'
+    +'<a class="cc-open" href="'+escapeHtml(p.url||NOTION_CONTENT_URL)+'" target="_blank">Open in Notion →</a>'
+    +'</div>';
+  return body;
+}
+
+function formatContentDate(value){
+  if(!value)return '';
+  var d=new Date(value);
+  if(isNaN(d.getTime()))return value;
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
 function notionPageToContent(page){
   var props=page.properties||{};
   return {
     date:getNotionDate(props[NOTION_CONTENT_DATE_FIELD])||getNotionDate(props['Publish Date'])||getNotionDate(props['Production Date']),
+    productionDate:getNotionDate(props['Production Date']),
+    publishDate:getNotionDate(props['Publish Date'])||getNotionDate(props['Post Date'])||getNotionDate(props['Scheduled Date']),
     title:getFirstNotionText(props,['Content Title','Title','Name','Video Title','Post Title','Content Name','Topic','Idea'])||getAnyNotionTitle(props)||'Untitled',
-    hook:getFirstNotionText(props,['Hook','Opening Hook','Angle','Concept','Caption','Description','Script','Notes']),
+    summary:getFirstNotionText(props,['Summary','Short Description','Description','Video Summary','Content Summary','Brief','Synopsis']),
+    hook:getFirstNotionText(props,['Hook','Opening Hook','Angle','Concept','Caption','Script','Notes']),
     format:getFirstNotionOption(props,['Format','Type','Content Type','Asset Type']),
     platform:getFirstNotionOption(props,['Platform','Platforms','Channel','Channels']),
     campaign:getFirstNotionOption(props,['Campaign','Pillar','Content Pillar','Series']),
+    status:getFirstNotionOption(props,['Status','State']),
+    stage:getFirstNotionOption(props,['Stage','Production Stage','Workflow']),
+    owner:getFirstNotionOption(props,['Owner','Creator','Assigned To','Person']),
     cta:getFirstNotionText(props,['CTA','Call To Action','Call-to-action','Offer','Next Step']),
     url:page.url||('https://www.notion.so/'+page.id.replace(/-/g,''))
   };
@@ -1036,6 +1071,7 @@ function getNotionDate(prop){return prop&&prop.date?prop.date.start:null;}
 function getNotionSelect(prop){return prop&&prop.select?prop.select.name:'';}
 function getNotionMultiSelect(prop){return prop&&prop.multi_select?prop.multi_select.map(function(x){return x.name;}).join(', '):'';}
 function getNotionStatus(prop){return prop&&prop.status?prop.status.name:'';}
+function getNotionPeople(prop){return prop&&prop.people?prop.people.map(function(x){return x.name||x.person&&x.person.email||'';}).filter(Boolean).join(', '):'';}
 function getNotionText(prop){
   if(!prop)return '';
   var arr=prop.title||prop.rich_text||[];
@@ -1048,7 +1084,7 @@ function getFirstNotionText(props,names){
 function getFirstNotionOption(props,names){
   for(var i=0;i<names.length;i++){
     var p=props[names[i]];
-    var v=getNotionSelect(p)||getNotionMultiSelect(p)||getNotionStatus(p)||getNotionText(p);
+    var v=getNotionSelect(p)||getNotionMultiSelect(p)||getNotionStatus(p)||getNotionPeople(p)||getNotionText(p);
     if(v)return v;
   }
   return '';
