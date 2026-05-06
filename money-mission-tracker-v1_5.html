@@ -618,7 +618,7 @@ input:focus{border-color:#333}
 .ct-open-btn:hover{background:#0a1830}
 .ct-none{font-size:11px;color:#2a4a70;line-height:1.6}
 .ct-none a{color:#5b9cf6;text-decoration:none}
-.ct-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:3px;margin-bottom:10px}
+.ct-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:3px;margin-bottom:10px}
 .ct-tab{height:28px;border:0;border-radius:7px;background:transparent;color:#d7dde3;font-size:10px;font-weight:700;cursor:pointer;transition:all .15s}
 .ct-tab:hover{color:#5b9cf6}
 .ct-tab.active{background:#061020;color:#5b9cf6;border:0.5px solid #1a3050}
@@ -640,6 +640,29 @@ input:focus{border-color:#333}
 .ct-format-box{background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:9px;text-align:center}
 .ct-format-num{font-size:22px;font-weight:700;color:#5b9cf6;line-height:1}
 .ct-format-label{font-size:9px;color:#2a4a70;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:3px}
+.ct-command-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.ct-command-box{background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:9px}
+.ct-command-label{font-size:9px;color:#2a4a70;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:5px}
+.ct-command-value{font-size:13px;color:#f0f3f5;font-weight:700;line-height:1.35}
+.ct-mini-table{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.ct-table-row{display:grid;grid-template-columns:1fr 70px 72px;gap:8px;align-items:center;background:#040c18;border:0.5px solid #0e2030;border-radius:8px;padding:8px 9px}
+.ct-table-title{font-size:11px;color:#d7dde3;font-weight:700;line-height:1.35}
+.ct-table-meta{font-size:9px;color:#5a7a9a;line-height:1.35;margin-top:2px}
+.ct-table-pill{font-size:9px;color:#d7dde3;background:#0b0d0f;border:0.5px solid #2a3036;border-radius:12px;padding:3px 7px;text-align:center;font-weight:700}
+.ct-table-link{height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#061020;border:0.5px solid #1a3050;color:#d7dde3;font-size:10px;font-weight:800;text-decoration:none}
+.ct-stage-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:10px}
+.ct-stage-card{background:#040c18;border:0.5px solid #0e2030;border-radius:8px;padding:8px 5px;text-align:center;min-height:58px}
+.ct-stage-num{font-size:18px;font-weight:800;color:#5b9cf6;line-height:1}
+.ct-stage-name{font-size:8px;color:#9aa6b2;text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+.ct-performance-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.ct-performance-card{background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:9px;text-align:center}
+.ct-performance-val{font-size:20px;font-weight:800;color:#f0f3f5;line-height:1}
+.ct-performance-lbl{font-size:8px;color:#9aa6b2;text-transform:uppercase;letter-spacing:.05em;margin-top:5px;font-weight:700}
+.ct-repurpose-list{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+.ct-repurpose-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:9px 10px}
+.ct-repurpose-title{font-size:12px;color:#d7dde3;font-weight:700;line-height:1.35}
+.ct-repurpose-meta{font-size:10px;color:#5a7a9a;margin-top:3px}
+.ct-empty-note{font-size:11px;color:#5a7a9a;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:10px 12px;line-height:1.55;margin-bottom:10px}
 
 /* PUBLISH CHAIN */
 .ct-chain-row{display:flex;align-items:center;gap:0;margin-bottom:10px;background:#040c18;border:0.5px solid #0e2030;border-radius:10px;padding:10px 12px}
@@ -1185,7 +1208,8 @@ body{background:#090a0b;color:#d8dde1}
   <div class="ct-tabs">
     <button class="ct-tab active" id="ct-tab-today" onclick="setContentView('today')">Today</button>
     <button class="ct-tab" id="ct-tab-pipeline" onclick="setContentView('pipeline')">Pipeline</button>
-    <button class="ct-tab" id="ct-tab-consistency" onclick="setContentView('consistency')">Consistency</button>
+    <button class="ct-tab" id="ct-tab-performance" onclick="setContentView('performance')">Performance</button>
+    <button class="ct-tab" id="ct-tab-repurpose" onclick="setContentView('repurpose')">Repurpose</button>
   </div>
   <div class="context-resources" id="ct-resources">
     <div class="context-resources-top"><div class="context-resources-label">Resources for this content move</div><div class="context-resources-count" id="ct-resources-count"></div></div>
@@ -1201,18 +1225,33 @@ body{background:#090a0b;color:#d8dde1}
     </div>
   </div>
     <div class="ct-bottleneck" id="ct-today-signal">Reading today’s content signal...</div>
+    <div class="ct-command-grid">
+      <div class="ct-command-box"><div class="ct-command-label">Cycle Judge</div><div class="ct-command-value">Consistency first</div></div>
+      <div class="ct-command-box"><div class="ct-command-label">Primary CTA</div><div class="ct-command-value">Free Skool community</div></div>
+      <div class="ct-command-box"><div class="ct-command-label">Main Channel</div><div class="ct-command-value">YouTube → Shorts/Reels</div></div>
+    </div>
   </div>
 
   <div class="ct-view" id="ct-view-pipeline">
     <div class="ct-bottleneck" id="ct-pipeline-summary">Reading pipeline...</div>
+    <div class="ct-stage-strip" id="ct-stage-strip"></div>
     <div class="ct-pipeline" id="ct-pipeline"></div>
+    <div class="ct-mini-table" id="ct-pipeline-table"></div>
     <div class="ct-format-split">
       <div class="ct-format-box"><div class="ct-format-num" id="ct-long-count">0</div><div class="ct-format-label">Longs</div></div>
       <div class="ct-format-box"><div class="ct-format-num" id="ct-short-count">0</div><div class="ct-format-label">Shorts</div></div>
     </div>
   </div>
 
-  <div class="ct-view" id="ct-view-consistency">
+  <div class="ct-view" id="ct-view-performance">
+    <div class="ct-bottleneck" id="ct-performance-summary">Reading content performance...</div>
+    <div class="ct-performance-grid" id="ct-performance-grid"></div>
+    <div class="ct-mini-table" id="ct-performance-table"></div>
+  </div>
+
+  <div class="ct-view" id="ct-view-repurpose">
+    <div class="ct-bottleneck" id="ct-repurpose-summary">Reading repurpose queue...</div>
+    <div class="ct-repurpose-list" id="ct-repurpose-list"></div>
     <div class="ct-signal">
       <div class="ct-signal-item"><div class="ct-signal-val" id="ct-posted-total">0</div><div class="ct-signal-lbl">Posted</div></div>
       <div class="ct-signal-item"><div class="ct-signal-val" id="ct-consistency-pct">0%</div><div class="ct-signal-lbl">Consistency</div></div>
@@ -3222,10 +3261,22 @@ function notionPageToContent(page){
     format:getFirstNotionOption(props,['Format','Type','Content Type','Asset Type']),
     platform:getFirstNotionOption(props,['Platform','Platforms','Channel','Channels']),
     campaign:getFirstNotionOption(props,['Campaign','Pillar','Content Pillar','Series']),
+    pillar:getFirstNotionOption(props,['Content Pillar','Pillar','Campaign','Series']),
+    offer:getFirstNotionOption(props,['Offer','Offer Attached','Primary Offer']),
     status:getFirstNotionOption(props,['Status','State']),
     stage:getFirstNotionOption(props,['Stage','Production Stage','Workflow']),
     owner:getFirstNotionOption(props,['Owner','Creator','Assigned To','Person']),
-    cta:getFirstNotionText(props,['CTA','Call To Action','Call-to-action','Offer','Next Step']),
+    cta:getFirstNotionText(props,['CTA','Call To Action','Call-to-action','Next Step'])||getFirstNotionOption(props,['CTA','Call To Action','Offer','Primary CTA']),
+    priority:getFirstNotionOption(props,['Priority','Importance']),
+    stuckReason:getFirstNotionText(props,['Stuck Reason','Blocker','Why Stuck']),
+    nextAction:getFirstNotionText(props,['Next Action','Next Step','Action']),
+    repurposeStatus:getFirstNotionOption(props,['Repurpose Status','Clip Status','Shorts Status']),
+    views:getFirstNotionNumber(props,['Views','View Count']),
+    comments:getFirstNotionNumber(props,['Comments','Comment Count']),
+    saves:getFirstNotionNumber(props,['Saves','Saved']),
+    dmsGenerated:getFirstNotionNumber(props,['DMs Generated','DMs','DMs From Content']),
+    skoolJoins:getFirstNotionNumber(props,['Skool Joins','Community Joins','Free Community Joins']),
+    callsBooked:getFirstNotionNumber(props,['Calls Booked','Booked Calls']),
     url:page.url||('https://www.notion.so/'+page.id.replace(/-/g,''))
   };
 }
@@ -3262,6 +3313,13 @@ function getFirstNotionOption(props,names){
     if(v)return v;
   }
   return '';
+}
+function getFirstNotionNumber(props,names){
+  for(var i=0;i<names.length;i++){
+    var n=getNotionNumber(props[names[i]]);
+    if(n)return n;
+  }
+  return 0;
 }
 function getAnyNotionTitle(props){
   var keys=Object.keys(props||{});
@@ -4519,7 +4577,7 @@ function getContentLog(){
 
 function setContentView(view){
   contentView=view||'today';
-  ['today','pipeline','consistency'].forEach(function(v){
+  ['today','pipeline','performance','repurpose'].forEach(function(v){
     var tab=document.getElementById('ct-tab-'+v);
     var pane=document.getElementById('ct-view-'+v);
     if(tab)tab.classList.toggle('active',v===contentView);
@@ -4582,7 +4640,7 @@ function renderContentCard(){
   var streak=getContentStreak();
   var streakEl=document.getElementById('ct-streak-num');
   if(streakEl)streakEl.textContent=streak;
-  ['today','pipeline','consistency'].forEach(function(v){
+  ['today','pipeline','performance','repurpose'].forEach(function(v){
     var tab=document.getElementById('ct-tab-'+v);
     var pane=document.getElementById('ct-view-'+v);
     if(tab)tab.classList.toggle('active',v===contentView);
@@ -4673,6 +4731,8 @@ function renderContentCard(){
   // Pull today's Notion content into the card
   renderTodayContentInCard();
   renderContentPipeline();
+  renderContentPerformance();
+  renderContentRepurpose();
 }
 
 function renderTodayContentInCard(){
@@ -4695,23 +4755,29 @@ function renderTodayContentInCard(){
   var hook=p.hook||'';
   var platform=p.platform||'';
   var format=p.format||'';
+  var pillar=getContentPillar(p);
+  var offer=getContentOffer(p);
+  var cta=getContentCTA(p);
   var url=p.url||'https://www.notion.so/bab4403b6207421894669c954037775a';
   var tagsHtml='';
   if(platform)tagsHtml+='<span class="ct-piece-tag platform">'+platform+'</span>';
   if(format)tagsHtml+='<span class="ct-piece-tag format">'+format+'</span>';
+  if(pillar)tagsHtml+='<span class="ct-piece-tag format">'+escapeHtml(pillar)+'</span>';
+  if(offer)tagsHtml+='<span class="ct-piece-tag platform">'+escapeHtml(offer)+'</span>';
   var controls=pieces.length>1?'<div class="cc-picker"><button class="cc-nav" onclick="pickContent(-1)" '+(selectedContentIdx<=0?'disabled':'')+'>‹</button><div class="cc-count">Option '+(selectedContentIdx+1)+' of '+pieces.length+'</div><button class="cc-nav" onclick="pickContent(1)" '+(selectedContentIdx>=pieces.length-1?'disabled':'')+'>›</button></div>':'';
-  wrap.innerHTML=controls+'<div class="ct-piece"><div class="ct-piece-info"><div class="ct-piece-title">'+escapeHtml(title)+'</div>'+(hook?'<div class="ct-piece-hook">Hook: '+escapeHtml(hook)+'</div>':'')+(tagsHtml?'<div class="ct-piece-tags">'+tagsHtml+'</div>':'')+'</div><a class="ct-open-btn" href="'+url+'" target="_blank">Open →</a></div>';
+  wrap.innerHTML=controls+'<div class="ct-piece"><div class="ct-piece-info"><div class="ct-piece-title">'+escapeHtml(title)+'</div>'+(hook?'<div class="ct-piece-hook">Hook: '+escapeHtml(hook)+'</div>':'')+'<div class="ct-piece-hook">CTA: '+escapeHtml(cta)+'</div>'+(tagsHtml?'<div class="ct-piece-tags">'+tagsHtml+'</div>':'')+'</div><a class="ct-open-btn" href="'+url+'" target="_blank">Open →</a></div>';
   var signal=document.getElementById('ct-today-signal');
   if(signal){
     var stage=p.stage||p.status||'Production';
     var format=p.format||'content';
-    signal.innerHTML='<strong>Today’s move:</strong> Push this '+escapeHtml(format)+' from '+escapeHtml(stage)+' toward Posted. If it is already posted, clip or repurpose it before the day ends.';
+    signal.innerHTML='<strong>Today’s one content move:</strong> Ship this '+escapeHtml(format)+' for '+escapeHtml(pillar)+'. Move it from '+escapeHtml(stage)+' toward Posted, then point people to '+escapeHtml(cta)+'.';
   }
 }
 
 function normalizeContentStage(piece){
   var raw=String((piece&&piece.stage)||(piece&&piece.status)||'').toLowerCase();
   if(/idea|plan|concept|backlog|draft/.test(raw))return 'Idea';
+  if(/script|outline|write|writing/.test(raw))return 'Script';
   if(/record|film|shoot|produce|production/.test(raw))return 'Record';
   if(/edit|editing|review|cut/.test(raw))return 'Edit';
   if(/post|publish|scheduled|ready|done|live/.test(raw))return 'Post';
@@ -4724,11 +4790,49 @@ function isShortContent(piece){
   return /short|reel|tiktok|clip|thread/.test(text);
 }
 
+function getContentPillar(piece){
+  var raw=String((piece&&piece.pillar)||(piece&&piece.campaign)||(piece&&piece.contentPillar)||'').trim();
+  if(raw)return raw;
+  var text=String((piece&&piece.title)+' '+(piece&&piece.summary)+' '+(piece&&piece.hook)).toLowerCase();
+  if(/business|os|system|behind|build/.test(text))return 'Business/OS BTS';
+  if(/story|journey|motivat|lesson|mindset/.test(text))return 'Motivational Story';
+  if(/live|rl|studio|session|record|artist/.test(text))return 'RL Streams/Studio';
+  if(/proof|result|win|case/.test(text))return 'Proof';
+  return 'Business/OS BTS';
+}
+
+function getContentOffer(piece){
+  var raw=String((piece&&piece.offer)||(piece&&piece.cta)||(piece&&piece.nextStep)||'').trim();
+  if(/skool|community|free/i.test(raw))return 'Free Skool';
+  if(/studio|session|booking/i.test(raw))return 'Studio Booking';
+  if(/mix|master/i.test(raw))return 'Mix/Master';
+  if(/bangin|beat/i.test(raw))return 'BANGIN+';
+  if(/os|rappreneur/i.test(raw))return 'Rappreneur OS';
+  return 'Free Skool';
+}
+
+function getContentCTA(piece){
+  var raw=String((piece&&piece.cta)||(piece&&piece.nextAction)||(piece&&piece.nextStep)||'').trim();
+  if(raw)return raw;
+  return 'join the free Skool community';
+}
+
+function contentMetric(piece,name){
+  var v=piece&&piece[name];
+  return parseFloat(v)||0;
+}
+
 function renderContentPipeline(){
   var pieces=window.__contentPipelinePieces||window.__contentPieces||[];
-  var stages=['Idea','Record','Edit','Post','Clip'];
-  var counts={Idea:0,Record:0,Edit:0,Post:0,Clip:0};
+  var stages=['Idea','Script','Record','Edit','Post','Clip'];
+  var counts={Idea:0,Script:0,Record:0,Edit:0,Post:0,Clip:0};
   pieces.forEach(function(p){counts[normalizeContentStage(p)]++;});
+  var strip=document.getElementById('ct-stage-strip');
+  if(strip){
+    strip.innerHTML=stages.map(function(stage){
+      return '<div class="ct-stage-card"><div class="ct-stage-num">'+counts[stage]+'</div><div class="ct-stage-name">'+stage+'</div></div>';
+    }).join('');
+  }
   var pipe=document.getElementById('ct-pipeline');
   if(pipe){
     var max=Math.max(1,Math.max.apply(null,stages.map(function(s){return counts[s];})));
@@ -4736,6 +4840,22 @@ function renderContentPipeline(){
       var count=counts[stage],w=Math.max(count?8:0,Math.round(count/max*100));
       return '<div class="ct-pipe-row"><div class="ct-pipe-name">'+stage+'</div><div class="ct-pipe-track"><div class="ct-pipe-fill" style="width:'+w+'%"></div></div><div class="ct-pipe-count">'+count+'</div></div>';
     }).join('');
+  }
+  var table=document.getElementById('ct-pipeline-table');
+  if(table){
+    var active=pieces.slice().sort(function(a,b){
+      var ap=String(a.priority||'').toLowerCase(),bp=String(b.priority||'').toLowerCase();
+      return (bp.indexOf('high')>=0?1:0)-(ap.indexOf('high')>=0?1:0);
+    }).slice(0,6);
+    if(active.length){
+      table.innerHTML=active.map(function(p){
+        var stage=normalizeContentStage(p);
+        var meta=getContentPillar(p)+' · '+getContentOffer(p);
+        return '<div class="ct-table-row"><div><div class="ct-table-title">'+escapeHtml(p.title||'Untitled')+'</div><div class="ct-table-meta">'+escapeHtml(meta)+'</div></div><div class="ct-table-pill">'+escapeHtml(stage)+'</div><a class="ct-table-link" href="'+escapeHtml(p.url||NOTION_CONTENT_URL)+'" target="_blank">Open</a></div>';
+      }).join('');
+    }else{
+      table.innerHTML='<div class="ct-empty-note">No active content projects are visible yet. Connect the active content pipeline endpoint or add status/stage data in Notion.</div>';
+    }
   }
   var longCount=pieces.filter(function(p){return !isShortContent(p);}).length;
   var shortCount=pieces.filter(isShortContent).length;
@@ -4753,8 +4873,72 @@ function renderContentPipeline(){
     if(counts[bottleneck]===0){
       summary.innerHTML='<strong>No active bottleneck visible.</strong> Today’s loaded content is light. Use Notion to choose the next piece.';
     }else{
-      var action=bottleneck==='Idea'?'choose one idea and schedule production':bottleneck==='Record'?'record one piece before switching tasks':bottleneck==='Edit'?'finish one edit and prepare it to post':bottleneck==='Post'?'publish or schedule the ready piece':'turn one long piece into shorts';
+      var action=bottleneck==='Idea'?'choose one idea and schedule production':bottleneck==='Script'?'turn one idea into a shootable outline':bottleneck==='Record'?'record one piece before switching tasks':bottleneck==='Edit'?'finish one edit and prepare it to post':bottleneck==='Post'?'publish or schedule the ready piece':'turn one long piece into shorts';
       summary.innerHTML='<strong>Bottleneck: '+bottleneck+'.</strong> '+action+'.'+(limited?' <span style="color:#2a4a70">Limited view: Apps Script still needs the active pipeline endpoint.</span>':'');
+    }
+  }
+}
+
+function renderContentPerformance(){
+  var pieces=window.__contentPipelinePieces||window.__contentPieces||[];
+  var log=getContentLog();
+  var today=new Date();today.setHours(0,0,0,0);
+  var daysSinceCycleStart=Math.max(1,Math.floor((today-CYCLE1_START)/864e5)+1);
+  var totalPosted=Object.keys(log.days||{}).length;
+  var consistency=Math.round(totalPosted/daysSinceCycleStart*100);
+  var skoolPieces=pieces.filter(function(p){return /skool|community|free/i.test(getContentCTA(p)+' '+getContentOffer(p));}).length;
+  var youtubePieces=pieces.filter(function(p){return /youtube|yt/i.test(String(p.platform||''));}).length;
+  var dms=pieces.reduce(function(s,p){return s+contentMetric(p,'dmsGenerated');},0);
+  var joins=pieces.reduce(function(s,p){return s+contentMetric(p,'skoolJoins');},0);
+  var calls=pieces.reduce(function(s,p){return s+contentMetric(p,'callsBooked');},0);
+  var grid=document.getElementById('ct-performance-grid');
+  if(grid){
+    grid.innerHTML=[
+      {v:totalPosted,l:'Cycle Posts'},
+      {v:consistency+'%',l:'Consistency'},
+      {v:skoolPieces,l:'Skool CTA'},
+      {v:youtubePieces,l:'YouTube Focus'}
+    ].map(function(k){return '<div class="ct-performance-card"><div class="ct-performance-val">'+k.v+'</div><div class="ct-performance-lbl">'+k.l+'</div></div>';}).join('');
+  }
+  var summary=document.getElementById('ct-performance-summary');
+  if(summary){
+    summary.innerHTML='<strong>Cycle 1 scorecard:</strong> Consistency is the judge. Business signal is secondary: '+dms+' DMs, '+joins+' Skool joins, '+calls+' calls attributed in visible Notion data.';
+  }
+  var table=document.getElementById('ct-performance-table');
+  if(table){
+    var ranked=pieces.slice().sort(function(a,b){
+      return (contentMetric(b,'skoolJoins')*3+contentMetric(b,'dmsGenerated')+contentMetric(b,'callsBooked')*5)-(contentMetric(a,'skoolJoins')*3+contentMetric(a,'dmsGenerated')+contentMetric(a,'callsBooked')*5);
+    }).slice(0,5);
+    if(ranked.length){
+      table.innerHTML=ranked.map(function(p){
+        var signal=contentMetric(p,'skoolJoins')+' joins · '+contentMetric(p,'dmsGenerated')+' DMs';
+        return '<div class="ct-table-row"><div><div class="ct-table-title">'+escapeHtml(p.title||'Untitled')+'</div><div class="ct-table-meta">'+escapeHtml(getContentPillar(p)+' · '+getContentCTA(p))+'</div></div><div class="ct-table-pill">'+escapeHtml(signal)+'</div><a class="ct-table-link" href="'+escapeHtml(p.url||NOTION_CONTENT_URL)+'" target="_blank">Open</a></div>';
+      }).join('');
+    }else{
+      table.innerHTML='<div class="ct-empty-note">Add Views, DMs Generated, Skool Joins, and Calls Booked in Notion when you are ready. For Cycle 1, posting consistently still wins.</div>';
+    }
+  }
+}
+
+function renderContentRepurpose(){
+  var pieces=window.__contentPipelinePieces||window.__contentPieces||[];
+  var longPieces=pieces.filter(function(p){return !isShortContent(p);});
+  var needsRepurpose=longPieces.filter(function(p){
+    var s=String(p.repurposeStatus||p.status||'').toLowerCase();
+    return !/done|complete|clipped|repurposed/.test(s);
+  }).slice(0,6);
+  var summary=document.getElementById('ct-repurpose-summary');
+  if(summary){
+    summary.innerHTML='<strong>Leverage rule:</strong> every YouTube/studio/stream piece should create shorts, Reels, Threads, and a Skool post. Visible queue: '+needsRepurpose.length+' long-form piece'+(needsRepurpose.length===1?'':'s')+' still needs repurpose.';
+  }
+  var list=document.getElementById('ct-repurpose-list');
+  if(list){
+    if(needsRepurpose.length){
+      list.innerHTML=needsRepurpose.map(function(p){
+        return '<div class="ct-repurpose-item"><div><div class="ct-repurpose-title">'+escapeHtml(p.title||'Untitled')+'</div><div class="ct-repurpose-meta">'+escapeHtml(getContentPillar(p)+' · Make 3 shorts + 1 Thread + 1 Skool post')+'</div></div><a class="ct-table-link" href="'+escapeHtml(p.url||NOTION_CONTENT_URL)+'" target="_blank">Open</a></div>';
+      }).join('');
+    }else{
+      list.innerHTML='<div class="ct-empty-note">No repurpose queue visible yet. Add Repurpose Status to the Notion content database so this can become a real leverage board.</div>';
     }
   }
 }
