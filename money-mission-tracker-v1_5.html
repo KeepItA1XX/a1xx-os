@@ -489,6 +489,18 @@ input:focus{border-color:#333}
 .dpc-now-mode{font-size:10px;color:#4a7a30;font-weight:700;white-space:nowrap}
 .dpc-now-main{font-size:12px;color:#c8e8a8;line-height:1.5;margin-bottom:5px}
 .dpc-now-sub{font-size:10px;color:#4a7a30;line-height:1.45}
+.mission-path-card{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:12px;padding:11px 12px;margin-bottom:10px}
+.mission-path-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px}
+.mission-path-label{font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.1em;font-weight:800;margin-bottom:4px}
+.mission-path-title{font-size:14px;font-weight:800;color:#f0f3f5;line-height:1.25}
+.mission-path-step{font-size:10px;color:#7ec845;background:#121712;border:0.5px solid #3a5a2a;border-radius:20px;padding:4px 9px;white-space:nowrap;font-weight:800}
+.mission-path-objective{font-size:13px;color:#d7dde3;line-height:1.45;margin-bottom:9px}
+.mission-path-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
+.mission-path-box{background:#07090b;border:0.5px solid #20262b;border-radius:9px;padding:8px 9px}
+.mission-path-box-label{font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin-bottom:4px}
+.mission-path-box-text{font-size:11px;color:#c6ccd2;line-height:1.45}
+.mission-path-next{font-size:10px;color:#8b949e;line-height:1.45;border-top:0.5px solid #20262b;padding-top:8px}
+.mission-path-next strong{color:#d7dde3}
 .dpc-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#050f02;border:0.5px solid #1a2a0a;border-radius:9px;padding:3px;margin-bottom:10px}
 .dpc-tab{height:28px;border:0;border-radius:7px;background:transparent;color:#4a7a30;font-size:10px;font-weight:800;cursor:pointer;transition:all .15s}
 .dpc-tab:hover{color:#7ec845}
@@ -988,6 +1000,28 @@ body{background:#090a0b;color:#d8dde1}
     </div>
     <div class="dpc-now-main" id="dpc-now-main">Syncing calendar and Todoist...</div>
     <div class="dpc-now-sub" id="dpc-now-sub"></div>
+  </div>
+
+  <div class="mission-path-card" id="mission-path-card">
+    <div class="mission-path-top">
+      <div>
+        <div class="mission-path-label">Mission Path</div>
+        <div class="mission-path-title" id="mission-path-title">Loading objective...</div>
+      </div>
+      <div class="mission-path-step" id="mission-path-step">Step 1</div>
+    </div>
+    <div class="mission-path-objective" id="mission-path-objective">Reading today’s campaign state...</div>
+    <div class="mission-path-grid">
+      <div class="mission-path-box">
+        <div class="mission-path-box-label">Proof</div>
+        <div class="mission-path-box-text" id="mission-path-proof">Log the action.</div>
+      </div>
+      <div class="mission-path-box">
+        <div class="mission-path-box-label">Loadout</div>
+        <div class="mission-path-box-text" id="mission-path-loadout">Use the active resource.</div>
+      </div>
+    </div>
+    <div class="mission-path-next" id="mission-path-next"><strong>Next:</strong> unlock the next move.</div>
   </div>
 
   <!-- STREAK CHAIN -->
@@ -2278,6 +2312,46 @@ function renderLeadCard(lead){
     +'<div class="dpc-lead-actions">'+callBtn+'<span class="dpc-mini-btn">Done</span></div></div>';
 }
 
+function getMissionPath(d,modeKey,calEvents,contentPieces){
+  var dayType=getMissionDayType();
+  var nextEvent=getNextCalendarEvent(calEvents||[]);
+  var topContent=(contentPieces||[])[0];
+  var contentTitle=topContent&&topContent.title?topContent.title:'today’s scheduled content';
+  var dms=d.dms||0,content=d.content||0,calls=d.calls||0,closes=d.closes||0,money=d.money||0,leads=d.leads||0;
+  if(dayType==='content'){
+    if(content<1)return {name:'Signal Boost',step:'Step 1 / 4',objective:'Post one piece today. Start with '+contentTitle+'.',proof:'Content posted = 1',loadout:'Content Hook Bank',next:'Send the post to warm leads or repurpose it.'};
+    return {name:'Signal Boost',step:'Step 4 / 4',objective:'Use today’s post as pipeline fuel.',proof:'Post sent to warm leads',loadout:'Content Posting Checklist',next:'Log the result before shutdown.'};
+  }
+  if(dayType==='beat'){
+    return {name:'Build The Asset',step:'Step 1 / 4',objective:'Move one beat or production project one stage forward.',proof:'Beat/project updated',loadout:'BANGIN+ Weekly Upload SOP',next:'If it is ready, upload/package it.'};
+  }
+  if(dayType==='manager'){
+    return {name:'Clean The Map',step:'Step 1 / 4',objective:nextEvent?'Prepare for '+nextEvent.startTime+' · '+nextEvent.title+'.':'Review calendar and clear the highest-impact task.',proof:'Calendar/task handled',loadout:'Weekly Campaign Review',next:'Update numbers so the report tells the truth.'};
+  }
+  if(dms<20)return {name:'Seed The Pipeline',step:'Step 1 / 4',objective:'Send '+(20-dms)+' DMs to active rappers.',proof:'DMs logged at 20+',loadout:'Cold DM Opener Script',next:'Warm Lead Sweep'};
+  if(dms<40)return {name:'Seed The Pipeline',step:'Step 2 / 4',objective:'Push to 40 total DMs before switching tabs.',proof:'DMs logged at 40',loadout:'Cold DM Opener Script',next:'Follow up with warm replies'};
+  if(leads>0&&calls<1)return {name:'Booking Push',step:'Step 3 / 4',objective:'Turn one warm reply into a booked call.',proof:'Calls booked = 1',loadout:'Booking Call Script',next:'Send offer or payment step'};
+  if(calls>0&&closes<1)return {name:'Close The Loop',step:'Step 3 / 4',objective:'Collect payment or send the payment link.',proof:'Close or money logged',loadout:'Offer Stack / Objection Handler',next:'Extraction'};
+  if(closes>0||money>0)return {name:'Extraction',step:'Step 4 / 4',objective:'Lock the win. Log numbers and lesson before shutdown.',proof:'Scoreboard updated',loadout:'Weekly Campaign Review',next:'Set tomorrow’s mission'};
+  return {name:'Warm Lead Sweep',step:'Step 3 / 4',objective:'Follow up with every warm reply and ask one clear next-step question.',proof:'Warm leads updated',loadout:'Warm Lead Follow-Up Script',next:'Book one call'};
+}
+
+function renderMissionPath(d,modeKey,calEvents,contentPieces){
+  var path=getMissionPath(d,modeKey,calEvents,contentPieces);
+  var title=document.getElementById('mission-path-title');
+  var step=document.getElementById('mission-path-step');
+  var objective=document.getElementById('mission-path-objective');
+  var proof=document.getElementById('mission-path-proof');
+  var loadout=document.getElementById('mission-path-loadout');
+  var next=document.getElementById('mission-path-next');
+  if(title)title.textContent=path.name;
+  if(step)step.textContent=path.step;
+  if(objective)objective.textContent=path.objective;
+  if(proof)proof.textContent=path.proof;
+  if(loadout)loadout.textContent=path.loadout;
+  if(next)next.innerHTML='<strong>Next:</strong> '+escapeHtml(path.next);
+}
+
 function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   ['now','pipeline','followup','scoreboard'].forEach(function(v){
     var tab=document.getElementById('dpc-tab-'+v);
@@ -2297,6 +2371,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   var targetDms=dms<20?20:40;
   var dmGap=Math.max(0,targetDms-dms);
   updateDPCSubViews();
+  renderMissionPath(d,modeKey,calEvents||[],window.__contentPieces||[]);
 
   var cmd=document.getElementById('dpc-pipeline-command');
   if(cmd){
