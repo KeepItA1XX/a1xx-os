@@ -1688,6 +1688,8 @@ var NOTION_CONTENT_URL='https://www.notion.so/1a06115281da81bcb7eccecbcba9ed8e';
 var NOTION_CONTENT_DATE_FIELD='Production Date';
 var NOTION_PRODUCTION_DB='1a761152-81da-8178-ad45-000b48fc3735';
 var NOTION_PRODUCTION_URL='https://www.notion.so/1a76115281da8189ab20cae06ccf55f3';
+var NOTION_CRM_DB='38468725-2a65-45b2-b1a5-17e13a311af4';
+var NOTION_CRM_URL='https://www.notion.so/b82e7140b3b048d1915d34e4cdf9f65a';
 var GOLDEN_KEY='a1xx_golden';
 var CHECK_KEY='a1xx_checks_v1';
 var DPC_KEY='a1xx_daily_profit_v1';
@@ -2333,10 +2335,77 @@ function getDPCLeadCards(d,calEvents,bottleneck){
 function renderLeadCard(lead){
   var phone=lead.phone?String(lead.phone).replace(/[^0-9+]/g,''):'';
   var callBtn=phone?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(phone)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
+  var openUrl=lead.instagramUrl||lead.url||NOTION_CRM_URL;
   return '<div class="dpc-lead-card"><div><div class="dpc-lead-name">'+escapeHtml(lead.name)+'</div>'
     +'<div class="dpc-lead-meta">'+escapeHtml(lead.heat+' · '+lead.meta)+'</div>'
     +'<div class="dpc-lead-next">'+escapeHtml(lead.next)+'</div></div>'
-    +'<div class="dpc-lead-actions">'+callBtn+'<span class="dpc-mini-btn">Done</span></div></div>';
+    +'<div class="dpc-lead-actions">'+callBtn+'<a class="dpc-mini-btn" href="'+escapeHtml(openUrl)+'" target="_blank">Open</a></div></div>';
+}
+
+function getCRMLeads(){
+  return window.__crmLeads||[];
+}
+
+function isClosedCRMLead(lead){
+  var txt=(lead.stage+' '+lead.status+' '+lead.conversionEvent).toLowerCase();
+  return /closed won|purchased|opportunity won|paid|dead|lost/.test(txt);
+}
+
+function isHotCRMLead(lead){
+  if(lead.hot)return true;
+  var txt=(lead.stage+' '+lead.status+' '+lead.bookingPriority+' '+lead.conversionEvent).toLowerCase();
+  return /hot|book|replied|active|follow|qualified|call/.test(txt);
+}
+
+function getCRMStageKey(lead){
+  var text=(lead.stage+' '+lead.status+' '+lead.conversionEvent+' '+lead.funnelSource+' '+lead.recentActivity).toLowerCase();
+  if(/closed won|purchased|purchase|paid|opportunity won/.test(text))return 'paid';
+  if(/booked|call booked/.test(text))return 'booked';
+  if(/masterclass/.test(text))return 'masterclass';
+  if(/skool|community/.test(text))return 'skool';
+  if(/resource|opt-in|opt in|beat pack|break even|blueprint|form submit/.test(text))return 'resource';
+  if(/follow-up|follow up|replied|conversation|qualified|offer/.test(text))return 'follow';
+  return 'new';
+}
+
+function countBy(items,fn){
+  var out={};
+  (items||[]).forEach(function(item){
+    var key=fn(item)||'Unknown';
+    out[key]=(out[key]||0)+1;
+  });
+  return out;
+}
+
+function topCount(counts){
+  var keys=Object.keys(counts||{});
+  if(!keys.length)return {name:'None yet',value:0};
+  keys.sort(function(a,b){return counts[b]-counts[a];});
+  return {name:keys[0],value:counts[keys[0]]};
+}
+
+function buildCRMLeadCard(lead){
+  var source=lead.source||lead.funnelSource||'Manual';
+  var stage=lead.stage||lead.status||'New Lead';
+  var offer=asArray(lead.offerInterest).join(', ')||'No offer tagged';
+  var next=lead.followUpDate?'Follow up: '+formatContentDate(lead.followUpDate):'Next: move this lead one stage forward';
+  return renderLeadCard({
+    name:lead.name||'Unnamed lead',
+    meta:source+' · '+stage+' · '+offer,
+    next:next,
+    heat:isHotCRMLead(lead)?'Hot':'Active',
+    phone:lead.phone||'',
+    instagramUrl:lead.instagramUrl||'',
+    url:lead.url||NOTION_CRM_URL
+  });
+}
+
+function renderBarRows(rows,maxVal){
+  maxVal=maxVal||Math.max.apply(null,rows.map(function(r){return r.value;}).concat([1]));
+  return '<div class="dpc-source-list">'+rows.map(function(row){
+    var w=Math.min(100,Math.round(row.value/Math.max(maxVal,1)*100));
+    return '<div class="dpc-source-row"><div class="dpc-source-name">'+escapeHtml(row.name)+'</div><div class="dpc-source-track"><div class="dpc-source-fill" style="width:'+Math.max(w,row.value?8:0)+'%"></div></div><div class="dpc-source-val">'+escapeHtml(row.label||String(row.value))+'</div></div>';
+  }).join('')+'</div>';
 }
 
 function getMissionPath(d,modeKey,calEvents,contentPieces){
@@ -2392,6 +2461,18 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   var wkCalls=parseFloat((document.getElementById('w-calls')||{}).value)||d.calls||0;
   var wkCloses=parseFloat((document.getElementById('w-closes')||{}).value)||d.closes||0;
   var money=d.money||0, dms=d.dms||0, leads=d.leads||0, calls=d.calls||0, closes=d.closes||0;
+  var crmLeads=getCRMLeads();
+  var activeCRM=crmLeads.filter(function(lead){return !isClosedCRMLead(lead);});
+  var hotCRM=activeCRM.filter(isHotCRMLead);
+  var dueCRM=activeCRM.filter(function(lead){
+    if(!lead.followUpDate)return false;
+    var due=new Date(lead.followUpDate);due.setHours(23,59,59,999);
+    return !isNaN(due.getTime())&&due>=new Date(Date.now()-7*864e5)&&due<=new Date();
+  });
+  var stageCounts=countBy(activeCRM,getCRMStageKey);
+  var sourceCounts=countBy(activeCRM,function(lead){return lead.source||lead.funnelSource||'Manual';});
+  var topSource=topCount(sourceCounts);
+  leads=Math.max(leads,hotCRM.length);
   var bottleneck=getCampaignBottleneck(d,wkDms,wkResp,wkCalls,wkCloses);
   var nextEvent=getNextCalendarEvent(calEvents||[]);
   var related=getRelatedTasksForMode('outreach');
@@ -2402,15 +2483,20 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
 
   var cmd=document.getElementById('dpc-pipeline-command');
   if(cmd){
-    if(dmGap>0)cmd.textContent='Focus: traffic. Send '+dmGap+' more DMs before checking anything else.';
-    else if(calls<1)cmd.textContent='Focus: booking. Turn warm replies into one call.';
-    else if(closes<1)cmd.textContent='Focus: cash. Send the payment link or close the booked call.';
-    else cmd.textContent='Focus: scale. Keep volume and follow-up moving.';
+    if(activeCRM.length)cmd.textContent='Pipeline live: '+activeCRM.length+' active lead'+(activeCRM.length===1?'':'s')+' · '+hotCRM.length+' hot · '+dueCRM.length+' due now · top source: '+topSource.name+'.';
+    else if(dmGap>0)cmd.textContent='No live CRM leads loaded yet. Send '+dmGap+' more DMs and log the first lead in Notion CRM.';
+    else cmd.textContent='CRM waiting on Apps Script endpoint. Manual DPC numbers are active until leads sync.';
   }
 
   var funnel=document.getElementById('dpc-funnel');
   if(funnel){
-    var stages=[
+    var stages=activeCRM.length?[
+      {name:'New',val:stageCounts.new||0,target:Math.max(activeCRM.length,1)},
+      {name:'Resource',val:stageCounts.resource||0,target:Math.max(activeCRM.length,1)},
+      {name:'Skool',val:stageCounts.skool||0,target:Math.max(activeCRM.length,1)},
+      {name:'Follow',val:stageCounts.follow||0,target:Math.max(activeCRM.length,1)},
+      {name:'Booked',val:stageCounts.booked||0,target:Math.max(activeCRM.length,1)}
+    ]:[
       {name:'DMs',val:dms,target:40},
       {name:'Warm',val:leads,target:5},
       {name:'Calls',val:calls,target:1},
@@ -2425,43 +2511,43 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
 
   var pipeActions=document.getElementById('dpc-pipeline-actions');
   if(pipeActions){
-    var sourceFocus=dms<20?'IG DMs':(leads>0?'Warm replies':'Content comments + IG DMs');
-    var nextMetric=dmGap>0?dmGap+' more DMs':calls<1?'1 booked call':closes<1?'1 paid close':'more qualified volume';
+    var flowStuck=topCount(stageCounts);
+    var sourceFocus=activeCRM.length?topSource.name:(dms<20?'IG DMs':(leads>0?'Warm replies':'Content comments + IG DMs'));
+    var nextMetric=dueCRM.length?dueCRM.length+' follow-up'+(dueCRM.length===1?'':'s')+' due':hotCRM.length?hotCRM.length+' hot lead'+(hotCRM.length===1?'':'s'):dmGap>0?dmGap+' more DMs':'1 booked call';
     pipeActions.innerHTML=[
-      {title:'Source: '+sourceFocus,copy:'Current pull: '+dms+' DMs, '+(d.content||0)+' post, '+leads+' warm lead'+(leads===1?'':'s')+'.'},
-      {title:'Stuck: '+bottleneck.stage,copy:bottleneck.msg},
-      {title:'Next number: '+nextMetric,copy:'Log it here so the campaign brief updates immediately.'}
+      {title:'Source: '+sourceFocus,copy:activeCRM.length?topSource.value+' active lead'+(topSource.value===1?'':'s')+' coming from this source.':'Current pull: '+dms+' DMs, '+(d.content||0)+' post, '+leads+' warm lead'+(leads===1?'':'s')+'.'},
+      {title:'Stage: '+flowStuck.name,copy:activeCRM.length?flowStuck.value+' lead'+(flowStuck.value===1?'':'s')+' sitting here. Move the best one forward.':bottleneck.msg},
+      {title:'Next: '+nextMetric,copy:'Open the Hot List or Follow-Up tab and take the next action.'}
     ].map(renderDPCAction).join('');
   }
 
   var board=document.getElementById('dpc-pipeline-board');
   if(board){
-    var skoolJoins=d.skool||0;
-    var skoolPct=leads>0?Math.round(Math.min(100,skoolJoins/Math.max(leads,1)*100)):0;
-    var sources=[
-      {name:'IG DMs',val:dms,target:40,label:dms+' sent'},
-      {name:'Content',val:d.content||0,target:1,label:(d.content||0)+' posted'},
-      {name:'Warm Leads',val:leads,target:5,label:leads+' warm'},
-      {name:'Skool Free',val:skoolJoins,target:3,label:skoolJoins+' joined'},
-      {name:'Calls',val:calls,target:1,label:calls+' booked'}
-    ];
+    var skoolJoins=stageCounts.skool||0;
+    var resourceCount=stageCounts.resource||0;
+    var skoolPct=resourceCount>0?Math.round(Math.min(100,skoolJoins/Math.max(resourceCount,1)*100)):0;
+    var sourceRows=Object.keys(sourceCounts).sort(function(a,b){return sourceCounts[b]-sourceCounts[a];}).slice(0,6).map(function(name){return {name:name,value:sourceCounts[name],label:sourceCounts[name]+' leads'};});
+    if(!sourceRows.length){
+      sourceRows=[
+        {name:'IG DMs',value:dms,label:dms+' sent'},
+        {name:'Content',value:d.content||0,label:(d.content||0)+' posted'},
+        {name:'Manual Leads',value:d.leads||0,label:(d.leads||0)+' warm'}
+      ];
+    }
     board.innerHTML='<div class="dpc-mini-grid">'
-      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+leads+'</div><div class="dpc-mini-lbl">Warm leads</div></div>'
-      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+skoolPct+'%</div><div class="dpc-mini-lbl">Skool path</div></div>'
-      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+fmt(money)+'</div><div class="dpc-mini-lbl">Collected</div></div>'
-      +'</div><div class="dpc-source-list">'
-      +sources.map(function(s){
-        var w=Math.min(100,Math.round(s.val/Math.max(s.target,1)*100));
-        return '<div class="dpc-source-row"><div class="dpc-source-name">'+s.name+'</div><div class="dpc-source-track"><div class="dpc-source-fill" style="width:'+Math.max(w,s.val?8:0)+'%"></div></div><div class="dpc-source-val">'+s.label+'</div></div>';
-      }).join('')
-      +'</div>';
+      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+activeCRM.length+'</div><div class="dpc-mini-lbl">Active CRM</div></div>'
+      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+skoolPct+'%</div><div class="dpc-mini-lbl">Resource to Skool</div></div>'
+      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+hotCRM.length+'</div><div class="dpc-mini-lbl">Hot Leads</div></div>'
+      +'</div>'+renderBarRows(sourceRows);
   }
 
   var followCmd=document.getElementById('dpc-follow-command');
   if(followCmd){
     var calMsg=nextEvent?'Protect '+nextEvent.startTime+' for '+nextEvent.title+'. ':'';
     var taskMsg=related.length?'Todoist says: '+related[0].content+'. ':'';
-    followCmd.textContent=calMsg+taskMsg+(leads>0?'Follow up with '+leads+' warm lead'+(leads===1?'':'s')+' before sending cold DMs.':'No warm leads logged yet. Create warm leads by sending new DMs first.');
+    if(dueCRM.length)followCmd.textContent='Follow-up queue: '+dueCRM.length+' CRM lead'+(dueCRM.length===1?'':'s')+' due now. '+calMsg+taskMsg;
+    else if(hotCRM.length)followCmd.textContent='Hot list: '+hotCRM.length+' active lead'+(hotCRM.length===1?'':'s')+' need movement. '+calMsg+taskMsg;
+    else followCmd.textContent=calMsg+taskMsg+(leads>0?'Follow up with '+leads+' warm lead'+(leads===1?'':'s')+' before sending cold DMs.':'No warm leads logged yet. Create warm leads by sending new DMs first.');
   }
 
   var script=document.getElementById('dpc-script-box');
@@ -2475,18 +2561,24 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   if(followActions){
     var followTask=related.length?related[0].content:'No Todoist follow-up task loaded';
     var callWindow=nextEvent?nextEvent.startTime+' · '+nextEvent.title:'No call on calendar yet';
-    followActions.innerHTML=[
-      {title:'Queue: '+leads+' warm lead'+(leads===1?'':'s'),copy:leads>0?'Reply before new cold DMs. Ask the next-step question.':'No warm leads logged. Send DMs until replies exist.'},
-      {title:'Calendar: '+callWindow,copy:nextEvent?'Prep the offer before the event, then log the result.':'Use Google Voice when a lead is ready for a call.'},
-      {title:'Todoist: '+followTask,copy:'Clear this before the campaign ends or move it to the correct pipeline stage.'}
-    ].map(renderDPCAction).join('');
+    var followLeadCards=(dueCRM.length?dueCRM:hotCRM).slice(0,3);
+    if(followLeadCards.length)followActions.innerHTML=followLeadCards.map(buildCRMLeadCard).join('');
+    else followActions.innerHTML=[
+        {title:'Queue: '+leads+' warm lead'+(leads===1?'':'s'),copy:leads>0?'Reply before new cold DMs. Ask the next-step question.':'No warm leads logged. Send DMs until replies exist.'},
+        {title:'Calendar: '+callWindow,copy:nextEvent?'Prep the offer before the event, then log the result.':'Use Google Voice when a lead is ready for a call.'},
+        {title:'Todoist: '+followTask,copy:'Clear this before the campaign ends or move it to the correct pipeline stage.'}
+      ].map(renderDPCAction).join('');
   }
 
   var callStack=document.getElementById('dpc-call-stack');
   if(callStack){
-    var callCards=getDPCLeadCards(d,calEvents||[],bottleneck).filter(function(x){return /call|booked|calendar/i.test(x.meta+' '+x.name);});
-    if(!callCards.length)callCards=[{name:'No booked calls visible',meta:'Call queue · Empty',next:'Your next move is not call prep yet. Create or follow up warm leads until one call is booked.',heat:'Queue',phone:''}];
-    callStack.innerHTML=callCards.map(renderLeadCard).join('');
+    var crmCards=activeCRM.filter(function(lead){return /book|call|studio|hot/i.test(lead.stage+' '+lead.status+' '+lead.offerInterest+' '+lead.bookingPriority)||lead.phone;}).slice(0,5);
+    if(crmCards.length)callStack.innerHTML=crmCards.map(buildCRMLeadCard).join('');
+    else{
+      var callCards=getDPCLeadCards(d,calEvents||[],bottleneck).filter(function(x){return /call|booked|calendar/i.test(x.meta+' '+x.name);});
+      if(!callCards.length)callCards=[{name:'No booked calls visible',meta:'Call queue · Empty',next:'Your next move is not call prep yet. Create or follow up warm leads until one call is booked.',heat:'Queue',phone:''}];
+      callStack.innerHTML=callCards.map(renderLeadCard).join('');
+    }
   }
 
   var kpis=document.getElementById('dpc-kpi-grid');
@@ -2851,6 +2943,113 @@ function normalizeResources(data){
   }).filter(function(item){return item.title;});
 }
 
+async function loadCRMLeads(){
+  var ns=getStore(NOTION_KEY);
+  var appUrl=localStorage.getItem(SHEETS_KEY);
+  window.__crmLeads=[];
+  window.__crmLimited=true;
+  if(!ns||!ns.key||!appUrl){
+    setHealth('crm','err','CRM needs Notion secret and Apps Script URL');
+    return [];
+  }
+  try{
+    var data=await fetchCRMLeads(appUrl,ns.key,NOTION_CRM_DB);
+    var leads=normalizeCRMLeads(data);
+    window.__crmLeads=leads;
+    window.__crmLimited=false;
+    setHealth('crm','ok',leads.length+' CRM lead(s) loaded');
+    return leads;
+  }catch(e){
+    window.__crmLeads=[];
+    window.__crmLimited=true;
+    setHealth('crm','err',e.message);
+    return [];
+  }
+}
+
+async function fetchCRMLeads(appUrl,secret,databaseId){
+  var sep=appUrl.indexOf('?')>=0?'&':'?';
+  var qs='action=crm_leads&notionSecret='+encodeURIComponent(secret)+'&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
+  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
+  if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
+  var text=await res.text();
+  var data;
+  try{data=JSON.parse(text);}
+  catch(jsonErr){throw new Error('Apps Script did not return JSON');}
+  if(data&&data.error)throw new Error(data.error);
+  if(data&&data.status==='error')throw new Error(data.message||'Apps Script returned an error');
+  if(data&&data.status==='ok'&&data.message&&String(data.message).indexOf('Backend is live')>=0){
+    throw new Error('Apps Script is live but missing the CRM lead handler');
+  }
+  return data;
+}
+
+function normalizeCRMLeads(data){
+  var items=Array.isArray(data)?data:(data.items||data.leads||data.results||[]);
+  return items.map(function(item){
+    if(item.properties)return notionPageToCRMLead(item);
+    return {
+      name:item.name||item.title||item.Name||'Unnamed lead',
+      source:item.source||item.Source||'',
+      funnelSource:item.funnelSource||item.cfFunnelSource||item['CF Funnel Source']||'',
+      stage:item.stage||item.pipelineStage||item['Pipeline Stage']||'',
+      status:item.status||item.leadStatus||item['Lead Status']||'',
+      offerInterest:asArray(item.offerInterest||item['Offer Interest']),
+      phone:item.phone||item.Phone||'',
+      instagram:item.instagram||item.Instagram||'',
+      instagramUrl:formatInstagramUrl(item.instagram||item.Instagram||''),
+      email:item.email||item.Email||'',
+      hot:asBool(item.hot||item.hotLead||item['Hot Lead']),
+      bookingPriority:item.bookingPriority||item['Booking Priority']||'',
+      followUpDate:item.followUpDate||item['Follow-Up Date']||'',
+      lastContact:item.lastContact||item['Last Contact']||'',
+      optInDate:item.optInDate||item['Opt-In Date']||'',
+      opportunityValue:parseFloat(item.opportunityValue||item['Opportunity Value'])||0,
+      conversionEvent:item.conversionEvent||item['Conversion Event']||'',
+      contactedToday:asBool(item.contactedToday||item['Contacted Today']),
+      replied:asBool(item.replied||item.Replied),
+      recentActivity:item.recentActivity||item['Recent Activity']||'',
+      url:item.url||item.notionUrl||NOTION_CRM_URL
+    };
+  }).filter(function(lead){return lead&&lead.name;});
+}
+
+function notionPageToCRMLead(page){
+  var props=page.properties||{};
+  var ig=getFirstNotionText(props,['Instagram'])||getFirstNotionOption(props,['Instagram']);
+  return {
+    name:getFirstNotionText(props,['Name','Lead Name','Title'])||getAnyNotionTitle(props)||'Unnamed lead',
+    source:getFirstNotionOption(props,['Source'])||'',
+    funnelSource:getFirstNotionOption(props,['CF Funnel Source','Funnel Name','Page Name'])||'',
+    stage:getFirstNotionOption(props,['Pipeline Stage'])||'',
+    status:getFirstNotionOption(props,['Lead Status'])||'',
+    offerInterest:asArray(getFirstNotionOption(props,['Offer Interest'])),
+    phone:getFirstNotionText(props,['Phone'])||getNotionSimple(props['Phone']),
+    instagram:ig,
+    instagramUrl:formatInstagramUrl(ig),
+    email:getFirstNotionText(props,['Email'])||getNotionSimple(props['Email']),
+    hot:getNotionCheckbox(props['Hot Lead']),
+    bookingPriority:getFirstNotionOption(props,['Booking Priority'])||'',
+    followUpDate:getNotionDate(props['Follow-Up Date']),
+    lastContact:getNotionDate(props['Last Contact'])||getNotionDate(props['Last Activity Date'])||getNotionDate(props['Last Activity']),
+    optInDate:getNotionDate(props['Opt-In Date'])||getNotionDate(props['Date Added']),
+    opportunityValue:getNotionNumber(props['Opportunity Value']),
+    conversionEvent:getFirstNotionOption(props,['Conversion Event'])||'',
+    contactedToday:getNotionCheckbox(props['Contacted Today']),
+    replied:getNotionCheckbox(props['Replied']),
+    recentActivity:getFirstNotionText(props,['Recent Activity','Notes'])||'',
+    url:page.url||('https://www.notion.so/'+page.id.replace(/-/g,''))
+  };
+}
+
+function formatInstagramUrl(value){
+  var v=String(value||'').trim();
+  if(!v)return '';
+  if(/^https?:\/\//i.test(v))return v;
+  v=v.replace(/^@/,'');
+  return 'https://instagram.com/'+encodeURIComponent(v);
+}
+
 function asArray(value){
   if(Array.isArray(value))return value;
   if(!value)return [];
@@ -2862,6 +3061,11 @@ function asArray(value){
     return value.split(',').map(function(v){return v.trim();}).filter(Boolean);
   }
   return [];
+}
+
+function asBool(value){
+  if(value===true||value==='true'||value==='__YES__'||value===1)return true;
+  return false;
 }
 
 function normalizeProductionItems(data){
@@ -3000,6 +3204,17 @@ function getNotionSelect(prop){return prop&&prop.select?prop.select.name:'';}
 function getNotionMultiSelect(prop){return prop&&prop.multi_select?prop.multi_select.map(function(x){return x.name;}).join(', '):'';}
 function getNotionStatus(prop){return prop&&prop.status?prop.status.name:'';}
 function getNotionPeople(prop){return prop&&prop.people?prop.people.map(function(x){return x.name||x.person&&x.person.email||'';}).filter(Boolean).join(', '):'';}
+function getNotionCheckbox(prop){return !!(prop&&prop.checkbox);}
+function getNotionNumber(prop){return prop&&typeof prop.number==='number'?prop.number:0;}
+function getNotionSimple(prop){
+  if(!prop)return '';
+  if(prop.phone_number)return prop.phone_number;
+  if(prop.email)return prop.email;
+  if(prop.url)return prop.url;
+  if(typeof prop.number==='number')return String(prop.number);
+  if(typeof prop.checkbox==='boolean')return prop.checkbox?'true':'';
+  return '';
+}
 function getNotionText(prop){
   if(!prop)return '';
   var arr=prop.title||prop.rich_text||[];
@@ -3776,11 +3991,13 @@ async function loadTodayData(){
   var pipelinePieces=await loadContentPipeline(notionPieces||[]);
   var productionPieces=await loadProductionPipeline();
   var resources=await loadResources();
+  var crmLeads=await loadCRMLeads();
   var calEvents=await loadCalendar();
   window.__contentPieces=notionPieces||[];
   window.__contentPipelinePieces=pipelinePieces||notionPieces||[];
   window.__productionPieces=productionPieces||[];
   window.__resources=resources||[];
+  window.__crmLeads=crmLeads||[];
   window.__calEvents=calEvents||[];
   initDayType(calEvents||[]);
   buildWeekStrip(calEvents||[],notionPieces||[]);
