@@ -495,6 +495,30 @@ input:focus{border-color:#333}
 .dpc-tab.active{background:#0d1808;color:#7ec845;border:0.5px solid #2a4015}
 .dpc-view{display:none}
 .dpc-view.active{display:block}
+.dpc-subtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#080a0c;border:0.5px solid #222a31;border-radius:9px;padding:3px;margin-bottom:10px}
+.dpc-subtab{height:28px;border:0;border-radius:7px;background:transparent;color:#8b949e;font-size:10px;font-weight:800;cursor:pointer;transition:all .15s}
+.dpc-subtab:hover{color:#d7dde3}
+.dpc-subtab.active{background:#121712;border:0.5px solid #3a5a2a;color:#7ec845}
+.dpc-mini-view{display:none}
+.dpc-mini-view.active{display:block}
+.dpc-lead-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.dpc-lead-card{display:grid;grid-template-columns:1fr auto;gap:10px;background:#050f02;border:0.5px solid #1a2a0a;border-radius:10px;padding:10px}
+.dpc-lead-name{font-size:12px;font-weight:800;color:#f0f3f5;margin-bottom:4px}
+.dpc-lead-meta{font-size:10px;color:#8b949e;line-height:1.45}
+.dpc-lead-next{font-size:11px;color:#c6ccd2;line-height:1.45;margin-top:6px}
+.dpc-lead-actions{display:flex;flex-direction:column;gap:5px;align-items:stretch}
+.dpc-mini-btn{height:26px;padding:0 9px;border-radius:7px;border:0.5px solid #2a3036;background:#0b0d0f;color:#d7dde3;font-size:10px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.dpc-mini-btn:hover{border-color:#3a5a2a;background:#111711;color:#fff}
+.dpc-mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.dpc-mini-metric{background:#050f02;border:0.5px solid #1a2a0a;border-radius:10px;padding:10px;text-align:center}
+.dpc-mini-val{font-size:20px;font-weight:800;color:#f0f3f5;line-height:1}
+.dpc-mini-lbl{font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;font-weight:800;margin-top:5px}
+.dpc-source-list{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+.dpc-source-row{display:grid;grid-template-columns:92px 1fr 56px;align-items:center;gap:8px;background:#050f02;border:0.5px solid #1a2a0a;border-radius:9px;padding:8px 9px}
+.dpc-source-name{font-size:10px;color:#d7dde3;font-weight:800}
+.dpc-source-track{height:7px;background:#0b0d0f;border-radius:5px;overflow:hidden}
+.dpc-source-fill{height:100%;background:#639922;border-radius:5px}
+.dpc-source-val{font-size:10px;color:#9aa3aa;text-align:right;font-weight:800}
 .dpc-coach-box{background:#030804;border:0.5px solid #18270d;border-radius:10px;padding:10px 12px;margin-bottom:10px}
 .dpc-coach-label{font-size:9px;color:#639922;text-transform:uppercase;letter-spacing:.1em;font-weight:800;margin-bottom:5px}
 .dpc-coach-text{font-size:12px;color:#c8e8a8;line-height:1.55}
@@ -924,7 +948,7 @@ body{background:#090a0b;color:#d8dde1}
 </div>
 
 <!-- DAILY PROFIT CAMPAIGN -->
-<div class="dpc-card" id="dpc-card">
+<div class="dpc-card mission-hidden" id="dpc-card">
 
   <!-- HEADER -->
   <div class="dpc-header">
@@ -1011,28 +1035,64 @@ body{background:#090a0b;color:#d8dde1}
   </div>
 
   <div class="dpc-view" id="dpc-view-pipeline">
-    <div class="dpc-coach-box">
-      <div class="dpc-coach-label">Pipeline command</div>
-      <div class="dpc-coach-text" id="dpc-pipeline-command">Reading money pipeline...</div>
+    <div class="dpc-subtabs">
+      <button class="dpc-subtab active" id="dpc-pipeline-tab-command" onclick="setDPCSubView('pipeline','command')">Focus</button>
+      <button class="dpc-subtab" id="dpc-pipeline-tab-board" onclick="setDPCSubView('pipeline','board')">Sources</button>
+      <button class="dpc-subtab" id="dpc-pipeline-tab-money" onclick="setDPCSubView('pipeline','money')">Stuck</button>
     </div>
-    <div class="dpc-funnel" id="dpc-funnel"></div>
-    <div class="dpc-action-list" id="dpc-pipeline-actions"></div>
+    <div class="dpc-mini-view active" id="dpc-pipeline-view-command">
+      <div class="dpc-coach-box">
+        <div class="dpc-coach-label">Pipeline command</div>
+        <div class="dpc-coach-text" id="dpc-pipeline-command">Reading money pipeline...</div>
+      </div>
+      <div class="dpc-action-list" id="dpc-pipeline-actions"></div>
+    </div>
+    <div class="dpc-mini-view" id="dpc-pipeline-view-board">
+      <div class="dpc-lead-stack" id="dpc-pipeline-board"></div>
+    </div>
+    <div class="dpc-mini-view" id="dpc-pipeline-view-money">
+      <div class="dpc-funnel" id="dpc-funnel"></div>
+    </div>
   </div>
 
   <div class="dpc-view" id="dpc-view-followup">
-    <div class="dpc-coach-box">
-      <div class="dpc-coach-label">Follow-up command</div>
-      <div class="dpc-coach-text" id="dpc-follow-command">Reading warm leads, tasks, and calendar...</div>
+    <div class="dpc-subtabs">
+      <button class="dpc-subtab active" id="dpc-follow-tab-queue" onclick="setDPCSubView('follow','queue')">Queue</button>
+      <button class="dpc-subtab" id="dpc-follow-tab-script" onclick="setDPCSubView('follow','script')">Script</button>
+      <button class="dpc-subtab" id="dpc-follow-tab-calls" onclick="setDPCSubView('follow','calls')">Calls</button>
     </div>
-    <div class="dpc-script" id="dpc-script-box"></div>
-    <div class="dpc-action-list" id="dpc-follow-actions"></div>
+    <div class="dpc-mini-view active" id="dpc-follow-view-queue">
+      <div class="dpc-coach-box">
+        <div class="dpc-coach-label">Follow-up command</div>
+        <div class="dpc-coach-text" id="dpc-follow-command">Reading warm leads, tasks, and calendar...</div>
+      </div>
+      <div class="dpc-action-list" id="dpc-follow-actions"></div>
+    </div>
+    <div class="dpc-mini-view" id="dpc-follow-view-script">
+      <div class="dpc-script" id="dpc-script-box"></div>
+    </div>
+    <div class="dpc-mini-view" id="dpc-follow-view-calls">
+      <div class="dpc-lead-stack" id="dpc-call-stack"></div>
+    </div>
   </div>
 
   <div class="dpc-view" id="dpc-view-scoreboard">
-    <div class="dpc-kpi-grid" id="dpc-kpi-grid"></div>
-    <div class="dpc-coach-box">
-      <div class="dpc-coach-label">Bottleneck diagnosis</div>
-      <div class="dpc-coach-text" id="dpc-score-diagnosis">Reading campaign math...</div>
+    <div class="dpc-subtabs">
+      <button class="dpc-subtab active" id="dpc-score-tab-kpis" onclick="setDPCSubView('score','kpis')">KPIs</button>
+      <button class="dpc-subtab" id="dpc-score-tab-bottleneck" onclick="setDPCSubView('score','bottleneck')">Bottleneck</button>
+      <button class="dpc-subtab" id="dpc-score-tab-plan" onclick="setDPCSubView('score','plan')">Plan</button>
+    </div>
+    <div class="dpc-mini-view active" id="dpc-score-view-kpis">
+      <div class="dpc-kpi-grid" id="dpc-kpi-grid"></div>
+    </div>
+    <div class="dpc-mini-view" id="dpc-score-view-bottleneck">
+      <div class="dpc-coach-box">
+        <div class="dpc-coach-label">Bottleneck diagnosis</div>
+        <div class="dpc-coach-text" id="dpc-score-diagnosis">Reading campaign math...</div>
+      </div>
+    </div>
+    <div class="dpc-mini-view" id="dpc-score-view-plan">
+      <div class="dpc-action-list" id="dpc-score-plan"></div>
     </div>
   </div>
 
@@ -1065,7 +1125,7 @@ body{background:#090a0b;color:#d8dde1}
 </div>
 
 <!-- CONTENT CARD -->
-<div class="content-tracker-card" id="content-tracker-card">
+<div class="content-tracker-card mission-hidden" id="content-tracker-card">
 
   <div class="ct-header">
     <div>
@@ -1148,7 +1208,7 @@ body{background:#090a0b;color:#d8dde1}
 </div>
 
 <!-- PRODUCTION CARD -->
-<div class="production-card" id="production-card">
+<div class="production-card mission-hidden" id="production-card">
 
   <div class="ct-header">
     <div>
@@ -1268,7 +1328,7 @@ body{background:#090a0b;color:#d8dde1}
 </div>
 
 <!-- CALENDAR -->
-<div class="cal-card collapsible-card" id="calendar-card">
+<div class="cal-card collapsible-card mission-hidden" id="calendar-card">
   <div class="cal-label collapse-head" onclick="toggleCollapse('calendar-card')"><div class="collapse-title">On your calendar today <span class="collapse-chevron">▼</span></div></div>
   <div class="collapse-body">
     <div class="context-resources" id="cal-resources">
@@ -1280,7 +1340,7 @@ body{background:#090a0b;color:#d8dde1}
 </div>
 
 <!-- CHECKLIST -->
-<div class="checklist-section collapsible-card" id="actions-card">
+<div class="checklist-section collapsible-card mission-hidden" id="actions-card">
   <div class="checklist-header collapse-head" onclick="toggleCollapse('actions-card')">
     <div class="checklist-title" id="checklist-title">Today's actions</div>
     <div class="checklist-score"><span id="check-score">Loading Todoist...</span> <span class="collapse-chevron">▼</span></div>
@@ -2157,6 +2217,28 @@ function setDPCView(view){
   renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
 }
 
+function setDPCSubView(group,view){
+  if(group==='pipeline')dpcSubViews.pipeline=view||'command';
+  if(group==='follow')dpcSubViews.follow=view||'queue';
+  if(group==='score')dpcSubViews.score=view||'kpis';
+  updateDPCSubViews();
+}
+
+function updateDPCSubViews(){
+  [
+    {group:'pipeline',views:['command','board','money'],active:dpcSubViews.pipeline},
+    {group:'follow',views:['queue','script','calls'],active:dpcSubViews.follow},
+    {group:'score',views:['kpis','bottleneck','plan'],active:dpcSubViews.score}
+  ].forEach(function(set){
+    set.views.forEach(function(v){
+      var tab=document.getElementById('dpc-'+set.group+'-tab-'+v);
+      var pane=document.getElementById('dpc-'+set.group+'-view-'+v);
+      if(tab)tab.classList.toggle('active',v===set.active);
+      if(pane)pane.classList.toggle('active',v===set.active);
+    });
+  });
+}
+
 function getCampaignBottleneck(d,wkDms,wkResp,wkCalls,wkCloses){
   if((d.dms||0)<20)return {stage:'Traffic',msg:'Volume is too low. Open Instagram, find 20 rappers, and send the opener before checking anything else.'};
   if(wkDms>=20&&wkResp/Math.max(wkDms,1)<.1)return {stage:'Hook',msg:'Replies are low. The opener is not creating enough curiosity. Test a more specific first message today.'};
@@ -2164,6 +2246,36 @@ function getCampaignBottleneck(d,wkDms,wkResp,wkCalls,wkCloses){
   if(wkCalls===0&&((d.leads||0)>0||wkResp>0))return {stage:'Booking',msg:'Warm conversations are not turning into calls. Push the next good reply toward a simple call invite.'};
   if(wkCloses===0&&wkCalls>0)return {stage:'Close',msg:'Calls are happening but cash is not collected. Tighten the offer and ask for the payment step.'};
   return {stage:'Scale',msg:'The system has movement. Keep volume high and follow up until the money lands.'};
+}
+
+function getDPCLeadCards(d,calEvents,bottleneck){
+  var nextEvent=getNextCalendarEvent(calEvents||[]);
+  var leads=[];
+  if(nextEvent){
+    leads.push({name:nextEvent.title,meta:'Calendar · '+nextEvent.startTime,next:'Prep the offer, confirm the next step, and log the result after the call.',heat:'Hot',phone:''});
+  }
+  if((d.leads||0)>0){
+    leads.push({name:(d.leads||0)+' warm lead'+((d.leads||0)===1?'':'s'),meta:'Logged today · Follow-up due now',next:'Reply first, ask one qualifying question, then push the best reply toward a call.',heat:'Warm',phone:''});
+  }
+  if((d.calls||0)>0){
+    leads.push({name:(d.calls||0)+' booked call'+((d.calls||0)===1?'':'s'),meta:'Pipeline stage · Call booked',next:'Before the call: review the offer. After the call: send payment/schedule next step.',heat:'Hot',phone:''});
+  }
+  if((d.closes||0)===0){
+    leads.push({name:bottleneck.stage+' bottleneck',meta:'System diagnosis · Highest leverage',next:bottleneck.msg,heat:'Focus',phone:''});
+  }
+  if(!leads.length){
+    leads.push({name:'Seed the pipeline',meta:'No warm lead data yet',next:'Open Instagram, find active rappers, send 20 DMs, and create the first warm lead.',heat:'Start',phone:''});
+  }
+  return leads.slice(0,4);
+}
+
+function renderLeadCard(lead){
+  var phone=lead.phone?String(lead.phone).replace(/[^0-9+]/g,''):'';
+  var callBtn=phone?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(phone)+'">Call</a>':'<span class="dpc-mini-btn">Prep</span>';
+  return '<div class="dpc-lead-card"><div><div class="dpc-lead-name">'+escapeHtml(lead.name)+'</div>'
+    +'<div class="dpc-lead-meta">'+escapeHtml(lead.heat+' · '+lead.meta)+'</div>'
+    +'<div class="dpc-lead-next">'+escapeHtml(lead.next)+'</div></div>'
+    +'<div class="dpc-lead-actions">'+callBtn+'<span class="dpc-mini-btn">Done</span></div></div>';
 }
 
 function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
@@ -2184,13 +2296,14 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   var related=getRelatedTasksForMode('outreach');
   var targetDms=dms<20?20:40;
   var dmGap=Math.max(0,targetDms-dms);
+  updateDPCSubViews();
 
   var cmd=document.getElementById('dpc-pipeline-command');
   if(cmd){
-    if(dmGap>0)cmd.textContent='Open Instagram. Find '+dmGap+' rappers who recently posted music, followed studios, or look active. Send the opener. Do not optimize before volume.';
-    else if(calls<1)cmd.textContent='DM volume is moving. Now turn warm replies into one booked call. Ask for the next step directly.';
-    else if(closes<1)cmd.textContent='You have a call path. Today’s job is to collect money or send the payment link.';
-    else cmd.textContent='Campaign has cash movement. Keep the flywheel turning: more DMs, more follow-ups, more offers.';
+    if(dmGap>0)cmd.textContent='Focus: traffic. Send '+dmGap+' more DMs before checking anything else.';
+    else if(calls<1)cmd.textContent='Focus: booking. Turn warm replies into one call.';
+    else if(closes<1)cmd.textContent='Focus: cash. Send the payment link or close the booked call.';
+    else cmd.textContent='Focus: scale. Keep volume and follow-up moving.';
   }
 
   var funnel=document.getElementById('dpc-funnel');
@@ -2211,10 +2324,31 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   var pipeActions=document.getElementById('dpc-pipeline-actions');
   if(pipeActions){
     pipeActions.innerHTML=[
-      {title:'Traffic Sprint',copy:'Open Instagram. Search local rappers, studio tags, cypher clips, and recent music posts. Send '+Math.max(10,dmGap||20)+' DMs.'},
-      {title:'Qualification',copy:'For every reply, ask: “What are you working on right now?” Track warm replies as leads.'},
-      {title:'Conversion',copy:'If they have a project, invite them to a call, studio session, or next paid step today.'}
+      {title:'1. Source',copy:'Instagram, studio tags, recent posts.'},
+      {title:'2. Qualify',copy:'Project? Budget? Timeline?'},
+      {title:'3. Convert',copy:'Call, invoice, or paid next step.'}
     ].map(renderDPCAction).join('');
+  }
+
+  var board=document.getElementById('dpc-pipeline-board');
+  if(board){
+    var skoolPct=leads>0?Math.round(Math.min(100,(calls||0)/Math.max(leads,1)*100)):0;
+    var sources=[
+      {name:'IG DMs',val:dms,target:40,label:dms+' sent'},
+      {name:'Content',val:d.content||0,target:1,label:(d.content||0)+' posted'},
+      {name:'Warm Leads',val:leads,target:5,label:leads+' warm'},
+      {name:'Calls',val:calls,target:1,label:calls+' booked'}
+    ];
+    board.innerHTML='<div class="dpc-mini-grid">'
+      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+leads+'</div><div class="dpc-mini-lbl">Warm leads</div></div>'
+      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+skoolPct+'%</div><div class="dpc-mini-lbl">Skool path</div></div>'
+      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+fmt(money)+'</div><div class="dpc-mini-lbl">Collected</div></div>'
+      +'</div><div class="dpc-source-list">'
+      +sources.map(function(s){
+        var w=Math.min(100,Math.round(s.val/Math.max(s.target,1)*100));
+        return '<div class="dpc-source-row"><div class="dpc-source-name">'+s.name+'</div><div class="dpc-source-track"><div class="dpc-source-fill" style="width:'+Math.max(w,s.val?8:0)+'%"></div></div><div class="dpc-source-val">'+s.label+'</div></div>';
+      }).join('')
+      +'</div>';
   }
 
   var followCmd=document.getElementById('dpc-follow-command');
@@ -2240,6 +2374,13 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
     ].map(renderDPCAction).join('');
   }
 
+  var callStack=document.getElementById('dpc-call-stack');
+  if(callStack){
+    var callCards=getDPCLeadCards(d,calEvents||[],bottleneck).filter(function(x){return /call|booked|calendar/i.test(x.meta+' '+x.name);});
+    if(!callCards.length)callCards=[{name:'No booked calls visible',meta:'Call queue · Empty',next:'Your next move is not call prep yet. Create or follow up warm leads until one call is booked.',heat:'Queue',phone:''}];
+    callStack.innerHTML=callCards.map(renderLeadCard).join('');
+  }
+
   var kpis=document.getElementById('dpc-kpi-grid');
   if(kpis){
     var responseRate=wkDms>0?Math.round(wkResp/wkDms*100):0;
@@ -2256,6 +2397,15 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
 
   var diag=document.getElementById('dpc-score-diagnosis');
   if(diag)diag.innerHTML='<strong>'+escapeHtml(bottleneck.stage)+' bottleneck:</strong> '+escapeHtml(bottleneck.msg)+' '+(gap>0?'Weekly gap: '+fmt(gap)+'.':'Weekly target is protected. Keep compounding.');
+
+  var scorePlan=document.getElementById('dpc-score-plan');
+  if(scorePlan){
+    scorePlan.innerHTML=[
+      {title:'Fix '+bottleneck.stage,copy:bottleneck.msg},
+      {title:'One measurable target',copy:dmGap>0?'Send '+dmGap+' DMs before checking other tabs.':calls<1?'Book one call from warm replies.':closes<1?'Collect payment or send the payment link.':'Increase volume while the system is working.'},
+      {title:'End-of-day proof',copy:'Before shutdown, log DMs, warm leads, calls, closes, and money collected so tomorrow starts smarter.'}
+    ].map(renderDPCAction).join('');
+  }
 }
 
 function renderDPCAction(a){
@@ -3430,7 +3580,7 @@ function lockMission(){
 
 function applyMissionFocus(){
   var mission=getMissionStore();
-  if(mission.locked&&mission.tool)openMissionTool(mission.tool,false);
+  if(mission.locked)openMissionTool(mission.tool||getMissionPrimaryTool(getMissionDayType()),false);
   else{
     ['dpc-card','content-tracker-card','production-card','calendar-card','actions-card'].forEach(function(id){
       var el=document.getElementById(id);
@@ -3917,6 +4067,7 @@ var CYCLE1_DAYS=55;
 var contentView='today';
 var productionView='today';
 var dpcView='now';
+var dpcSubViews={pipeline:'command',follow:'queue',score:'kpis'};
 
 function getContentLog(){
   return getStore(CONTENT_LOG_KEY)||{days:{}};
