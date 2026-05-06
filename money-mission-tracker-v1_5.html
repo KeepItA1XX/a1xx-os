@@ -426,19 +426,29 @@ input:focus{border-color:#333}
 .mission-move{background:#050a04;border:0.5px solid #16240b;border-radius:10px;padding:10px;min-height:78px}
 .mission-move-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1808;border:0.5px solid #2a4015;color:#7ec845;font-size:10px;font-weight:800;margin-bottom:7px}
 .mission-move-text{font-size:12px;color:#d8efd0;line-height:1.45}
+.mission-resources{background:#070807;border:0.5px solid #1f2428;border-radius:10px;padding:9px 10px;margin-bottom:10px;display:none}
+.mission-resources.show{display:block}
+.mission-resources-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.mission-resources-label{font-size:9px;font-weight:800;color:#8b949e;text-transform:uppercase;letter-spacing:.09em}
+.mission-resources-count{font-size:9px;color:#555}
+.mission-resource-list{display:flex;gap:6px;flex-wrap:wrap}
+.mission-resource{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:6px 9px;background:#0d1012;border:0.5px solid #2a3036;border-radius:8px;color:#d7dde3;text-decoration:none;font-size:11px;font-weight:700;line-height:1.25;transition:all .2s}
+.mission-resource:hover{border-color:#3a5a2a;color:#f0f3f5;background:#111711}
+.mission-resource span{font-size:10px;color:#7ec845}
 .mission-check{display:grid;grid-template-columns:70px 1fr 1fr;gap:8px;align-items:center;margin-bottom:10px}
 .mission-check-label{font-size:9px;font-weight:800;color:#4f7f28;text-transform:uppercase;letter-spacing:.09em}
 .mission-choice-row{display:flex;gap:5px}
 .mission-choice{height:28px;padding:0 9px;background:#0a0a0a;border:0.5px solid #1d3010;border-radius:8px;color:#526944;font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;flex:1}
 .mission-choice:hover{border-color:#2a4015;color:#7ec845}
 .mission-choice.active{background:#0d1808;border-color:#2a4015;color:#7ec845}
-.mission-tools{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+.mission-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
 .mission-tool{height:32px;background:#0a0a0a;border:0.5px solid #1a1a1a;border-radius:8px;color:#777;font-size:10px;font-weight:700;cursor:pointer;transition:all .2s}
 .mission-tool:hover{border-color:#2a2a2a;color:#e0e0e0}
 .mission-tool.active{background:#0d1808;border-color:#2a4015;color:#7ec845}
 .mission-lock{width:100%;height:34px;background:#0d1808;border:0.5px solid #2a4015;border-radius:9px;color:#7ec845;font-size:11px;font-weight:800;cursor:pointer;transition:all .2s}
 .mission-lock:hover{background:#102006}
 .mission-lock.locked{background:#10190a;color:#8fbf66}
+.mission-check.locked{display:none}
 .mission-hidden{display:none!important}
 
 /* DAILY PROFIT CAMPAIGN */
@@ -871,6 +881,13 @@ body{background:#090a0b;color:#d8dde1}
     <div class="mission-move"><div class="mission-move-num">2</div><div class="mission-move-text" id="mission-move-2">Protect the day from noise.</div></div>
     <div class="mission-move"><div class="mission-move-num">3</div><div class="mission-move-text" id="mission-move-3">Log the result before shutdown.</div></div>
   </div>
+  <div class="mission-resources" id="mission-resources">
+    <div class="mission-resources-top">
+      <div class="mission-resources-label">Useful right now</div>
+      <div class="mission-resources-count" id="mission-resources-count">Loading resources...</div>
+    </div>
+    <div class="mission-resource-list" id="mission-resource-list"></div>
+  </div>
   <div class="mission-check">
     <div class="mission-check-label">Check in</div>
     <div class="mission-choice-row">
@@ -888,8 +905,6 @@ body{background:#090a0b;color:#d8dde1}
     <button class="mission-tool" id="mission-tool-campaign" onclick="openMissionTool('campaign',true)">Campaign</button>
     <button class="mission-tool" id="mission-tool-content" onclick="openMissionTool('content',true)">Content</button>
     <button class="mission-tool" id="mission-tool-production" onclick="openMissionTool('production',true)">Production</button>
-    <button class="mission-tool" id="mission-tool-calendar" onclick="openMissionTool('calendar',true)">Calendar</button>
-    <button class="mission-tool" id="mission-tool-tasks" onclick="openMissionTool('tasks',true)">Tasks</button>
   </div>
   <button class="mission-lock" id="mission-lock-btn" onclick="lockMission()">Lock Mission</button>
 </div>
@@ -909,6 +924,8 @@ body{background:#090a0b;color:#d8dde1}
     <button class="dt-override-btn" onclick="setDayType('outreach')">💬 Outreach</button>
     <button class="dt-override-btn" onclick="setDayType('content')">📱 Content</button>
     <button class="dt-override-btn" onclick="setDayType('manager')">📋 Manager</button>
+    <button class="dt-override-btn" onclick="openMissionTool('calendar',true)">📅 Calendar</button>
+    <button class="dt-override-btn" onclick="openMissionTool('tasks',true)">✅ Tasks</button>
   </div>
 </div>
 
@@ -1669,6 +1686,7 @@ function renderSystemHealth(){
   var services=[
     ['todoist','Todoist'],
     ['content','Content / Notion'],
+    ['resources','Resources'],
     ['calendar','Calendar'],
     ['storage','Local storage']
   ];
@@ -2493,6 +2511,83 @@ async function fetchProductionPipeline(appUrl,secret,databaseId){
   return data;
 }
 
+async function loadResources(){
+  var ns=getStore(NOTION_KEY);
+  var appUrl=localStorage.getItem(SHEETS_KEY);
+  window.__resources=[];
+  if(!ns||!ns.key){
+    setHealth('resources','err','Notion secret not set');
+    return [];
+  }
+  if(!appUrl){
+    setHealth('resources','err','Apps Script URL not set');
+    return [];
+  }
+  setHealth('resources','loading','Loading OS Resource Library');
+  try{
+    var data=await fetchResources(appUrl,ns.key);
+    var items=normalizeResources(data);
+    window.__resources=items;
+    setHealth('resources','ok',items.length+' resource(s) loaded');
+    return items;
+  }catch(e){
+    window.__resources=[];
+    setHealth('resources','err',e.message);
+    return [];
+  }
+}
+
+async function fetchResources(appUrl,secret){
+  var sep=appUrl.indexOf('?')>=0?'&':'?';
+  var qs='action=resources&notionSecret='+encodeURIComponent(secret)+'&_='+Date.now();
+  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
+  if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
+  var text=await res.text();
+  var data;
+  try{data=JSON.parse(text);}
+  catch(jsonErr){throw new Error('Apps Script did not return JSON');}
+  if(data&&data.error)throw new Error(data.error);
+  if(data&&data.status==='error')throw new Error(data.message||'Apps Script returned an error');
+  if(data&&data.status==='ok'&&data.message&&String(data.message).indexOf('Backend is live')>=0){
+    throw new Error('Apps Script is live but missing the resources handler');
+  }
+  return data;
+}
+
+function normalizeResources(data){
+  var items=Array.isArray(data)?data:(data.items||data.results||[]);
+  return items.map(function(item){
+    return {
+      title:item.title||item.name||'Untitled resource',
+      type:item.type||'',
+      businessArea:asArray(item.businessArea),
+      relatedCard:asArray(item.relatedCard),
+      relatedTab:asArray(item.relatedTab),
+      relatedStage:asArray(item.relatedStage),
+      useCase:asArray(item.useCase),
+      priority:item.priority||'',
+      whenToShow:item.whenToShow||'',
+      summary:item.summary||item.shortSummary||'',
+      aiNotes:item.aiNotes||'',
+      url:item.resourceUrl||item.url||item.notionUrl||'',
+      notionUrl:item.notionUrl||item.url||''
+    };
+  }).filter(function(item){return item.title;});
+}
+
+function asArray(value){
+  if(Array.isArray(value))return value;
+  if(!value)return [];
+  if(typeof value==='string'){
+    try{
+      var parsed=JSON.parse(value);
+      if(Array.isArray(parsed))return parsed;
+    }catch(e){}
+    return value.split(',').map(function(v){return v.trim();}).filter(Boolean);
+  }
+  return [];
+}
+
 function normalizeProductionItems(data){
   var items=Array.isArray(data)?data:(data.items||data.productions||data.results||[]);
   return items.map(function(item){
@@ -3159,6 +3254,61 @@ function getMissionMoves(dayType,mission,contentPieces,calEvents){
   return moves[dayType]||moves.outreach;
 }
 
+function resourceHaystack(r){
+  return [
+    r.title,r.type,r.priority,r.whenToShow,r.summary,r.aiNotes,
+    (r.businessArea||[]).join(' '),(r.relatedCard||[]).join(' '),
+    (r.relatedTab||[]).join(' '),(r.relatedStage||[]).join(' '),(r.useCase||[]).join(' ')
+  ].join(' ').toLowerCase();
+}
+
+function getResourceKeywords(tool,dayType){
+  if(tool==='content'||dayType==='content')return ['content','hook','posting','post','caption','record','clip'];
+  if(tool==='production'||dayType==='beat')return ['production','beat','bangin','soundee','upload','mix','master'];
+  if(tool==='calendar'||dayType==='manager')return ['booking','call','calendar','weekly','review','offer'];
+  if(tool==='tasks')return ['weekly','review','campaign','checklist','playbook'];
+  return ['outreach','sales','dm','follow','booking','offer','objection','campaign','cold','warm'];
+}
+
+function pickMissionResources(tool,dayType,limit){
+  var resources=window.__resources||[];
+  var keywords=getResourceKeywords(tool,dayType);
+  return resources.map(function(r){
+    var text=resourceHaystack(r);
+    var score=0;
+    keywords.forEach(function(k){if(text.indexOf(k)>=0)score+=2;});
+    if((r.relatedCard||[]).indexOf('Mission Brief')>=0)score+=2;
+    if((r.relatedCard||[]).indexOf('Daily Profit Campaign')>=0&&tool==='campaign')score+=2;
+    if((r.priority||'').toLowerCase()==='high')score+=3;
+    else if((r.priority||'').toLowerCase()==='medium')score+=1;
+    return {resource:r,score:score};
+  }).filter(function(x){return x.score>0;})
+    .sort(function(a,b){return b.score-a.score;})
+    .slice(0,limit||3)
+    .map(function(x){return x.resource;});
+}
+
+function renderMissionResources(tool,dayType){
+  var wrap=document.getElementById('mission-resources');
+  var list=document.getElementById('mission-resource-list');
+  var count=document.getElementById('mission-resources-count');
+  if(!wrap||!list||!count)return;
+  var resources=pickMissionResources(tool,dayType,3);
+  if(!resources.length){
+    wrap.classList.remove('show');
+    list.innerHTML='';
+    count.textContent='No matched resources yet';
+    return;
+  }
+  wrap.classList.add('show');
+  count.textContent=resources.length+' matched';
+  list.innerHTML=resources.map(function(r){
+    var url=r.url||r.notionUrl||'#';
+    var target=url==='#'?'':' target="_blank"';
+    return '<a class="mission-resource" href="'+escapeHtml(url)+'"'+target+'><span>↗</span>'+escapeHtml(r.title)+'</a>';
+  }).join('');
+}
+
 function renderMissionBrief(contentPieces,calEvents){
   var title=document.getElementById('mission-title');
   var badge=document.getElementById('mission-badge');
@@ -3174,7 +3324,7 @@ function renderMissionBrief(contentPieces,calEvents){
   var weekOfCycle=Math.max(1,Math.floor((today-pd(cy.start))/6048e5)+1);
   var tool=mission.tool||getMissionPrimaryTool(dayType);
   var dayNames={outreach:'money day',content:'content day',beat:'production day',manager:'manager day'};
-  title.textContent='This week is about '+(gap>0?'closing '+fmt(gap):'protecting the win')+'. Today is a '+(dayNames[dayType]||'money day')+'.';
+  title.textContent=mission.locked?('Cycle '+cy.num+' '+cy.name+' · Week '+weekOfCycle+' mission locked'):('This week is about '+(gap>0?'closing '+fmt(gap):'protecting the win')+'. Today is a '+(dayNames[dayType]||'money day')+'.');
   badge.textContent='Cycle '+cy.num+' · W'+weekOfCycle+' · '+daysLeft(ci)+'d left';
   copy.innerHTML='<strong>'+rhythm.name+':</strong> '+escapeHtml(rhythm.focus)+' Weekly target: '+fmt(rev)+' / '+fmt(wk)+'. '+(gap>0?'The mission is to close the gap with one clean daily campaign.':'You hit the weekly number. Keep compounding without getting sloppy.');
   var moves=getMissionMoves(dayType,mission,contentPieces||[],calEvents||[]);
@@ -3191,17 +3341,23 @@ function renderMissionBrief(contentPieces,calEvents){
     if(b)b.classList.toggle('active',mission.time===v);
   });
   updateMissionToolState(tool,mission.locked);
+  renderMissionResources(tool,dayType);
 }
 
 function updateMissionToolState(tool,locked){
-  ['campaign','content','production','calendar','tasks'].forEach(function(t){
+  ['campaign','content','production'].forEach(function(t){
     var b=document.getElementById('mission-tool-'+t);
     if(b)b.classList.toggle('active',t===tool);
   });
+  var check=document.querySelector('.mission-check');
+  if(check)check.classList.toggle('locked',!!locked);
   var lockBtn=document.getElementById('mission-lock-btn');
   if(lockBtn){
+    var ci=getCycleIdx(),cy=CYCLES[ci],today=new Date();
+    var weekOfCycle=Math.max(1,Math.floor((today-pd(cy.start))/6048e5)+1);
+    var missionName='Cycle '+cy.num+' '+cy.name+' · Week '+weekOfCycle;
     lockBtn.classList.toggle('locked',!!locked);
-    lockBtn.textContent=locked?'Mission locked · showing '+tool:'Lock Mission';
+    lockBtn.textContent=locked?missionName+' locked · showing '+tool:'Lock Mission';
   }
 }
 
@@ -3218,6 +3374,7 @@ function openMissionTool(tool,shouldScroll){
   if(tool==='content'&&typeof setContentView==='function')setContentView('today');
   if(tool==='production'&&typeof setProductionView==='function')setProductionView('today');
   updateMissionToolState(tool,true);
+  renderMissionResources(tool,getMissionDayType());
   if(shouldScroll){
     var target=document.getElementById(ids[tool]);
     if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
@@ -3249,10 +3406,12 @@ async function loadTodayData(){
   var notionPieces=await loadContentToday();
   var pipelinePieces=await loadContentPipeline(notionPieces||[]);
   var productionPieces=await loadProductionPipeline();
+  var resources=await loadResources();
   var calEvents=await loadCalendar();
   window.__contentPieces=notionPieces||[];
   window.__contentPipelinePieces=pipelinePieces||notionPieces||[];
   window.__productionPieces=productionPieces||[];
+  window.__resources=resources||[];
   window.__calEvents=calEvents||[];
   initDayType(calEvents||[]);
   buildWeekStrip(calEvents||[],notionPieces||[]);
