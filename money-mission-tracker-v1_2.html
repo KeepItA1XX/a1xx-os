@@ -953,6 +953,21 @@ function updateStreams(){
   else{chk.style.color='#e05555';chk.style.fontWeight='600';chk.textContent='⚠ MISMATCH: Streams are '+fmt(Math.abs(diff))+(diff>0?' over':' under')+' your revenue total of '+fmt(rev)+'. Streams should add up to '+fmt(rev)+'. Adjust the inputs above until they match.';}
 }
 
+/* WEEKLY CHECK */
+function checkWeeklyTotals(rev){
+  var weekTotal=0;
+  for(var i=0;i<8;i++){var el=document.getElementById('wk-'+i);weekTotal+=el?parseFloat(el.value)||0:0;}
+  if(weekTotal===0||rev===0)return;
+  var diff=Math.abs(weekTotal-rev);
+  var chk=document.getElementById('stream-check');
+  if(!chk)return;
+  if(diff>50&&!chk.textContent.includes('Weekly bars')){
+    var existing=chk.textContent;
+    chk.style.color='#d4a017';
+    chk.textContent=(existing?existing+' · ':'')+'Weekly bars total '+fmt(weekTotal)+' vs revenue '+fmt(rev)+' — update weekly log to match.';
+  }
+}
+
 /* FUNNEL */
 function updateFunnel(){
   var sent=parseFloat(document.getElementById('dm-sent').value)||0;
