@@ -725,6 +725,7 @@ function fmt(n){return '$'+Math.round(n).toLocaleString();}
 function pct(a,b){return b===0?0:Math.min(100,Math.max(0,Math.round(a/b*100)));}
 function fmtS(s){return pd(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function nowMins(){var n=new Date();return n.getHours()*60+n.getMinutes();}
+function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function getStore(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
 function setStore(k,v){localStorage.setItem(k,JSON.stringify(v));}
 function flash(id){var t=document.getElementById(id);if(!t)return;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
@@ -916,7 +917,7 @@ function buildWeekStrip(calEvents,notionPieces){
   var DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   for(var i=0;i<7;i++){
     var d=new Date(monday);d.setDate(monday.getDate()+i);
-    var ds=d.toISOString().split('T')[0];
+    var ds=dateKey(d);
     var isToday=d.getTime()===today.getTime();
     var hasContent=notionPieces&&notionPieces.some(function(p){return p.date===ds;});
     var hasCal=calEvents&&calEvents.some(function(e){var ed=new Date(e.start);ed.setHours(0,0,0,0);return ed.getTime()===d.getTime()&&!e.title.toLowerCase().includes('fedex')&&!e.title.toLowerCase().includes('work');});
@@ -951,7 +952,7 @@ async function loadContentToday(){
     syncEl.textContent='Content: needs Apps Script';syncEl.className='sync-pill err';
     return null;
   }
-  var today=new Date().toISOString().split('T')[0];
+  var today=dateKey(new Date());
   document.getElementById('cc-date').textContent=today;
   try{
     var data=await fetchNotionContent(appUrl,today,ns.key,NOTION_CONTENT_DB,NOTION_CONTENT_DATE_FIELD);
