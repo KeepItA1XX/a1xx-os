@@ -271,6 +271,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .report-note{background:#111;border-radius:8px;padding:12px;font-size:12px;color:#444;line-height:1.7;font-style:italic}
 
 /* ROLODEX TAB */
+.rolodex-profile{background:#101214;border:0.5px solid #262b31;border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px}
+.rp-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.rp-label{font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.1em;font-weight:800;margin-bottom:4px}
+.rp-name{font-size:17px;font-weight:800;color:#f0f3f5;line-height:1.25}
+.rp-sub{font-size:11px;color:#8b949e;line-height:1.5;margin-top:4px}
+.rp-level{min-width:88px;text-align:center;background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:8px}
+.rp-level-num{font-size:24px;font-weight:900;color:#7ec845;line-height:1}
+.rp-level-lbl{font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.rp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.rp-stat{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:9px;padding:9px;text-align:center}
+.rp-stat-val{font-size:18px;font-weight:900;color:#f0f3f5;line-height:1}
+.rp-stat-lbl{font-size:8px;color:#8b949e;text-transform:uppercase;letter-spacing:.05em;font-weight:800;margin-top:5px}
+.rp-skill-bars{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rp-skill{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:9px;padding:8px 10px}
+.rp-skill-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px}
+.rp-skill-name{font-size:10px;color:#d7dde3;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.rp-skill-score{font-size:10px;color:#7ec845;font-weight:900}
+.rp-skill-track{height:5px;background:#050607;border-radius:4px;overflow:hidden}
+.rp-skill-fill{height:100%;background:#7ec845;border-radius:4px}
+.rolodex-search{background:#101214;border:0.5px solid #262b31;border-radius:12px;padding:10px 12px;margin-bottom:12px}
+.rolodex-search input{width:100%;height:38px;background:#0b0d0f;border:0.5px solid #2a3036;border-radius:9px;color:#f0f3f5;font-size:13px;padding:0 12px;outline:none}
+.rolodex-search-meta{font-size:10px;color:#8b949e;margin-top:8px;line-height:1.45}
 .rolodex-group{margin-bottom:1.25rem}
 .rolodex-group-label{font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
 .rolodex-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
@@ -436,10 +458,11 @@ input:focus{border-color:#333}
 .mission-resource{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:6px 9px;background:#0d1012;border:0.5px solid #2a3036;border-radius:8px;color:#d7dde3;text-decoration:none;font-size:11px;font-weight:700;line-height:1.25;transition:all .2s}
 .mission-resource:hover{border-color:#3a5a2a;color:#f0f3f5;background:#111711}
 .mission-resource span{font-size:10px;color:#7ec845}
-.context-resources{background:#080a0c;border:0.5px solid #222a31;border-radius:10px;padding:8px 10px;margin-bottom:10px;display:none}
+.context-resources{background:#080a0c;border:0.5px solid #222a31;border-radius:10px;padding:8px 10px;margin-top:10px;margin-bottom:0;display:none}
 .context-resources.show{display:block}
+.context-resources.collapsed .context-resource-list{display:none}
 .context-resources-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
-.context-resources-label{font-size:9px;font-weight:800;color:#8b949e;text-transform:uppercase;letter-spacing:.08em}
+.context-resources-label{font-size:9px;font-weight:800;color:#d7dde3;text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
 .context-resources-count{font-size:9px;color:#555}
 .context-resource-list{display:flex;gap:6px;flex-wrap:wrap}
 .mission-check{display:none}
@@ -1009,11 +1032,6 @@ body{background:#090a0b;color:#d8dde1}
     <button class="dpc-tab" id="dpc-tab-followup" onclick="setDPCView('followup')">Follow-Up</button>
     <button class="dpc-tab" id="dpc-tab-scoreboard" onclick="setDPCView('scoreboard')">Scoreboard</button>
   </div>
-  <div class="context-resources" id="dpc-resources">
-    <div class="context-resources-top"><div class="context-resources-label">Resources for this campaign</div><div class="context-resources-count" id="dpc-resources-count"></div></div>
-    <div class="context-resource-list" id="dpc-resource-list"></div>
-  </div>
-
   <div class="dpc-view active" id="dpc-view-now">
   <!-- THE ONE THING -->
   <div class="dpc-one-thing">
@@ -1176,6 +1194,11 @@ body{background:#090a0b;color:#d8dde1}
     </div>
   </div>
 
+  <div class="context-resources collapsed" id="dpc-resources">
+    <div class="context-resources-top"><div class="context-resources-label" onclick="toggleResourceDrawer('dpc')">Resources for this campaign</div><div class="context-resources-count" id="dpc-resources-count"></div></div>
+    <div class="context-resource-list" id="dpc-resource-list"></div>
+  </div>
+
   <!-- HIDDEN: legacy IDs kept for JS compatibility -->
   <div style="display:none">
     <div id="coach-tasks">0/0</div>
@@ -1211,11 +1234,6 @@ body{background:#090a0b;color:#d8dde1}
     <button class="ct-tab" id="ct-tab-performance" onclick="setContentView('performance')">Performance</button>
     <button class="ct-tab" id="ct-tab-repurpose" onclick="setContentView('repurpose')">Repurpose</button>
   </div>
-  <div class="context-resources" id="ct-resources">
-    <div class="context-resources-top"><div class="context-resources-label">Resources for this content move</div><div class="context-resources-count" id="ct-resources-count"></div></div>
-    <div class="context-resource-list" id="ct-resource-list"></div>
-  </div>
-
   <div class="ct-view active" id="ct-view-today">
   <!-- TODAY'S SCHEDULED CONTENT (from Notion) -->
   <div class="ct-today" id="ct-today-wrap">
@@ -1288,6 +1306,11 @@ body{background:#090a0b;color:#d8dde1}
   <div class="ct-status" id="ct-status">Loading your content record...</div>
   </div>
 
+  <div class="context-resources collapsed" id="ct-resources">
+    <div class="context-resources-top"><div class="context-resources-label" onclick="toggleResourceDrawer('ct')">Resources for this content move</div><div class="context-resources-count" id="ct-resources-count"></div></div>
+    <div class="context-resource-list" id="ct-resource-list"></div>
+  </div>
+
 </div>
 
 <!-- PRODUCTION CARD -->
@@ -1310,11 +1333,6 @@ body{background:#090a0b;color:#d8dde1}
     <button class="prod-tab" id="prod-tab-pipeline" onclick="setProductionView('pipeline')">Pipeline</button>
     <button class="prod-tab" id="prod-tab-consistency" onclick="setProductionView('consistency')">Consistency</button>
   </div>
-  <div class="context-resources" id="prod-resources">
-    <div class="context-resources-top"><div class="context-resources-label">Resources for this production move</div><div class="context-resources-count" id="prod-resources-count"></div></div>
-    <div class="context-resource-list" id="prod-resource-list"></div>
-  </div>
-
   <div class="prod-view active" id="prod-view-today">
     <div class="prod-command">
       <div class="prod-command-label">Production move</div>
@@ -1369,6 +1387,11 @@ body{background:#090a0b;color:#d8dde1}
   <div class="ct-status" id="prod-status" style="color:#6a5acd">Enter production data in the Activities tab below.</div>
   </div>
 
+  <div class="context-resources collapsed" id="prod-resources">
+    <div class="context-resources-top"><div class="context-resources-label" onclick="toggleResourceDrawer('prod')">Resources for this production move</div><div class="context-resources-count" id="prod-resources-count"></div></div>
+    <div class="context-resource-list" id="prod-resource-list"></div>
+  </div>
+
 </div>
 
 <!-- TIME BLOCK -->
@@ -1414,8 +1437,8 @@ body{background:#090a0b;color:#d8dde1}
 <div class="cal-card collapsible-card mission-hidden" id="calendar-card">
   <div class="cal-label collapse-head" onclick="toggleCollapse('calendar-card')"><div class="collapse-title">On your calendar today <span class="collapse-chevron">▼</span></div></div>
   <div class="collapse-body">
-    <div class="context-resources" id="cal-resources">
-      <div class="context-resources-top"><div class="context-resources-label">Resources for today’s schedule</div><div class="context-resources-count" id="cal-resources-count"></div></div>
+    <div class="context-resources collapsed" id="cal-resources">
+      <div class="context-resources-top"><div class="context-resources-label" onclick="toggleResourceDrawer('cal')">Resources for today’s schedule</div><div class="context-resources-count" id="cal-resources-count"></div></div>
       <div class="context-resource-list" id="cal-resource-list"></div>
     </div>
     <div class="cal-items" id="cal-items"><div class="cal-empty">Loading calendar...</div></div>
@@ -1429,8 +1452,8 @@ body{background:#090a0b;color:#d8dde1}
     <div class="checklist-score"><span id="check-score">Loading Todoist...</span> <span class="collapse-chevron">▼</span></div>
   </div>
   <div class="collapse-body">
-    <div class="context-resources" id="task-resources">
-      <div class="context-resources-top"><div class="context-resources-label">Resources for today’s actions</div><div class="context-resources-count" id="task-resources-count"></div></div>
+    <div class="context-resources collapsed" id="task-resources">
+      <div class="context-resources-top"><div class="context-resources-label" onclick="toggleResourceDrawer('task')">Resources for today’s actions</div><div class="context-resources-count" id="task-resources-count"></div></div>
       <div class="context-resource-list" id="task-resource-list"></div>
     </div>
     <div id="checklist-body"><div style="padding:14px 1.25rem;font-size:12px;color:#444">Connect Todoist to see today's tasks ↑</div></div>
@@ -1674,7 +1697,38 @@ body{background:#090a0b;color:#d8dde1}
 <!-- ═══════════════════════════════════════════ ROLODEX TAB ══ -->
 <div id="pane-rolodex" style="display:none">
 
-<div style="font-size:11px;color:#444;margin-bottom:14px">Your most important playbooks, tools, and documents. One tap away.</div>
+<div class="rolodex-profile">
+  <div class="rp-top">
+    <div>
+      <div class="rp-label">Executive Producer Profile</div>
+      <div class="rp-name">A1XX Money Mission Player Card</div>
+      <div class="rp-sub" id="rp-summary">Cycle profile loading from your current mission data.</div>
+    </div>
+    <div class="rp-level">
+      <div class="rp-level-num" id="rp-level">1</div>
+      <div class="rp-level-lbl">Cycle Level</div>
+    </div>
+  </div>
+  <div class="rp-stats">
+    <div class="rp-stat"><div class="rp-stat-val" id="rp-rev">$0</div><div class="rp-stat-lbl">Revenue</div></div>
+    <div class="rp-stat"><div class="rp-stat-val" id="rp-streak">0</div><div class="rp-stat-lbl">Content Streak</div></div>
+    <div class="rp-stat"><div class="rp-stat-val" id="rp-dms">0</div><div class="rp-stat-lbl">DMs Logged</div></div>
+    <div class="rp-stat"><div class="rp-stat-val" id="rp-active">0</div><div class="rp-stat-lbl">Active Assets</div></div>
+  </div>
+  <div class="rp-skill-bars" id="rp-skill-bars"></div>
+</div>
+
+<div class="rolodex-search">
+  <input type="text" id="rolodex-search" placeholder="Search playbooks, tools, content, contacts, resources..." oninput="filterRolodex()"/>
+  <div class="rolodex-search-meta" id="rolodex-search-meta">Search currently filters this Rolodex and loaded OS resources. Notion-wide search is the next backend step.</div>
+</div>
+
+<div class="rolodex-group" id="rolodex-queue-group">
+  <div class="rolodex-group-label">Follow-Up Queues</div>
+  <div class="rolodex-grid" id="rolodex-queue-grid">
+    <div class="rolodex-item"><div class="ri-icon amber">!</div><div><div class="ri-name">Lead queues loading</div><div class="ri-type">CRM · no-shows, incomplete forms, booked but not closed</div></div></div>
+  </div>
+</div>
 
 <div class="rolodex-group">
   <div class="rolodex-group-label">Playbooks — Cycle 1</div>
@@ -1706,6 +1760,13 @@ body{background:#090a0b;color:#d8dde1}
     <a class="rolodex-item" href="https://www.skool.com" target="_blank"><div class="ri-icon purple">🎓</div><div><div class="ri-name">Skool</div><div class="ri-type">Rappreneur OS Community</div></div></a>
     <a class="rolodex-item" href="https://todoist.com" target="_blank"><div class="ri-icon red">✅</div><div><div class="ri-name">Todoist</div><div class="ri-type">Daily Execution</div></div></a>
     <a class="rolodex-item" href="https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit" target="_blank"><div class="ri-icon green">📊</div><div><div class="ri-name">Mission Tracker Sheet</div><div class="ri-type">Google Drive · ARCHIVES</div></div></a>
+  </div>
+</div>
+
+<div class="rolodex-group" id="rolodex-live-group">
+  <div class="rolodex-group-label">Live Contacts + Resources</div>
+  <div class="rolodex-grid" id="rolodex-live-grid">
+    <div class="rolodex-item"><div class="ri-icon green">↗</div><div><div class="ri-name">Live resources loading</div><div class="ri-type">Notion · OS Resource Library</div></div></div>
   </div>
 </div>
 
@@ -1926,6 +1987,7 @@ function showTab(name,el){
   document.getElementById('pane-'+name).style.display='block';
   if(el)el.classList.add('active');
   if(name==='report')updateReport();
+  if(name==='rolodex')renderRolodex();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -3958,12 +4020,102 @@ function renderContextResources(card,view){
     return;
   }
   wrap.classList.add('show');
-  count.textContent=resources.length+' matched';
+  count.textContent=resources.length+' matched · tap';
   list.innerHTML=resources.map(function(r){
     var url=r.url||r.notionUrl||'#';
     var target=url==='#'?'':' target="_blank"';
     return '<a class="mission-resource" href="'+escapeHtml(url)+'"'+target+'><span>↗</span>'+escapeHtml(r.title)+'</a>';
   }).join('');
+}
+
+function toggleResourceDrawer(prefix){
+  var wrap=document.getElementById(prefix+'-resources');
+  if(wrap)wrap.classList.toggle('collapsed');
+}
+
+function renderRolodex(){
+  var ci=getCycleIdx(),cy=CYCLES[ci];
+  var rev=parseFloat((document.getElementById('w-rev')||{}).value)||0;
+  var dms=parseFloat((document.getElementById('w-dms')||{}).value)||(getDailyCoach().dms||0);
+  var contentStreak=typeof getContentStreak==='function'?getContentStreak():0;
+  var activeAssets=(window.__contentPipelinePieces||[]).length+(window.__productionPieces||[]).length;
+  var set=function(id,val){var el=document.getElementById(id);if(el)el.textContent=val;};
+  set('rp-level',cy.num);
+  set('rp-rev',fmt(rev));
+  set('rp-streak',contentStreak);
+  set('rp-dms',dms);
+  set('rp-active',activeAssets);
+  var summary=document.getElementById('rp-summary');
+  if(summary)summary.textContent='Cycle '+cy.num+' · '+cy.name+' · '+daysLeft(ci)+' days left. Current build: consistency, outreach, production delivery, and weekly revenue proof.';
+  var scores=[
+    {name:'Outreach',score:Math.min(100,Math.round(dms/40*100))},
+    {name:'Content',score:Math.min(100,contentStreak*14)},
+    {name:'Production',score:Math.min(100,(getProductionData().banginThisWeek===1?80:20)+Math.min(20,(window.__productionPieces||[]).length*5))},
+    {name:'Tracking',score:rev>0?70:35}
+  ];
+  var bars=document.getElementById('rp-skill-bars');
+  if(bars){
+    bars.innerHTML=scores.map(function(s){
+      return '<div class="rp-skill"><div class="rp-skill-top"><div class="rp-skill-name">'+s.name+'</div><div class="rp-skill-score">'+s.score+'%</div></div><div class="rp-skill-track"><div class="rp-skill-fill" style="width:'+s.score+'%"></div></div></div>';
+    }).join('');
+  }
+  renderRolodexQueues();
+  renderRolodexLive();
+  filterRolodex();
+}
+
+function renderRolodexQueues(){
+  var grid=document.getElementById('rolodex-queue-grid');
+  if(!grid)return;
+  var leads=window.__crmLeads||[];
+  var buckets=[
+    {name:'No-shows',meta:'Booked or registered but did not attend',test:function(l){return /no.?show|missed/i.test(l.stage+' '+l.status+' '+l.recentActivity);}},
+    {name:'Booked, no call yet',meta:'Booked something but no call happened',test:function(l){return /book|schedul|registered/i.test(l.stage+' '+l.status+' '+l.conversionEvent)&&!/call complete|closed|won/i.test(l.stage+' '+l.status);}},
+    {name:'Incomplete forms',meta:'Started opt-in but form is incomplete',test:function(l){return /incomplete|partial|abandon|form/i.test(l.stage+' '+l.status+' '+l.recentActivity+' '+l.conversionEvent);}},
+    {name:'Resource, not Skool',meta:'Downloaded/opted in but not in community',test:function(l){return /resource|download|beat pack|opt.?in/i.test(l.stage+' '+l.status+' '+l.conversionEvent)&&!/skool|community/i.test(l.stage+' '+l.status+' '+l.conversionEvent);}}
+  ];
+  grid.innerHTML=buckets.map(function(b){
+    var count=leads.filter(b.test).length;
+    return '<a class="rolodex-item" href="'+NOTION_CRM_URL+'" target="_blank"><div class="ri-icon amber">'+count+'</div><div><div class="ri-name">'+b.name+'</div><div class="ri-type">'+b.meta+'</div></div></a>';
+  }).join('');
+}
+
+function renderRolodexLive(){
+  var grid=document.getElementById('rolodex-live-grid');
+  if(!grid)return;
+  var resources=(window.__resources||[]).slice(0,8).map(function(r){
+    return {name:r.title,type:'Resource · '+(r.type||'Notion'),url:r.url||r.notionUrl||'#',icon:'↗',color:'blue'};
+  });
+  var leads=(window.__crmLeads||[]).slice(0,6).map(function(l){
+    var tag=l.stage||l.status||l.source||'CRM Lead';
+    return {name:l.name,type:tag+(l.followUpDate?' · follow up '+formatContentDate(l.followUpDate):''),url:l.url||NOTION_CRM_URL,icon:l.hot?'🔥':'👤',color:l.hot?'amber':'green'};
+  });
+  var items=leads.concat(resources);
+  if(!items.length){
+    grid.innerHTML='<div class="rolodex-item"><div class="ri-icon green">↗</div><div><div class="ri-name">No live contacts/resources loaded yet</div><div class="ri-type">Connect CRM and Resource Library endpoints to fill this section.</div></div></div>';
+    return;
+  }
+  grid.innerHTML=items.map(function(item){
+    return '<a class="rolodex-item" href="'+escapeHtml(item.url)+'" target="_blank"><div class="ri-icon '+item.color+'">'+item.icon+'</div><div><div class="ri-name">'+escapeHtml(item.name)+'</div><div class="ri-type">'+escapeHtml(item.type)+'</div></div></a>';
+  }).join('');
+}
+
+function filterRolodex(){
+  var input=document.getElementById('rolodex-search');
+  var q=input?input.value.trim().toLowerCase():'';
+  var items=document.querySelectorAll('#pane-rolodex .rolodex-item');
+  var shown=0;
+  items.forEach(function(item){
+    var hit=!q||item.textContent.toLowerCase().indexOf(q)>=0;
+    item.style.display=hit?'flex':'none';
+    if(hit)shown++;
+  });
+  document.querySelectorAll('#pane-rolodex .rolodex-group').forEach(function(group){
+    var visible=Array.prototype.slice.call(group.querySelectorAll('.rolodex-item')).some(function(item){return item.style.display!=='none';});
+    group.style.display=visible?'block':'none';
+  });
+  var meta=document.getElementById('rolodex-search-meta');
+  if(meta)meta.textContent=q?shown+' result'+(shown===1?'':'s')+' showing for "'+q+'".':'Search currently filters this Rolodex, loaded contacts, and OS resources. Notion-wide search is the next backend step.';
 }
 
 function renderMissionBrief(contentPieces,calEvents){
@@ -4107,6 +4259,7 @@ async function loadTodayData(){
   safeRender('task resources',function(){renderContextResources('tasks','today');});
   safeRender('daily profit campaign',function(){renderDailyCoach(notionPieces||[],calEvents||[]);});
   safeRender('mission brief',function(){renderMissionBrief(notionPieces||[],calEvents||[]);});
+  safeRender('rolodex',function(){renderRolodex();});
   safeRender('mission focus',function(){applyMissionFocus();});
   safeRender('daily archive',function(){checkDailyArchive();});
   safeRender('sync complete',function(){markSyncComplete();});
@@ -4120,6 +4273,7 @@ function init(){
   safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);});
   safeRender('initial mission brief',function(){renderMissionBrief([],[]);});
+  safeRender('initial rolodex',function(){renderRolodex();});
   safeRender('initial mission focus',function(){applyMissionFocus();});
   loadTodayData().catch(function(e){
     console.error('A1XX startup failed',e);
