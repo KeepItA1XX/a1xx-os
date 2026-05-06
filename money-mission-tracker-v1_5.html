@@ -993,6 +993,10 @@ async function fetchNotionContent(appUrl,date,secret,databaseId,dateField){
   try{data=JSON.parse(text);}
   catch(jsonErr){throw new Error('Apps Script did not return JSON');}
   if(data&&data.error)throw new Error(data.error);
+  if(data&&data.status==='error')throw new Error(data.message||'Apps Script returned an error');
+  if(data&&data.status==='ok'&&data.message&&String(data.message).indexOf('Backend is live')>=0){
+    throw new Error('Apps Script is live but missing the content handler');
+  }
   return data;
 }
 
@@ -1060,6 +1064,10 @@ async function loadCalendar(){
     var data;
     try{data=JSON.parse(text);}
     catch(jsonErr){throw new Error('not JSON');}
+    if(data&&data.status==='error')throw new Error(data.message||'Apps Script returned an error');
+    if(data&&data.status==='ok'&&data.message&&String(data.message).indexOf('Backend is live')>=0){
+      throw new Error('Apps Script is live but missing the calendar handler');
+    }
     var allEvents=Array.isArray(data)?data:(data.events||[]);
     if(!allEvents.length){
       el.innerHTML='<div class="cal-empty">Nothing on your calendar today.</div>';
