@@ -914,9 +914,9 @@ body{background:#090a0b;color:#d8dde1}
   </div>
   <div class="mission-copy" id="mission-copy">Reading your cycle target, weekly inputs, calendar, tasks, content, and production rhythm.</div>
   <div class="mission-grid">
-    <div class="mission-move"><div class="mission-move-num">1</div><div class="mission-move-text" id="mission-move-1">Find the highest-leverage move.</div></div>
-    <div class="mission-move"><div class="mission-move-num">2</div><div class="mission-move-text" id="mission-move-2">Protect the day from noise.</div></div>
-    <div class="mission-move"><div class="mission-move-num">3</div><div class="mission-move-text" id="mission-move-3">Log the result before shutdown.</div></div>
+    <div class="mission-move"><div class="mission-move-num">1</div><div class="mission-move-text" id="mission-move-1">Reading mission priority...</div></div>
+    <div class="mission-move"><div class="mission-move-num">2</div><div class="mission-move-text" id="mission-move-2">Checking calendar and tasks...</div></div>
+    <div class="mission-move"><div class="mission-move-num">3</div><div class="mission-move-text" id="mission-move-3">Finding proof needed this week...</div></div>
   </div>
   <div class="mission-check">
     <div class="mission-check-label">Check in</div>
@@ -3471,30 +3471,30 @@ function getMissionMoves(dayType,mission,contentPieces,calEvents){
   var topContent=pieces[0]&&pieces[0].title&&pieces[0].title!=='Untitled'?pieces[0].title:'today’s scheduled content';
   var nextEvent=getNextCalendarEvent(calEvents||[]);
   var topTask=(todoistTasks||[]).filter(function(t){return !localChecks[t.id];})[0];
-  var prep=mission.energy==='low'||mission.time==='light';
-  var moves={
-    outreach:[
-      prep?'Send the first 20 DMs. Make the day count without trying to carry the whole week at once.':'Send 40 DMs before you drift into admin.',
-      'Push warm replies toward one booked call or one paid next step.',
-      topTask?'Clear this task: '+topTask.content:'Log DMs, replies, calls, closes, and money before shutdown.'
-    ],
-    content:[
-      'Move '+topContent+' one stage closer to posted.',
-      prep?'Capture the simplest usable version. Short, clean, published beats perfect but hidden.':'Clip or repurpose one asset after the main post is handled.',
-      'Use the post as pipeline fuel: send it to warm leads or invite people into the next offer.'
-    ],
-    beat:[
-      prep?'Open the DAW and move one beat forward for 30 focused minutes.':'Create or finish one beat that can feed BANGIN+ and Soundee.',
-      'Check the weekly production promise: BANGIN+ first, Soundee stock second.',
-      'Turn the production asset into business motion: pitch, post, or package it.'
-    ],
-    manager:[
-      nextEvent?'Protect the next event: '+nextEvent.startTime+' · '+nextEvent.title:'Review the calendar and choose the day’s real constraint.',
-      topTask?'Clear the highest-impact Todoist item: '+topTask.content:'Choose the one admin task that unlocks tomorrow.',
-      'Update the weekly numbers so the report can tell the truth.'
-    ]
-  };
-  return moves[dayType]||moves.outreach;
+  var rev=parseFloat((document.getElementById('w-rev')||{}).value)||0;
+  var wk=parseFloat((document.getElementById('w-wk')||{}).value)||400;
+  var gap=Math.max(0,wk-rev);
+  var prod=getProductionData();
+  var activeContent=(window.__contentPipelinePieces||pieces||[]).length;
+  var activeProduction=(window.__productionPieces||[]).length;
+  var dms=parseFloat((document.getElementById('w-dms')||{}).value)||d.dms||0;
+  var calls=parseFloat((document.getElementById('w-calls')||{}).value)||d.calls||0;
+  var closes=parseFloat((document.getElementById('w-closes')||{}).value)||d.closes||0;
+  var taskText=topTask?topTask.content:'No urgent Todoist task loaded';
+  var scheduleText=nextEvent?'Next: '+nextEvent.startTime+' · '+nextEvent.title:'Calendar clear right now';
+  var priority='';
+  if(gap>0&&dayType==='outreach')priority='Revenue gap: '+fmt(gap)+' left this week. Priority is pipeline: DMs → replies → call.';
+  else if(dayType==='content')priority='Content mission: '+topContent+'. Active content visible: '+activeContent+'.';
+  else if(dayType==='beat')priority='Production mission: BANGIN+ '+(prod.banginThisWeek===1?'done':'pending')+'. Active projects: '+activeProduction+'.';
+  else if(dayType==='manager')priority='Manager mission: protect schedule, clear top task, update numbers.';
+  else priority=gap>0?'Week gap: '+fmt(gap)+'. Pick the fastest path to cash.':'Week target protected. Keep compounding inputs.';
+  var constraint=scheduleText+' · Task: '+taskText;
+  var proof='';
+  if(dayType==='outreach')proof='Proof needed: '+Math.max(0,40-dms)+' more DMs, '+Math.max(0,1-calls)+' call, '+Math.max(0,1-closes)+' close.';
+  else if(dayType==='content')proof='Proof needed: post today, then mark content posted.';
+  else if(dayType==='beat')proof='Proof needed: move one production forward; upload BANGIN+ if pending.';
+  else proof='Proof needed: calendar handled, top task cleared, numbers updated.';
+  return [priority,constraint,proof];
 }
 
 function resourceHaystack(r){
