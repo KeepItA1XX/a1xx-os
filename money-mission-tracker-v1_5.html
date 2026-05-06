@@ -39,6 +39,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .block-progress-fill.manager{background:#3a2800}
 .block-progress-fill.finale{background:#2a1848}
 
+.coach-card{background:#0d1308;border:0.5px solid #263815;border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px}
+.coach-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.coach-label{font-size:10px;font-weight:700;color:#7ec845;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.coach-title{font-size:16px;font-weight:600;color:#f0f0f0}
+.coach-pulse{font-size:11px;color:#639922;text-align:right;line-height:1.5}
+.coach-line{background:#10190a;border:0.5px solid #1d3010;border-radius:8px;padding:9px 11px;font-size:12px;color:#8fbf66;line-height:1.55;margin-bottom:10px}
+.coach-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.coach-action{background:#0b0f08;border:0.5px solid #1d2815;border-radius:10px;padding:10px;cursor:pointer;transition:all .2s;min-height:86px}
+.coach-action:hover{border-color:#2a4015;background:#0f170a}
+.coach-action.done{opacity:.55}
+.coach-action-head{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.coach-check{width:18px;height:18px;border-radius:50%;border:1.5px solid #2a4015;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.coach-action.done .coach-check{background:#639922;border-color:#639922}
+.coach-action.done .coach-check::after{content:'✓';font-size:10px;color:#fff;font-weight:700}
+.coach-action-title{font-size:12px;font-weight:600;color:#e0e0e0;line-height:1.35}
+.coach-action.done .coach-action-title{text-decoration:line-through;color:#555}
+.coach-action-meta{font-size:10px;color:#526944;line-height:1.45}
+.coach-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.coach-stat{background:#0b0b0b;border:0.5px solid #1a1a1a;border-radius:8px;padding:9px 10px}
+.coach-stat-label{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.coach-stat-value{font-size:16px;font-weight:600;color:#f0f0f0}
+.coach-stat input{width:100%;height:28px;background:#111;border:0.5px solid #222;border-radius:6px;color:#e0e0e0;font-size:14px;font-weight:600;padding:0 7px}
+
 .golden-card{background:#150e00;border:0.5px solid #3a2800;border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px;cursor:pointer;transition:border-color .2s}
 .golden-card:hover{border-color:#d4a017}
 .golden-card.active{border-color:#d4a017;background:#1a1200}
@@ -375,6 +398,25 @@ input:focus{border-color:#333}
   <div class="status" id="sheets-status"></div>
 </div>
 
+<!-- DAILY COACH -->
+<div class="coach-card">
+  <div class="coach-top">
+    <div>
+      <div class="coach-label">Daily Profit Campaign</div>
+      <div class="coach-title">Execution pressure</div>
+    </div>
+    <div class="coach-pulse" id="coach-pulse">Loading...</div>
+  </div>
+  <div class="coach-line" id="coach-line">Reading today’s calendar, content, tasks, and cycle pace...</div>
+  <div class="coach-actions" id="coach-actions"></div>
+  <div class="coach-stats">
+    <div class="coach-stat"><div class="coach-stat-label">Tasks done</div><div class="coach-stat-value" id="coach-tasks">0/0</div></div>
+    <div class="coach-stat"><div class="coach-stat-label">Money today</div><input type="number" id="coach-money" min="0" value="0" oninput="saveDailyCoach()"/></div>
+    <div class="coach-stat"><div class="coach-stat-label">DMs sent</div><input type="number" id="coach-dms" min="0" value="0" oninput="saveDailyCoach()"/></div>
+    <div class="coach-stat"><div class="coach-stat-label">Biz moves</div><input type="number" id="coach-moves" min="0" value="0" oninput="saveDailyCoach()"/></div>
+  </div>
+</div>
+
 <!-- TIME BLOCK -->
 <div class="block-bar" id="block-bar">
   <div class="block-header">
@@ -694,6 +736,7 @@ var NOTION_CONTENT_URL='https://www.notion.so/1a06115281da81bcb7eccecbcba9ed8e';
 var NOTION_CONTENT_DATE_FIELD='Production Date';
 var GOLDEN_KEY='a1xx_golden';
 var CHECK_KEY='a1xx_checks_v1';
+var DPC_KEY='a1xx_daily_profit_v1';
 var STREAK_KEY='a1xx_streak';
 
 var CYCLES=[
@@ -937,6 +980,80 @@ function buildWeekStrip(calEvents,notionPieces){
     grid.appendChild(div);
   }
   document.getElementById('week-note').innerHTML='<strong style="color:#555">Legend:</strong> <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#639922;border-radius:50%;display:inline-block"></span>Content scheduled</span> · <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#3a7bd5;border-radius:50%;display:inline-block"></span>Calendar event</span> · <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#d4a017;border-radius:50%;display:inline-block"></span>Sunday review</span>';
+}
+
+/* ══════════════════════════════════════════════════════════
+   DAILY COACH
+══════════════════════════════════════════════════════════ */
+function getDailyCoach(){
+  var saved=getStore(DPC_KEY);
+  var today=dateKey(new Date());
+  if(saved&&saved.date===today)return saved;
+  return {date:today,money:0,dms:0,moves:0,done:{}};
+}
+
+function saveDailyCoach(){
+  var d=getDailyCoach();
+  d.money=parseFloat((document.getElementById('coach-money')||{}).value)||0;
+  d.dms=parseFloat((document.getElementById('coach-dms')||{}).value)||0;
+  d.moves=parseFloat((document.getElementById('coach-moves')||{}).value)||0;
+  setStore(DPC_KEY,d);
+  renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
+}
+
+function toggleCoachAction(id){
+  var d=getDailyCoach();
+  d.done=d.done||{};
+  d.done[id]=!d.done[id];
+  setStore(DPC_KEY,d);
+  renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
+}
+
+function buildCoachActions(contentPieces){
+  var actions=[];
+  var mainContent=contentPieces&&contentPieces[0];
+  var title=mainContent&&mainContent.title&&mainContent.title!=='Untitled'?mainContent.title:'today’s strongest content piece';
+  actions.push({id:'make',title:'Produce or move content',meta:'Push '+title+' forward before the day gets noisy.'});
+  actions.push({id:'dms',title:'Send 40 DMs',meta:'Money Time target. Warm leads, studio partners, follow-ups.'});
+  actions.push({id:'collect',title:'Collect or create cash',meta:'Invoice, follow up, pitch, book a call, or close one paid step.'});
+  return actions;
+}
+
+function renderDailyCoach(contentPieces,calEvents){
+  window.__contentPieces=contentPieces||window.__contentPieces||[];
+  window.__calEvents=calEvents||window.__calEvents||[];
+  var d=getDailyCoach();
+  var moneyEl=document.getElementById('coach-money'),dmsEl=document.getElementById('coach-dms'),movesEl=document.getElementById('coach-moves');
+  if(moneyEl&&document.activeElement!==moneyEl)moneyEl.value=d.money||0;
+  if(dmsEl&&document.activeElement!==dmsEl)dmsEl.value=d.dms||0;
+  if(movesEl&&document.activeElement!==movesEl)movesEl.value=d.moves||0;
+  var doneTasks=Object.keys(localChecks||{}).filter(function(k){return localChecks[k];}).length;
+  var totalTasks=todoistTasks.length;
+  var taskEl=document.getElementById('coach-tasks');if(taskEl)taskEl.textContent=doneTasks+'/'+totalTasks;
+  var blockIdx=getCurrentBlock();
+  var block=blockIdx>=0&&blockIdx<TIME_BLOCKS.length?TIME_BLOCKS[blockIdx]:null;
+  var rev=parseFloat(document.getElementById('w-rev').value)||0;
+  var wk=parseFloat(document.getElementById('w-wk').value)||400;
+  var gap=Math.max(0,wk-rev);
+  var contentCount=(contentPieces||[]).length,calCount=(calEvents||[]).length;
+  var pulse=document.getElementById('coach-pulse');
+  if(pulse)pulse.innerHTML=(block?block.name:'Pre-flight')+'<br>'+contentCount+' content · '+calCount+' calendar';
+  var line=document.getElementById('coach-line');
+  if(line){
+    var mode=block&&block.cls==='money'?'You are in money mode. Do not organize the system. Create pressure: DMs, follow-ups, invoices, calls.':
+      block&&block.cls==='maker'?'You are in maker mode. Move one content piece from idea to asset before checking anything else.':
+      'Today needs proof, not planning. Make content, create conversations, and collect cash.';
+    line.textContent=mode+' Weekly gap: '+fmt(gap)+'. Today: '+fmt(d.money||0)+' collected, '+(d.dms||0)+' DMs, '+(d.moves||0)+' business moves.';
+  }
+  var wrap=document.getElementById('coach-actions');if(!wrap)return;
+  var actions=buildCoachActions(contentPieces||[]);
+  wrap.innerHTML=actions.map(function(a){
+    var done=d.done&&d.done[a.id];
+    return '<div class="coach-action'+(done?' done':'')+'" onclick="toggleCoachAction(\''+a.id+'\')">'
+      +'<div class="coach-action-head"><div class="coach-check"></div><div class="coach-action-title">'+escapeHtml(a.title)+'</div></div>'
+      +'<div class="coach-action-meta">'+escapeHtml(a.meta)+'</div>'
+      +'</div>';
+  }).join('');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1188,6 +1305,7 @@ async function loadTodoist(){
     loadLocalChecks();
     if(filtered.length){updateChecklist(getCurrentBlock());}
     else{showEmptyChecklist('No Todoist tasks due today after filters.');}
+    renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
     syncEl.textContent='Todoist: '+filtered.length+' tasks';syncEl.className='sync-pill ok';
   }catch(e){
     document.getElementById('check-score').textContent='Load failed';
@@ -1306,6 +1424,7 @@ function toggleCheck(taskId,content){
   var done=Object.values(localChecks).filter(Boolean).length;
   document.getElementById('check-score').textContent=done+' of '+total+' done';
   updateDoneSection();
+  renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
 }
 
 function checkAllDone(){
@@ -1366,6 +1485,7 @@ function addQuickTask(){
   todoistTasks.push({id:fakeId,content:text,priority:4,labels:[]});
   input.value='';
   updateChecklist(getCurrentBlock());
+  renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1530,14 +1650,18 @@ async function loadTodayData(){
   updateTimeBlock();updateGolden();
   var notionPieces=await loadContentToday();
   var calEvents=await loadCalendar();
+  window.__contentPieces=notionPieces||[];
+  window.__calEvents=calEvents||[];
   buildWeekStrip(calEvents||[],notionPieces||[]);
   await loadTodoist();
+  renderDailyCoach(notionPieces||[],calEvents||[]);
   checkDailyArchive();
 }
 function init(){
   loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
+  renderDailyCoach([],[]);
   loadTodayData();
   setInterval(function(){updateTimeBlock();updateGolden();},60000);
 }
