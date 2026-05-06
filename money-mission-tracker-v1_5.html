@@ -1003,16 +1003,22 @@ async function loadCalendar(){
     return[];
   }
   try{
-    var res=await fetch(url+'?action=calendar',{method:'GET',redirect:'follow'});
-    var data=await res.json();
-    if(!data.events||data.events.length===0){
+    var sep=url.indexOf('?')>=0?'&':'?';
+    var res=await fetch(url+sep+'action=calendar&_='+Date.now(),{method:'GET',redirect:'follow'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    var text=await res.text();
+    var data;
+    try{data=JSON.parse(text);}
+    catch(jsonErr){throw new Error('not JSON');}
+    var allEvents=Array.isArray(data)?data:(data.events||[]);
+    if(!allEvents.length){
       el.innerHTML='<div class="cal-empty">Nothing on your calendar today.</div>';
       syncEl.textContent='Calendar: clear';syncEl.className='sync-pill ok';
       return[];
     }
     el.innerHTML='';
-    var events=(data.events||[]).filter(function(e){return e&&e.title&&!e.title.toLowerCase().includes('fedex')&&!e.title.toLowerCase().includes('personal');});
-    if(events.length===0){el.innerHTML='<div class="cal-empty">No business events today.</div>';return[];}
+    var events=allEvents.filter(function(e){return e&&e.title&&!e.title.toLowerCase().includes('fedex')&&!e.title.toLowerCase().includes('personal');});
+    if(events.length===0){el.innerHTML='<div class="cal-empty">No business events today.</div>';syncEl.textContent='Calendar: clear';syncEl.className='sync-pill ok';return[];}
     events.forEach(function(e){
       var dot='cal-dot';
       var tl=e.title.toLowerCase();
@@ -1020,16 +1026,24 @@ async function loadCalendar(){
       else if(tl.includes('maker')||tl.includes('focus')||tl.includes('content'))dot='cal-dot maker';
       else if(tl.includes('fedex')||tl.includes('work'))dot='cal-dot work';
       var div=document.createElement('div');div.className='cal-item';
-      div.innerHTML='<div class="'+dot+'"></div><div class="cal-time">'+e.startTime+'</div><div class="cal-name">'+e.title+'</div>';
+      var time=e.startTime||e.time||formatCalTime(e.start);
+      div.innerHTML='<div class="'+dot+'"></div><div class="cal-time">'+time+'</div><div class="cal-name">'+e.title+'</div>';
       el.appendChild(div);
     });
     syncEl.textContent='Calendar: '+events.length+' events';syncEl.className='sync-pill ok';
     return events;
   }catch(ex){
-    el.innerHTML='<div class="cal-empty">Calendar unavailable — check Apps Script deployment.</div>';
-    syncEl.textContent='Calendar: error';syncEl.className='sync-pill err';
+    el.innerHTML='<div class="cal-empty">Calendar unavailable — check Apps Script deployment and that it returns JSON.</div>';
+    syncEl.textContent='Calendar: error — '+ex.message;syncEl.className='sync-pill err';
     return[];
   }
+}
+
+function formatCalTime(value){
+  if(!value)return '';
+  var d=new Date(value);
+  if(isNaN(d.getTime()))return '';
+  return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1046,13 +1060,7 @@ async function loadTodoist(){
   }
   syncEl.textContent='Todoist: loading...';syncEl.className='sync-pill loading';
   try{
-    var res=await fetch('https://api.todoist.com/rest/v2/tasks?filter=today',{
-      method:'GET',
-      headers:{'Authorization':'Bearer '+token}
-    });
-    if(!res.ok)throw new Error('Todoist '+res.status);
-    var raw2=await res.json();
-    var tasks=Array.isArray(raw2)?raw2:[];
+    var tasks=await fetchTodoistToday(token);
     var filtered=tasks.filter(function(t){
       var labels=t.labels||[];
       var hasExcludeLabel=labels.some(function(l){return EXCLUDE_LABELS.indexOf(l.toLowerCase())>=0;});
@@ -1060,12 +1068,41 @@ async function loadTodoist(){
     });
     todoistTasks=filtered;
     loadLocalChecks();
-    updateChecklist(getCurrentBlock());
+    if(filtered.length){updateChecklist(getCurrentBlock());}
+    else{showEmptyChecklist('No Todoist tasks due today after filters.');}
     syncEl.textContent='Todoist: '+filtered.length+' tasks';syncEl.className='sync-pill ok';
   }catch(e){
     document.getElementById('check-score').textContent='Load failed';
     syncEl.textContent='Todoist: error — '+e.message;syncEl.className='sync-pill err';
   }
+}
+
+async function fetchTodoistToday(token){
+  var v1Url='https://api.todoist.com/api/v1/tasks/filter?query='+encodeURIComponent('today')+'&limit=100';
+  try{return await requestTodoistTasks(v1Url,token);}
+  catch(v1Err){
+    var v2Url='https://api.todoist.com/rest/v2/tasks?filter='+encodeURIComponent('today');
+    try{return await requestTodoistTasks(v2Url,token);}
+    catch(v2Err){throw v1Err;}
+  }
+}
+
+async function requestTodoistTasks(url,token){
+  var res=await fetch(url,{method:'GET',headers:{'Authorization':'Bearer '+token,'Accept':'application/json'}});
+  if(!res.ok){
+    var errText='';
+    try{errText=await res.text();}catch(readErr){}
+    throw new Error('Todoist '+res.status+(errText?' · '+errText.slice(0,80):''));
+  }
+  var raw=await res.json();
+  return Array.isArray(raw)?raw:(raw.results||raw.items||[]);
+}
+
+function showEmptyChecklist(message){
+  document.getElementById('checklist-title').textContent='Today\'s actions';
+  document.getElementById('check-score').textContent='0 of 0 done';
+  document.getElementById('checklist-body').innerHTML='<div style="padding:14px 1.25rem;font-size:12px;color:#444">'+message+'</div>';
+  document.getElementById('done-section').style.display='none';
 }
 
 function getPriorityForBlock(blockIdx){
@@ -1184,9 +1221,9 @@ async function markTodoistComplete(taskId){
   var token=localStorage.getItem(TODOIST_KEY);
   if(!token||taskId.toString().startsWith('q_'))return;
   try{
-    await fetch('https://api.todoist.com/rest/v2/tasks/'+taskId+'/close',{
+    await fetch('https://api.todoist.com/api/v1/tasks/'+taskId+'/close',{
       method:'POST',
-      headers:{'Authorization':'Bearer '+token}
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/json'}
     });
   }catch(e){}
 }
