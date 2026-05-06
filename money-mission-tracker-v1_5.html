@@ -54,6 +54,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mode-box{background:#080808;border:0.5px solid #171717;border-radius:8px;padding:8px 9px}
 .mode-box-label{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
 .mode-box-text{font-size:11px;color:#888;line-height:1.45}
+.pressure-timer{background:#050805;border:0.5px solid #1f3113;border-radius:10px;padding:11px 12px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.timer-label{font-size:9px;color:#4f7f28;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:3px}
+.timer-title{font-size:12px;color:#aaa;font-weight:600}
+.timer-next{font-size:10px;color:#526944;margin-top:2px}
+.timer-clock{font-size:24px;font-weight:700;color:#7ec845;text-align:right;letter-spacing:.02em}
 .coach-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .coach-action{background:#0b0f08;border:0.5px solid #1d2815;border-radius:10px;padding:10px;cursor:pointer;transition:all .2s;min-height:86px}
 .coach-action:hover{border-color:#2a4015;background:#0f170a}
@@ -70,6 +75,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .coach-stat-label{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
 .coach-stat-value{font-size:16px;font-weight:600;color:#f0f0f0}
 .coach-stat input{width:100%;height:28px;background:#111;border:0.5px solid #222;border-radius:6px;color:#e0e0e0;font-size:14px;font-weight:600;padding:0 7px}
+.collapsible-card{overflow:hidden}
+.collapse-head{cursor:pointer;user-select:none}
+.collapse-title{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
+.collapse-chevron{font-size:11px;color:#333;transition:transform .2s}
+.collapse-body{display:block}
+.collapsible-card.collapsed .collapse-body{display:none}
+.collapsible-card.collapsed .collapse-chevron{transform:rotate(-90deg)}
 
 .golden-card{background:#150e00;border:0.5px solid #3a2800;border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px;cursor:pointer;transition:border-color .2s}
 .golden-card:hover{border-color:#d4a017}
@@ -86,9 +98,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .golden-inputs button{height:32px;padding:0 14px;background:#150e00;border:0.5px solid #3a2800;border-radius:6px;color:#d4a017;font-size:12px;font-weight:600;cursor:pointer}
 
 .week-strip{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px}
-.week-strip-label{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:10px}
+.week-strip-label{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.week-strip-label span{font-size:10px;color:#639922;text-transform:none;letter-spacing:0}
 .week-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.week-day{display:flex;flex-direction:column;align-items:center;gap:5px}
+.week-day{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;border-radius:8px;padding:4px 0;transition:background .15s}
+.week-day:hover{background:#111}
+.week-day.selected{background:#0d1808}
 .day-name{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:.04em}
 .day-num{font-size:12px;font-weight:500;color:#666;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%}
 .day-num.today{background:#2a4015;color:#7ec845}
@@ -98,6 +113,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .day-dot.review{background:#d4a017}
 .week-note{font-size:11px;color:#555;margin-top:10px;padding-top:10px;border-top:0.5px solid #1a1a1a;line-height:1.6}
 .week-note strong{color:#888}
+.week-brief{font-size:11px;color:#666;margin-top:10px;padding:10px 12px;background:#0a0a0a;border:0.5px solid #171717;border-radius:8px;line-height:1.6}
 
 .content-card{background:#0a1628;border:0.5px solid #1a3050;border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px;transition:border-color .2s}
 .content-card:hover{border-color:#2a4060}
@@ -367,6 +383,14 @@ input:focus{border-color:#333}
   </div>
 </div>
 
+<!-- WEEK STRIP -->
+<div class="week-strip">
+  <div class="week-strip-label"><div>This week at a glance</div><span id="week-meta">Loading week...</span></div>
+  <div class="week-days" id="week-days"></div>
+  <div class="week-brief" id="week-brief">Loading day brief...</div>
+  <div class="week-note" id="week-note">Loading week summary...</div>
+</div>
+
 <!-- TABS -->
 <div class="tabs">
   <div class="tab active" onclick="showTab('today',this)" id="tab-today">Today</div>
@@ -418,12 +442,21 @@ input:focus{border-color:#333}
   </div>
   <div class="coach-line" id="coach-line">Reading today’s calendar, content, tasks, and cycle pace...</div>
   <div class="mode-brief" id="mode-brief"></div>
+  <div class="pressure-timer">
+    <div>
+      <div class="timer-label">Pressure Timer</div>
+      <div class="timer-title" id="timer-title">Loading current sprint...</div>
+      <div class="timer-next" id="timer-next">Next up loading...</div>
+    </div>
+    <div class="timer-clock" id="timer-clock">--:--</div>
+  </div>
   <div class="coach-actions" id="coach-actions"></div>
   <div class="coach-stats">
-    <div class="coach-stat"><div class="coach-stat-label">Tasks done</div><div class="coach-stat-value" id="coach-tasks">0/0</div></div>
+    <div class="coach-stat"><div class="coach-stat-label">Todoist</div><div class="coach-stat-value" id="coach-tasks">0/0</div></div>
+    <div class="coach-stat"><div class="coach-stat-label">Campaign</div><div class="coach-stat-value" id="coach-campaign">0/3</div></div>
     <div class="coach-stat"><div class="coach-stat-label">Money today</div><input type="number" id="coach-money" min="0" value="0" oninput="saveDailyCoach()"/></div>
     <div class="coach-stat"><div class="coach-stat-label">DMs sent</div><input type="number" id="coach-dms" min="0" value="0" oninput="saveDailyCoach()"/></div>
-    <div class="coach-stat"><div class="coach-stat-label">Biz moves</div><input type="number" id="coach-moves" min="0" value="0" oninput="saveDailyCoach()"/></div>
+    <div class="coach-stat"><div class="coach-stat-label">New leads</div><input type="number" id="coach-leads" min="0" value="0" oninput="saveDailyCoach()"/></div>
   </div>
 </div>
 
@@ -459,41 +492,36 @@ input:focus{border-color:#333}
   </div>
 </div>
 
-<!-- WEEK STRIP -->
-<div class="week-strip">
-  <div class="week-strip-label">This week at a glance</div>
-  <div class="week-days" id="week-days"></div>
-  <div class="week-note" id="week-note">Loading week summary...</div>
-</div>
-
 <!-- TODAY'S CONTENT -->
-<div class="content-card" id="content-card">
-  <div class="cc-label">Today's content <span id="cc-date"></span></div>
-  <div id="cc-body"><div style="font-size:12px;color:#444">Loading from Notion...</div></div>
+<div class="content-card collapsible-card" id="content-card">
+  <div class="cc-label collapse-head" onclick="toggleCollapse('content-card')"><div class="collapse-title">Today's content <span><span id="cc-date"></span> <span class="collapse-chevron">▼</span></span></div></div>
+  <div class="collapse-body"><div id="cc-body"><div style="font-size:12px;color:#444">Loading from Notion...</div></div></div>
 </div>
 
 <!-- CALENDAR -->
-<div class="cal-card">
-  <div class="cal-label">On your calendar today</div>
-  <div class="cal-items" id="cal-items"><div class="cal-empty">Loading calendar...</div></div>
+<div class="cal-card collapsible-card" id="calendar-card">
+  <div class="cal-label collapse-head" onclick="toggleCollapse('calendar-card')"><div class="collapse-title">On your calendar today <span class="collapse-chevron">▼</span></div></div>
+  <div class="collapse-body"><div class="cal-items" id="cal-items"><div class="cal-empty">Loading calendar...</div></div></div>
 </div>
 
 <!-- CHECKLIST -->
-<div class="checklist-section">
-  <div class="checklist-header">
+<div class="checklist-section collapsible-card" id="actions-card">
+  <div class="checklist-header collapse-head" onclick="toggleCollapse('actions-card')">
     <div class="checklist-title" id="checklist-title">Today's actions</div>
-    <div class="checklist-score" id="check-score">Loading Todoist...</div>
+    <div class="checklist-score"><span id="check-score">Loading Todoist...</span> <span class="collapse-chevron">▼</span></div>
   </div>
-  <div id="checklist-body"><div style="padding:14px 1.25rem;font-size:12px;color:#444">Connect Todoist to see today's tasks ↑</div></div>
-  <div id="done-section" style="display:none">
-    <div class="done-section">
-      <div class="done-label">Completed today</div>
-      <div id="done-list"></div>
+  <div class="collapse-body">
+    <div id="checklist-body"><div style="padding:14px 1.25rem;font-size:12px;color:#444">Connect Todoist to see today's tasks ↑</div></div>
+    <div id="done-section" style="display:none">
+      <div class="done-section">
+        <div class="done-label">Completed today</div>
+        <div id="done-list"></div>
+      </div>
     </div>
-  </div>
-  <div class="checklist-add">
-    <input type="text" id="add-task-input" placeholder="Quick add a task..." onkeydown="if(event.key==='Enter')addQuickTask()"/>
-    <button onclick="addQuickTask()">+ Add</button>
+    <div class="checklist-add">
+      <input type="text" id="add-task-input" placeholder="Quick add a task..." onkeydown="if(event.key==='Enter')addQuickTask()"/>
+      <button onclick="addQuickTask()">+ Add</button>
+    </div>
   </div>
 </div>
 
@@ -841,6 +869,11 @@ function toggleSetup(id){
   }
 }
 
+function toggleCollapse(id){
+  var el=document.getElementById(id);
+  if(el)el.classList.toggle('collapsed');
+}
+
 function saveTodoist(){
   var t=document.getElementById('todoist-token').value.trim();
   if(!t){document.getElementById('todoist-status').textContent='Paste your token first.';return;}
@@ -984,6 +1017,11 @@ function buildWeekStrip(calEvents,notionPieces){
   var grid=document.getElementById('week-days');
   grid.innerHTML='';
   var DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var ci=getCycleIdx(),cy=CYCLES[ci],cycleWeek=Math.floor((today-pd(cy.start))/6048e5)+1;
+  var weekNum=getWeekNumber(today);
+  var sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+  var meta=document.getElementById('week-meta');
+  if(meta)meta.textContent='Week '+weekNum+' · '+monday.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'-'+sunday.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' · Cycle '+cy.num+' W'+Math.max(1,cycleWeek);
   for(var i=0;i<7;i++){
     var d=new Date(monday);d.setDate(monday.getDate()+i);
     var ds=dateKey(d);
@@ -991,13 +1029,50 @@ function buildWeekStrip(calEvents,notionPieces){
     var hasContent=notionPieces&&notionPieces.some(function(p){return p.date===ds;});
     var hasCal=calEvents&&calEvents.some(function(e){var ed=new Date(e.start);ed.setHours(0,0,0,0);return ed.getTime()===d.getTime()&&!e.title.toLowerCase().includes('fedex')&&!e.title.toLowerCase().includes('work');});
     var isSunday=d.getDay()===0;
-    var div=document.createElement('div');div.className='week-day';
+    var div=document.createElement('div');div.className='week-day'+(isToday?' selected':'');
     div.innerHTML='<div class="day-name">'+DAYS[i]+'</div>'
       +'<div class="day-num'+(isToday?' today':'')+'">'+d.getDate()+'</div>'
       +'<div class="day-dot'+(isSunday?' review':hasContent?' content':hasCal?' cal':'')+'"></div>';
+    div.onclick=(function(day){return function(){selectWeekDay(day,calEvents||[],notionPieces||[]);};})(new Date(d));
     grid.appendChild(div);
   }
+  selectWeekDay(today,calEvents||[],notionPieces||[]);
   document.getElementById('week-note').innerHTML='<strong style="color:#555">Legend:</strong> <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#639922;border-radius:50%;display:inline-block"></span>Content scheduled</span> · <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#3a7bd5;border-radius:50%;display:inline-block"></span>Calendar event</span> · <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#d4a017;border-radius:50%;display:inline-block"></span>Sunday review</span>';
+}
+
+function getWeekNumber(d){
+  var x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  var day=x.getUTCDay()||7;
+  x.setUTCDate(x.getUTCDate()+4-day);
+  var yearStart=new Date(Date.UTC(x.getUTCFullYear(),0,1));
+  return Math.ceil((((x-yearStart)/86400000)+1)/7);
+}
+
+function selectWeekDay(day,calEvents,notionPieces){
+  document.querySelectorAll('.week-day').forEach(function(el){el.classList.remove('selected');});
+  var idx=(day.getDay()+6)%7;
+  var el=document.querySelectorAll('.week-day')[idx];if(el)el.classList.add('selected');
+  var ds=dateKey(day);
+  var dayContent=(notionPieces||[]).filter(function(p){return p.date===ds;});
+  var dayCal=(calEvents||[]).filter(function(e){var ed=new Date(e.start);return !isNaN(ed.getTime())&&dateKey(ed)===ds;});
+  var rhythm=getDayRhythm(day.getDay());
+  var brief=document.getElementById('week-brief');if(!brief)return;
+  brief.innerHTML='<strong style="color:#888">'+day.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})+'</strong> · '+rhythm.name+'<br>'
+    +rhythm.focus+'<br>'
+    +'<span style="color:#444">Today signals:</span> '+dayContent.length+' content item'+(dayContent.length===1?'':'s')+' · '+dayCal.length+' calendar event'+(dayCal.length===1?'':'s')+' · '+rhythm.action;
+}
+
+function getDayRhythm(day){
+  var map={
+    0:{name:'Rest + Reset',focus:'Recover, reset the week, review the scoreboard, prep Monday.',action:'Keep it light unless a deadline is real.'},
+    1:{name:'Meetings + Calls',focus:'Onboarding, sales calls, podcasts, academy work, relationship motion.',action:'Stack calls and keep follow-ups clean.'},
+    2:{name:'Content + Sales',focus:'Produce content, sell, follow up, and clear busy work around the edges.',action:'Move one asset and one pipeline step.'},
+    3:{name:'Content + Sales',focus:'Produce content, sell, follow up, and keep momentum from Monday/Tuesday.',action:'Do not drift. Content plus conversations.'},
+    4:{name:'Masterclass Push',focus:'Promote the masterclass, invite warm leads, improve the funnel, and make offers.',action:'Invite people and tighten the sales path.'},
+    5:{name:'Follow-up + Catch-up',focus:'Close loops, follow up, finish what slipped, and protect real life.',action:'Recover missed execution without overloading.'},
+    6:{name:'Big Content + IRL Network',focus:'Events, city networking, IRL streams, content capture, and open creative work.',action:'Capture proof and meet people.'}
+  };
+  return map[day]||map[1];
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1006,15 +1081,16 @@ function buildWeekStrip(calEvents,notionPieces){
 function getDailyCoach(){
   var saved=getStore(DPC_KEY);
   var today=dateKey(new Date());
+  if(saved&&saved.leads===undefined)saved.leads=saved.moves||0;
   if(saved&&saved.date===today)return saved;
-  return {date:today,money:0,dms:0,moves:0,done:{}};
+  return {date:today,money:0,dms:0,leads:0,done:{}};
 }
 
 function saveDailyCoach(){
   var d=getDailyCoach();
   d.money=parseFloat((document.getElementById('coach-money')||{}).value)||0;
   d.dms=parseFloat((document.getElementById('coach-dms')||{}).value)||0;
-  d.moves=parseFloat((document.getElementById('coach-moves')||{}).value)||0;
+  d.leads=parseFloat((document.getElementById('coach-leads')||{}).value)||0;
   setStore(DPC_KEY,d);
   renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
 }
@@ -1087,14 +1163,47 @@ function renderModeBrief(mode){
     +'</div>';
 }
 
+function renderPressureTimer(modeKey,block,calEvents){
+  var clock=document.getElementById('timer-clock'),title=document.getElementById('timer-title'),next=document.getElementById('timer-next');
+  if(!clock||!title||!next)return;
+  var now=new Date();
+  var target=null,label='';
+  if(block){
+    target=new Date(now);
+    target.setHours(Math.floor(block.end/60),block.end%60,0,0);
+    label='Until '+block.name+' ends';
+  }else{
+    var first=TIME_BLOCKS[0];
+    target=new Date(now);
+    target.setHours(Math.floor(first.start/60),first.start%60,0,0);
+    label='Until Maker Time starts';
+  }
+  var ms=Math.max(0,target-now);
+  var mins=Math.floor(ms/60000),secs=Math.floor((ms%60000)/1000);
+  var h=Math.floor(mins/60),m=mins%60;
+  clock.textContent=(h>0?h+':':'')+String(m).padStart(h>0?2:1,'0')+':'+String(secs).padStart(2,'0');
+  var mode=MODE_BRIEFS[modeKey]||MODE_BRIEFS.focus;
+  title.textContent=label+' · '+mode.name+' pressure';
+  var upcoming=getNextCalendarEvent(calEvents||[]);
+  next.textContent=upcoming?'Next: '+upcoming.startTime+' · '+upcoming.title:'Next: protect the next block, no drifting.';
+}
+
+function getNextCalendarEvent(calEvents){
+  var now=new Date();
+  return (calEvents||[]).filter(function(e){
+    var d=new Date(e.start);
+    return !isNaN(d.getTime())&&d>now;
+  }).sort(function(a,b){return new Date(a.start)-new Date(b.start);})[0]||null;
+}
+
 function renderDailyCoach(contentPieces,calEvents){
   window.__contentPieces=contentPieces||window.__contentPieces||[];
   window.__calEvents=calEvents||window.__calEvents||[];
   var d=getDailyCoach();
-  var moneyEl=document.getElementById('coach-money'),dmsEl=document.getElementById('coach-dms'),movesEl=document.getElementById('coach-moves');
+  var moneyEl=document.getElementById('coach-money'),dmsEl=document.getElementById('coach-dms'),leadsEl=document.getElementById('coach-leads');
   if(moneyEl&&document.activeElement!==moneyEl)moneyEl.value=d.money||0;
   if(dmsEl&&document.activeElement!==dmsEl)dmsEl.value=d.dms||0;
-  if(movesEl&&document.activeElement!==movesEl)movesEl.value=d.moves||0;
+  if(leadsEl&&document.activeElement!==leadsEl)leadsEl.value=d.leads||0;
   var doneTasks=Object.keys(localChecks||{}).filter(function(k){return localChecks[k];}).length;
   var totalTasks=todoistTasks.length;
   var taskEl=document.getElementById('coach-tasks');if(taskEl)taskEl.textContent=doneTasks+'/'+totalTasks;
@@ -1110,11 +1219,14 @@ function renderDailyCoach(contentPieces,calEvents){
   if(pulse)pulse.innerHTML=modeBrief.name+' Mode<br>'+contentCount+' content · '+calCount+' calendar';
   var line=document.getElementById('coach-line');
   if(line){
-    line.textContent=modeBrief.goal+' Weekly gap: '+fmt(gap)+'. Today: '+fmt(d.money||0)+' collected, '+(d.dms||0)+' DMs, '+(d.moves||0)+' business moves.';
+    line.textContent=modeBrief.goal+' Weekly gap: '+fmt(gap)+'. Today: '+fmt(d.money||0)+' collected, '+(d.dms||0)+' DMs, '+(d.leads||0)+' new leads.';
   }
   renderModeBrief(modeKey);
+  renderPressureTimer(modeKey,block,calEvents||[]);
   var wrap=document.getElementById('coach-actions');if(!wrap)return;
   var actions=buildCoachActions(contentPieces||[],modeKey);
+  var campaignDone=actions.filter(function(a){return d.done&&d.done[a.id];}).length;
+  var campaignEl=document.getElementById('coach-campaign');if(campaignEl)campaignEl.textContent=campaignDone+'/'+actions.length;
   wrap.innerHTML=actions.map(function(a){
     var done=d.done&&d.done[a.id];
     return '<div class="coach-action'+(done?' done':'')+'" onclick="toggleCoachAction(\''+a.id+'\')">'
@@ -1731,7 +1843,7 @@ function init(){
   document.getElementById('streak-n').textContent=streak.count||0;
   renderDailyCoach([],[]);
   loadTodayData();
-  setInterval(function(){updateTimeBlock();updateGolden();},60000);
+  setInterval(function(){updateTimeBlock();updateGolden();renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);},1000);
 }
 init();
 
