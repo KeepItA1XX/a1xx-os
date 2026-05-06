@@ -1823,7 +1823,7 @@ async function fetchWithRetry(url,opts,tries){
   var lastErr;
   for(var i=0;i<tries;i++){
     try{
-      var res=await fetch(url,opts||{});
+      var res=await fetchWithTimeout(url,opts||{},12000);
       if((res.status===429||res.status>=500)&&i<tries-1){
         lastErr=new Error('HTTP '+res.status);
         await new Promise(function(r){setTimeout(r,500*(i+1));});
@@ -1834,6 +1834,37 @@ async function fetchWithRetry(url,opts,tries){
     catch(e){lastErr=e;if(i<tries-1)await new Promise(function(r){setTimeout(r,500);});}
   }
   throw lastErr;
+}
+
+function fetchWithTimeout(url,opts,ms){
+  ms=ms||12000;
+  if(typeof AbortController==='undefined'){
+    return Promise.race([
+      fetch(url,opts||{}),
+      new Promise(function(resolve,reject){setTimeout(function(){reject(new Error('Request timed out'));},ms);})
+    ]);
+  }
+  var controller=new AbortController();
+  var options=Object.assign({},opts||{},{signal:controller.signal});
+  var timer=setTimeout(function(){controller.abort();},ms);
+  return fetch(url,options).finally(function(){clearTimeout(timer);});
+}
+
+async function safeLoad(label,loader,fallback,ms){
+  try{
+    return await Promise.race([
+      Promise.resolve().then(loader),
+      new Promise(function(resolve,reject){setTimeout(function(){reject(new Error(label+' timed out'));},ms||14000);})
+    ]);
+  }catch(e){
+    console.warn('A1XX load skipped:',label,e);
+    return fallback;
+  }
+}
+
+function safeRender(label,fn){
+  try{return fn();}
+  catch(e){console.warn('A1XX render skipped:',label,e);}
 }
 
 function getCycleIdx(){
@@ -3986,44 +4017,58 @@ function applyMissionFocus(){
 
 /* INIT */
 async function loadTodayData(){
-  updateTimeBlock();updateGolden();
-  var notionPieces=await loadContentToday();
-  var pipelinePieces=await loadContentPipeline(notionPieces||[]);
-  var productionPieces=await loadProductionPipeline();
-  var resources=await loadResources();
-  var crmLeads=await loadCRMLeads();
-  var calEvents=await loadCalendar();
+  safeRender('time block',function(){updateTimeBlock();updateGolden();});
+  var notionPieces=await safeLoad('Notion content',function(){return loadContentToday();},[],15000);
+  window.__contentPieces=notionPieces||[];
+  safeRender('early content render',function(){renderContentCard();renderMissionBrief(notionPieces||[],window.__calEvents||[]);});
+
+  var loaded=await Promise.all([
+    safeLoad('content pipeline',function(){return loadContentPipeline(notionPieces||[]);},notionPieces||[],12000),
+    safeLoad('production pipeline',function(){return loadProductionPipeline();},[],12000),
+    safeLoad('resource library',function(){return loadResources();},[],12000),
+    safeLoad('CRM leads',function(){return loadCRMLeads();},[],12000),
+    safeLoad('Google Calendar',function(){return loadCalendar();},[],12000)
+  ]);
+  var pipelinePieces=loaded[0]||notionPieces||[];
+  var productionPieces=loaded[1]||[];
+  var resources=loaded[2]||[];
+  var crmLeads=loaded[3]||[];
+  var calEvents=loaded[4]||[];
   window.__contentPieces=notionPieces||[];
   window.__contentPipelinePieces=pipelinePieces||notionPieces||[];
   window.__productionPieces=productionPieces||[];
   window.__resources=resources||[];
   window.__crmLeads=crmLeads||[];
   window.__calEvents=calEvents||[];
-  initDayType(calEvents||[]);
-  buildWeekStrip(calEvents||[],notionPieces||[]);
-  await loadTodoist();
-  renderContentCard();
-  renderProductionCard();
-  renderContextResources('calendar','today');
-  renderContextResources('tasks','today');
-  renderDailyCoach(notionPieces||[],calEvents||[]);
-  renderMissionBrief(notionPieces||[],calEvents||[]);
-  applyMissionFocus();
-  checkDailyArchive();
-  markSyncComplete();
+  safeRender('day type',function(){initDayType(calEvents||[]);});
+  safeRender('week strip',function(){buildWeekStrip(calEvents||[],notionPieces||[]);});
+  await safeLoad('Todoist',function(){return loadTodoist();},null,12000);
+  safeRender('content card',function(){renderContentCard();});
+  safeRender('production card',function(){renderProductionCard();});
+  safeRender('calendar resources',function(){renderContextResources('calendar','today');});
+  safeRender('task resources',function(){renderContextResources('tasks','today');});
+  safeRender('daily profit campaign',function(){renderDailyCoach(notionPieces||[],calEvents||[]);});
+  safeRender('mission brief',function(){renderMissionBrief(notionPieces||[],calEvents||[]);});
+  safeRender('mission focus',function(){applyMissionFocus();});
+  safeRender('daily archive',function(){checkDailyArchive();});
+  safeRender('sync complete',function(){markSyncComplete();});
 }
 function init(){
-  loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();
+  safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();});
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
-  renderSystemHealth();
-  renderDailyCoach([],[]);
-  renderMissionBrief([],[]);
-  applyMissionFocus();
-  loadTodayData();
-  setInterval(function(){updateTimeBlock();updateGolden();renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);},1000);
+  safeRender('system health',function(){renderSystemHealth();});
+  safeRender('initial daily campaign',function(){renderDailyCoach([],[]);});
+  safeRender('initial mission brief',function(){renderMissionBrief([],[]);});
+  safeRender('initial mission focus',function(){applyMissionFocus();});
+  loadTodayData().catch(function(e){
+    console.error('A1XX startup failed',e);
+    safeRender('startup fallback mission',function(){renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);});
+  });
+  setInterval(function(){
+    safeRender('live tick',function(){updateTimeBlock();updateGolden();renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);});
+  },1000);
 }
-init();
 
 /* COLLAPSE TOGGLE */
 function tc(bid,cid){
@@ -5032,6 +5077,9 @@ updateReport=function(){
   _origUpdateReport();
   updateCompanyHealth();
 };
+
+// Start only after every card, state key, and helper has been defined.
+init();
 </script>
 </body>
 </html>
