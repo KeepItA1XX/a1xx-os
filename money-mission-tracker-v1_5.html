@@ -429,9 +429,9 @@ input:focus{border-color:#333}
 .mission-move-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1808;border:0.5px solid #2a4015;color:#7ec845;font-size:10px;font-weight:800;margin-bottom:7px}
 .mission-move.active .mission-move-num{width:28px;height:28px;margin-bottom:0}
 .mission-move-text{font-size:13px;color:#f0f3f5;line-height:1.45}
-.mission-dots{display:flex;justify-content:center;gap:5px;margin-bottom:10px}
-.mission-dot{width:6px;height:6px;border-radius:50%;background:#30363d;cursor:pointer;transition:all .2s}
-.mission-dot.active{width:18px;border-radius:8px;background:#7ec845}
+.mission-dots{display:flex;justify-content:center;gap:8px;margin-bottom:10px}
+.mission-dot{width:14px;height:14px;border-radius:50%;background:#30363d;cursor:pointer;transition:all .2s;border:1px solid #454c54}
+.mission-dot.active{width:34px;border-radius:10px;background:#7ec845;border-color:#9ee878}
 .mission-resource-list{display:flex;gap:6px;flex-wrap:wrap}
 .mission-resource{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:6px 9px;background:#0d1012;border:0.5px solid #2a3036;border-radius:8px;color:#d7dde3;text-decoration:none;font-size:11px;font-weight:700;line-height:1.25;transition:all .2s}
 .mission-resource:hover{border-color:#3a5a2a;color:#f0f3f5;background:#111711}
@@ -3929,7 +3929,7 @@ function renderMissionBrief(contentPieces,calEvents){
   var nextEvent=getNextCalendarEvent(calEvents||[]);
   var openTasks=getOpenMissionTasks(3);
   title.textContent=mission.locked?('Mission locked: '+(dayNames[dayType]||'money day')+' · '+tool):('Welcome back, Executive Producer. It is '+todayLabel+' · '+nowLabel+'.');
-  badge.textContent='Cycle '+cy.num+' · W'+weekOfCycle+' · '+daysLeft(ci)+'d left';
+  badge.textContent='Cycle '+cy.num+' · '+cy.name+' · W'+weekOfCycle+' · '+fmt(gap)+' gap';
   copy.innerHTML='<strong>'+escapeHtml(cy.name)+' Week '+weekOfCycle+':</strong> '+fmt(rev)+' / '+fmt(wk)+' collected. '
     +(gap>0?'Gap still open: <strong>'+fmt(gap)+'</strong>. ':'Weekly target is protected. ')
     +'Yesterday: '+escapeHtml(yesterday)+'. '
@@ -4054,10 +4054,12 @@ async function loadTodayData(){
   safeRender('sync complete',function(){markSyncComplete();});
 }
 function init(){
+  window.__a1xxBooting=true;
   safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();});
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
   safeRender('system health',function(){renderSystemHealth();});
+  safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);});
   safeRender('initial mission brief',function(){renderMissionBrief([],[]);});
   safeRender('initial mission focus',function(){applyMissionFocus();});
@@ -4068,6 +4070,7 @@ function init(){
   setInterval(function(){
     safeRender('live tick',function(){updateTimeBlock();updateGolden();renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);});
   },1000);
+  window.__a1xxBooting=false;
 }
 
 /* COLLAPSE TOGGLE */
@@ -5079,7 +5082,28 @@ updateReport=function(){
 };
 
 // Start only after every card, state key, and helper has been defined.
-init();
+var __a1xxStarted=false;
+function startA1XX(){
+  if(__a1xxStarted)return;
+  __a1xxStarted=true;
+  try{
+    init();
+  }catch(e){
+    console.error('A1XX hard startup error',e);
+    __a1xxStarted=false;
+    safeRender('hard startup fallback',function(){
+      renderDayTypeBanner({type:'outreach',auto:true,reason:'Fallback mode — startup error caught. Refresh once; if it remains, check System Health.'});
+      renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
+      applyMissionFocus();
+    });
+  }
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',startA1XX);
+}else{
+  startA1XX();
+}
+setTimeout(startA1XX,50);
 </script>
 </body>
 </html>
