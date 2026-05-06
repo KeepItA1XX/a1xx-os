@@ -1022,12 +1022,12 @@ function notionPageToContent(page){
   var props=page.properties||{};
   return {
     date:getNotionDate(props[NOTION_CONTENT_DATE_FIELD])||getNotionDate(props['Publish Date'])||getNotionDate(props['Production Date']),
-    title:getNotionText(props['Content Title'])||getNotionText(props.Name)||'Untitled',
-    hook:getNotionText(props.Hook),
-    format:getNotionSelect(props.Format),
-    platform:getNotionMultiSelect(props.Platform),
-    campaign:getNotionSelect(props.Campaign),
-    cta:getNotionText(props.CTA),
+    title:getFirstNotionText(props,['Content Title','Title','Name','Video Title','Post Title','Content Name','Topic','Idea'])||getAnyNotionTitle(props)||'Untitled',
+    hook:getFirstNotionText(props,['Hook','Opening Hook','Angle','Concept','Caption','Description','Script','Notes']),
+    format:getFirstNotionOption(props,['Format','Type','Content Type','Asset Type']),
+    platform:getFirstNotionOption(props,['Platform','Platforms','Channel','Channels']),
+    campaign:getFirstNotionOption(props,['Campaign','Pillar','Content Pillar','Series']),
+    cta:getFirstNotionText(props,['CTA','Call To Action','Call-to-action','Offer','Next Step']),
     url:page.url||('https://www.notion.so/'+page.id.replace(/-/g,''))
   };
 }
@@ -1035,10 +1035,33 @@ function notionPageToContent(page){
 function getNotionDate(prop){return prop&&prop.date?prop.date.start:null;}
 function getNotionSelect(prop){return prop&&prop.select?prop.select.name:'';}
 function getNotionMultiSelect(prop){return prop&&prop.multi_select?prop.multi_select.map(function(x){return x.name;}).join(', '):'';}
+function getNotionStatus(prop){return prop&&prop.status?prop.status.name:'';}
 function getNotionText(prop){
   if(!prop)return '';
   var arr=prop.title||prop.rich_text||[];
   return arr&&arr[0]?arr.map(function(x){return x.plain_text||'';}).join(''):'';
+}
+function getFirstNotionText(props,names){
+  for(var i=0;i<names.length;i++){var v=getNotionText(props[names[i]]);if(v)return v;}
+  return '';
+}
+function getFirstNotionOption(props,names){
+  for(var i=0;i<names.length;i++){
+    var p=props[names[i]];
+    var v=getNotionSelect(p)||getNotionMultiSelect(p)||getNotionStatus(p)||getNotionText(p);
+    if(v)return v;
+  }
+  return '';
+}
+function getAnyNotionTitle(props){
+  var keys=Object.keys(props||{});
+  for(var i=0;i<keys.length;i++){
+    if(props[keys[i]]&&props[keys[i]].type==='title'){
+      var v=getNotionText(props[keys[i]]);
+      if(v)return v;
+    }
+  }
+  return '';
 }
 
 function escapeHtml(value){
