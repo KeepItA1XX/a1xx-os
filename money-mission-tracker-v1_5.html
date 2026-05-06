@@ -683,6 +683,7 @@ var TODOIST_KEY='a1xx_todoist_v1';
 var NOTION_KEY='a1xx_notion_v1';
 var NOTION_CONTENT_DB='1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_CONTENT_URL='https://www.notion.so/1a06115281da81bcb7eccecbcba9ed8e';
+var NOTION_CONTENT_DATE_FIELD='Production Date';
 var GOLDEN_KEY='a1xx_golden';
 var CHECK_KEY='a1xx_checks_v1';
 var STREAK_KEY='a1xx_streak';
@@ -953,7 +954,7 @@ async function loadContentToday(){
   var today=new Date().toISOString().split('T')[0];
   document.getElementById('cc-date').textContent=today;
   try{
-    var data=await fetchNotionContent(appUrl,today,ns.key,NOTION_CONTENT_DB);
+    var data=await fetchNotionContent(appUrl,today,ns.key,NOTION_CONTENT_DB,NOTION_CONTENT_DATE_FIELD);
     var pieces=normalizeNotionContent(data);
     if(!pieces.length){
       ccEl.innerHTML='<div style="font-size:12px;color:#444">No content scheduled for today. <a href="'+NOTION_CONTENT_URL+'" target="_blank" style="color:#5b9cf6">Open content calendar →</a></div>';
@@ -982,9 +983,9 @@ async function loadContentToday(){
   }
 }
 
-async function fetchNotionContent(appUrl,date,secret,databaseId){
+async function fetchNotionContent(appUrl,date,secret,databaseId,dateField){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
-  var qs='action=content&date='+encodeURIComponent(date)+'&notionSecret='+encodeURIComponent(secret)+'&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
+  var qs='action=content&date='+encodeURIComponent(date)+'&notionSecret='+encodeURIComponent(secret)+'&databaseId='+encodeURIComponent(databaseId)+'&dateField='+encodeURIComponent(dateField)+'&_='+Date.now();
   var res=await fetch(appUrl+sep+qs,{method:'GET',redirect:'follow'});
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
@@ -1015,7 +1016,7 @@ function normalizeNotionContent(data){
 function notionPageToContent(page){
   var props=page.properties||{};
   return {
-    date:getNotionDate(props['Publish Date']),
+    date:getNotionDate(props[NOTION_CONTENT_DATE_FIELD])||getNotionDate(props['Publish Date'])||getNotionDate(props['Production Date']),
     title:getNotionText(props['Content Title'])||getNotionText(props.Name)||'Untitled',
     hook:getNotionText(props.Hook),
     format:getNotionSelect(props.Format),
