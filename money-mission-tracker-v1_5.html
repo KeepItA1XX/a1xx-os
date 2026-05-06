@@ -426,15 +426,16 @@ input:focus{border-color:#333}
 .mission-move{background:#050a04;border:0.5px solid #16240b;border-radius:10px;padding:10px;min-height:78px}
 .mission-move-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1808;border:0.5px solid #2a4015;color:#7ec845;font-size:10px;font-weight:800;margin-bottom:7px}
 .mission-move-text{font-size:12px;color:#d8efd0;line-height:1.45}
-.mission-resources{background:#070807;border:0.5px solid #1f2428;border-radius:10px;padding:9px 10px;margin-bottom:10px;display:none}
-.mission-resources.show{display:block}
-.mission-resources-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
-.mission-resources-label{font-size:9px;font-weight:800;color:#8b949e;text-transform:uppercase;letter-spacing:.09em}
-.mission-resources-count{font-size:9px;color:#555}
 .mission-resource-list{display:flex;gap:6px;flex-wrap:wrap}
 .mission-resource{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:6px 9px;background:#0d1012;border:0.5px solid #2a3036;border-radius:8px;color:#d7dde3;text-decoration:none;font-size:11px;font-weight:700;line-height:1.25;transition:all .2s}
 .mission-resource:hover{border-color:#3a5a2a;color:#f0f3f5;background:#111711}
 .mission-resource span{font-size:10px;color:#7ec845}
+.context-resources{background:#080a0c;border:0.5px solid #222a31;border-radius:10px;padding:8px 10px;margin-bottom:10px;display:none}
+.context-resources.show{display:block}
+.context-resources-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.context-resources-label{font-size:9px;font-weight:800;color:#8b949e;text-transform:uppercase;letter-spacing:.08em}
+.context-resources-count{font-size:9px;color:#555}
+.context-resource-list{display:flex;gap:6px;flex-wrap:wrap}
 .mission-check{display:grid;grid-template-columns:70px 1fr 1fr;gap:8px;align-items:center;margin-bottom:10px}
 .mission-check-label{font-size:9px;font-weight:800;color:#4f7f28;text-transform:uppercase;letter-spacing:.09em}
 .mission-choice-row{display:flex;gap:5px}
@@ -881,13 +882,6 @@ body{background:#090a0b;color:#d8dde1}
     <div class="mission-move"><div class="mission-move-num">2</div><div class="mission-move-text" id="mission-move-2">Protect the day from noise.</div></div>
     <div class="mission-move"><div class="mission-move-num">3</div><div class="mission-move-text" id="mission-move-3">Log the result before shutdown.</div></div>
   </div>
-  <div class="mission-resources" id="mission-resources">
-    <div class="mission-resources-top">
-      <div class="mission-resources-label">Useful right now</div>
-      <div class="mission-resources-count" id="mission-resources-count">Loading resources...</div>
-    </div>
-    <div class="mission-resource-list" id="mission-resource-list"></div>
-  </div>
   <div class="mission-check">
     <div class="mission-check-label">Check in</div>
     <div class="mission-choice-row">
@@ -949,6 +943,10 @@ body{background:#090a0b;color:#d8dde1}
     <button class="dpc-tab" id="dpc-tab-pipeline" onclick="setDPCView('pipeline')">Pipeline</button>
     <button class="dpc-tab" id="dpc-tab-followup" onclick="setDPCView('followup')">Follow-Up</button>
     <button class="dpc-tab" id="dpc-tab-scoreboard" onclick="setDPCView('scoreboard')">Scoreboard</button>
+  </div>
+  <div class="context-resources" id="dpc-resources">
+    <div class="context-resources-top"><div class="context-resources-label">Resources for this campaign</div><div class="context-resources-count" id="dpc-resources-count"></div></div>
+    <div class="context-resource-list" id="dpc-resource-list"></div>
   </div>
 
   <div class="dpc-view active" id="dpc-view-now">
@@ -1085,6 +1083,10 @@ body{background:#090a0b;color:#d8dde1}
     <button class="ct-tab" id="ct-tab-pipeline" onclick="setContentView('pipeline')">Pipeline</button>
     <button class="ct-tab" id="ct-tab-consistency" onclick="setContentView('consistency')">Consistency</button>
   </div>
+  <div class="context-resources" id="ct-resources">
+    <div class="context-resources-top"><div class="context-resources-label">Resources for this content move</div><div class="context-resources-count" id="ct-resources-count"></div></div>
+    <div class="context-resource-list" id="ct-resource-list"></div>
+  </div>
 
   <div class="ct-view active" id="ct-view-today">
   <!-- TODAY'S SCHEDULED CONTENT (from Notion) -->
@@ -1164,6 +1166,10 @@ body{background:#090a0b;color:#d8dde1}
     <button class="prod-tab active" id="prod-tab-today" onclick="setProductionView('today')">Today</button>
     <button class="prod-tab" id="prod-tab-pipeline" onclick="setProductionView('pipeline')">Pipeline</button>
     <button class="prod-tab" id="prod-tab-consistency" onclick="setProductionView('consistency')">Consistency</button>
+  </div>
+  <div class="context-resources" id="prod-resources">
+    <div class="context-resources-top"><div class="context-resources-label">Resources for this production move</div><div class="context-resources-count" id="prod-resources-count"></div></div>
+    <div class="context-resource-list" id="prod-resource-list"></div>
   </div>
 
   <div class="prod-view active" id="prod-view-today">
@@ -1264,7 +1270,13 @@ body{background:#090a0b;color:#d8dde1}
 <!-- CALENDAR -->
 <div class="cal-card collapsible-card" id="calendar-card">
   <div class="cal-label collapse-head" onclick="toggleCollapse('calendar-card')"><div class="collapse-title">On your calendar today <span class="collapse-chevron">▼</span></div></div>
-  <div class="collapse-body"><div class="cal-items" id="cal-items"><div class="cal-empty">Loading calendar...</div></div></div>
+  <div class="collapse-body">
+    <div class="context-resources" id="cal-resources">
+      <div class="context-resources-top"><div class="context-resources-label">Resources for today’s schedule</div><div class="context-resources-count" id="cal-resources-count"></div></div>
+      <div class="context-resource-list" id="cal-resource-list"></div>
+    </div>
+    <div class="cal-items" id="cal-items"><div class="cal-empty">Loading calendar...</div></div>
+  </div>
 </div>
 
 <!-- CHECKLIST -->
@@ -1274,6 +1286,10 @@ body{background:#090a0b;color:#d8dde1}
     <div class="checklist-score"><span id="check-score">Loading Todoist...</span> <span class="collapse-chevron">▼</span></div>
   </div>
   <div class="collapse-body">
+    <div class="context-resources" id="task-resources">
+      <div class="context-resources-top"><div class="context-resources-label">Resources for today’s actions</div><div class="context-resources-count" id="task-resources-count"></div></div>
+      <div class="context-resource-list" id="task-resource-list"></div>
+    </div>
     <div id="checklist-body"><div style="padding:14px 1.25rem;font-size:12px;color:#444">Connect Todoist to see today's tasks ↑</div></div>
     <div id="done-section" style="display:none">
       <div class="done-section">
@@ -2137,6 +2153,7 @@ function setDPCView(view){
     if(tab)tab.classList.toggle('active',v===dpcView);
     if(pane)pane.classList.toggle('active',v===dpcView);
   });
+  renderContextResources('dpc',dpcView);
   renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
 }
 
@@ -2156,6 +2173,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
     if(tab)tab.classList.toggle('active',v===dpcView);
     if(pane)pane.classList.toggle('active',v===dpcView);
   });
+  renderContextResources('dpc',dpcView);
   var wkDms=parseFloat((document.getElementById('w-dms')||{}).value)||d.dms||0;
   var wkResp=parseFloat((document.getElementById('w-resp')||{}).value)||d.leads||0;
   var wkCalls=parseFloat((document.getElementById('w-calls')||{}).value)||d.calls||0;
@@ -3262,23 +3280,44 @@ function resourceHaystack(r){
   ].join(' ').toLowerCase();
 }
 
-function getResourceKeywords(tool,dayType){
-  if(tool==='content'||dayType==='content')return ['content','hook','posting','post','caption','record','clip'];
-  if(tool==='production'||dayType==='beat')return ['production','beat','bangin','soundee','upload','mix','master'];
-  if(tool==='calendar'||dayType==='manager')return ['booking','call','calendar','weekly','review','offer'];
-  if(tool==='tasks')return ['weekly','review','campaign','checklist','playbook'];
-  return ['outreach','sales','dm','follow','booking','offer','objection','campaign','cold','warm'];
+function getContextResourceKeywords(card,view){
+  var map={
+    dpc:{
+      now:['outreach','sales','dm','cold','campaign','script'],
+      pipeline:['pipeline','booking','offer','close','objection','sales'],
+      followup:['follow','warm','lead','booking','dm','script'],
+      scoreboard:['review','scoreboard','bottleneck','offer','objection','campaign']
+    },
+    content:{
+      today:['content','hook','posting','post','caption'],
+      pipeline:['content','record','edit','post','clip','pipeline'],
+      consistency:['content','posting','checklist','consistency','weekly']
+    },
+    production:{
+      today:['production','beat','bangin','soundee','upload'],
+      pipeline:['production','beat','pipeline','mix','master','upload'],
+      consistency:['production','bangin','weekly','soundee','checklist']
+    },
+    calendar:{
+      today:['calendar','booking','call','prep','offer','weekly','review']
+    },
+    tasks:{
+      today:['task','checklist','campaign','playbook','weekly','review','admin']
+    }
+  };
+  return (map[card]&&map[card][view])||[];
 }
 
-function pickMissionResources(tool,dayType,limit){
+function pickResourcesForContext(card,view,limit){
   var resources=window.__resources||[];
-  var keywords=getResourceKeywords(tool,dayType);
+  var keywords=getContextResourceKeywords(card,view);
+  var cardNames={dpc:'Daily Profit Campaign',content:'Content',production:'Production',calendar:'Mission Brief',tasks:'Daily Profit Campaign'};
   return resources.map(function(r){
     var text=resourceHaystack(r);
     var score=0;
     keywords.forEach(function(k){if(text.indexOf(k)>=0)score+=2;});
-    if((r.relatedCard||[]).indexOf('Mission Brief')>=0)score+=2;
-    if((r.relatedCard||[]).indexOf('Daily Profit Campaign')>=0&&tool==='campaign')score+=2;
+    if((r.relatedCard||[]).indexOf(cardNames[card])>=0)score+=3;
+    if((r.relatedTab||[]).map(function(x){return x.toLowerCase();}).indexOf(String(view).toLowerCase())>=0)score+=2;
     if((r.priority||'').toLowerCase()==='high')score+=3;
     else if((r.priority||'').toLowerCase()==='medium')score+=1;
     return {resource:r,score:score};
@@ -3288,16 +3327,17 @@ function pickMissionResources(tool,dayType,limit){
     .map(function(x){return x.resource;});
 }
 
-function renderMissionResources(tool,dayType){
-  var wrap=document.getElementById('mission-resources');
-  var list=document.getElementById('mission-resource-list');
-  var count=document.getElementById('mission-resources-count');
+function renderContextResources(card,view){
+  var prefix=card==='production'?'prod':card==='content'?'ct':card==='calendar'?'cal':card==='tasks'?'task':'dpc';
+  var wrap=document.getElementById(prefix+'-resources');
+  var list=document.getElementById(prefix+'-resource-list');
+  var count=document.getElementById(prefix+'-resources-count');
   if(!wrap||!list||!count)return;
-  var resources=pickMissionResources(tool,dayType,3);
+  var resources=pickResourcesForContext(card,view,3);
   if(!resources.length){
     wrap.classList.remove('show');
     list.innerHTML='';
-    count.textContent='No matched resources yet';
+    count.textContent='';
     return;
   }
   wrap.classList.add('show');
@@ -3341,7 +3381,6 @@ function renderMissionBrief(contentPieces,calEvents){
     if(b)b.classList.toggle('active',mission.time===v);
   });
   updateMissionToolState(tool,mission.locked);
-  renderMissionResources(tool,dayType);
 }
 
 function updateMissionToolState(tool,locked){
@@ -3374,7 +3413,8 @@ function openMissionTool(tool,shouldScroll){
   if(tool==='content'&&typeof setContentView==='function')setContentView('today');
   if(tool==='production'&&typeof setProductionView==='function')setProductionView('today');
   updateMissionToolState(tool,true);
-  renderMissionResources(tool,getMissionDayType());
+  if(tool==='calendar')renderContextResources('calendar','today');
+  if(tool==='tasks')renderContextResources('tasks','today');
   if(shouldScroll){
     var target=document.getElementById(ids[tool]);
     if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
@@ -3418,6 +3458,8 @@ async function loadTodayData(){
   await loadTodoist();
   renderContentCard();
   renderProductionCard();
+  renderContextResources('calendar','today');
+  renderContextResources('tasks','today');
   renderDailyCoach(notionPieces||[],calEvents||[]);
   renderMissionBrief(notionPieces||[],calEvents||[]);
   applyMissionFocus();
@@ -3888,6 +3930,7 @@ function setContentView(view){
     if(tab)tab.classList.toggle('active',v===contentView);
     if(pane)pane.classList.toggle('active',v===contentView);
   });
+  renderContextResources('content',contentView);
   renderContentCard();
 }
 
@@ -3950,6 +3993,7 @@ function renderContentCard(){
     if(tab)tab.classList.toggle('active',v===contentView);
     if(pane)pane.classList.toggle('active',v===contentView);
   });
+  renderContextResources('content',contentView);
 
   // Chain dots (today, yesterday, 2 days ago)
   for(var i=0;i<3;i++){
@@ -4131,6 +4175,7 @@ function setProductionView(view){
     if(tab)tab.classList.toggle('active',v===productionView);
     if(pane)pane.classList.toggle('active',v===productionView);
   });
+  renderContextResources('production',productionView);
   renderProductionCard();
 }
 
@@ -4163,6 +4208,7 @@ function renderProductionCard(){
     if(tab)tab.classList.toggle('active',v===productionView);
     if(pane)pane.classList.toggle('active',v===productionView);
   });
+  renderContextResources('production',productionView);
 
   // Stats
   var psBeats=document.getElementById('ps-beats');
