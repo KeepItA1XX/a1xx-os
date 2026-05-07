@@ -1935,7 +1935,7 @@ var NOTION_CONTENT_URL='https://www.notion.so/1a06115281da81bcb7eccecbcba9ed8e';
 var NOTION_CONTENT_DATE_FIELD='Production Date';
 var NOTION_PRODUCTION_DB='1a761152-81da-8178-ad45-000b48fc3735';
 var NOTION_PRODUCTION_URL='https://www.notion.so/1a76115281da8189ab20cae06ccf55f3';
-var NOTION_CRM_DB='38468725-2a65-45b2-b1a5-17e13a311af4';
+var NOTION_CRM_DB='b82e7140-b3b0-48d1-915d-34e4cdf9f65a';
 var NOTION_CRM_URL='https://www.notion.so/b82e7140b3b048d1915d34e4cdf9f65a';
 var GOLDEN_KEY='a1xx_golden';
 var CHECK_KEY='a1xx_checks_v1';
@@ -3133,18 +3133,10 @@ function renderDailyCoach(contentPieces,calEvents){
    CONTENT CALENDAR (NOTION)
 ══════════════════════════════════════════════════════════ */
 async function loadContentToday(){
-  var ns=getStore(NOTION_KEY);
   var appUrl=localStorage.getItem(SHEETS_KEY);
   var ccEl=document.getElementById('cc-body');
   var ccCard=document.getElementById('content-card');
   var syncEl=document.getElementById('sync-notion');
-  if(!ns||!ns.key){
-    if(ccEl)ccEl.innerHTML='<div style="font-size:12px;color:#444">Set up the Notion secret in Sheets ⚙ above to see today\'s scheduled content.</div>';
-    if(ccCard)ccCard.classList.add('empty');
-    syncEl.textContent='Content: not set up';syncEl.className='sync-pill err';
-    setHealth('content','err','Notion secret not set');
-    return null;
-  }
   if(!appUrl){
     if(ccEl)ccEl.innerHTML='<div style="font-size:12px;color:#444">Add your Apps Script URL in Sheets ⚙. Notion content has to load through Apps Script, not directly from the browser.</div>';
     if(ccCard)ccCard.classList.add('empty');
@@ -3156,7 +3148,7 @@ async function loadContentToday(){
   var ccDate=document.getElementById('cc-date');if(ccDate)ccDate.textContent=today;
   setHealth('content','loading','Loading Notion content for '+today);
   try{
-    var data=await fetchNotionContent(appUrl,today,ns.key,NOTION_CONTENT_DB,NOTION_CONTENT_DATE_FIELD);
+    var data=await fetchNotionContent(appUrl,today,NOTION_CONTENT_DB,NOTION_CONTENT_DATE_FIELD);
     var pieces=normalizeNotionContent(data);
     if(!pieces.length){
       if(ccEl)ccEl.innerHTML='<div style="font-size:12px;color:#444">No content scheduled for today. <a href="'+NOTION_CONTENT_URL+'" target="_blank" style="color:#5b9cf6">Open content calendar →</a></div>';
@@ -3180,9 +3172,9 @@ async function loadContentToday(){
   }
 }
 
-async function fetchNotionContent(appUrl,date,secret,databaseId,dateField){
+async function fetchNotionContent(appUrl,date,databaseId,dateField){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
-  var qs='action=content&date='+encodeURIComponent(date)+'&notionSecret='+encodeURIComponent(secret)+'&databaseId='+encodeURIComponent(databaseId)+'&dateField='+encodeURIComponent(dateField)+'&_='+Date.now();
+  var qs='action=content&date='+encodeURIComponent(date)+'&databaseId='+encodeURIComponent(databaseId)+'&dateField='+encodeURIComponent(dateField)+'&_='+Date.now();
   var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
@@ -3198,12 +3190,11 @@ async function fetchNotionContent(appUrl,date,secret,databaseId,dateField){
 }
 
 async function loadContentPipeline(fallbackPieces){
-  var ns=getStore(NOTION_KEY);
   var appUrl=localStorage.getItem(SHEETS_KEY);
   window.__contentPipelineLimited=true;
-  if(!ns||!ns.key||!appUrl)return fallbackPieces||[];
+  if(!appUrl)return fallbackPieces||[];
   try{
-    var data=await fetchNotionPipeline(appUrl,ns.key,NOTION_CONTENT_DB);
+    var data=await fetchNotionPipeline(appUrl,NOTION_CONTENT_DB);
     var pieces=normalizeNotionContent(data);
     if(pieces.length){
       window.__contentPipelineLimited=false;
@@ -3216,9 +3207,9 @@ async function loadContentPipeline(fallbackPieces){
   return fallbackPieces||[];
 }
 
-async function fetchNotionPipeline(appUrl,secret,databaseId){
+async function fetchNotionPipeline(appUrl,databaseId){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
-  var qs='action=content_pipeline&notionSecret='+encodeURIComponent(secret)+'&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
+  var qs='action=content_pipeline&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
   var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
@@ -3234,12 +3225,11 @@ async function fetchNotionPipeline(appUrl,secret,databaseId){
 }
 
 async function loadProductionPipeline(){
-  var ns=getStore(NOTION_KEY);
   var appUrl=localStorage.getItem(SHEETS_KEY);
   window.__productionPipelineLimited=true;
-  if(!ns||!ns.key||!appUrl)return [];
+  if(!appUrl)return [];
   try{
-    var data=await fetchProductionPipeline(appUrl,ns.key,NOTION_PRODUCTION_DB);
+    var data=await fetchProductionPipeline(appUrl,NOTION_PRODUCTION_DB);
     var items=normalizeProductionItems(data).filter(function(item){return !isProductionComplete(item);});
     window.__productionPipelineLimited=false;
     if(items.length)setHealth('content','ok','Production pipeline loaded: '+items.length+' active beat(s)');
@@ -3250,9 +3240,9 @@ async function loadProductionPipeline(){
   }
 }
 
-async function fetchProductionPipeline(appUrl,secret,databaseId){
+async function fetchProductionPipeline(appUrl,databaseId){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
-  var qs='action=production_pipeline&notionSecret='+encodeURIComponent(secret)+'&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
+  var qs='action=production_pipeline&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
   var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
@@ -3268,20 +3258,15 @@ async function fetchProductionPipeline(appUrl,secret,databaseId){
 }
 
 async function loadResources(){
-  var ns=getStore(NOTION_KEY);
   var appUrl=localStorage.getItem(SHEETS_KEY);
   window.__resources=[];
-  if(!ns||!ns.key){
-    setHealth('resources','err','Notion secret not set');
-    return [];
-  }
   if(!appUrl){
     setHealth('resources','err','Apps Script URL not set');
     return [];
   }
   setHealth('resources','loading','Loading OS Resource Library');
   try{
-    var data=await fetchResources(appUrl,ns.key);
+    var data=await fetchResources(appUrl);
     var items=normalizeResources(data);
     window.__resources=items;
     setHealth('resources','ok',items.length+' resource(s) loaded');
@@ -3293,9 +3278,9 @@ async function loadResources(){
   }
 }
 
-async function fetchResources(appUrl,secret){
+async function fetchResources(appUrl){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
-  var qs='action=resources&notionSecret='+encodeURIComponent(secret)+'&_='+Date.now();
+  var qs='action=resources&_='+Date.now();
   var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
@@ -3332,16 +3317,15 @@ function normalizeResources(data){
 }
 
 async function loadCRMLeads(){
-  var ns=getStore(NOTION_KEY);
   var appUrl=localStorage.getItem(SHEETS_KEY);
   window.__crmLeads=[];
   window.__crmLimited=true;
-  if(!ns||!ns.key||!appUrl){
-    setHealth('crm','err','CRM needs Notion secret and Apps Script URL');
+  if(!appUrl){
+    setHealth('crm','err','CRM needs Apps Script URL');
     return [];
   }
   try{
-    var data=await fetchCRMLeads(appUrl,ns.key,NOTION_CRM_DB);
+    var data=await fetchCRMLeads(appUrl);
     var leads=normalizeCRMLeads(data);
     window.__crmLeads=leads;
     window.__crmLimited=false;
@@ -3355,9 +3339,9 @@ async function loadCRMLeads(){
   }
 }
 
-async function fetchCRMLeads(appUrl,secret,databaseId){
+async function fetchCRMLeads(appUrl){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
-  var qs='action=crm_leads&notionSecret='+encodeURIComponent(secret)+'&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
+  var qs='action=crm_leads&_='+Date.now();
   var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
@@ -4376,15 +4360,14 @@ async function searchRolodexBackend(){
     return;
   }
   var appUrl=localStorage.getItem(SHEETS_KEY);
-  var ns=getStore(NOTION_KEY);
-  if(!appUrl||!ns||!ns.key){
+  if(!appUrl){
     if(badge)badge.textContent='Local only';
     return;
   }
   if(badge)badge.textContent='Searching...';
   try{
     var sep=appUrl.indexOf('?')>=0?'&':'?';
-    var url=appUrl+sep+'action=rolodex_search&query='+encodeURIComponent(q)+'&notionSecret='+encodeURIComponent(ns.key)+'&_='+Date.now();
+    var url=appUrl+sep+'action=rolodex_search&query='+encodeURIComponent(q)+'&_='+Date.now();
     var res=await fetchWithRetry(url,{method:'GET',redirect:'follow'},2);
     if(!res.ok)throw new Error('HTTP '+res.status);
     var data=await res.json();
@@ -5269,13 +5252,7 @@ function renderTodayContentInCard(){
   if(!wrap)return;
   var pieces=window.__contentPieces||[];
   if(!pieces.length){
-    // Check if Notion is set up
-    var ns=getStore(NOTION_KEY);
-    if(!ns||!ns.key){
-      wrap.innerHTML='<div class="ct-none">Connect Notion in Sheets ⚙ to see today\'s scheduled content here.</div>';
-    } else {
-      wrap.innerHTML='<div class="ct-none">No content scheduled for today. <a href="https://www.notion.so/bab4403b6207421894669c954037775a" target="_blank">Open content calendar →</a></div>';
-    }
+    wrap.innerHTML='<div class="ct-none">No content scheduled for today. <a href="https://www.notion.so/bab4403b6207421894669c954037775a" target="_blank">Open content calendar →</a></div>';
     return;
   }
   selectedContentIdx=Math.min(selectedContentIdx,Math.max(0,pieces.length-1));
@@ -5661,10 +5638,7 @@ function renderProductionToday(){
   if(!wrap)return;
   var items=getFilteredProductions();
   if(!items.length){
-    var ns=getStore(NOTION_KEY);
-    if(!ns||!ns.key){
-      wrap.innerHTML='<div class="ct-none">Connect Notion in Sheets setup to pull active beats from Master Beat Catalog.</div>';
-    }else if(window.__productionPipelineLimited){
+    if(window.__productionPipelineLimited){
       wrap.innerHTML='<div class="ct-none">Production database found. Add Apps Script action <strong>production_pipeline</strong> for Master Beat Catalog, then active beats will appear here. <a href="'+NOTION_PRODUCTION_URL+'" target="_blank">Open catalog →</a></div>';
     }else{
       wrap.innerHTML='<div class="ct-none">No active beats found outside completed status. <a href="'+NOTION_PRODUCTION_URL+'" target="_blank">Open Master Beat Catalog →</a></div>';
