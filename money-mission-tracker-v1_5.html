@@ -478,7 +478,7 @@ input:focus{border-color:#333}
 .mission-choice:hover{border-color:#2a4015;color:#7ec845}
 .mission-choice.active{background:#0d1808;border-color:#2a4015;color:#7ec845}
 .mission-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
-.mission-tool{min-height:46px;background:#0b0d0f;border:0.5px solid #2a3036;border-radius:8px;color:#f0f3f5;font-size:11px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center}
+.mission-tool{min-height:46px;background:#0b0d0f;border:0.5px solid #2a3036;border-radius:8px;color:#f0f3f5;font-size:11px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;text-decoration:none}
 .mission-tool:hover{border-color:#3a5a2a;color:#fff;background:#111711}
 .mission-tool.active{background:#121712;border-color:#3a5a2a;color:#fff}
 .mission-tool-signal{font-size:9px;color:#aeb6bd;font-weight:700;line-height:1.2}
@@ -488,6 +488,7 @@ input:focus{border-color:#333}
 .mission-lock.locked{background:#10190a;color:#8fbf66}
 .mission-check.locked{display:none}
 .mission-hidden{display:none!important}
+#dpc-card:target,#content-tracker-card:target,#production-card:target,#calendar-card:target,#actions-card:target{display:block!important;scroll-margin-top:18px}
 
 /* DAILY PROFIT CAMPAIGN */
 .dpc-card{background:#080e04;border:1px solid #1d3010;border-radius:14px;padding:1.1rem 1.25rem;margin-bottom:10px}
@@ -610,7 +611,7 @@ input:focus{border-color:#333}
 .dt-type{font-size:13px;font-weight:600;color:#f0f0f0}
 .dt-reason{font-size:10px;color:#444;margin-top:2px}
 .dt-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.dt-override-btn{height:26px;padding:0 10px;border:0.5px solid #1e1e1e;border-radius:20px;background:#111;color:#d7dde3;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.dt-override-btn{height:26px;padding:0 10px;border:0.5px solid #1e1e1e;border-radius:20px;background:#111;color:#d7dde3;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 .dt-override-btn:hover{border-color:#2a2a2a;color:#fff}
 .dt-override-btn.active{border-color:#2a4015;background:#0d1808;color:#7ec845}
 .dt-auto-badge{font-size:9px;color:#333;background:#0a0a0a;border:0.5px solid #1a1a1a;border-radius:10px;padding:2px 7px}
@@ -990,9 +991,9 @@ body{background:#090a0b;color:#d8dde1}
     <div class="mission-dot" onclick="setMissionSlide(2)"></div>
   </div>
   <div class="mission-tools">
-    <button class="mission-tool" id="mission-tool-campaign" onclick="openMissionTool('campaign',true)"><span>Campaign</span><span class="mission-tool-signal" id="mission-signal-campaign">Reading...</span></button>
-    <button class="mission-tool" id="mission-tool-content" onclick="openMissionTool('content',true)"><span>Content</span><span class="mission-tool-signal" id="mission-signal-content">Reading...</span></button>
-    <button class="mission-tool" id="mission-tool-production" onclick="openMissionTool('production',true)"><span>Production</span><span class="mission-tool-signal" id="mission-signal-production">Reading...</span></button>
+    <a class="mission-tool" id="mission-tool-campaign" href="#dpc-card" data-mission-tool="campaign" onclick="openMissionTool('campaign',true)"><span>Campaign</span><span class="mission-tool-signal" id="mission-signal-campaign">Reading...</span></a>
+    <a class="mission-tool" id="mission-tool-content" href="#content-tracker-card" data-mission-tool="content" onclick="openMissionTool('content',true)"><span>Content</span><span class="mission-tool-signal" id="mission-signal-content">Reading...</span></a>
+    <a class="mission-tool" id="mission-tool-production" href="#production-card" data-mission-tool="production" onclick="openMissionTool('production',true)"><span>Production</span><span class="mission-tool-signal" id="mission-signal-production">Reading...</span></a>
   </div>
   <button class="mission-lock" id="mission-lock-btn" onclick="lockMission()">Lock Mission</button>
 </div>
@@ -1008,12 +1009,12 @@ body{background:#090a0b;color:#d8dde1}
   </div>
   <div class="dt-right">
     <div class="dt-auto-badge" id="dt-auto-badge">Auto</div>
-    <button class="dt-override-btn" onclick="setDayType('beat')">🎵 Beat</button>
-    <button class="dt-override-btn" onclick="setDayType('outreach')">💬 Outreach</button>
-    <button class="dt-override-btn" onclick="setDayType('content')">📱 Content</button>
-    <button class="dt-override-btn" onclick="setDayType('manager')">📋 Manager</button>
-    <button class="dt-override-btn" onclick="openMissionTool('calendar',true)">📅 Calendar</button>
-    <button class="dt-override-btn" onclick="openMissionTool('tasks',true)">✅ Tasks</button>
+    <a class="dt-override-btn" href="#production-card" data-day-tool="beat" onclick="selectMissionDayTool('beat')">🎵 Beat</a>
+    <a class="dt-override-btn" href="#dpc-card" data-day-tool="outreach" onclick="selectMissionDayTool('outreach')">💬 Outreach</a>
+    <a class="dt-override-btn" href="#content-tracker-card" data-day-tool="content" onclick="selectMissionDayTool('content')">📱 Content</a>
+    <a class="dt-override-btn" href="#calendar-card" data-day-tool="manager" onclick="selectMissionDayTool('manager')">📋 Manager</a>
+    <a class="dt-override-btn" href="#calendar-card" data-mission-tool="calendar" onclick="openMissionTool('calendar',true)">📅 Calendar</a>
+    <a class="dt-override-btn" href="#actions-card" data-mission-tool="tasks" onclick="openMissionTool('tasks',true)">✅ Tasks</a>
   </div>
 </div>
 
@@ -1124,8 +1125,8 @@ body{background:#090a0b;color:#d8dde1}
   <div class="dpc-view" id="dpc-view-pipeline">
     <div class="dpc-subtabs">
       <button class="dpc-subtab active" id="dpc-pipeline-tab-command" onclick="setDPCSubView('pipeline','command')">Focus</button>
-      <button class="dpc-subtab" id="dpc-pipeline-tab-board" onclick="setDPCSubView('pipeline','board')">Sources</button>
-      <button class="dpc-subtab" id="dpc-pipeline-tab-money" onclick="setDPCSubView('pipeline','money')">Stuck</button>
+      <button class="dpc-subtab" id="dpc-pipeline-tab-board" onclick="setDPCSubView('pipeline','board')">Hit List</button>
+      <button class="dpc-subtab" id="dpc-pipeline-tab-money" onclick="setDPCSubView('pipeline','money')">Gap</button>
     </div>
     <div class="dpc-mini-view active" id="dpc-pipeline-view-command">
       <div class="dpc-coach-box">
@@ -1135,7 +1136,139 @@ body{background:#090a0b;color:#d8dde1}
       <div class="dpc-action-list" id="dpc-pipeline-actions"></div>
     </div>
     <div class="dpc-mini-view" id="dpc-pipeline-view-board">
-      <div class="dpc-lead-stack" id="dpc-pipeline-board"></div>
+
+      <!-- HIT LIST STYLES — injected inline so Codex doesn't need to touch the CSS block -->
+      <style>
+        .hl-section { margin-bottom: 16px; }
+        .hl-section-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+          padding-bottom: 6px;
+          border-bottom: 0.5px solid #1d3010;
+        }
+        .hl-section-icon { font-size: 14px; }
+        .hl-section-title {
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: .1em;
+          color: #7ec845;
+        }
+        .hl-section-title.amber { color: #d4a017; }
+        .hl-section-title.blue { color: #5b9cf6; }
+        .hl-section-count {
+          font-size: 10px;
+          color: #444;
+          margin-left: auto;
+        }
+        .hl-card {
+          background: #080e04;
+          border: 0.5px solid #1d3010;
+          border-radius: 10px;
+          padding: 10px 12px;
+          margin-bottom: 8px;
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items: start;
+        }
+        .hl-card.amber { border-color: #3a2800; background: #0d0900; }
+        .hl-card.blue { border-color: #1a3050; background: #060d18; }
+        .hl-name {
+          font-size: 13px;
+          font-weight: 800;
+          color: #f0f3f5;
+          margin-bottom: 3px;
+          line-height: 1.25;
+        }
+        .hl-meta {
+          font-size: 10px;
+          color: #8b949e;
+          line-height: 1.55;
+          margin-bottom: 6px;
+        }
+        .hl-badges {
+          display: flex;
+          gap: 5px;
+          flex-wrap: wrap;
+          margin-bottom: 6px;
+        }
+        .hl-badge {
+          font-size: 9px;
+          font-weight: 800;
+          padding: 2px 7px;
+          border-radius: 4px;
+          text-transform: uppercase;
+          letter-spacing: .05em;
+        }
+        .hl-badge.new { background: #111f08; color: #7ec845; border: 0.5px solid #2a4015; }
+        .hl-badge.atl { background: #150e00; color: #d4a017; border: 0.5px solid #3a2800; }
+        .hl-badge.overdue { background: #150505; color: #e05555; border: 0.5px solid #3a1010; }
+        .hl-badge.stage { background: #0b0d0f; color: #8b949e; border: 0.5px solid #2a3036; }
+        .hl-badge.offer { background: #0a1628; color: #5b9cf6; border: 0.5px solid #1a3050; }
+        .hl-phone {
+          font-size: 11px;
+          color: #639922;
+          font-weight: 700;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .hl-phone:hover { color: #7ec845; }
+        .hl-phone-copied { color: #7ec845 !important; }
+        .hl-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          align-items: stretch;
+          min-width: 68px;
+        }
+        .hl-btn {
+          height: 28px;
+          padding: 0 10px;
+          border-radius: 7px;
+          border: 0.5px solid #2a3036;
+          background: #0b0d0f;
+          color: #d7dde3;
+          font-size: 10px;
+          font-weight: 800;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: all .2s;
+        }
+        .hl-btn:hover { border-color: #3a5a2a; background: #111711; color: #fff; }
+        .hl-btn.ig { border-color: #3a2800; color: #d4a017; }
+        .hl-btn.ig:hover { background: #150e00; }
+        .hl-btn.call { border-color: #1a3050; color: #5b9cf6; }
+        .hl-btn.call:hover { background: #0a1628; }
+        .hl-empty {
+          background: #080e04;
+          border: 0.5px dashed #1d3010;
+          border-radius: 10px;
+          padding: 14px 12px;
+          font-size: 11px;
+          color: #4a7a30;
+          line-height: 1.6;
+          margin-bottom: 8px;
+        }
+        .hl-empty strong { color: #7ec845; }
+      </style>
+
+      <!-- HIT LIST CONTAINER -->
+      <div id="hit-list-wrap">
+        <div class="hl-empty">
+          <strong>Loading Hit List...</strong><br>
+          Pulling leads from Notion CRM.
+        </div>
+      </div>
+
     </div>
     <div class="dpc-mini-view" id="dpc-pipeline-view-money">
       <div class="dpc-funnel" id="dpc-funnel"></div>
@@ -1861,7 +1994,7 @@ function fmtS(s){return pd(s).toLocaleDateString('en-US',{month:'short',day:'num
 function nowMins(){var n=new Date();return n.getHours()*60+n.getMinutes();}
 function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function getStore(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
-function setStore(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function setStore(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){console.warn('A1XX local save skipped',k,e);}}
 function flash(id){var t=document.getElementById(id);if(!t)return;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 
 function getHealth(){
@@ -2398,21 +2531,34 @@ function renderNowBrief(modeKey,block,calEvents,d){
   var blockLabel=block?block.name:'Pre-flight';
   modeEl.textContent=blockLabel+' · '+mode.name;
   var taskText=related.length?related[0].content:'No matching Todoist task. Use the campaign action.';
-  var main='';
+  var crmLeads=typeof getCRMLeads==='function'?getCRMLeads():[];
+  var activeCRM=crmLeads.filter(function(lead){return !(typeof isClosedCRMLead==='function'&&isClosedCRMLead(lead));});
+  var hotCRM=activeCRM.filter(function(lead){return typeof isHotCRMLead==='function'&&isHotCRMLead(lead);});
+  var dueCRM=activeCRM.filter(function(lead){
+    if(!lead.followUpDate)return false;
+    var due=new Date(lead.followUpDate);due.setHours(23,59,59,999);
+    return !isNaN(due.getTime())&&due<=new Date();
+  });
+  var contentPieces=window.__contentPieces||[];
+  var productionPieces=window.__productionPieces||[];
+  var feed='';
   if(modeKey==='outreach'){
-    var remaining=Math.max(0,40-(d.dms||0));
-    main=remaining>0?'Send '+remaining+' more DMs before this block ends. Start with the warmest artists first.':'DM minimum hit. Push warm replies toward a call or payment.';
-  }else if(modeKey==='focus'){
-    main='Protect this block for one maker output. Move content, production, or a funnel asset one visible step forward.';
+    feed=activeCRM.length
+      ?'Notion feed: '+activeCRM.length+' active lead'+(activeCRM.length===1?'':'s')+' · '+hotCRM.length+' hot · '+dueCRM.length+' follow-up'+(dueCRM.length===1?'':'s')+' due.'
+      :'Notion feed: CRM has no active leads loaded yet. New opt-ins and follow-ups will appear here after sync.';
+  }else if(modeKey==='focus'||modeKey==='busy'){
+    feed=contentPieces.length
+      ?'Notion feed: '+contentPieces.length+' content piece'+(contentPieces.length===1?'':'s')+' scheduled or active today.'
+      :'Notion feed: no content scheduled today. Check the Content card if you want to pick one manually.';
   }else if(modeKey==='clients'){
-    main='Serve one client or prospect visibly: deliver, update, or clarify the next step.';
-  }else if(modeKey==='busy'){
-    main='Clear admin without hiding in it. Finish 2-3 small tasks, then get back to money or making.';
+    feed=productionPieces.length
+      ?'Notion feed: '+productionPieces.length+' production project'+(productionPieces.length===1?'':'s')+' active in the pipeline.'
+      :'Notion feed: no active production projects loaded from Notion yet.';
   }else{
-    main='Set the day: pick the money move, the content move, and the follow-up move before the schedule starts pulling on you.';
+    feed='Notion feed: reading CRM, content, and production context for this block.';
   }
-  mainEl.textContent=main;
-  subEl.textContent='Todoist: '+taskText+(nextEvent?' · Next calendar: '+nextEvent.startTime+' '+nextEvent.title:' · Calendar: protect the next open block');
+  mainEl.textContent=feed;
+  subEl.textContent='Todoist: '+taskText+(nextEvent?' · Calendar: '+nextEvent.startTime+' · '+nextEvent.title:' · Calendar: no upcoming event loaded');
 }
 
 function setDPCView(view){
@@ -2547,6 +2693,124 @@ function buildCRMLeadCard(lead){
   });
 }
 
+/* ═══════════════════════════════════════════════════════════
+   HIT LIST
+═══════════════════════════════════════════════════════════ */
+function getRecencyLabel(dateStr){
+  if(!dateStr)return '';
+  var d=new Date(dateStr);
+  if(isNaN(d.getTime()))return '';
+  var ms=Date.now()-d.getTime();
+  var mins=Math.floor(ms/60000);
+  var hrs=Math.floor(ms/3600000);
+  var days=Math.floor(ms/86400000);
+  if(mins<60)return mins+'m ago';
+  if(hrs<24)return hrs+'h ago';
+  if(days===1)return 'yesterday';
+  return days+'d ago';
+}
+
+function getRecencyColor(dateStr){
+  if(!dateStr)return 'stage';
+  var ms=Date.now()-new Date(dateStr).getTime();
+  var hrs=ms/3600000;
+  if(hrs<24)return 'new';
+  if(hrs<72)return 'offer';
+  return 'overdue';
+}
+
+function isATLLead(lead){
+  var phone=String(lead.phone||'').replace(/[^0-9]/g,'');
+  var areaCode=phone.length>=10?phone.slice(0,3):phone.slice(0,3);
+  var atlCodes=['404','470','678','770'];
+  if(atlCodes.indexOf(areaCode)>=0)return true;
+  var tags=String(lead.cfAtlTag||lead.source||lead.funnelSource||'').toLowerCase();
+  if(/atl|atlanta/.test(tags))return true;
+  return false;
+}
+
+function buildHLPhone(lead){
+  var phone=String(lead.phone||'').trim();
+  if(!phone)return '';
+  return '<span class="hl-phone" onclick="hlCopyPhone(\''+escapeHtml(phone)+'\')" id="hlph-'+escapeHtml(lead.name.replace(/\s/g,''))+'">📋 '+escapeHtml(phone)+'</span>';
+}
+
+function hlCopyPhone(phone){
+  try{navigator.clipboard.writeText(phone);}catch(e){}
+  window.open('https://voice.google.com/u/0/calls','_blank');
+  document.querySelectorAll('.hl-phone').forEach(function(el){
+    if(el.textContent.indexOf(phone)>=0){
+      el.classList.add('hl-phone-copied');
+      el.textContent='✅ '+phone+' — copied';
+      setTimeout(function(){el.classList.remove('hl-phone-copied');el.innerHTML='📋 '+phone;},3000);
+    }
+  });
+}
+
+function buildHLCard(lead,variant){
+  variant=variant||'green';
+  var recency=getRecencyLabel(lead.optInDate||lead.lastContact||'');
+  var recencyColor=getRecencyColor(lead.optInDate||'');
+  var atl=isATLLead(lead);
+  var stage=lead.stage||lead.status||'New Lead';
+  var offer=asArray(lead.offerInterest).join(', ')||lead.funnelSource||'';
+  var instagram=String(lead.instagram||'').trim().replace(/^@/,'');
+  var igUrl=instagram?'https://instagram.com/'+encodeURIComponent(instagram):'https://www.instagram.com/explore/';
+  var phone=String(lead.phone||'').trim();
+  var voiceUrl=phone?'https://voice.google.com/u/0/calls':'https://voice.google.com/u/0/calls';
+  var badges='';
+  if(recency)badges+='<span class="hl-badge '+recencyColor+'">'+escapeHtml(recency)+'</span>';
+  if(atl)badges+='<span class="hl-badge atl">🏙️ ATL</span>';
+  if(stage)badges+='<span class="hl-badge stage">'+escapeHtml(stage)+'</span>';
+  if(offer)badges+='<span class="hl-badge offer">'+escapeHtml(offer)+'</span>';
+  return '<div class="hl-card '+variant+'">'
+    +'<div>'
+    +'<div class="hl-name">'+escapeHtml(lead.name||'Unknown')+'</div>'
+    +(badges?'<div class="hl-badges">'+badges+'</div>':'')
+    +(phone?'<div>'+buildHLPhone(lead)+'</div>':'<div class="hl-meta">No phone captured</div>')
+    +'</div>'
+    +'<div class="hl-actions">'
+    +'<a class="hl-btn ig" href="'+igUrl+'" target="_blank">DM on IG</a>'
+    +(phone?'<a class="hl-btn call" href="'+escapeHtml(voiceUrl)+'" target="_blank" onclick="hlCopyPhone(\''+escapeHtml(phone)+'\')">Call</a>':'')
+    +'</div>'
+    +'</div>';
+}
+
+function renderHitList(){
+  var wrap=document.getElementById('hit-list-wrap');
+  if(!wrap)return;
+  var leads=window.__crmLeads||[];
+  var now=Date.now();
+  var newToday=leads.filter(function(lead){
+    var d=new Date(lead.optInDate||lead.lastContact||'');
+    if(isNaN(d.getTime()))return false;
+    return (now-d.getTime())<86400000;
+  }).sort(function(a,b){return new Date(b.optInDate||b.lastContact||0)-new Date(a.optInDate||a.lastContact||0);});
+  var followDue=leads.filter(function(lead){
+    if(!lead.followUpDate)return false;
+    var due=new Date(lead.followUpDate);due.setHours(23,59,59,999);
+    return !isNaN(due.getTime())&&due<=new Date();
+  }).sort(function(a,b){return new Date(a.followUpDate)-new Date(b.followUpDate);});
+  var atlLeads=leads.filter(function(lead){return isATLLead(lead);}).sort(function(a,b){return new Date(b.optInDate||b.lastContact||0)-new Date(a.optInDate||a.lastContact||0);}).slice(0,6);
+  var html='';
+  html+='<div class="hl-section">';
+  html+='<div class="hl-section-header"><span class="hl-section-icon">🔴</span><span class="hl-section-title">New Today</span><span class="hl-section-count">'+newToday.length+' lead'+(newToday.length===1?'':'s')+'</span></div>';
+  if(newToday.length){newToday.forEach(function(lead){html+=buildHLCard(lead,'green');});}
+  else{html+='<div class="hl-empty"><strong>No new leads in the last 24 hours.</strong><br>Send DMs to fill this list. Every opt-in starts here.</div>';}
+  html+='</div>';
+  html+='<div class="hl-section">';
+  html+='<div class="hl-section-header"><span class="hl-section-icon">🟡</span><span class="hl-section-title amber">Follow Up Due</span><span class="hl-section-count">'+followDue.length+' due</span></div>';
+  if(followDue.length){followDue.slice(0,8).forEach(function(lead){html+=buildHLCard(lead,'amber');});}
+  else{html+='<div class="hl-empty" style="border-color:#3a2800;color:#7a5b18"><strong>No follow-ups due today.</strong><br>Set follow-up dates in Notion after every conversation.</div>';}
+  html+='</div>';
+  html+='<div class="hl-section">';
+  html+='<div class="hl-section-header"><span class="hl-section-icon">🏙️</span><span class="hl-section-title blue">ATL Local</span><span class="hl-section-count">'+atlLeads.length+' local</span></div>';
+  if(atlLeads.length){atlLeads.forEach(function(lead){html+=buildHLCard(lead,'blue');});}
+  else{html+='<div class="hl-empty" style="border-color:#1a3050;color:#2a4a70"><strong>No ATL locals detected yet.</strong><br>ATL leads are flagged by 404, 470, 678, or 770 area codes and the CF ATL tag.</div>';}
+  html+='</div>';
+  wrap.innerHTML=html;
+}
+
 function renderBarRows(rows,maxVal){
   maxVal=maxVal||Math.max.apply(null,rows.map(function(r){return r.value;}).concat([1]));
   return '<div class="dpc-source-list">'+rows.map(function(row){
@@ -2668,25 +2932,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
     ].map(renderDPCAction).join('');
   }
 
-  var board=document.getElementById('dpc-pipeline-board');
-  if(board){
-    var skoolJoins=stageCounts.skool||0;
-    var resourceCount=stageCounts.resource||0;
-    var skoolPct=resourceCount>0?Math.round(Math.min(100,skoolJoins/Math.max(resourceCount,1)*100)):0;
-    var sourceRows=Object.keys(sourceCounts).sort(function(a,b){return sourceCounts[b]-sourceCounts[a];}).slice(0,6).map(function(name){return {name:name,value:sourceCounts[name],label:sourceCounts[name]+' leads'};});
-    if(!sourceRows.length){
-      sourceRows=[
-        {name:'IG DMs',value:dms,label:dms+' sent'},
-        {name:'Content',value:d.content||0,label:(d.content||0)+' posted'},
-        {name:'Manual Leads',value:d.leads||0,label:(d.leads||0)+' warm'}
-      ];
-    }
-    board.innerHTML='<div class="dpc-mini-grid">'
-      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+activeCRM.length+'</div><div class="dpc-mini-lbl">Active CRM</div></div>'
-      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+skoolPct+'%</div><div class="dpc-mini-lbl">Resource to Skool</div></div>'
-      +'<div class="dpc-mini-metric"><div class="dpc-mini-val">'+hotCRM.length+'</div><div class="dpc-mini-lbl">Hot Leads</div></div>'
-      +'</div>'+renderBarRows(sourceRows);
-  }
+  renderHitList();
 
   var followCmd=document.getElementById('dpc-follow-command');
   if(followCmd){
@@ -4233,6 +4479,38 @@ function renderMissionBrief(contentPieces,calEvents){
   updateMissionToolState(tool,mission.locked);
 }
 
+function wireMissionButtons(){
+  [
+    ['mission-tool-campaign','campaign'],
+    ['mission-tool-content','content'],
+    ['mission-tool-production','production']
+  ].forEach(function(pair){
+    var el=document.getElementById(pair[0]);
+    if(el&&!el.__wiredMissionOpen){
+      el.__wiredMissionOpen=true;
+      el.addEventListener('click',function(ev){
+        ev.preventDefault();
+        openMissionTool(pair[1],true);
+      });
+    }
+  });
+}
+
+function wireMissionDelegates(){
+  if(document.__a1xxMissionDelegatesWired)return;
+  document.__a1xxMissionDelegatesWired=true;
+  document.addEventListener('click',function(ev){
+    var target=ev.target&&ev.target.closest?ev.target.closest('[data-mission-tool],[data-day-tool]'):null;
+    if(!target)return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    var day=target.getAttribute('data-day-tool');
+    var tool=target.getAttribute('data-mission-tool');
+    if(day)selectMissionDayTool(day);
+    else if(tool)openMissionTool(tool,true);
+  },true);
+}
+
 function updateMissionToolState(tool,locked){
   ['campaign','content','production'].forEach(function(t){
     var b=document.getElementById('mission-tool-'+t);
@@ -4251,24 +4529,39 @@ function updateMissionToolState(tool,locked){
 }
 
 function openMissionTool(tool,shouldScroll){
-  var mission=getMissionStore();
-  mission.tool=tool;
-  mission.locked=true;
-  saveMissionStore(mission);
   var ids={campaign:'dpc-card',content:'content-tracker-card',production:'production-card',calendar:'calendar-card',tasks:'actions-card'};
   Object.keys(ids).forEach(function(k){
     var el=document.getElementById(ids[k]);
-    if(el)el.classList.toggle('mission-hidden',k!==tool);
+    if(el){
+      var active=k===tool;
+      el.classList.toggle('mission-hidden',!active);
+      el.style.display=active?'block':'none';
+      el.hidden=false;
+    }
   });
-  if(tool==='campaign'&&typeof setDPCView==='function'){
-    setDPCView('now');
-    renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
+  try{
+    var mission=getMissionStore();
+    mission.tool=tool;
+    mission.locked=true;
+    saveMissionStore(mission);
+  }catch(saveErr){
+    console.warn('A1XX mission state save skipped',saveErr);
   }
-  if(tool==='content'&&typeof setContentView==='function')setContentView('today');
-  if(tool==='production'&&typeof setProductionView==='function')setProductionView('today');
-  updateMissionToolState(tool,true);
-  if(tool==='calendar')renderContextResources('calendar','today');
-  if(tool==='tasks')renderContextResources('tasks','today');
+  try{
+    if(tool==='campaign'&&typeof setDPCView==='function'){
+      setDPCView('now');
+      renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
+    }
+    if(tool==='content'&&typeof setContentView==='function')setContentView('today');
+    if(tool==='production'&&typeof setProductionView==='function')setProductionView('today');
+    updateMissionToolState(tool,true);
+    renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
+    if(tool==='calendar')renderContextResources('calendar','today');
+    if(tool==='tasks')renderContextResources('tasks','today');
+  }catch(e){
+    console.error('A1XX mission open render error',tool,e);
+    updateMissionToolState(tool,true);
+  }
   if(shouldScroll){
     var target=document.getElementById(ids[tool]);
     if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
@@ -4282,17 +4575,31 @@ function lockMission(){
   renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
 }
 
+function selectMissionDayTool(type){
+  var tool=getMissionPrimaryTool(type);
+  openMissionTool(tool,true);
+  try{setDayType(type,false,(DAY_TYPES[type]||{}).reason);}catch(e){console.warn('A1XX day type update skipped',e);}
+  openMissionTool(tool,true);
+}
+
 function applyMissionFocus(){
   var mission=getMissionStore();
   if(mission.locked)openMissionTool(mission.tool||getMissionPrimaryTool(getMissionDayType()),false);
   else{
     ['dpc-card','content-tracker-card','production-card','calendar-card','actions-card'].forEach(function(id){
       var el=document.getElementById(id);
-      if(el)el.classList.add('mission-hidden');
+      if(el){
+        el.classList.add('mission-hidden');
+        el.style.display='none';
+        el.hidden=false;
+      }
     });
     updateMissionToolState(mission.tool||getMissionPrimaryTool(getMissionDayType()),false);
   }
 }
+
+window.openMissionTool=openMissionTool;
+window.selectMissionDayTool=selectMissionDayTool;
 
 /* INIT */
 async function loadTodayData(){
@@ -4328,13 +4635,16 @@ async function loadTodayData(){
   safeRender('task resources',function(){renderContextResources('tasks','today');});
   safeRender('daily profit campaign',function(){renderDailyCoach(notionPieces||[],calEvents||[]);});
   safeRender('mission brief',function(){renderMissionBrief(notionPieces||[],calEvents||[]);});
+  safeRender('wire mission buttons',function(){wireMissionButtons();});
   safeRender('rolodex',function(){renderRolodex();});
+  safeRender('hit list',function(){renderHitList();});
   safeRender('mission focus',function(){applyMissionFocus();});
   safeRender('daily archive',function(){checkDailyArchive();});
   safeRender('sync complete',function(){markSyncComplete();});
 }
 function init(){
   window.__a1xxBooting=true;
+  safeRender('mission delegates',function(){wireMissionDelegates();});
   safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();});
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
@@ -4342,6 +4652,7 @@ function init(){
   safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);});
   safeRender('initial mission brief',function(){renderMissionBrief([],[]);});
+  safeRender('initial mission buttons',function(){wireMissionButtons();});
   safeRender('initial rolodex',function(){renderRolodex();});
   safeRender('initial mission focus',function(){applyMissionFocus();});
   loadTodayData().catch(function(e){
