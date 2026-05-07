@@ -290,9 +290,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rp-skill-score{font-size:10px;color:#7ec845;font-weight:900}
 .rp-skill-track{height:5px;background:#050607;border-radius:4px;overflow:hidden}
 .rp-skill-fill{height:100%;background:#7ec845;border-radius:4px}
-.rolodex-search{background:#101214;border:0.5px solid #262b31;border-radius:12px;padding:10px 12px;margin-bottom:12px}
-.rolodex-search input{width:100%;height:38px;background:#0b0d0f;border:0.5px solid #2a3036;border-radius:9px;color:#f0f3f5;font-size:13px;padding:0 12px;outline:none}
+.rolodex-search{background:#0b1116;border:1px solid #33515f;border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:inset 3px 0 0 #5b9cf6}
+.rolodex-search-shell{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;background:#05080b;border:0.5px solid #2a3d4a;border-radius:11px;padding:0 10px}
+.rolodex-search-icon{font-size:15px;color:#5b9cf6;font-weight:900}
+.rolodex-search input{width:100%;height:44px;background:transparent;border:0;color:#f0f3f5;font-size:14px;font-weight:700;padding:0;outline:none}
+.rolodex-search input::placeholder{color:#6f7b86;font-weight:600}
+.rolodex-search-badge{font-size:9px;color:#d7dde3;background:#101820;border:0.5px solid #2a3d4a;border-radius:14px;padding:4px 8px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .rolodex-search-meta{font-size:10px;color:#8b949e;margin-top:8px;line-height:1.45}
+.rolodex-results{display:none;margin-bottom:12px}
+.rolodex-results.show{display:block}
 .rolodex-group{margin-bottom:1.25rem}
 .rolodex-group-label{font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
 .rolodex-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
@@ -1719,8 +1725,17 @@ body{background:#090a0b;color:#d8dde1}
 </div>
 
 <div class="rolodex-search">
-  <input type="text" id="rolodex-search" placeholder="Search playbooks, tools, content, contacts, resources..." oninput="filterRolodex()"/>
-  <div class="rolodex-search-meta" id="rolodex-search-meta">Search currently filters this Rolodex and loaded OS resources. Notion-wide search is the next backend step.</div>
+  <div class="rolodex-search-shell">
+    <div class="rolodex-search-icon">⌕</div>
+    <input type="text" id="rolodex-search" placeholder="Search your business brain..." oninput="handleRolodexSearch()"/>
+    <div class="rolodex-search-badge" id="rolodex-search-badge">Local + backend</div>
+  </div>
+  <div class="rolodex-search-meta" id="rolodex-search-meta">Search playbooks, contacts, resources, content, production, Google Drive links, and notes.</div>
+</div>
+
+<div class="rolodex-results" id="rolodex-results">
+  <div class="rolodex-group-label">Search Results</div>
+  <div class="rolodex-grid" id="rolodex-results-grid"></div>
 </div>
 
 <div class="rolodex-group" id="rolodex-queue-group">
@@ -4100,10 +4115,64 @@ function renderRolodexLive(){
   }).join('');
 }
 
+var rolodexSearchTimer=null;
+
+function handleRolodexSearch(){
+  filterRolodex();
+  clearTimeout(rolodexSearchTimer);
+  rolodexSearchTimer=setTimeout(searchRolodexBackend,450);
+}
+
+async function searchRolodexBackend(){
+  var input=document.getElementById('rolodex-search');
+  var q=input?input.value.trim():'';
+  var badge=document.getElementById('rolodex-search-badge');
+  var resultsWrap=document.getElementById('rolodex-results');
+  var resultsGrid=document.getElementById('rolodex-results-grid');
+  if(!q||q.length<2){
+    if(resultsWrap)resultsWrap.classList.remove('show');
+    if(badge)badge.textContent='Local + backend';
+    return;
+  }
+  var appUrl=localStorage.getItem(SHEETS_KEY);
+  var ns=getStore(NOTION_KEY);
+  if(!appUrl||!ns||!ns.key){
+    if(badge)badge.textContent='Local only';
+    return;
+  }
+  if(badge)badge.textContent='Searching...';
+  try{
+    var sep=appUrl.indexOf('?')>=0?'&':'?';
+    var url=appUrl+sep+'action=rolodex_search&query='+encodeURIComponent(q)+'&notionSecret='+encodeURIComponent(ns.key)+'&_='+Date.now();
+    var res=await fetchWithRetry(url,{method:'GET',redirect:'follow'},2);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    var data=await res.json();
+    if(data.status==='error')throw new Error(data.message||'Search error');
+    var items=data.items||data.results||[];
+    if(resultsWrap)resultsWrap.classList.add('show');
+    if(resultsGrid){
+      resultsGrid.innerHTML=items.length?items.map(renderRolodexResult).join(''):'<div class="rolodex-item"><div class="ri-icon blue">0</div><div><div class="ri-name">No backend results yet</div><div class="ri-type">Try a broader keyword or add this term to Notion/Drive.</div></div></div>';
+    }
+    if(badge)badge.textContent=items.length+' backend';
+  }catch(e){
+    if(badge)badge.textContent='Local only';
+    var meta=document.getElementById('rolodex-search-meta');
+    if(meta)meta.textContent='Backend search is not active yet: '+e.message+'. Local filtering is still working.';
+  }
+}
+
+function renderRolodexResult(item){
+  var source=String(item.source||item.type||'Result');
+  var icon=/crm|lead|contact/i.test(source)?'👤':/drive|doc|sheet|file/i.test(source)?'📄':/content/i.test(source)?'▶':/production|beat/i.test(source)?'🎵':'↗';
+  var color=/crm|lead|contact/i.test(source)?'green':/drive|doc|sheet|file/i.test(source)?'blue':/production|beat/i.test(source)?'purple':'amber';
+  var url=item.url||item.notionUrl||'#';
+  return '<a class="rolodex-item" href="'+escapeHtml(url)+'" target="_blank"><div class="ri-icon '+color+'">'+icon+'</div><div><div class="ri-name">'+escapeHtml(item.title||item.name||'Untitled')+'</div><div class="ri-type">'+escapeHtml(source+(item.summary?' · '+item.summary:''))+'</div></div></a>';
+}
+
 function filterRolodex(){
   var input=document.getElementById('rolodex-search');
   var q=input?input.value.trim().toLowerCase():'';
-  var items=document.querySelectorAll('#pane-rolodex .rolodex-item');
+  var items=document.querySelectorAll('#pane-rolodex .rolodex-group .rolodex-item');
   var shown=0;
   items.forEach(function(item){
     var hit=!q||item.textContent.toLowerCase().indexOf(q)>=0;
@@ -4115,7 +4184,7 @@ function filterRolodex(){
     group.style.display=visible?'block':'none';
   });
   var meta=document.getElementById('rolodex-search-meta');
-  if(meta)meta.textContent=q?shown+' result'+(shown===1?'':'s')+' showing for "'+q+'".':'Search currently filters this Rolodex, loaded contacts, and OS resources. Notion-wide search is the next backend step.';
+  if(meta)meta.textContent=q?shown+' local result'+(shown===1?'':'s')+' showing for "'+q+'". Backend search will add Notion and Drive results when the Apps Script endpoint is deployed.':'Search playbooks, contacts, resources, content, production, Google Drive links, and notes.';
 }
 
 function renderMissionBrief(contentPieces,calEvents){
