@@ -460,6 +460,9 @@ input:focus{border-color:#333}
 .mission-dots{display:flex;justify-content:center;gap:8px;margin-bottom:10px}
 .mission-dot{width:14px;height:14px;border-radius:50%;background:#30363d;cursor:pointer;transition:all .2s;border:1px solid #454c54}
 .mission-dot.active{width:34px;border-radius:10px;background:#7ec845;border-color:#9ee878}
+.mission-simple{display:grid;gap:7px;margin-bottom:10px}
+.mission-simple-line{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:10px 12px;color:#f0f3f5;font-size:13px;font-weight:800;line-height:1.35}
+.mission-simple-line.urgent{border-color:#3a2800;color:#f0d08a;background:#100c02}
 .mission-resource-list{display:flex;gap:6px;flex-wrap:wrap}
 .mission-resource{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:6px 9px;background:#0d1012;border:0.5px solid #2a3036;border-radius:8px;color:#d7dde3;text-decoration:none;font-size:11px;font-weight:700;line-height:1.25;transition:all .2s}
 .mission-resource:hover{border-color:#3a5a2a;color:#f0f3f5;background:#111711}
@@ -502,6 +505,7 @@ input:focus{border-color:#333}
 .dpc-one-thing{background:#050f02;border:0.5px solid #2a4a10;border-radius:10px;padding:10px 12px;margin-bottom:10px}
 .dpc-ot-label{font-size:9px;font-weight:700;color:#7ec845;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
 .dpc-ot-text{font-size:13px;font-weight:500;color:#c8e8a8;line-height:1.5}
+.dpc-bottleneck-line{background:#100c02;border:0.5px solid #3a2800;border-radius:9px;padding:8px 11px;margin:-2px 0 10px;color:#f0d08a;font-size:11px;font-weight:800;line-height:1.4}
 
 .dpc-scoreboard{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
 .dpc-score-item{background:#050f02;border:0.5px solid #1a2a0a;border-radius:10px;padding:9px 8px;text-align:center;transition:border-color .2s}
@@ -913,6 +917,8 @@ body{background:#090a0b;color:#d8dde1}
     <button class="btn" onclick="toggleSetup('todoist')">Todoist setup</button>
     <button class="btn" onclick="toggleSetup('sheets')">Sheets / Notion setup</button>
     <button class="btn" onclick="loadTodayData()">Run sync check</button>
+    <button class="btn primary" onclick="sendBackup()">Save backup ↑</button>
+    <button class="btn" onclick="restoreBackup()">Restore backup ↓</button>
   </div>
 </div>
 
@@ -979,15 +985,9 @@ body{background:#090a0b;color:#d8dde1}
     <div class="mission-badge" id="mission-badge">Cycle</div>
   </div>
   <div class="mission-copy" id="mission-copy">Reading your cycle target, weekly inputs, calendar, tasks, content, and production rhythm.</div>
-  <div class="mission-grid">
-    <div class="mission-move active"><div class="mission-move-num">1</div><div class="mission-move-text" id="mission-move-1">Reading mission priority...</div></div>
-    <div class="mission-move"><div class="mission-move-num">2</div><div class="mission-move-text" id="mission-move-2">Checking calendar and tasks...</div></div>
-    <div class="mission-move"><div class="mission-move-num">3</div><div class="mission-move-text" id="mission-move-3">Finding proof needed this week...</div></div>
-  </div>
-  <div class="mission-dots" id="mission-dots">
-    <div class="mission-dot active" onclick="setMissionSlide(0)"></div>
-    <div class="mission-dot" onclick="setMissionSlide(1)"></div>
-    <div class="mission-dot" onclick="setMissionSlide(2)"></div>
+  <div class="mission-simple" id="mission-simple">
+    <div class="mission-simple-line" id="mission-gap-line">Reading weekly gap...</div>
+    <div class="mission-simple-line urgent" id="mission-lead-line">Finding most urgent lead...</div>
   </div>
   <div class="mission-tools">
     <a class="mission-tool" id="mission-tool-campaign" href="#dpc-card" data-mission-tool="campaign" onclick="openMissionTool('campaign',true)"><span>Campaign</span><span class="mission-tool-signal" id="mission-signal-campaign">Reading...</span></a>
@@ -1044,6 +1044,7 @@ body{background:#090a0b;color:#d8dde1}
     <div class="dpc-ot-label">⚡ Do this right now</div>
     <div class="dpc-ot-text" id="dpc-ot-text">Loading your focus...</div>
   </div>
+  <div class="dpc-bottleneck-line" id="dpc-now-bottleneck">Reading campaign bottleneck...</div>
 
   <!-- NOW BRIEF -->
   <div class="dpc-now-brief">
@@ -1123,18 +1124,18 @@ body{background:#090a0b;color:#d8dde1}
 
   <div class="dpc-view" id="dpc-view-pipeline">
     <div class="dpc-subtabs">
-      <button class="dpc-subtab active" id="dpc-pipeline-tab-command" onclick="setDPCSubView('pipeline','command')">Focus</button>
-      <button class="dpc-subtab" id="dpc-pipeline-tab-board" onclick="setDPCSubView('pipeline','board')">Hit List</button>
+      <button class="dpc-subtab" id="dpc-pipeline-tab-command" onclick="setDPCSubView('pipeline','command')">Focus</button>
+      <button class="dpc-subtab active" id="dpc-pipeline-tab-board" onclick="setDPCSubView('pipeline','board')">Hit List</button>
       <button class="dpc-subtab" id="dpc-pipeline-tab-money" onclick="setDPCSubView('pipeline','money')">Gap</button>
     </div>
-    <div class="dpc-mini-view active" id="dpc-pipeline-view-command">
+    <div class="dpc-mini-view" id="dpc-pipeline-view-command">
       <div class="dpc-coach-box">
         <div class="dpc-coach-label">Pipeline command</div>
         <div class="dpc-coach-text" id="dpc-pipeline-command">Reading money pipeline...</div>
       </div>
       <div class="dpc-action-list" id="dpc-pipeline-actions"></div>
     </div>
-    <div class="dpc-mini-view" id="dpc-pipeline-view-board">
+    <div class="dpc-mini-view active" id="dpc-pipeline-view-board">
 
       <!-- HIT LIST STYLES — injected inline so Codex doesn't need to touch the CSS block -->
       <style>
@@ -1203,6 +1204,7 @@ body{background:#090a0b;color:#d8dde1}
           letter-spacing: .05em;
         }
         .hl-badge.new { background: #111f08; color: #7ec845; border: 0.5px solid #2a4015; }
+        .hl-badge.watch { background: #150e00; color: #d4a017; border: 0.5px solid #3a2800; }
         .hl-badge.atl { background: #150e00; color: #d4a017; border: 0.5px solid #3a2800; }
         .hl-badge.overdue { background: #150505; color: #e05555; border: 0.5px solid #3a1010; }
         .hl-badge.stage { background: #0b0d0f; color: #8b949e; border: 0.5px solid #2a3036; }
@@ -1941,6 +1943,7 @@ var NOTION_CRM_URL='https://www.notion.so/b82e7140b3b048d1915d34e4cdf9f65a';
 var GOLDEN_KEY='a1xx_golden';
 var CHECK_KEY='a1xx_checks_v1';
 var DPC_KEY='a1xx_daily_profit_v1';
+var DPC_WEEKLY_LOG_KEY='a1xx_dpc_weekly_daily_logs_v1';
 var STREAK_KEY='a1xx_streak';
 var MISSION_KEY='a1xx_mission_brief_v1';
 
@@ -2199,6 +2202,47 @@ function testSheets(){
   setTimeout(function(){document.getElementById('sheets-status').style.color='#639922';document.getElementById('sheets-status').textContent='Sent — check Activity Log in your Sheet.';},800);
 }
 
+async function sendBackup(){
+  var appUrl=localStorage.getItem(SHEETS_KEY);
+  if(!appUrl){alert('Add your Apps Script URL in Sheets setup first.');return;}
+  var payload={};
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i);
+    if(k&&k.indexOf('a1xx_')===0)payload[k]=localStorage.getItem(k);
+  }
+  var json=JSON.stringify(payload);
+  var keyCount=Object.keys(payload).length;
+  try{
+    await fetch(appUrl,{
+      method:'POST',
+      body:JSON.stringify({type:'backup_save',payload:json,keyCount:keyCount,size:json.length}),
+      mode:'no-cors',
+      redirect:'follow'
+    });
+    alert('Backup saved — '+keyCount+' keys sent to your Sheet.');
+  }catch(e){
+    alert('Backup failed: '+e.message);
+  }
+}
+
+async function restoreBackup(){
+  var appUrl=localStorage.getItem(SHEETS_KEY);
+  if(!appUrl){alert('Add your Apps Script URL in Sheets setup first.');return;}
+  if(!confirm('This will overwrite your current local data with the last saved backup. Continue?'))return;
+  try{
+    var sep=appUrl.indexOf('?')>=0?'&':'?';
+    var res=await fetch(appUrl+sep+'action=get_backup&_='+Date.now(),{method:'GET',redirect:'follow'});
+    var data=await res.json();
+    if(!data.backup||!data.backup.payload){alert('No backup found in your Sheet yet.');return;}
+    var payload=JSON.parse(data.backup.payload);
+    Object.keys(payload).forEach(function(k){localStorage.setItem(k,payload[k]);});
+    alert('Restored '+Object.keys(payload).length+' keys from backup saved on '+new Date(data.backup.savedAt).toLocaleString()+'. Reloading...');
+    location.reload();
+  }catch(e){
+    alert('Restore failed: '+e.message);
+  }
+}
+
 /* ══════════════════════════════════════════════════════════
    TIME BLOCKS
 ══════════════════════════════════════════════════════════ */
@@ -2399,7 +2443,10 @@ function saveDailyCoach(){
 
 function submitDailyCoachLog(){
   saveDailyCoach();
-  syncDPCtoWeekly();
+  syncDPCtoWeekly(true);
+  if(typeof calcWeek==='function')calcWeek();
+  if(typeof updateReport==='function')updateReport();
+  if(typeof updateCompanyHealth==='function')updateCompanyHealth();
   updateStreakChain();
   var d=getDailyCoach();
   var status=document.getElementById('dpc-save-status');
@@ -2559,6 +2606,7 @@ function renderNowBrief(modeKey,block,calEvents,d){
 
 function setDPCView(view){
   dpcView=view||'now';
+  if(dpcView==='pipeline')dpcSubViews.pipeline='board';
   ['now','pipeline','followup','scoreboard'].forEach(function(v){
     var tab=document.getElementById('dpc-tab-'+v);
     var pane=document.getElementById('dpc-view-'+v);
@@ -2570,7 +2618,7 @@ function setDPCView(view){
 }
 
 function setDPCSubView(group,view){
-  if(group==='pipeline')dpcSubViews.pipeline=view||'command';
+  if(group==='pipeline')dpcSubViews.pipeline=view||'board';
   if(group==='follow')dpcSubViews.follow=view||'queue';
   if(group==='score')dpcSubViews.score=view||'kpis';
   updateDPCSubViews();
@@ -2697,21 +2745,23 @@ function getRecencyLabel(dateStr){
   var d=new Date(dateStr);
   if(isNaN(d.getTime()))return '';
   var ms=Date.now()-d.getTime();
+  if(ms<0)ms=0;
   var mins=Math.floor(ms/60000);
   var hrs=Math.floor(ms/3600000);
   var days=Math.floor(ms/86400000);
-  if(mins<60)return mins+'m ago';
-  if(hrs<24)return hrs+'h ago';
+  if(mins<60)return Math.max(1,mins)+'m ago';
+  if(hrs<24)return hrs+'h ago'+(hrs>=5?' — respond now':'');
   if(days===1)return 'yesterday';
-  return days+'d ago';
+  return days+'d ago — respond now';
 }
 
 function getRecencyColor(dateStr){
   if(!dateStr)return 'stage';
   var ms=Date.now()-new Date(dateStr).getTime();
+  if(ms<0)ms=0;
   var hrs=ms/3600000;
-  if(hrs<24)return 'new';
-  if(hrs<72)return 'offer';
+  if(hrs<1)return 'new';
+  if(hrs<5)return 'watch';
   return 'overdue';
 }
 
@@ -2881,6 +2931,8 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   var topSource=topCount(sourceCounts);
   leads=Math.max(leads,hotCRM.length);
   var bottleneck=getCampaignBottleneck(d,wkDms,wkResp,wkCalls,wkCloses);
+  var nowBottle=document.getElementById('dpc-now-bottleneck');
+  if(nowBottle)nowBottle.textContent='⚠ '+bottleneck.stage+' bottleneck — '+bottleneck.msg;
   var nextEvent=getNextCalendarEvent(calEvents||[]);
   var related=getRelatedTasksForMode('outreach');
   var targetDms=dms<20?20:40;
@@ -4412,6 +4464,32 @@ function filterRolodex(){
   if(meta)meta.textContent=q?shown+' local result'+(shown===1?'':'s')+' showing for "'+q+'". Backend search will add Notion and Drive results when the Apps Script endpoint is deployed.':'Search playbooks, contacts, resources, content, production, Google Drive links, and notes.';
 }
 
+function getMostUrgentLeadLine(){
+  var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
+  if(!leads.length)return 'No urgent lead loaded · open Hit List';
+  var now=new Date();
+  var ranked=leads.slice().sort(function(a,b){
+    function score(lead){
+      var s=0;
+      if(lead.hot)s+=1000;
+      if(lead.followUpDate){
+        var due=new Date(lead.followUpDate);due.setHours(23,59,59,999);
+        if(!isNaN(due.getTime())&&due<=now)s+=900;
+      }
+      if(lead.phone)s+=80;
+      if(isATLLead(lead))s+=60;
+      var recent=new Date(lead.optInDate||lead.lastContact||0);
+      if(!isNaN(recent.getTime()))s+=Math.max(0,50-Math.floor((Date.now()-recent.getTime())/3600000));
+      return s;
+    }
+    return score(b)-score(a);
+  });
+  var lead=ranked[0];
+  var recency=getRecencyLabel(lead.optInDate||lead.lastContact||'');
+  var due=lead.followUpDate?'follow up due':lead.phone?'call ready':'new lead';
+  return (lead.name||'Unknown lead')+' · '+(recency||lead.stage||'active')+' · '+due;
+}
+
 function renderMissionBrief(contentPieces,calEvents){
   var title=document.getElementById('mission-title');
   var badge=document.getElementById('mission-badge');
@@ -4432,20 +4510,13 @@ function renderMissionBrief(contentPieces,calEvents){
   var yesterday=getYesterdayMissionSummary();
   var nextEvent=getNextCalendarEvent(calEvents||[]);
   var openTasks=getOpenMissionTasks(3);
-  title.textContent=mission.locked?('Mission locked: '+(dayNames[dayType]||'money day')+' · '+tool):('Welcome back, Executive Producer. It is '+todayLabel+' · '+nowLabel+'.');
-  badge.textContent='Cycle '+cy.num+' · '+cy.name+' · W'+weekOfCycle+' · '+fmt(gap)+' gap';
-  copy.innerHTML='<strong>'+escapeHtml(cy.name)+' Week '+weekOfCycle+':</strong> '+fmt(rev)+' / '+fmt(wk)+' collected. '
-    +(gap>0?'Gap still open: <strong>'+fmt(gap)+'</strong>. ':'Weekly target is protected. ')
-    +'Yesterday: '+escapeHtml(yesterday)+'. '
-    +(nextEvent?'Next calendar: <strong>'+escapeHtml(nextEvent.startTime+' · '+nextEvent.title)+'</strong>. ':'Calendar is open right now. ')
-    +'Open tasks: '+openTasks.length+'. Choose how to start below.';
-  var moves=getMissionMoves(dayType,mission,contentPieces||[],calEvents||[]);
-  for(var i=0;i<3;i++){
-    var el=document.getElementById('mission-move-'+(i+1));
-    if(el)el.textContent=moves[i]||'Move the mission forward.';
-  }
-  setMissionSlide(missionSlideIdx);
-  startMissionSlideRotation();
+  title.textContent=mission.locked?('Mission locked: '+(dayNames[dayType]||'money day')+' · '+tool):('Welcome back, Executive Producer · '+todayLabel+' · '+nowLabel);
+  badge.textContent='Cycle '+cy.num+' · '+cy.name+' · W'+weekOfCycle;
+  copy.style.display='none';
+  var gapLine=document.getElementById('mission-gap-line');
+  var leadLine=document.getElementById('mission-lead-line');
+  if(gapLine)gapLine.textContent=(gap>0?fmt(gap)+' gap this week':fmt(rev)+' collected · weekly target protected')+' · '+openTasks.length+' open task'+(openTasks.length===1?'':'s')+(nextEvent?' · next: '+nextEvent.startTime:'');
+  if(leadLine)leadLine.textContent=getMostUrgentLeadLine();
   updateMissionToolSignals(contentPieces||[],calEvents||[]);
   ['low','normal','high'].forEach(function(v){
     var b=document.getElementById('mission-energy-'+v);
@@ -5054,22 +5125,48 @@ function renderStreakChain(){
 /* ═══════════════════════════════════════════════════════════
    WIRE DAILY SYNC: daily DPC feeds weekly totals
 ═══════════════════════════════════════════════════════════ */
-function syncDPCtoWeekly(){
+function syncDPCtoWeekly(persistToday){
   var d=getDailyCoach();
-  // DMs, calls, closes, content feed into weekly fields
-  // These accumulate — we store daily logs and sum them
-  var chain_data=getStore(STREAK_CHAIN_KEY)||{days:[]};
   var weekStart=getWeekStart();
-  // Get all days this week from streak chain
-  var weekDays=chain_data.days?chain_data.days.filter(function(x){return x.date>=weekStart;}):[];
-  // For weekly totals we just show today's DPC as a reference
-  // The actual weekly input fields in Activities tab are separate verified fields
-  // But we can show a "from daily logs" hint
-  var dmsEl=document.getElementById('w-dms');
-  var contentEl=document.getElementById('w-content');
-  // Only auto-fill if field is empty (don't override manual entry)
-  if(dmsEl&&!parseFloat(dmsEl.value)){dmsEl.placeholder='Daily logged: '+(d.dms||0);}
-  if(contentEl&&!parseFloat(contentEl.value)){contentEl.placeholder='Daily logged: '+(d.content||0);}
+  var store=getStore(DPC_WEEKLY_LOG_KEY)||{};
+  store[weekStart]=store[weekStart]||{};
+  if(persistToday){
+    store[weekStart][d.date||dateKey(new Date())]={
+      dms:d.dms||0,
+      content:d.content||0,
+      calls:d.calls||0,
+      closes:d.closes||0,
+      leads:d.leads||0,
+      money:d.money||0
+    };
+    setStore(DPC_WEEKLY_LOG_KEY,store);
+  }
+
+  if(!Object.keys(store[weekStart]||{}).length)return;
+
+  var totals={dms:0,content:0,calls:0,closes:0,leads:0,money:0};
+  Object.keys(store[weekStart]||{}).forEach(function(k){
+    var row=store[weekStart][k]||{};
+    totals.dms+=parseFloat(row.dms)||0;
+    totals.content+=parseFloat(row.content)||0;
+    totals.calls+=parseFloat(row.calls)||0;
+    totals.closes+=parseFloat(row.closes)||0;
+    totals.leads+=parseFloat(row.leads)||0;
+    totals.money+=parseFloat(row.money)||0;
+  });
+
+  function setField(id,val,mode){
+    var el=document.getElementById(id);
+    if(!el)return;
+    if(mode==='max')el.value=Math.max(parseFloat(el.value)||0,val||0);
+    else el.value=val||0;
+  }
+  setField('w-dms',totals.dms);
+  setField('w-content',totals.content);
+  setField('w-calls',totals.calls);
+  setField('w-closes',totals.closes);
+  setField('w-resp',totals.leads,'max');
+  setField('w-rev',totals.money,'max');
 }
 
 
@@ -5082,7 +5179,7 @@ var CYCLE1_DAYS=55;
 var contentView='today';
 var productionView='today';
 var dpcView='now';
-var dpcSubViews={pipeline:'command',follow:'queue',score:'kpis'};
+var dpcSubViews={pipeline:'board',follow:'queue',score:'kpis'};
 
 function getContentLog(){
   return getStore(CONTENT_LOG_KEY)||{days:{}};
