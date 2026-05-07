@@ -965,7 +965,6 @@ body{background:#090a0b;color:#d8dde1}
   <div class="setup-panel-title">Connect Google Sheets + Calendar</div>
   <div class="setup-note">Paste your Apps Script Web App URL below. This powers automatic Sheets backup, Google Calendar reading, and Notion content loading.</div>
   <div class="setup-field"><label>Apps Script Web App URL</label><input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/.../exec"/></div>
-  <div class="setup-field"><label>Notion Integration Secret (for content calendar)</label><input type="password" id="notion-secret" placeholder="secret_xxxxxxxxxx"/></div>
   <div class="btn-row"><button class="btn blue" onclick="saveSheets()">Save ↗</button><button class="btn" onclick="testSheets()">Test connection</button></div>
   <div class="status" id="sheets-status"></div>
 </div>
@@ -2148,9 +2147,7 @@ function toggleSetup(id){
   if(!wasOpen)p.classList.add('open');
   if(id==='sheets'){
     var s=localStorage.getItem(SHEETS_KEY)||'';
-    var ns=getStore(NOTION_KEY);
     document.getElementById('sheets-url').value=s;
-    if(ns)document.getElementById('notion-secret').value=ns.key||'';
   }
   if(id==='todoist'){
     var td=localStorage.getItem(TODOIST_KEY)||'';
@@ -2187,9 +2184,7 @@ function saveTodoist(){
 
 function saveSheets(){
   var url=document.getElementById('sheets-url').value.trim();
-  var ns=document.getElementById('notion-secret').value.trim();
   if(url)localStorage.setItem(SHEETS_KEY,url);
-  if(ns)setStore(NOTION_KEY,{key:ns});
   document.getElementById('setup-sheets').classList.remove('open');
   document.getElementById('sheets-status').textContent='';
   loadTodayData();
