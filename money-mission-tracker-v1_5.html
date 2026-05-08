@@ -16,6 +16,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .streak{display:flex;align-items:center;gap:4px;background:#111f08;border:0.5px solid #2a4015;border-radius:20px;padding:4px 10px}
 .streak-num{font-size:11px;font-weight:700;color:#7ec845}
 .streak-lbl{font-size:11px;color:#639922}
+.close-streak{background:#150e00;border-color:#3a2800}
+.close-streak .streak-num{color:#d4a017}
+.close-streak .streak-lbl{color:#a07010}
 .cycle-pill{font-size:11px;color:#555;background:#111;border:0.5px solid #1e1e1e;border-radius:20px;padding:4px 12px}
 
 /* TABS */
@@ -507,7 +510,14 @@ input:focus{border-color:#333}
 .dpc-ot-text{font-size:13px;font-weight:500;color:#c8e8a8;line-height:1.5}
 .dpc-bottleneck-line{background:#100c02;border:0.5px solid #3a2800;border-radius:9px;padding:8px 11px;margin:-2px 0 10px;color:#f0d08a;font-size:11px;font-weight:800;line-height:1.4}
 
-.dpc-scoreboard{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
+.dpc-scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.dpc-score-item.cash{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:16px;padding:14px 16px;border-color:#3a2800;background:#0d0800}
+.dpc-score-item.cash .dpc-score-num{font-size:40px;line-height:1;color:#d4a017}
+.dpc-score-item.cash .dpc-score-label{font-size:10px;text-align:left}
+.dpc-score-item.cash .dpc-score-target{text-align:right;font-size:10px}
+.dpc-score-item.cash .dpc-score-bar{grid-column:1/-1;margin-top:10px;height:3px}
+.dpc-score-item.cash.hot .dpc-score-num{color:#e4a020}
+.dpc-score-item.cash.done .dpc-score-num{color:#7ec845}
 .dpc-score-item{background:#050f02;border:0.5px solid #1a2a0a;border-radius:10px;padding:9px 8px;text-align:center;transition:border-color .2s}
 .dpc-score-item.zero{border-color:#3a1010;background:#0a0404}
 .dpc-score-item.hot{border-color:#2a4015;background:#071002}
@@ -898,6 +908,7 @@ body{background:#090a0b;color:#d8dde1}
     <span class="tag green" id="saved-tag">Saved</span>
     <span class="tag blue" id="synced-tag">Synced</span>
     <div class="streak" style="margin-top:14px"><span style="font-size:12px">🔥</span><span class="streak-num" id="streak-n">0</span><span class="streak-lbl">week streak</span></div>
+    <div class="streak close-streak" style="margin-top:14px"><span style="font-size:12px">💰</span><span class="streak-num" id="close-streak-n">0</span><span class="streak-lbl">close streak</span></div>
     <div class="cycle-stack">
       <div style="height:12px"></div>
       <div class="cycle-pill" id="cycle-pill">Cycle 1 · Loading...</div>
@@ -1100,6 +1111,12 @@ body{background:#090a0b;color:#d8dde1}
 
   <!-- SCOREBOARD: 5 numbers, red when zero -->
   <div class="dpc-scoreboard">
+    <div class="dpc-score-item zero cash" id="dsc-money">
+      <div class="dpc-score-label">Cash Collected Today</div>
+      <div class="dpc-score-num" id="sc-money">$0</div>
+      <div class="dpc-score-target" id="sc-money-t">/ $87 needed</div>
+      <div class="dpc-score-bar"><div class="dpc-score-fill" id="sf-money" style="width:0%"></div></div>
+    </div>
     <div class="dpc-score-item zero" id="dsc-dms">
       <div class="dpc-score-num" id="sc-dms">0</div>
       <div class="dpc-score-label">DMs sent</div>
@@ -1123,12 +1140,6 @@ body{background:#090a0b;color:#d8dde1}
       <div class="dpc-score-label">Closes</div>
       <div class="dpc-score-target">/ 1 target</div>
       <div class="dpc-score-bar"><div class="dpc-score-fill" id="sf-closes" style="width:0%"></div></div>
-    </div>
-    <div class="dpc-score-item zero" id="dsc-money">
-      <div class="dpc-score-num" id="sc-money">$0</div>
-      <div class="dpc-score-label">Collected</div>
-      <div class="dpc-score-target" id="sc-money-t">/ $87 needed</div>
-      <div class="dpc-score-bar"><div class="dpc-score-fill" id="sf-money" style="width:0%"></div></div>
     </div>
   </div>
 
@@ -2279,6 +2290,25 @@ async function sendBackup(silent){
 
 function getCloseLog(){return getStore(CLOSE_LOG_KEY)||[];}
 
+function getCloseStreak(){
+  var log=getCloseLog();
+  var closeDays={};
+  log.forEach(function(c){if(c.date)closeDays[c.date]=true;});
+  var streak=0;
+  var today=new Date();today.setHours(0,0,0,0);
+  for(var i=0;i<365;i++){
+    var d=new Date(today);d.setDate(today.getDate()-i);
+    if(closeDays[dateKey(d)])streak++;
+    else if(i>0)break;
+  }
+  return streak;
+}
+
+function renderCloseStreak(){
+  var el=document.getElementById('close-streak-n');
+  if(el)el.textContent=getCloseStreak();
+}
+
 function toggleCloseForm(){
   var f=document.getElementById('close-form');
   if(f)f.classList.toggle('open');
@@ -2300,6 +2330,7 @@ function saveClose(){
   document.getElementById('cl-source').value='';
   toggleCloseForm();
   renderCloseLog();
+  renderCloseStreak();
   sendBackup(true);
 }
 
@@ -4788,7 +4819,7 @@ async function loadTodayData(){
 function init(){
   window.__a1xxBooting=true;
   safeRender('mission delegates',function(){wireMissionDelegates();});
-  safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();});
+  safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();renderCloseStreak();});
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
   safeRender('system health',function(){renderSystemHealth();});
