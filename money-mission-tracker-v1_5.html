@@ -204,6 +204,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sync-pill.err{background:#150505;color:#e05555;border:0.5px solid #3a1010}
 .sync-pill.loading{background:#111;color:#555;border:0.5px solid #222}
 .system-panel{background:#0e0e0e;border:0.5px solid #1e1e1e;border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px;display:none}
+.auto-backup-bar{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:0.5px solid #1e1e1e;font-size:10px;color:#555}
+.auto-backup-bar span:first-child{color:#444;flex-shrink:0}
+#auto-backup-status{color:#7b838b;flex:1}
+.auto-backup-now-btn{background:none;border:0.5px solid #2a3036;border-radius:6px;color:#7b838b;font-size:10px;padding:3px 8px;cursor:pointer;flex-shrink:0}
+.auto-backup-now-btn:hover{border-color:#4a6a30;color:#c8e8a8}
 .system-panel.open{display:block}
 .system-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .system-title{font-size:12px;font-weight:700;color:#e0e0e0;text-transform:uppercase;letter-spacing:.08em}
@@ -968,6 +973,11 @@ body{background:#090a0b;color:#d8dde1}
     <button class="btn" onclick="loadTodayData()">Run sync check</button>
     <button class="btn primary" onclick="sendBackup()">Save backup ↑</button>
     <button class="btn" onclick="restoreBackup()">Restore backup ↓</button>
+  </div>
+  <div class="auto-backup-bar">
+    <span>🔄 Auto-save:</span>
+    <span id="auto-backup-status">Starting...</span>
+    <button class="auto-backup-now-btn" onclick="checkAutoBackup(true)">Save now</button>
   </div>
 </div>
 
@@ -2085,7 +2095,12 @@ function fmtS(s){return pd(s).toLocaleDateString('en-US',{month:'short',day:'num
 function nowMins(){var n=new Date();return n.getHours()*60+n.getMinutes();}
 function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function getStore(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
-function setStore(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){console.warn('A1XX local save skipped',k,e);}}
+function setStore(k,v){
+  try{
+    localStorage.setItem(k,JSON.stringify(v));
+    if(k!=='a1xx_auto_backup_meta_v1')touchLastModified();
+  }catch(e){console.warn('A1XX local save skipped',k,e);}
+}
 function flash(id){var t=document.getElementById(id);if(!t)return;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 
 function getHealth(){
@@ -4851,6 +4866,59 @@ function toggleMissionPath(){
 }
 window.toggleMissionPath=toggleMissionPath;
 
+/* ── AUTO-SAVE ── */
+var AUTO_BACKUP_META_KEY='a1xx_auto_backup_meta_v1';
+
+function touchLastModified(){
+  try{
+    var raw=localStorage.getItem(AUTO_BACKUP_META_KEY);
+    var meta=raw?JSON.parse(raw):{lastModified:0,lastSaved:0};
+    meta.lastModified=Date.now();
+    localStorage.setItem(AUTO_BACKUP_META_KEY,JSON.stringify(meta));
+  }catch(e){}
+}
+
+function checkAutoBackup(force){
+  try{
+    var raw=localStorage.getItem(AUTO_BACKUP_META_KEY);
+    var meta=raw?JSON.parse(raw):{lastModified:0,lastSaved:0};
+    if(!force&&meta.lastModified<=meta.lastSaved){
+      updateAutoBackupIndicator();
+      return;
+    }
+    sendBackup(true);
+    meta.lastSaved=Date.now();
+    localStorage.setItem(AUTO_BACKUP_META_KEY,JSON.stringify(meta));
+    updateAutoBackupIndicator();
+  }catch(e){console.warn('A1XX auto-backup check failed',e);}
+}
+
+function updateAutoBackupIndicator(){
+  var el=document.getElementById('auto-backup-status');
+  if(!el)return;
+  try{
+    var raw=localStorage.getItem(AUTO_BACKUP_META_KEY);
+    var meta=raw?JSON.parse(raw):{lastModified:0,lastSaved:0};
+    if(!meta.lastSaved){el.textContent='Not yet saved';return;}
+    var mins=Math.round((Date.now()-meta.lastSaved)/60000);
+    if(mins<1)el.textContent='Saved just now';
+    else if(mins===1)el.textContent='Saved 1 min ago';
+    else if(mins<60)el.textContent='Saved '+mins+' min ago';
+    else{var hrs=Math.floor(mins/60);el.textContent='Saved '+hrs+'h ago';}
+    var unsaved=meta.lastModified>meta.lastSaved;
+    el.style.color=unsaved?'#d4a017':'#7b838b';
+  }catch(e){el.textContent='Status unavailable';}
+}
+
+function startAutoBackup(){
+  setTimeout(checkAutoBackup,8000);
+  setInterval(checkAutoBackup,60*60*1000);
+  setInterval(updateAutoBackupIndicator,60000);
+  updateAutoBackupIndicator();
+}
+window.checkAutoBackup=checkAutoBackup;
+window.startAutoBackup=startAutoBackup;
+
 /* ── MISSION JOURNEY ── */
 var MISSION_STEPS_KEY='a1xx_mission_journey_v1';
 
@@ -5041,6 +5109,7 @@ function init(){
   safeRender('system health',function(){renderSystemHealth();});
   safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);renderMissionJourney();});
+  safeRender('auto backup',function(){startAutoBackup();});
   safeRender('initial mission brief',function(){renderMissionBrief([],[]);});
   safeRender('initial mission buttons',function(){wireMissionButtons();});
   safeRender('initial rolodex',function(){renderRolodex();});
