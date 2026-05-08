@@ -2202,9 +2202,9 @@ function testSheets(){
   setTimeout(function(){document.getElementById('sheets-status').style.color='#639922';document.getElementById('sheets-status').textContent='Sent — check Activity Log in your Sheet.';},800);
 }
 
-async function sendBackup(){
+async function sendBackup(silent){
   var appUrl=localStorage.getItem(SHEETS_KEY);
-  if(!appUrl){alert('Add your Apps Script URL in Sheets setup first.');return;}
+  if(!appUrl){if(!silent)alert('Add your Apps Script URL in Sheets setup first.');return;}
   var payload={};
   for(var i=0;i<localStorage.length;i++){
     var k=localStorage.key(i);
@@ -2212,6 +2212,9 @@ async function sendBackup(){
   }
   var json=JSON.stringify(payload);
   var keyCount=Object.keys(payload).length;
+  if(!silent&&json.length>45000){
+    if(!confirm('Your backup data is getting large ('+Math.round(json.length/1000)+'KB). Send anyway?'))return;
+  }
   try{
     await fetch(appUrl,{
       method:'POST',
@@ -2219,9 +2222,9 @@ async function sendBackup(){
       mode:'no-cors',
       redirect:'follow'
     });
-    alert('Backup saved — '+keyCount+' keys sent to your Sheet.');
+    if(!silent)alert('Backup saved — '+keyCount+' keys sent to your Sheet.');
   }catch(e){
-    alert('Backup failed: '+e.message);
+    if(!silent)alert('Backup failed: '+e.message);
   }
 }
 
@@ -2459,6 +2462,7 @@ function submitDailyCoachLog(){
     },3500);
   }
   flash('saved-tag');
+  sendBackup(true);
 }
 
 function toggleCoachAction(id){
