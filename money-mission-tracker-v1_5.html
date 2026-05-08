@@ -652,7 +652,21 @@ input:focus{border-color:#333}
 .ct-open-btn:hover{background:#0a1830}
 .ct-none{font-size:11px;color:#2a4a70;line-height:1.6}
 .ct-none a{color:#5b9cf6;text-decoration:none}
-.ct-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:3px;margin-bottom:10px}
+.ct-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:3px;margin-bottom:10px}
+.close-log-section{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:12px;padding:1.25rem;margin-bottom:10px}
+.close-log-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.close-log-title{font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.08em}
+.close-log-count{font-size:11px;color:#7ec845;font-weight:700}
+.close-form{display:none;margin-bottom:10px}
+.close-form.open{display:block}
+.close-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.close-form select{height:36px;font-size:12px;padding:0 10px;border:0.5px solid #1e1e1e;border-radius:8px;background:#111;color:#e0e0e0;outline:none;width:100%}
+.close-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#111;border-radius:8px;margin-bottom:6px}
+.close-item-left{display:flex;flex-direction:column;gap:2px}
+.close-item-name{font-size:12px;color:#e0e0e0;font-weight:600}
+.close-item-meta{font-size:10px;color:#555}
+.close-item-amount{font-size:14px;font-weight:700;color:#7ec845}
+.close-empty{font-size:12px;color:#333;text-align:center;padding:12px}
 .ct-tab{height:28px;border:0;border-radius:7px;background:transparent;color:#d7dde3;font-size:10px;font-weight:700;cursor:pointer;transition:all .15s}
 .ct-tab:hover{color:#5b9cf6}
 .ct-tab.active{background:#061020;color:#5b9cf6;border:0.5px solid #1a3050}
@@ -1371,7 +1385,6 @@ body{background:#090a0b;color:#d8dde1}
   <div class="ct-tabs">
     <button class="ct-tab active" id="ct-tab-today" onclick="setContentView('today')">Today</button>
     <button class="ct-tab" id="ct-tab-pipeline" onclick="setContentView('pipeline')">Pipeline</button>
-    <button class="ct-tab" id="ct-tab-performance" onclick="setContentView('performance')">Performance</button>
     <button class="ct-tab" id="ct-tab-repurpose" onclick="setContentView('repurpose')">Repurpose</button>
   </div>
   <div class="ct-view active" id="ct-view-today">
@@ -1399,12 +1412,6 @@ body{background:#090a0b;color:#d8dde1}
       <div class="ct-format-box"><div class="ct-format-num" id="ct-long-count">0</div><div class="ct-format-label">Longs</div></div>
       <div class="ct-format-box"><div class="ct-format-num" id="ct-short-count">0</div><div class="ct-format-label">Shorts</div></div>
     </div>
-  </div>
-
-  <div class="ct-view" id="ct-view-performance">
-    <div class="ct-bottleneck" id="ct-performance-summary">Reading content performance...</div>
-    <div class="ct-performance-grid" id="ct-performance-grid"></div>
-    <div class="ct-mini-table" id="ct-performance-table"></div>
   </div>
 
   <div class="ct-view" id="ct-view-repurpose">
@@ -1830,6 +1837,48 @@ body{background:#090a0b;color:#d8dde1}
     </div>
   </div>
 </div>
+<div class="close-log-section">
+  <div class="close-log-head">
+    <div class="close-log-title">Close Log</div>
+    <span class="close-log-count" id="cl-count">0 closes · $0</span>
+  </div>
+  <div class="btn-row" style="margin-bottom:8px">
+    <button class="btn primary" onclick="toggleCloseForm()">+ Log a close</button>
+  </div>
+  <div class="close-form" id="close-form">
+    <div class="close-form-grid">
+      <div class="wi-group"><div class="wi-label">Lead name</div><input class="wi-input" type="text" id="cl-name" placeholder="e.g. Mike T."></div>
+      <div class="wi-group"><div class="wi-label">Amount ($)</div><input class="wi-input" type="number" id="cl-amount" placeholder="0" min="0"></div>
+      <div class="wi-group"><div class="wi-label">Product</div>
+        <select id="cl-product" class="close-form select">
+          <option value="">Select product</option>
+          <option>Studio Session</option>
+          <option>Beat Pack ($7)</option>
+          <option>Rappreneur OS ($97)</option>
+          <option>Production Deal</option>
+          <option>Mix &amp; Master</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="wi-group"><div class="wi-label">Source</div>
+        <select id="cl-source" class="close-form select">
+          <option value="">Select source</option>
+          <option>Instagram DM</option>
+          <option>ClickFunnels</option>
+          <option>Referral</option>
+          <option>Content</option>
+          <option>Cold outreach</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveClose()">Save close ✓</button>
+      <button class="btn" onclick="toggleCloseForm()">Cancel</button>
+    </div>
+  </div>
+  <div id="close-log-list"></div>
+</div>
 <div class="report-note">Revenue is the result of your actions — not your to-do list. Hit your daily three consistently and this number takes care of itself.</div>
 
 </div><!-- end report pane -->
@@ -2226,6 +2275,46 @@ async function sendBackup(silent){
   }catch(e){
     if(!silent)alert('Backup failed: '+e.message);
   }
+}
+
+function getCloseLog(){return getStore(CLOSE_LOG_KEY)||[];}
+
+function toggleCloseForm(){
+  var f=document.getElementById('close-form');
+  if(f)f.classList.toggle('open');
+}
+
+function saveClose(){
+  var name=((document.getElementById('cl-name')||{}).value||'').trim();
+  var amount=parseFloat((document.getElementById('cl-amount')||{}).value)||0;
+  var product=(document.getElementById('cl-product')||{}).value||'';
+  var source=(document.getElementById('cl-source')||{}).value||'';
+  if(!name){alert('Add a lead name.');return;}
+  if(!amount){alert('Add an amount.');return;}
+  var log=getCloseLog();
+  log.unshift({date:dateKey(new Date()),name:name,product:product,amount:amount,source:source,ts:Date.now()});
+  setStore(CLOSE_LOG_KEY,log);
+  document.getElementById('cl-name').value='';
+  document.getElementById('cl-amount').value='';
+  document.getElementById('cl-product').value='';
+  document.getElementById('cl-source').value='';
+  toggleCloseForm();
+  renderCloseLog();
+  sendBackup(true);
+}
+
+function renderCloseLog(){
+  var log=getCloseLog();
+  var list=document.getElementById('close-log-list');
+  var countEl=document.getElementById('cl-count');
+  if(!list)return;
+  var total=log.reduce(function(s,c){return s+(c.amount||0);},0);
+  if(countEl)countEl.textContent=log.length+' close'+(log.length!==1?'s':'')+' · '+fmt(total);
+  if(!log.length){list.innerHTML='<div class="close-empty">No closes logged yet. Hit a deal? Log it here.</div>';return;}
+  list.innerHTML=log.slice(0,10).map(function(c){
+    var meta=[c.product,c.source,c.date].filter(Boolean).join(' · ');
+    return '<div class="close-item"><div class="close-item-left"><div class="close-item-name">'+escapeHtml(c.name)+'</div><div class="close-item-meta">'+escapeHtml(meta)+'</div></div><div class="close-item-amount">'+fmt(c.amount)+'</div></div>';
+  }).join('');
 }
 
 async function restoreBackup(){
@@ -4699,7 +4788,7 @@ async function loadTodayData(){
 function init(){
   window.__a1xxBooting=true;
   safeRender('mission delegates',function(){wireMissionDelegates();});
-  safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();});
+  safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();});
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
   safeRender('system health',function(){renderSystemHealth();});
@@ -5178,6 +5267,7 @@ function syncDPCtoWeekly(persistToday){
    CONTENT TRACKER
 ═══════════════════════════════════════════════════════════ */
 var CONTENT_LOG_KEY='a1xx_content_log_v1';
+var CLOSE_LOG_KEY='a1xx_close_log_v1';
 var CYCLE1_START=new Date('2026-05-04');
 var CYCLE1_DAYS=55;
 var contentView='today';
@@ -5191,7 +5281,7 @@ function getContentLog(){
 
 function setContentView(view){
   contentView=view||'today';
-  ['today','pipeline','performance','repurpose'].forEach(function(v){
+  ['today','pipeline','repurpose'].forEach(function(v){
     var tab=document.getElementById('ct-tab-'+v);
     var pane=document.getElementById('ct-view-'+v);
     if(tab)tab.classList.toggle('active',v===contentView);
@@ -5254,7 +5344,7 @@ function renderContentCard(){
   var streak=getContentStreak();
   var streakEl=document.getElementById('ct-streak-num');
   if(streakEl)streakEl.textContent=streak;
-  ['today','pipeline','performance','repurpose'].forEach(function(v){
+  ['today','pipeline','repurpose'].forEach(function(v){
     var tab=document.getElementById('ct-tab-'+v);
     var pane=document.getElementById('ct-view-'+v);
     if(tab)tab.classList.toggle('active',v===contentView);
