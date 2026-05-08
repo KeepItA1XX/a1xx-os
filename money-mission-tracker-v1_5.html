@@ -1285,6 +1285,16 @@ body{background:#090a0b;color:#d8dde1}
           margin-bottom: 8px;
         }
         .hl-empty strong { color: #7ec845; }
+        .hl-script { grid-column: 1/-1; margin-top: 8px; padding-top: 8px; border-top: 0.5px solid #1d3010; }
+        .hl-card.amber .hl-script { border-top-color: #3a2800; }
+        .hl-card.blue .hl-script { border-top-color: #1a3050; }
+        .hl-script-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+        .hl-script-label { font-size: 9px; font-weight: 800; color: #4a7a30; text-transform: uppercase; letter-spacing: .06em; }
+        .hl-card.amber .hl-script-label { color: #7a5b18; }
+        .hl-card.blue .hl-script-label { color: #2a4a70; }
+        .hl-script-text { font-size: 11px; color: #8b949e; line-height: 1.65; margin-bottom: 6px; }
+        .hl-script-copy { height: 22px; padding: 0 10px; border-radius: 6px; border: 0.5px solid #2a3036; background: #0b0d0f; color: #8b949e; font-size: 9px; font-weight: 800; cursor: pointer; transition: all .2s; }
+        .hl-script-copy:hover { border-color: #3a5a2a; color: #7ec845; }
       </style>
 
       <!-- HIT LIST CONTAINER -->
@@ -2917,6 +2927,33 @@ function hlCopyPhone(phone){
   });
 }
 
+function getFollowUpScript(lead){
+  var name=(lead.name||'').split(' ')[0]||'hey';
+  var key=getCRMStageKey(lead);
+  var stageLabel={new:'New Lead',resource:'Downloaded Resource',skool:'Joined Community',masterclass:'Watched Masterclass',follow:'Follow-Up',booked:'Call Booked',paid:'Client Check-In'};
+  var scripts={
+    new:      'Hey '+name+'! Saw you just came through — quick question before anything else: are you trying to get more studio time booked, build your production income, or something else? I want to make sure I point you in the right direction.',
+    resource: 'Hey '+name+'! Did you get a chance to check out what you grabbed yet? Most people have one thing that\'s actually blocking them right now. What does that look like for you?',
+    skool:    'Welcome to the community '+name+'! Real quick — what\'s the move you\'re most focused on right now? Getting sessions booked, growing online, or building your catalog?',
+    masterclass: 'Hey '+name+'! How did the masterclass land for you? Most people who watch it already know what they need — they just need the right system around them. What\'s your current setup?',
+    follow:   'Hey '+name+', just circling back. I know timing matters with this stuff — are you still working on it or has the situation shifted? Either way no pressure, just want to make sure I\'m actually useful to you.',
+    booked:   'Looking forward to connecting '+name+'! One thing before our call — what\'s the ONE outcome you want to walk away with? That way I can make sure we solve the actual thing.',
+    paid:     'Hey '+name+'! Just checking in — how are things going since we started working together? Any wins to report? Want to make sure you\'re getting everything out of this.'
+  };
+  return {script:scripts[key]||scripts.new, label:stageLabel[key]||'Script'};
+}
+
+function copyHLScriptById(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  var text=el.textContent||'';
+  try{
+    navigator.clipboard.writeText(text);
+    var btn=el.parentElement.querySelector('.hl-script-copy');
+    if(btn){btn.textContent='Copied ✓';setTimeout(function(){btn.textContent='Copy';},2000);}
+  }catch(e){}
+}
+
 function buildHLCard(lead,variant){
   variant=variant||'green';
   var recency=getRecencyLabel(lead.optInDate||lead.lastContact||'');
@@ -2933,6 +2970,8 @@ function buildHLCard(lead,variant){
   if(atl)badges+='<span class="hl-badge atl">🏙️ ATL</span>';
   if(stage)badges+='<span class="hl-badge stage">'+escapeHtml(stage)+'</span>';
   if(offer)badges+='<span class="hl-badge offer">'+escapeHtml(offer)+'</span>';
+  var scriptData=getFollowUpScript(lead);
+  var scriptId='hls-'+Math.random().toString(36).slice(2,8);
   return '<div class="hl-card '+variant+'">'
     +'<div>'
     +'<div class="hl-name">'+escapeHtml(lead.name||'Unknown')+'</div>'
@@ -2942,6 +2981,13 @@ function buildHLCard(lead,variant){
     +'<div class="hl-actions">'
     +'<a class="hl-btn ig" href="'+igUrl+'" target="_blank">DM on IG</a>'
     +(phone?'<a class="hl-btn call" href="'+escapeHtml(voiceUrl)+'" target="_blank" onclick="hlCopyPhone(\''+escapeHtml(phone)+'\')">Call</a>':'')
+    +'</div>'
+    +'<div class="hl-script">'
+    +'<div class="hl-script-header">'
+    +'<span class="hl-script-label">'+escapeHtml(scriptData.label)+'</span>'
+    +'<button class="hl-script-copy" onclick="copyHLScriptById(\''+scriptId+'\')">Copy</button>'
+    +'</div>'
+    +'<div class="hl-script-text" id="'+scriptId+'">'+escapeHtml(scriptData.script)+'</div>'
     +'</div>'
     +'</div>';
 }
