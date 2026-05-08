@@ -1114,8 +1114,6 @@ body{background:#090a0b;color:#d8dde1}
     <div class="dpc-ot-label">⚡ Do this right now</div>
     <div class="dpc-ot-text" id="dpc-ot-text">Loading your focus...</div>
   </div>
-  <div class="dpc-bottleneck-line" id="dpc-now-bottleneck">Reading campaign bottleneck...</div>
-
   <!-- NOW BRIEF -->
   <div class="dpc-now-brief">
     <div class="dpc-now-top">
@@ -1180,6 +1178,9 @@ body{background:#090a0b;color:#d8dde1}
       <div class="dpc-score-bar"><div class="dpc-score-fill" id="sf-closes" style="width:0%"></div></div>
     </div>
   </div>
+
+  <!-- BOTTLENECK -->
+  <div class="dpc-bottleneck-line" id="dpc-now-bottleneck">Reading campaign bottleneck...</div>
 
   <!-- UNIT ECONOMICS -->
   <div class="dpc-math"><span id="dpc-math-text">Log your activity below to see conversion math.</span></div>
@@ -4884,10 +4885,11 @@ var AUTO_BACKUP_META_KEY='a1xx_auto_backup_meta_v1';
 
 function touchLastModified(){
   try{
-    var raw=localStorage.getItem(AUTO_BACKUP_META_KEY);
+    var key='a1xx_auto_backup_meta_v1';
+    var raw=localStorage.getItem(key);
     var meta=raw?JSON.parse(raw):{lastModified:0,lastSaved:0};
     meta.lastModified=Date.now();
-    localStorage.setItem(AUTO_BACKUP_META_KEY,JSON.stringify(meta));
+    localStorage.setItem(key,JSON.stringify(meta));
   }catch(e){}
 }
 
@@ -5079,7 +5081,7 @@ function renderMissionJourney(){
   }
 
   var completeHtml=allDone&&idx<total-1?'<button class="mj-complete-btn" onclick="completeMissionStep()">Step Complete → '+(idx+2)+' of '+total+'</button>':'';
-  if(allDone&&idx===total-1)completeHtml='<div style="font-size:11px;font-weight:700;color:#7ec845;text-align:center;padding:8px 0">Mission complete. Log it and go again.</div>';
+  if(allDone&&idx===total-1)completeHtml='<div style="font-size:11px;font-weight:700;color:#ffffff;text-align:center;padding:8px 0">Mission complete. Log it and go again.</div>';
 
   el.innerHTML='<div class="mj-dots">'+dots+'</div><div class="mj-action">'+step.action+'</div><div class="mj-checks">'+checksHtml+'</div>'+resourceHtml+completeHtml;
 }
@@ -5438,6 +5440,7 @@ function setDayType(type,auto,reason){
   // Re-render coach with new day type context
   renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
   renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
+  if(typeof renderMissionJourney==='function')renderMissionJourney();
   var m=getMissionStore();
   if(m.locked){
     m.tool=getMissionPrimaryTool(type);
@@ -6342,6 +6345,7 @@ var _origUpdateReport=updateReport;
 updateReport=function(){
   _origUpdateReport();
   updateCompanyHealth();
+  updateTopbarBiz();
 };
 
 // Start only after every card, state key, and helper has been defined.
