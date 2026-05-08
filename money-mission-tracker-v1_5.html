@@ -2340,10 +2340,43 @@ async function sendBackup(silent){
       redirect:'follow'
     });
     if(!silent)alert('Backup saved — '+keyCount+' keys sent to your Sheet.');
+    if(!silent)logDevChange('Claude (A1XX OS)','data → Sheets','Manual backup: '+keyCount+' keys, '+Math.round(json.length/1000)+'KB');
   }catch(e){
     if(!silent)alert('Backup failed: '+e.message);
   }
 }
+
+// ── DEV LOG ─────────────────────────────────────────────────────────────────
+// Call this whenever a significant change is made to the app or its data.
+// agent:   which AI or person made the change (e.g. 'Claude (A1XX OS)')
+// layer:   what was changed ('HTML', 'Apps Script', 'data → Sheets', 'Notion', etc.)
+// summary: one-line description of what was done
+// session: optional context string (session ID, version tag, etc.)
+//
+// Other AIs can POST directly to the Apps Script URL:
+//   { type: 'log_change', agent: '...', layer: '...', summary: '...', session: '...' }
+//
+function logDevChange(agent,layer,summary,session){
+  var url=localStorage.getItem(SHEETS_KEY);
+  if(!url)return;
+  try{
+    fetch(url,{
+      method:'POST',
+      body:JSON.stringify({
+        type:'log_change',
+        agent:agent||'A1XX OS',
+        layer:layer||'—',
+        summary:summary||'',
+        session:session||'',
+        ts:new Date().toISOString()
+      }),
+      mode:'no-cors',
+      redirect:'follow'
+    });
+  }catch(e){}
+}
+window.logDevChange=logDevChange;
+// ────────────────────────────────────────────────────────────────────────────
 
 function getCloseLog(){return getStore(CLOSE_LOG_KEY)||[];}
 
