@@ -4968,14 +4968,17 @@ function completeMissionStep(){
 
 function openMissionResource(name){
   var sheetsUrl=getStore('a1xx_sheets_url_v1');
-  if(!sheetsUrl){alert('Connect your Apps Script URL first (System panel).');return;}
+  if(!sheetsUrl){
+    alert('Add "'+name+'" as a page in your Notion Resource DB.\n\nOnce it\'s there, connect your Apps Script URL and this button will open it directly.');
+    return;
+  }
   fetch(sheetsUrl+'?action=search_resources&query='+encodeURIComponent(name))
     .then(function(r){return r.json();})
     .then(function(data){
       if(data&&data.url)window.open(data.url,'_blank');
-      else alert('"'+name+'" not found in Notion Resource DB.\n\nAdd a page with this name in your Resource DB and it will link here automatically.');
+      else alert('"'+name+'" not found in Notion Resource DB yet.\n\nAdd a page with this exact name in your Resource DB and this button will link to it automatically.');
     })
-    .catch(function(){alert('"'+name+'" not in Resource DB yet.\n\nAdd it in Notion → Resource DB and it will link here.');});
+    .catch(function(){alert('"'+name+'" not in Resource DB yet.\n\nAdd it in Notion → Resource DB and this button will link to it.');});
 }
 
 window.toggleMissionCheck=toggleMissionCheck;
