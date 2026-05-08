@@ -12,6 +12,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* TOPBAR */
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;gap:12px}
 .brand{font-size:11px;color:#444;text-transform:uppercase;letter-spacing:.1em}
+.topbar-clock{font-size:10px;color:#555;margin-bottom:3px;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.topbar-biz-row{font-size:10px;color:#6a737a;display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.topbar-biz-sep{color:#333}
+.topbar-biz-val{color:#c4c9cf;font-weight:600}
+.save-nudge{font-size:13px;cursor:pointer;line-height:1;opacity:0.85;transition:opacity .2s}
+.save-nudge:hover{opacity:1}
 .topright{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .streak{display:flex;align-items:center;gap:4px;background:#111f08;border:0.5px solid #2a4015;border-radius:20px;padding:4px 10px}
 .streak-num{font-size:11px;font-weight:700;color:#7ec845}
@@ -918,12 +924,19 @@ body{background:#090a0b;color:#d8dde1}
   <!-- LEFT: brand stacked above health pills -->
   <div class="topleft">
     <div>
-      <div class="brand" style="margin-bottom:6px">A1XX — Money Mission OS</div>
-      <div style="display:flex;align-items:center;gap:6px">
+      <div class="brand" style="margin-bottom:2px">Money Mission OS</div>
+      <div class="topbar-clock" id="topbar-clock">--:-- · ---</div>
+      <div class="topbar-biz-row">
+        <span class="topbar-biz-val" id="topbar-rev">$—</span>
+        <span class="topbar-biz-sep">·</span>
+        <span id="topbar-days">— days left</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
         <div class="health-dot-wrap" onclick="toggleSystemPanel()" title="System health — tap for details">
           <div class="health-dot-main loading" id="health-dot-main"></div>
           <span class="health-dot-lbl" id="health-dot-lbl"></span>
         </div>
+        <div class="save-nudge" id="save-nudge" onclick="checkAutoBackup(true)" title="Unsaved changes — tap to save now" style="display:none">💾</div>
         <div class="company-health" onclick="toggleCompanyPanel()" title="Business health vs cycle goal">
           <div class="ch-dot" id="ch-dot"></div>
           <span class="ch-label">Biz</span>
@@ -4878,16 +4891,34 @@ function touchLastModified(){
   }catch(e){}
 }
 
+function isHibernateHour(){
+  var h=new Date().getHours();
+  return h>=0&&h<6;
+}
+
 function checkAutoBackup(force){
   try{
     var raw=localStorage.getItem(AUTO_BACKUP_META_KEY);
-    var meta=raw?JSON.parse(raw):{lastModified:0,lastSaved:0};
+    var meta=raw?JSON.parse(raw):{lastModified:0,lastSaved:0,hibernateSave:0};
+    if(!meta.hibernateSave)meta.hibernateSave=0;
+
+    // hibernate window: midnight–6am, allow only one save per night
+    if(!force&&isHibernateHour()){
+      var midnight=new Date();midnight.setHours(0,0,0,0);
+      if(meta.hibernateSave>=midnight.getTime()){
+        updateAutoBackupIndicator();
+        return; // already saved once tonight
+      }
+    }
+
     if(!force&&meta.lastModified<=meta.lastSaved){
       updateAutoBackupIndicator();
       return;
     }
     sendBackup(true);
-    meta.lastSaved=Date.now();
+    var now=Date.now();
+    meta.lastSaved=now;
+    if(isHibernateHour())meta.hibernateSave=now;
     localStorage.setItem(AUTO_BACKUP_META_KEY,JSON.stringify(meta));
     updateAutoBackupIndicator();
   }catch(e){console.warn('A1XX auto-backup check failed',e);}
@@ -4895,19 +4926,22 @@ function checkAutoBackup(force){
 
 function updateAutoBackupIndicator(){
   var el=document.getElementById('auto-backup-status');
-  if(!el)return;
+  var nudge=document.getElementById('save-nudge');
   try{
     var raw=localStorage.getItem(AUTO_BACKUP_META_KEY);
     var meta=raw?JSON.parse(raw):{lastModified:0,lastSaved:0};
-    if(!meta.lastSaved){el.textContent='Not yet saved';return;}
+    var unsaved=meta.lastModified>meta.lastSaved;
+    if(nudge)nudge.style.display=unsaved?'inline':'none';
+    if(!el)return;
+    if(!meta.lastSaved){el.textContent='Not yet saved';el.style.color='#7b838b';return;}
     var mins=Math.round((Date.now()-meta.lastSaved)/60000);
     if(mins<1)el.textContent='Saved just now';
     else if(mins===1)el.textContent='Saved 1 min ago';
     else if(mins<60)el.textContent='Saved '+mins+' min ago';
     else{var hrs=Math.floor(mins/60);el.textContent='Saved '+hrs+'h ago';}
-    var unsaved=meta.lastModified>meta.lastSaved;
+    if(isHibernateHour()&&unsaved)el.textContent+=' · hibernate mode';
     el.style.color=unsaved?'#d4a017':'#7b838b';
-  }catch(e){el.textContent='Status unavailable';}
+  }catch(e){if(el)el.textContent='Status unavailable';}
 }
 
 function startAutoBackup(){
@@ -4918,6 +4952,38 @@ function startAutoBackup(){
 }
 window.checkAutoBackup=checkAutoBackup;
 window.startAutoBackup=startAutoBackup;
+
+/* ── LIVE CLOCK ── */
+function updateClock(){
+  var el=document.getElementById('topbar-clock');
+  if(!el)return;
+  var now=new Date();
+  var h=now.getHours(),m=now.getMinutes(),ampm=h>=12?'PM':'AM';
+  h=h%12||12;
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  el.textContent=h+':'+(m<10?'0':'')+m+' '+ampm+' · '+days[now.getDay()]+' '+months[now.getMonth()]+' '+now.getDate();
+}
+function startClock(){updateClock();setInterval(updateClock,30000);}
+window.startClock=startClock;
+
+/* ── TOPBAR BIZ OVERVIEW ── */
+function updateTopbarBiz(){
+  try{
+    var ci=getCycleIdx?getCycleIdx():0;
+    var revEl=document.getElementById('topbar-rev');
+    var daysEl=document.getElementById('topbar-days');
+    var cpRev=document.getElementById('cp-rev');
+    if(revEl&&cpRev&&cpRev.textContent&&cpRev.textContent!=='—'){
+      revEl.textContent=cpRev.textContent;
+    }
+    if(daysEl&&typeof daysLeft==='function'){
+      var dl=daysLeft(ci);
+      daysEl.textContent=dl===1?'1 day left':dl+' days left';
+    }
+  }catch(e){}
+}
+window.updateTopbarBiz=updateTopbarBiz;
 
 /* ── MISSION JOURNEY ── */
 var MISSION_STEPS_KEY='a1xx_mission_journey_v1';
@@ -5103,13 +5169,15 @@ async function loadTodayData(){
 function init(){
   window.__a1xxBooting=true;
   safeRender('mission delegates',function(){wireMissionDelegates();});
-  safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();renderCloseStreak();});
+  safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();renderCloseStreak();updateTopbarBiz();});
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
   safeRender('system health',function(){renderSystemHealth();});
   safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);renderMissionJourney();});
   safeRender('auto backup',function(){startAutoBackup();});
+  safeRender('clock',function(){startClock();});
+  safeRender('topbar biz',function(){updateTopbarBiz();});
   safeRender('initial mission brief',function(){renderMissionBrief([],[]);});
   safeRender('initial mission buttons',function(){wireMissionButtons();});
   safeRender('initial rolodex',function(){renderRolodex();});
