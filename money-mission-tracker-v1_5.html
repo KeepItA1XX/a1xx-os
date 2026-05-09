@@ -914,6 +914,24 @@ body{background:#090a0b;color:#d8dde1}
 .chain-day.chain-green{background:#24371b;border-color:#4a7a30}.chain-day.chain-red{background:#321818;border-color:#6b2a2a}
 .check-item:hover,.cal-item,.checklist-add input,.checklist-add button,input[type=number],input[type=text],input[type=password],input[type=time]{background:#14171b;border-color:#2c333a;color:#e0e4e8}
 .check-text,.cal-name{color:#d6dbe0}.check-label{color:#9aa3aa;background:#1a1e23}
+/* ── INSTAGRAM SIGNAL — v1.5 ─────────────────────────────── */
+.ct-ig-signal{background:#0a1520;border:0.5px solid #1a3050;border-radius:8px;padding:10px 12px;margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.ct-ig-header{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.05em}
+.ct-ig-ts{margin-left:auto;font-size:9px;color:#5b9cf6;font-weight:600}
+.ct-ig-caption{font-size:12px;color:#c9d1d9;line-height:1.45;margin:4px 0}
+.ct-ig-stats{font-size:11px;color:#8b949e;display:flex;align-items:center;gap:8px}
+.ct-ig-link{margin-left:auto;color:#5b9cf6;text-decoration:none;font-size:10px;font-weight:700}
+.ct-ig-link:hover{text-decoration:underline}
+/* Rolodex Instagram live panel */
+.rolodex-ig-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.rolodex-ig-stat{background:#0e1820;border:0.5px solid #1a3050;border-radius:8px;padding:8px 10px;text-align:center}
+.rolodex-ig-val{font-size:16px;font-weight:800;color:#f0f3f5}
+.rolodex-ig-lbl{font-size:9px;color:#6f7b86;text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-top:2px}
+.rolodex-ig-post{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;background:#0a1218;border:0.5px solid #1a2d3a;border-radius:9px;margin-bottom:6px}
+.rolodex-ig-post-body{flex:1;min-width:0}
+.rolodex-ig-post-caption{font-size:12px;color:#c9d1d9;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rolodex-ig-post-meta{font-size:10px;color:#6f7b86;margin-top:3px}
+.rolodex-ig-post-link{font-size:10px;color:#5b9cf6;text-decoration:none;font-weight:700;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1460,6 +1478,20 @@ body{background:#090a0b;color:#d8dde1}
       <div class="ct-command-box"><div class="ct-command-label">Cycle Judge</div><div class="ct-command-value">Consistency first</div></div>
       <div class="ct-command-box"><div class="ct-command-label">Primary CTA</div><div class="ct-command-value">Free Skool community</div></div>
       <div class="ct-command-box"><div class="ct-command-label">Main Channel</div><div class="ct-command-value">YouTube → Shorts/Reels</div></div>
+    </div>
+    <!-- INSTAGRAM LAST POST SIGNAL — v1.5 (hidden until data loads) -->
+    <div class="ct-ig-signal" id="ct-ig-signal" style="display:none">
+      <div class="ct-ig-header">
+        <span>📸</span>
+        <span>Last Instagram Post</span>
+        <span class="ct-ig-ts" id="ct-ig-ts"></span>
+      </div>
+      <div class="ct-ig-caption" id="ct-ig-caption"></div>
+      <div class="ct-ig-stats">
+        <span>❤️ <span id="ct-ig-likes">0</span></span>
+        <span>💬 <span id="ct-ig-comments">0</span></span>
+        <a class="ct-ig-link" id="ct-ig-permalink" href="#" target="_blank">View post →</a>
+      </div>
     </div>
   </div>
 
@@ -2022,6 +2054,17 @@ body{background:#090a0b;color:#d8dde1}
     <a class="rolodex-item" href="https://todoist.com" target="_blank"><div class="ri-icon red">✅</div><div><div class="ri-name">Todoist</div><div class="ri-type">Daily Execution</div></div></a>
     <a class="rolodex-item" href="https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit" target="_blank"><div class="ri-icon green">📊</div><div><div class="ri-name">Mission Tracker Sheet</div><div class="ri-type">Google Drive · ARCHIVES</div></div></a>
   </div>
+</div>
+
+<!-- INSTAGRAM LIVE SECTION — v1.5 -->
+<div class="rolodex-group" id="rolodex-ig-group">
+  <div class="rolodex-group-label">Instagram — Live</div>
+  <div class="rolodex-ig-stats" id="rolodex-ig-stats">
+    <div class="rolodex-ig-stat"><div class="rolodex-ig-val" id="rig-followers">—</div><div class="rolodex-ig-lbl">Followers</div></div>
+    <div class="rolodex-ig-stat"><div class="rolodex-ig-val" id="rig-reach">—</div><div class="rolodex-ig-lbl">7-Day Reach</div></div>
+    <div class="rolodex-ig-stat"><div class="rolodex-ig-val" id="rig-impressions">—</div><div class="rolodex-ig-lbl">7-Day Impr.</div></div>
+  </div>
+  <div id="rolodex-ig-posts"><div class="rolodex-ig-post"><div class="rolodex-ig-post-body"><div class="rolodex-ig-post-caption" style="color:#444">Connect Instagram API to see live posts</div></div></div></div>
 </div>
 
 <div class="rolodex-group" id="rolodex-live-group">
@@ -5222,6 +5265,8 @@ function init(){
     console.error('A1XX startup failed',e);
     safeRender('startup fallback mission',function(){renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);});
   });
+  // Instagram — fire and forget, non-blocking (v1.5)
+  loadInstagramData();
   setInterval(function(){
     safeRender('live tick',function(){updateTimeBlock();updateGolden();renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);});
   },1000);
@@ -6060,6 +6105,87 @@ function renderContentRepurpose(){
       list.innerHTML='<div class="ct-empty-note">No repurpose queue visible yet. Add Repurpose Status to the Notion content database so this can become a real leverage board.</div>';
     }
   }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INSTAGRAM — v1.5
+   Calls action=instagram on Apps Script. Renders Today tab
+   signal and Rolodex live panel. Gracefully no-ops if
+   META_TOKEN / INSTAGRAM_BUSINESS_ID are not yet set.
+═══════════════════════════════════════════════════════════ */
+window.__igData = null;
+
+async function loadInstagramData() {
+  var url = localStorage.getItem(SHEETS_KEY);
+  if (!url) return;
+  try {
+    var qs = 'action=instagram&_=' + Date.now();
+    var res = await fetch(url + '?' + qs);
+    if (!res.ok) return;
+    var data = await res.json();
+    if (data.status !== 'ok') return;
+    window.__igData = data;
+    renderInstagramSignal();
+    renderRolodexInstagram();
+  } catch(e) {
+    // silently skip — credentials may not be set yet
+  }
+}
+
+function renderInstagramSignal() {
+  var data = window.__igData;
+  var wrap = document.getElementById('ct-ig-signal');
+  if (!wrap) return;
+  if (!data || !data.posts || !data.posts.length) { wrap.style.display = 'none'; return; }
+  var post = data.posts[0];
+  var ts = post.timestamp ? new Date(post.timestamp) : null;
+  var tsStr = ts ? ts.toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+  var tsEl = document.getElementById('ct-ig-ts');
+  var capEl = document.getElementById('ct-ig-caption');
+  var likesEl = document.getElementById('ct-ig-likes');
+  var commentsEl = document.getElementById('ct-ig-comments');
+  var linkEl = document.getElementById('ct-ig-permalink');
+  if (tsEl) tsEl.textContent = tsStr;
+  if (capEl) capEl.textContent = post.caption || '(no caption)';
+  if (likesEl) likesEl.textContent = post.likes || 0;
+  if (commentsEl) commentsEl.textContent = post.comments || 0;
+  if (linkEl) { linkEl.href = post.url || '#'; }
+  wrap.style.display = 'flex';
+}
+
+function renderRolodexInstagram() {
+  var data = window.__igData;
+  // Follower + insight tiles
+  var followersEl = document.getElementById('rig-followers');
+  var reachEl = document.getElementById('rig-reach');
+  var impressionsEl = document.getElementById('rig-impressions');
+  if (followersEl && data && data.account) {
+    followersEl.textContent = fmtK(data.account.followers_count);
+  }
+  if (reachEl && data && data.insights) {
+    reachEl.textContent = fmtK(data.insights.reach || 0);
+  }
+  if (impressionsEl && data && data.insights) {
+    impressionsEl.textContent = fmtK(data.insights.impressions || 0);
+  }
+  // Last 5 posts
+  var postsEl = document.getElementById('rolodex-ig-posts');
+  if (!postsEl) return;
+  var posts = (data && data.posts || []).slice(0, 5);
+  if (!posts.length) { postsEl.innerHTML = '<div class="rolodex-ig-post"><div class="rolodex-ig-post-body"><div class="rolodex-ig-post-caption" style="color:#444">No posts found</div></div></div>'; return; }
+  postsEl.innerHTML = posts.map(function(p) {
+    var ts = p.timestamp ? new Date(p.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+    var cap = escapeHtml((p.caption || '(no caption)').slice(0, 80));
+    var meta = ts + ' · ❤️ ' + (p.likes||0) + ' · 💬 ' + (p.comments||0);
+    return '<div class="rolodex-ig-post"><div class="rolodex-ig-post-body"><div class="rolodex-ig-post-caption">' + cap + '</div><div class="rolodex-ig-post-meta">' + meta + '</div></div><a class="rolodex-ig-post-link" href="' + escapeHtml(p.url||'#') + '" target="_blank">Open</a></div>';
+  }).join('');
+}
+
+// Helper: format large numbers as 1.2K / 45.3K
+function fmtK(n) {
+  n = Number(n) || 0;
+  if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,'') + 'K';
+  return String(n);
 }
 
 /* ═══════════════════════════════════════════════════════════
