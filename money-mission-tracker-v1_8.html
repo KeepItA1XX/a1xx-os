@@ -1891,6 +1891,17 @@ body{background:#090a0b;color:#d8dde1}
   </div>
 </div>
 
+<!-- INSTAGRAM ACTIVITY — Report Tab v1.5 -->
+<div class="prog-section" id="rpt-ig-section" style="margin-bottom:10px">
+  <div class="prog-title" style="display:flex;align-items:center;justify-content:space-between">
+    <span>📸 Content Activity — Instagram</span>
+    <a href="#" onclick="openIGTokenModal();return false;" style="font-size:10px;color:#5b9cf6;font-weight:600;text-decoration:none">🔑 Refresh Token</a>
+  </div>
+  <div id="rpt-ig-body">
+    <div style="color:#555;font-size:12px;padding:6px 0">No token set — <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6">add Instagram token</a> to see post activity.</div>
+  </div>
+</div>
+
 <div class="exp-breakdown">
   <div style="font-size:10px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Expense breakdown</div>
   <div class="exp-row"><span class="exp-label-text">Gross revenue</span><span class="exp-value-text" id="er-rev">—</span></div>
@@ -2066,19 +2077,6 @@ body{background:#090a0b;color:#d8dde1}
   </div>
 </div>
 
-<!-- INSTAGRAM LIVE SECTION — v1.5 -->
-<div class="rolodex-group" id="rolodex-ig-group" style="border:0.5px solid #1a3050;border-radius:10px;padding:12px;background:#080e14;margin-bottom:10px">
-  <div class="rolodex-group-label" style="display:flex;align-items:center;justify-content:space-between;color:#5b9cf6;margin-bottom:10px">
-    <span>📸 Instagram — Live</span>
-    <a href="#" onclick="openIGTokenModal();return false;" style="font-size:10px;color:#5b9cf6;font-weight:700;text-decoration:none;border:0.5px solid #1a3050;padding:3px 8px;border-radius:4px">🔑 Refresh Token</a>
-  </div>
-  <div class="rolodex-ig-stats" id="rolodex-ig-stats">
-    <div class="rolodex-ig-stat"><div class="rolodex-ig-val" id="rig-followers">—</div><div class="rolodex-ig-lbl">Followers</div></div>
-    <div class="rolodex-ig-stat"><div class="rolodex-ig-val" id="rig-reach">—</div><div class="rolodex-ig-lbl">7-Day Reach</div></div>
-    <div class="rolodex-ig-stat"><div class="rolodex-ig-val" id="rig-impressions">—</div><div class="rolodex-ig-lbl">7-Day Impr.</div></div>
-  </div>
-  <div id="rolodex-ig-posts"><div class="rolodex-ig-post"><div class="rolodex-ig-post-body"><div class="rolodex-ig-post-caption" style="color:#444">Connect Instagram API to see live posts</div></div></div></div>
-</div>
 
 <div class="rolodex-group" id="rolodex-live-group">
   <div class="rolodex-group-label">Live Contacts + Resources</div>
@@ -6162,9 +6160,41 @@ async function loadInstagramData() {
     };
     renderInstagramSignal();
     renderRolodexInstagram();
+    renderReportInstagram();
   } catch(e) {
     console.warn('Instagram load error', e);
   }
+}
+
+function renderReportInstagram() {
+  var el = document.getElementById('rpt-ig-body');
+  if (!el) return;
+  var data = window.__igData;
+  if (!data || !data.account || data.account.error) {
+    el.innerHTML = '<div style="color:#555;font-size:12px;padding:6px 0">No data — <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6">refresh token</a></div>';
+    return;
+  }
+  var now = new Date();
+  var weekAgo = new Date(now.getTime() - 7*24*60*60*1000);
+  var posts = data.posts || [];
+  var weekCount = posts.filter(function(p){ return p.timestamp && new Date(p.timestamp) >= weekAgo; }).length;
+  var weekTarget = 5;
+  var weekPct = Math.min(100, Math.round(weekCount / weekTarget * 100));
+  var lastPost = posts[0] || null;
+  var lastDate = lastPost && lastPost.timestamp ? new Date(lastPost.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+  var lastType = lastPost ? (lastPost.type === 'VIDEO' ? 'Reel/Video' : lastPost.type === 'IMAGE' ? 'Photo' : lastPost.type || '—') : '—';
+  var mediaCount = data.account.media_count || 0;
+  var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 10px">';
+  html += '<div class="bi-card"><div class="bi-label">Posts this week</div><div class="bi-value" style="color:'+(weekCount>=weekTarget?'#7ec845':'#f0f3f5')+'">'+weekCount+'</div><div class="bi-sub">target: '+weekTarget+'/week</div></div>';
+  html += '<div class="bi-card"><div class="bi-label">Total posts</div><div class="bi-value">'+mediaCount+'</div><div class="bi-sub">all time</div></div>';
+  html += '<div class="bi-card"><div class="bi-label">Last posted</div><div class="bi-value" style="font-size:13px">'+lastDate+'</div><div class="bi-sub">'+lastType+'</div></div>';
+  html += '</div>';
+  html += '<div class="prog-row">';
+  html += '<div class="prog-hd"><span class="prog-name">Posts this week</span><span class="prog-pct">'+weekPct+'%</span></div>';
+  html += '<div class="prog-track"><div class="prog-fill" style="width:'+weekPct+'%;background:'+(weekPct>=100?'#7ec845':'#3a7bd5')+'"></div></div>';
+  html += '<div class="prog-det"><span>'+weekCount+' of '+weekTarget+'</span><span>'+(weekCount>=weekTarget?'✅ Target hit':'Need '+(weekTarget-weekCount)+' more')+'</span></div>';
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function renderInstagramExpired() {
@@ -6174,13 +6204,13 @@ function renderInstagramExpired() {
     var cap = document.getElementById('ct-ig-caption');
     if (cap) cap.innerHTML = '<span style="color:#f85149;font-size:11px">Token expired —</span> <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6;font-size:11px;font-weight:700">Refresh →</a>';
   }
-  var postsEl = document.getElementById('rolodex-ig-posts');
-  if (postsEl) postsEl.innerHTML = '<div style="color:#f85149;font-size:12px;padding:6px 0">Token expired — <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6;font-weight:700">refresh token</a></div>';
+  var rpt = document.getElementById('rpt-ig-body');
+  if (rpt) rpt.innerHTML = '<div style="color:#f85149;font-size:12px;padding:6px 0">Token expired — <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6;font-weight:700">refresh token</a></div>';
 }
 
 function renderInstagramNoToken() {
-  var postsEl = document.getElementById('rolodex-ig-posts');
-  if (postsEl) postsEl.innerHTML = '<div style="color:#8b949e;font-size:12px;padding:6px 0">No token — <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6;font-weight:700">add Instagram token</a></div>';
+  var rpt = document.getElementById('rpt-ig-body');
+  if (rpt) rpt.innerHTML = '<div style="color:#555;font-size:12px;padding:6px 0">No token set — <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6">add Instagram token</a> to see post activity.</div>';
 }
 
 function openIGTokenModal() {
