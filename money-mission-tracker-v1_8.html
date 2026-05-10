@@ -1474,6 +1474,7 @@ body{background:#090a0b;color:#d8dde1}
   <div class="dpc-log collapsed" id="dpc-log">
     <div class="dpc-log-grid">
       <div class="dpc-log-item"><div class="dpc-log-label">DMs sent</div><input type="number" id="coach-dms" min="0" value="0" oninput="saveDailyCoach()"/></div>
+      <div class="dpc-log-item"><div class="dpc-log-label">Cold calls made</div><input type="number" id="coach-cold-calls" min="0" value="0" oninput="saveDailyCoach()"/></div>
       <div class="dpc-log-item"><div class="dpc-log-label">Content posted</div><input type="number" id="coach-content" min="0" value="0" oninput="saveDailyCoach()"/></div>
       <div class="dpc-log-item"><div class="dpc-log-label">Calls booked</div><input type="number" id="coach-calls" min="0" value="0" oninput="saveDailyCoach()"/></div>
       <div class="dpc-log-item"><div class="dpc-log-label">Closes (paid)</div><input type="number" id="coach-closes" min="0" value="0" oninput="saveDailyCoach()"/></div>
@@ -2179,6 +2180,7 @@ var GOLDEN_KEY='a1xx_golden';
 var CHECK_KEY='a1xx_checks_v1';
 var DPC_KEY='a1xx_daily_profit_v1';
 var DPC_WEEKLY_LOG_KEY='a1xx_dpc_weekly_daily_logs_v1';
+var DPC_CALL_RESCHEDULE_KEY='a1xx_dpc_call_reschedules_v1';
 var STREAK_KEY='a1xx_streak';
 var MISSION_KEY='a1xx_mission_brief_v1';
 
@@ -2760,14 +2762,16 @@ function getDailyCoach(){
   var saved=getStore(DPC_KEY);
   var today=dateKey(new Date());
   if(saved&&saved.leads===undefined)saved.leads=saved.moves||0;
+  if(saved&&saved.coldCalls===undefined)saved.coldCalls=0;
   if(saved&&saved.date===today)return saved;
-  return {date:today,money:0,dms:0,leads:0,content:0,calls:0,closes:0,done:{}};
+  return {date:today,money:0,dms:0,coldCalls:0,leads:0,content:0,calls:0,closes:0,done:{}};
 }
 
 function saveDailyCoach(){
   var d=getDailyCoach();
   d.money=parseFloat((document.getElementById('coach-money')||{}).value)||0;
   d.dms=parseFloat((document.getElementById('coach-dms')||{}).value)||0;
+  d.coldCalls=parseFloat((document.getElementById('coach-cold-calls')||{}).value)||0;
   d.leads=parseFloat((document.getElementById('coach-leads')||{}).value)||0;
   d.content=parseFloat((document.getElementById('coach-content')||{}).value)||0;
   d.calls=parseFloat((document.getElementById('coach-calls')||{}).value)||0;
@@ -2788,7 +2792,7 @@ function submitDailyCoachLog(){
   var status=document.getElementById('dpc-save-status');
   if(status){
     status.className='dpc-save-status ok';
-    status.textContent='Saved: '+(d.dms||0)+' DMs · '+(d.leads||0)+' leads · '+(d.calls||0)+' calls · '+fmt(d.money||0)+' collected';
+    status.textContent='Saved: '+(d.dms||0)+' DMs · '+(d.coldCalls||0)+' cold calls · '+(d.leads||0)+' leads · '+(d.calls||0)+' booked · '+fmt(d.money||0)+' collected';
     setTimeout(function(){
       var s=document.getElementById('dpc-save-status');
       if(s){s.className='dpc-save-status';s.textContent='Saves to today’s campaign on this device.';}
@@ -3009,11 +3013,27 @@ function getDPCLeadCards(d,calEvents,bottleneck){
 function renderLeadCard(lead){
   var phone=lead.phone?String(lead.phone).replace(/[^0-9+]/g,''):'';
   var callBtn=phone?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(phone)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
+  var rescheduleLabel=encodeURIComponent(lead.name||'Lead');
+  var rescheduleBtn='<button type="button" class="dpc-mini-btn" onclick="quickRescheduleCall(decodeURIComponent(\''+rescheduleLabel+'\'))">Reschedule</button>';
   var openUrl=lead.instagramUrl||lead.url||NOTION_CRM_URL;
   return '<div class="dpc-lead-card"><div><div class="dpc-lead-name">'+escapeHtml(lead.name)+'</div>'
     +'<div class="dpc-lead-meta">'+escapeHtml(lead.heat+' · '+lead.meta)+'</div>'
     +'<div class="dpc-lead-next">'+escapeHtml(lead.next)+'</div></div>'
-    +'<div class="dpc-lead-actions">'+callBtn+'<a class="dpc-mini-btn" href="'+escapeHtml(openUrl)+'" target="_blank">Open</a></div></div>';
+    +'<div class="dpc-lead-actions">'+callBtn+rescheduleBtn+'<a class="dpc-mini-btn" href="'+escapeHtml(openUrl)+'" target="_blank">Open</a></div></div>';
+}
+
+function quickRescheduleCall(name){
+  var log=getStore(DPC_CALL_RESCHEDULE_KEY)||[];
+  var label=name||'Lead';
+  log.unshift({date:dateKey(new Date()),lead:label,ts:new Date().toISOString()});
+  if(log.length>50)log=log.slice(0,50);
+  setStore(DPC_CALL_RESCHEDULE_KEY,log);
+  var status=document.getElementById('dpc-save-status');
+  if(status){
+    status.className='dpc-save-status ok';
+    status.textContent='Reschedule noted for '+label+'. Opening Calendar.';
+  }
+  window.open('https://calendar.google.com/calendar/u/0/r/eventedit?text='+encodeURIComponent('Reschedule call with '+label),'_blank');
 }
 
 function getCRMLeads(){
@@ -3290,7 +3310,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   var wkResp=parseFloat((document.getElementById('w-resp')||{}).value)||d.leads||0;
   var wkCalls=parseFloat((document.getElementById('w-calls')||{}).value)||d.calls||0;
   var wkCloses=parseFloat((document.getElementById('w-closes')||{}).value)||d.closes||0;
-  var money=d.money||0, dms=d.dms||0, leads=d.leads||0, calls=d.calls||0, closes=d.closes||0;
+  var money=d.money||0, dms=d.dms||0, coldCalls=d.coldCalls||0, leads=d.leads||0, calls=d.calls||0, closes=d.closes||0;
   var crmLeads=getCRMLeads();
   var activeCRM=crmLeads.filter(function(lead){return !isClosedCRMLead(lead);});
   var hotCRM=activeCRM.filter(isHotCRMLead);
@@ -3316,7 +3336,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   var cmd=document.getElementById('dpc-pipeline-command');
   if(cmd){
     if(activeCRM.length)cmd.textContent='Pipeline live: '+activeCRM.length+' active lead'+(activeCRM.length===1?'':'s')+' · '+hotCRM.length+' hot · '+dueCRM.length+' due now · top source: '+topSource.name+'.';
-    else if(dmGap>0)cmd.textContent='No live CRM leads loaded yet. Send '+dmGap+' more DMs and log the first lead in Notion CRM.';
+    else if(dmGap>0)cmd.textContent='No live CRM leads loaded yet. Send '+dmGap+' more DMs, make '+Math.max(0,10-coldCalls)+' cold calls, and log the first lead in Notion CRM.';
     else cmd.textContent='CRM waiting on Apps Script endpoint. Manual DPC numbers are active until leads sync.';
   }
 
@@ -3347,7 +3367,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
     var sourceFocus=activeCRM.length?topSource.name:(dms<20?'IG DMs':(leads>0?'Warm replies':'Content comments + IG DMs'));
     var nextMetric=dueCRM.length?dueCRM.length+' follow-up'+(dueCRM.length===1?'':'s')+' due':hotCRM.length?hotCRM.length+' hot lead'+(hotCRM.length===1?'':'s'):dmGap>0?dmGap+' more DMs':'1 booked call';
     pipeActions.innerHTML=[
-      {title:'Source: '+sourceFocus,copy:activeCRM.length?topSource.value+' active lead'+(topSource.value===1?'':'s')+' coming from this source.':'Current pull: '+dms+' DMs, '+(d.content||0)+' post, '+leads+' warm lead'+(leads===1?'':'s')+'.'},
+      {title:'Source: '+sourceFocus,copy:activeCRM.length?topSource.value+' active lead'+(topSource.value===1?'':'s')+' coming from this source.':'Current pull: '+dms+' DMs, '+coldCalls+' cold calls, '+(d.content||0)+' post, '+leads+' warm lead'+(leads===1?'':'s')+'.'},
       {title:'Stage: '+flowStuck.name,copy:activeCRM.length?flowStuck.value+' lead'+(flowStuck.value===1?'':'s')+' sitting here. Move the best one forward.':bottleneck.msg},
       {title:'Next: '+nextMetric,copy:'Open the Hot List or Follow-Up tab and take the next action.'}
     ].map(renderDPCAction).join('');
@@ -3430,9 +3450,10 @@ function renderDailyCoach(contentPieces,calEvents){
   window.__contentPieces=contentPieces||window.__contentPieces||[];
   window.__calEvents=calEvents||window.__calEvents||[];
   var d=getDailyCoach();
-  var moneyEl=document.getElementById('coach-money'),dmsEl=document.getElementById('coach-dms'),leadsEl=document.getElementById('coach-leads');
+  var moneyEl=document.getElementById('coach-money'),dmsEl=document.getElementById('coach-dms'),coldCallsEl=document.getElementById('coach-cold-calls'),leadsEl=document.getElementById('coach-leads');
   if(moneyEl&&document.activeElement!==moneyEl)moneyEl.value=d.money||0;
   if(dmsEl&&document.activeElement!==dmsEl)dmsEl.value=d.dms||0;
+  if(coldCallsEl&&document.activeElement!==coldCallsEl)coldCallsEl.value=d.coldCalls||0;
   if(leadsEl&&document.activeElement!==leadsEl)leadsEl.value=d.leads||0;
   var contentEl=document.getElementById('coach-content'),callsEl=document.getElementById('coach-calls'),closesEl=document.getElementById('coach-closes');
   if(contentEl&&document.activeElement!==contentEl)contentEl.value=d.content||0;
@@ -3457,7 +3478,7 @@ function renderDailyCoach(contentPieces,calEvents){
   var rev2=parseFloat(document.getElementById('w-rev').value)||0;
   var dailyNeeded=left2>0?Math.round(Math.max(0,cyc2.target-rev2)/left2):87;
 
-  var dms=d.dms||0, content=d.content||0, calls=d.calls||0, closes=d.closes||0, money=d.money||0;
+  var dms=d.dms||0, coldCalls=d.coldCalls||0, content=d.content||0, calls=d.calls||0, closes=d.closes||0, money=d.money||0;
   var targets={dms:40,content:1,calls:1,closes:1,money:dailyNeeded};
 
   function scoreItem(id,val,target){
@@ -3494,7 +3515,7 @@ function renderDailyCoach(contentPieces,calEvents){
     var ot='';
     // Blount logic: most urgent deficit drives the one thing
     if(dms===0&&(modeKey==='outreach'||modeKey==='prep')){
-      ot='Pipeline is empty. You have not sent a single DM today. Open Instagram right now and send 40 DMs before you do anything else.';
+      ot='Pipeline is empty. You have not sent a single DM or made a single cold call today. Open Instagram and Google Voice now. Start with 40 DMs plus 10 calls.';
     } else if(dms>0&&dms<20&&modeKey==='outreach'){
       ot='You have sent '+dms+' DMs. That is not enough. You need 40 minimum. Stop everything and hit that number before '+('block'&&block?('this block ends in '+blockLeft):'the end of Money Time')+'.';
     } else if(dms>=20&&dms<40&&modeKey==='outreach'){
@@ -3521,14 +3542,14 @@ function renderDailyCoach(contentPieces,calEvents){
   var mathEl=document.getElementById('dpc-math-text');
   if(mathEl){
     if(dms===0){
-      mathEl.innerHTML='Log your DMs to see your conversion math.';
+      mathEl.innerHTML='Log your DMs and cold calls to see your conversion math.';
     } else {
       var revPerDm=dms>0?(rev2/Math.max(dms,1)).toFixed(2):0;
       var wkDms=parseFloat(document.getElementById('w-dms').value)||dms;
       var wkCloses=parseFloat(document.getElementById('w-closes').value)||closes;
       var closeRate=wkDms>0&&wkCloses>0?Math.round(wkCloses/wkDms*100):0;
       var dmsToClose=closeRate>0?Math.ceil(100/closeRate):0;
-      var mathMsg='<strong>$'+revPerDm+'</strong> revenue per DM sent this cycle. ';
+      var mathMsg='<strong>$'+revPerDm+'</strong> revenue per DM sent this cycle. Cold calls today: <strong>'+coldCalls+'</strong>. ';
       if(closeRate>0){mathMsg+='<strong>'+closeRate+'%</strong> close rate — you need ~<strong>'+dmsToClose+' DMs</strong> per close at this rate. ';}
       if(gap>0&&dms>0){var dmsNeededToday=Math.ceil(gap/Math.max(parseFloat(revPerDm)||1,0.01));mathMsg+='To close the <strong>'+fmt(gap)+'</strong> week gap: send at least <strong>'+Math.min(dmsNeededToday,200)+' more DMs</strong>.';}
       mathEl.innerHTML=mathMsg;
@@ -5925,6 +5946,7 @@ function syncDPCtoWeekly(persistToday){
   if(persistToday){
     store[weekStart][d.date||dateKey(new Date())]={
       dms:d.dms||0,
+      coldCalls:d.coldCalls||0,
       content:d.content||0,
       calls:d.calls||0,
       closes:d.closes||0,
@@ -5936,10 +5958,11 @@ function syncDPCtoWeekly(persistToday){
 
   if(!Object.keys(store[weekStart]||{}).length)return;
 
-  var totals={dms:0,content:0,calls:0,closes:0,leads:0,money:0};
+  var totals={dms:0,coldCalls:0,content:0,calls:0,closes:0,leads:0,money:0};
   Object.keys(store[weekStart]||{}).forEach(function(k){
     var row=store[weekStart][k]||{};
     totals.dms+=parseFloat(row.dms)||0;
+    totals.coldCalls+=parseFloat(row.coldCalls)||0;
     totals.content+=parseFloat(row.content)||0;
     totals.calls+=parseFloat(row.calls)||0;
     totals.closes+=parseFloat(row.closes)||0;
