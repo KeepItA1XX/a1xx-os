@@ -932,6 +932,16 @@ body{background:#090a0b;color:#d8dde1}
 .rolodex-ig-post-caption{font-size:12px;color:#c9d1d9;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rolodex-ig-post-meta{font-size:10px;color:#6f7b86;margin-top:3px}
 .rolodex-ig-post-link{font-size:10px;color:#5b9cf6;text-decoration:none;font-weight:700;white-space:nowrap}
+/* ── Instagram token refresh modal ── */
+.ig-token-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:none;align-items:center;justify-content:center}
+.ig-token-modal-overlay.active{display:flex}
+.ig-token-modal{background:#0d1117;border:1px solid #30363d;border-radius:12px;padding:24px;width:90%;max-width:460px}
+.ig-token-modal h3{color:#f0f3f5;font-size:14px;font-weight:700;margin:0 0 6px}
+.ig-token-modal p{color:#8b949e;font-size:11px;line-height:1.65;margin:0 0 12px}
+.ig-token-modal textarea{width:100%;background:#010409;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:11px;padding:8px;resize:vertical;min-height:72px;font-family:monospace;box-sizing:border-box}
+.ig-token-modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.ig-save-btn{background:#238636;color:#fff;border:none;border-radius:6px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer}
+.ig-cancel-btn{background:transparent;color:#8b949e;border:1px solid #30363d;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -2058,7 +2068,10 @@ body{background:#090a0b;color:#d8dde1}
 
 <!-- INSTAGRAM LIVE SECTION — v1.5 -->
 <div class="rolodex-group" id="rolodex-ig-group">
-  <div class="rolodex-group-label">Instagram — Live</div>
+  <div class="rolodex-group-label" style="display:flex;align-items:center;justify-content:space-between">
+    <span>Instagram — Live</span>
+    <a href="#" onclick="openIGTokenModal();return false;" style="font-size:10px;color:#5b9cf6;font-weight:700;text-decoration:none">🔑 Refresh Token</a>
+  </div>
   <div class="rolodex-ig-stats" id="rolodex-ig-stats">
     <div class="rolodex-ig-stat"><div class="rolodex-ig-val" id="rig-followers">—</div><div class="rolodex-ig-lbl">Followers</div></div>
     <div class="rolodex-ig-stat"><div class="rolodex-ig-val" id="rig-reach">—</div><div class="rolodex-ig-lbl">7-Day Reach</div></div>
@@ -6115,21 +6128,73 @@ function renderContentRepurpose(){
 ═══════════════════════════════════════════════════════════ */
 window.__igData = null;
 
+// ── INSTAGRAM — direct browser calls to graph.instagram.com ──
+// Token stored in localStorage under a1xx_ig_token.
+// No Apps Script roundtrip needed — token refresh is instant.
 async function loadInstagramData() {
-  var url = localStorage.getItem(SHEETS_KEY);
-  if (!url) return;
+  var token = localStorage.getItem('a1xx_ig_token');
+  if (!token) { renderInstagramNoToken(); return; }
   try {
-    var qs = 'action=instagram&_=' + Date.now();
-    var res = await fetch(url + '?' + qs);
-    if (!res.ok) return;
-    var data = await res.json();
-    if (data.status !== 'ok') return;
-    window.__igData = data;
+    var accountRes = await fetch(
+      'https://graph.instagram.com/me?fields=id,username,account_type,media_count&access_token=' + token
+    );
+    var account = await accountRes.json();
+    if (account.error) { renderInstagramExpired(); return; }
+    var mediaRes = await fetch(
+      'https://graph.instagram.com/me/media?fields=id,caption,media_type,timestamp,permalink&limit=10&access_token=' + token
+    );
+    var mediaData = await mediaRes.json();
+    window.__igData = {
+      status: 'ok',
+      account: account,
+      posts: ((mediaData.data) || []).map(function(p) {
+        return { id: p.id, caption: (p.caption || '').slice(0, 120),
+                 type: p.media_type, timestamp: p.timestamp,
+                 likes: 0, comments: 0, url: p.permalink };
+      }),
+      insights: {}
+    };
     renderInstagramSignal();
     renderRolodexInstagram();
   } catch(e) {
-    // silently skip — credentials may not be set yet
+    console.warn('Instagram load error', e);
   }
+}
+
+function renderInstagramExpired() {
+  var wrap = document.getElementById('ct-ig-signal');
+  if (wrap) {
+    wrap.style.display = 'flex';
+    var cap = document.getElementById('ct-ig-caption');
+    if (cap) cap.innerHTML = '<span style="color:#f85149;font-size:11px">Token expired —</span> <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6;font-size:11px;font-weight:700">Refresh →</a>';
+  }
+  var postsEl = document.getElementById('rolodex-ig-posts');
+  if (postsEl) postsEl.innerHTML = '<div style="color:#f85149;font-size:12px;padding:6px 0">Token expired — <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6;font-weight:700">refresh token</a></div>';
+}
+
+function renderInstagramNoToken() {
+  var postsEl = document.getElementById('rolodex-ig-posts');
+  if (postsEl) postsEl.innerHTML = '<div style="color:#8b949e;font-size:12px;padding:6px 0">No token — <a href="#" onclick="openIGTokenModal();return false;" style="color:#5b9cf6;font-weight:700">add Instagram token</a></div>';
+}
+
+function openIGTokenModal() {
+  safeRender('ig token modal open', function() {
+    document.getElementById('ig-token-modal-overlay').classList.add('active');
+    document.getElementById('ig-token-input').value = '';
+    setTimeout(function(){ document.getElementById('ig-token-input').focus(); }, 120);
+  });
+}
+
+function saveInstagramToken() {
+  var token = (document.getElementById('ig-token-input').value || '').trim();
+  if (!token.startsWith('IGAA')) {
+    alert('Token should start with IGAA — please check and try again.');
+    return;
+  }
+  localStorage.setItem('a1xx_ig_token', token);
+  document.getElementById('ig-token-modal-overlay').classList.remove('active');
+  window.__igData = null;
+  loadInstagramData();
 }
 
 function renderInstagramSignal() {
@@ -6532,5 +6597,24 @@ if(document.readyState==='loading'){
 }
 setTimeout(startA1XX,50);
 </script>
+
+<!-- Instagram token refresh modal — v1.5 -->
+<div class="ig-token-modal-overlay" id="ig-token-modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="ig-token-modal">
+    <h3>🔑 Refresh Instagram Token</h3>
+    <p>
+      1. Go to <strong>developers.facebook.com/apps/960359013441868</strong><br>
+      2. Left sidebar → <strong>Instagram</strong> → <strong>Tokens</strong> tab<br>
+      3. Click <strong>Generate Token</strong> next to your account<br>
+      4. Copy the <code style="background:#161b22;padding:1px 4px;border-radius:3px">IGAA...</code> token and paste below<br><br>
+      Token is valid for <strong>1 hour</strong>. Paste a new one any time data goes stale.
+    </p>
+    <textarea id="ig-token-input" placeholder="Paste IGAA... token here"></textarea>
+    <div class="ig-token-modal-btns">
+      <button class="ig-cancel-btn" onclick="document.getElementById('ig-token-modal-overlay').classList.remove('active')">Cancel</button>
+      <button class="ig-save-btn" onclick="saveInstagramToken()">Save & Refresh</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
