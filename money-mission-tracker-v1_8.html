@@ -746,10 +746,32 @@ input:focus{border-color:#333}
 .ct-performance-card{background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:9px;text-align:center}
 .ct-performance-val{font-size:20px;font-weight:800;color:#f0f3f5;line-height:1}
 .ct-performance-lbl{font-size:8px;color:#9aa6b2;text-transform:uppercase;letter-spacing:.05em;margin-top:5px;font-weight:700}
-.ct-repurpose-list{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+/* ARCHIVED 2026-05-10 — replaced by Spark tab */
+/*.ct-repurpose-list{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
 .ct-repurpose-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:9px 10px}
 .ct-repurpose-title{font-size:12px;color:#d7dde3;font-weight:700;line-height:1.35}
-.ct-repurpose-meta{font-size:10px;color:#5a7a9a;margin-top:3px}
+.ct-repurpose-meta{font-size:10px;color:#5a7a9a;margin-top:3px}*/
+/* SPARK TAB — v1.9 2026-05-10 */
+.spark-section-label{font-size:9px;font-weight:800;color:#5a7a9a;text-transform:uppercase;letter-spacing:.1em;margin:14px 0 7px}
+.spark-capture-wrap{background:#040c18;border:0.5px solid #1a3050;border-radius:10px;padding:10px}
+.spark-capture-input{width:100%;background:transparent;border:none;outline:none;font-size:12px;color:#d7dde3;resize:none;font-family:inherit;line-height:1.5;min-height:54px}
+.spark-capture-input::placeholder{color:#2a4060}
+.spark-capture-row{display:flex;align-items:center;gap:8px;margin-top:8px;border-top:0.5px solid #0e2030;padding-top:8px}
+.spark-format-select{flex:1;background:#040c18;border:0.5px solid #1a3050;border-radius:6px;color:#8aaccc;font-size:10px;padding:5px 8px;outline:none;font-family:inherit}
+.spark-btn{height:28px;padding:0 14px;background:#0d2040;border:0.5px solid #1a4070;border-radius:7px;color:#5b9cf6;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;transition:background .15s}
+.spark-btn:hover{background:#112850}
+.spark-queue{display:flex;flex-direction:column;gap:6px;margin-bottom:2px}
+.spark-queue-item{display:flex;align-items:flex-start;gap:8px;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:8px 10px}
+.spark-queue-text{font-size:11px;color:#d7dde3;font-weight:600;line-height:1.4}
+.spark-queue-meta{font-size:9px;color:#3a6090;margin-top:2px}
+.spark-push-btn{height:22px;padding:0 9px;background:#061020;border:0.5px solid #1a3050;border-radius:5px;color:#5b9cf6;font-size:9px;font-weight:800;cursor:pointer;white-space:nowrap}
+.spark-push-btn:hover{background:#0d2040}
+.spark-del-btn{height:22px;width:22px;background:none;border:none;color:#2a4060;font-size:13px;cursor:pointer;line-height:1;padding:0;flex-shrink:0}
+.spark-del-btn:hover{color:#e05555}
+.spark-idea-item{display:flex;align-items:center;gap:8px;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:8px 10px}
+.spark-idea-title{font-size:11px;color:#d7dde3;font-weight:600;line-height:1.35}
+.spark-idea-meta{font-size:9px;color:#3a6090;margin-top:2px}
+.spark-idea-badge{font-size:8px;font-weight:800;color:#9b6df5;background:#1a0f30;border:0.5px solid #3a2060;border-radius:10px;padding:2px 7px;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
 .ct-empty-note{font-size:11px;color:#5a7a9a;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:10px 12px;line-height:1.55;margin-bottom:10px}
 
 /* PUBLISH CHAIN */
@@ -1473,7 +1495,7 @@ body{background:#090a0b;color:#d8dde1}
   <div class="ct-tabs">
     <button class="ct-tab active" id="ct-tab-today" onclick="setContentView('today')">Today</button>
     <button class="ct-tab" id="ct-tab-pipeline" onclick="setContentView('pipeline')">Pipeline</button>
-    <button class="ct-tab" id="ct-tab-repurpose" onclick="setContentView('repurpose')">Repurpose</button>
+    <button class="ct-tab" id="ct-tab-spark" onclick="setContentView('spark')">Spark</button>
     <button class="ct-tab" id="ct-tab-live" onclick="setContentView('live')">Live</button>
   </div>
   <div class="ct-view active" id="ct-view-today">
@@ -1517,43 +1539,31 @@ body{background:#090a0b;color:#d8dde1}
     </div>
   </div>
 
-  <div class="ct-view" id="ct-view-repurpose">
-    <div class="ct-bottleneck" id="ct-repurpose-summary">Reading repurpose queue...</div>
-    <div class="ct-repurpose-list" id="ct-repurpose-list"></div>
-    <div class="ct-signal">
-      <div class="ct-signal-item"><div class="ct-signal-val" id="ct-posted-total">0</div><div class="ct-signal-lbl">Posted</div></div>
-      <div class="ct-signal-item"><div class="ct-signal-val" id="ct-consistency-pct">0%</div><div class="ct-signal-lbl">Consistency</div></div>
-      <div class="ct-signal-item"><div class="ct-signal-val" id="ct-missed-days">0</div><div class="ct-signal-lbl">Missed</div></div>
+  <!-- SPARK TAB — v1.9 2026-05-10 — replaces Repurpose -->
+  <div class="ct-view" id="ct-view-spark">
+    <!-- QUICK CAPTURE -->
+    <div class="spark-section-label">⚡ Quick Capture</div>
+    <div class="spark-capture-wrap">
+      <textarea class="spark-capture-input" id="spark-input" placeholder="What's the idea? Hook, topic, angle — just get it down." rows="3"></textarea>
+      <div class="spark-capture-row">
+        <select class="spark-format-select" id="spark-format">
+          <option value="">Format...</option>
+          <option value="Long Video">Long Video</option>
+          <option value="Short Video">Short</option>
+          <option value="Reel">Reel</option>
+          <option value="Text-only">Thread</option>
+          <option value="Podcast">Podcast</option>
+          <option value="Blog">Blog</option>
+        </select>
+        <button class="spark-btn" onclick="captureIdea()">Capture →</button>
+      </div>
     </div>
-
-  <!-- PUBLISH CHAIN -->
-  <div class="ct-chain-row">
-    <div class="ct-chain-item" id="ctc-today">
-      <div class="ct-chain-dot" id="ctcd-today"></div>
-      <div class="ct-chain-label">Today</div>
-    </div>
-    <div class="ct-chain-dash"></div>
-    <div class="ct-chain-item" id="ctc-yesterday">
-      <div class="ct-chain-dot" id="ctcd-yesterday"></div>
-      <div class="ct-chain-label">Yesterday</div>
-    </div>
-    <div class="ct-chain-dash"></div>
-    <div class="ct-chain-item" id="ctc-2days">
-      <div class="ct-chain-dot" id="ctcd-2days"></div>
-      <div class="ct-chain-label">2 days ago</div>
-    </div>
-    <div style="flex:1"></div>
-    <button class="ct-post-btn" id="ct-post-btn" onclick="markContentPosted()">
-      Mark posted today ✓
-    </button>
-  </div>
-
-  <!-- 55-DAY CYCLE GRID -->
-  <div class="ct-grid-label">Cycle 1 — publishing record</div>
-  <div class="ct-grid" id="ct-cycle-grid"></div>
-
-  <!-- STATUS LINE -->
-  <div class="ct-status" id="ct-status">Loading your content record...</div>
+    <!-- LOCAL QUEUE -->
+    <div class="spark-section-label">📋 Captured — push to Notion</div>
+    <div class="spark-queue" id="spark-queue"></div>
+    <!-- IDEA BANK -->
+    <div class="spark-section-label">💡 Idea Bank</div>
+    <div id="spark-idea-bank" style="display:flex;flex-direction:column;gap:6px"><div class="ct-loading">Loading ideas from Notion...</div></div>
   </div>
 
   <!-- LIVE TAB — v1.9 2026-05-10 -->
@@ -5274,8 +5284,8 @@ var MISSION_STEPS={
      checks:['Set up your space','Record or design the asset','Review: does it hook in 2 seconds?','Caption and hashtags ready'],resource:null},
     {id:'post-it',title:'Post It',action:'Get it live',
      checks:['Post to Instagram','Share to Story if it\'s a Reel','Log in content tracker','Update content streak'],resource:null},
-    {id:'repurpose',title:'Repurpose It',action:'Get double value from the same content',
-     checks:['Download the posted version','Upload to YouTube Shorts or TikTok','Grab a quote for a text post','Check: can this become a beat promo?'],resource:null}
+    {id:'spark',title:'Spark an Idea',action:'Capture your next content move',
+     checks:['Open the Spark tab','Drop the idea or angle you\'ve been sitting on','Pick a format','Push it to Notion or save it locally'],resource:null}
   ],
   manager:[
     {id:'review-board',title:'Review the Scoreboard',action:'See exactly where you stand',
@@ -5401,6 +5411,7 @@ async function loadTodayData(){
   var calEvents=loaded[4]||[];
   // loaded[5] = liveEvents — renderLiveEvents() called inside loadLiveEvents (Manager archived)
   safeRender('live tab',function(){renderLiveTab();});
+  safeRender('spark tab',function(){renderSparkTab();});
   window.__contentPieces=notionPieces||[];
   window.__contentPipelinePieces=pipelinePieces||notionPieces||[];
   window.__productionPieces=productionPieces||[];
@@ -5925,7 +5936,7 @@ function getContentLog(){
 
 function setContentView(view){
   contentView=view||'today';
-  ['today','pipeline','repurpose','live'].forEach(function(v){
+  ['today','pipeline','spark','live'].forEach(function(v){
     var tab=document.getElementById('ct-tab-'+v);
     var pane=document.getElementById('ct-view-'+v);
     if(tab)tab.classList.toggle('active',v===contentView);
@@ -5933,6 +5944,7 @@ function setContentView(view){
   });
   renderContextResources('content',contentView);
   if(contentView==='live')renderLiveTab();
+  if(contentView==='spark')renderSparkTab();
   renderContentCard();
 }
 
@@ -5989,7 +6001,7 @@ function renderContentCard(){
   var streak=getContentStreak();
   var streakEl=document.getElementById('ct-streak-num');
   if(streakEl)streakEl.textContent=streak;
-  ['today','pipeline','repurpose','live'].forEach(function(v){
+  ['today','pipeline','spark','live'].forEach(function(v){
     var tab=document.getElementById('ct-tab-'+v);
     var pane=document.getElementById('ct-view-'+v);
     if(tab)tab.classList.toggle('active',v===contentView);
@@ -6081,7 +6093,8 @@ function renderContentCard(){
   renderTodayContentInCard();
   renderContentPipeline();
   renderContentPerformance();
-  renderContentRepurpose();
+  // ARCHIVED 2026-05-10: renderContentRepurpose() — replaced by renderSparkTab()
+  if(contentView==='spark')renderSparkTab();
 }
 
 function renderTodayContentInCard(){
@@ -6265,6 +6278,8 @@ function renderContentPerformance(){
   }
 }
 
+// ARCHIVED 2026-05-10 — renderContentRepurpose() replaced by Spark tab
+/*
 function renderContentRepurpose(){
   var pieces=window.__contentPipelinePieces||window.__contentPieces||[];
   var longPieces=pieces.filter(function(p){return !isShortContent(p);});
@@ -6286,6 +6301,125 @@ function renderContentRepurpose(){
       list.innerHTML='<div class="ct-empty-note">No repurpose queue visible yet. Add Repurpose Status to the Notion content database so this can become a real leverage board.</div>';
     }
   }
+}
+*/
+
+/* ══════════════════════════════════════════════════════════
+   SPARK TAB — v1.9 2026-05-10
+   Two sections:
+   1. Quick Capture — type an idea, save locally, push to Notion
+   2. Idea Bank — live Notion items at readyTo=Create or Plan
+   localStorage key: a1xx_spark_queue (array of {id,text,format,ts})
+   Apps Script POST type: create_content_idea (paste handler below)
+══════════════════════════════════════════════════════════ */
+var SPARK_QUEUE_KEY='a1xx_spark_queue';
+
+function captureIdea(){
+  var input=document.getElementById('spark-input');
+  var fmt=document.getElementById('spark-format');
+  if(!input||!input.value.trim())return;
+  var queue=getStore(SPARK_QUEUE_KEY)||[];
+  queue.unshift({id:Date.now(),text:input.value.trim(),format:(fmt&&fmt.value)||'',ts:new Date().toISOString()});
+  if(queue.length>20)queue=queue.slice(0,20);
+  setStore(SPARK_QUEUE_KEY,queue);
+  input.value='';
+  if(fmt)fmt.value='';
+  input.focus();
+  renderSparkQueue();
+}
+
+function renderSparkQueue(){
+  var el=document.getElementById('spark-queue');
+  if(!el)return;
+  var queue=getStore(SPARK_QUEUE_KEY)||[];
+  if(!queue.length){
+    el.innerHTML='<div class="ct-empty-note" style="margin-bottom:2px">Nothing captured yet — fire one off above.</div>';
+    return;
+  }
+  el.innerHTML='';
+  queue.forEach(function(item,idx){
+    var ago=sparkTimeAgo(new Date(item.ts));
+    var row=document.createElement('div');
+    row.className='spark-queue-item';
+    row.innerHTML='<div style="flex:1;min-width:0">'
+      +'<div class="spark-queue-text">'+escapeHtml(item.text)+'</div>'
+      +'<div class="spark-queue-meta">'+(item.format?escapeHtml(item.format)+' · ':'')+ago+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+      +'<button class="spark-push-btn" onclick="pushCapture('+idx+')">Push →</button>'
+      +'<button class="spark-del-btn" onclick="deleteCapture('+idx+')" title="Remove">✕</button>'
+      +'</div>';
+    el.appendChild(row);
+  });
+}
+
+function deleteCapture(idx){
+  var queue=getStore(SPARK_QUEUE_KEY)||[];
+  queue.splice(idx,1);
+  setStore(SPARK_QUEUE_KEY,queue);
+  renderSparkQueue();
+}
+
+function pushCapture(idx){
+  var queue=getStore(SPARK_QUEUE_KEY)||[];
+  var item=queue[idx];
+  if(!item)return;
+  var url=localStorage.getItem(SHEETS_KEY);
+  if(!url){alert('Connect Apps Script in setup ⚙ first.');return;}
+  // no-cors POST — blind send, optimistic remove
+  fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({type:'create_content_idea',title:item.text,format:item.format,readyTo:'Create',source:'Spark capture'})
+  }).catch(function(){});
+  queue.splice(idx,1);
+  setStore(SPARK_QUEUE_KEY,queue);
+  renderSparkQueue();
+}
+
+function renderSparkIdeaBank(){
+  var el=document.getElementById('spark-idea-bank');
+  if(!el)return;
+  var pieces=window.__contentPieces||[];
+  if(!pieces.length){
+    el.innerHTML='<div class="ct-empty-note">Notion content not loaded yet. Sync to see your idea bank.</div>';
+    return;
+  }
+  var ideas=pieces.filter(function(p){
+    var rt=String(p.readyTo||p.stage||p.status||'').toLowerCase();
+    return !rt||/create|plan|idea|concept|backlog/.test(rt);
+  }).slice(0,10);
+  if(!ideas.length){
+    el.innerHTML='<div class="ct-empty-note">No ideas at Create or Plan stage in Notion. Everything is already in motion — capture something new above.</div>';
+    return;
+  }
+  el.innerHTML='';
+  ideas.forEach(function(p){
+    var row=document.createElement('div');
+    row.className='spark-idea-item';
+    var badge=escapeHtml(p.readyTo||p.stage||'Idea');
+    var fmt=escapeHtml(p.format||'');
+    var ch=escapeHtml(p.channel||'');
+    row.innerHTML='<div style="flex:1;min-width:0">'
+      +'<div class="spark-idea-title">'+escapeHtml(p.title||'Untitled')+'</div>'
+      +'<div class="spark-idea-meta">'+(fmt?fmt+(ch?' · ':''):'')+ch+'</div>'
+      +'</div>'
+      +'<span class="spark-idea-badge">'+badge+'</span>'
+      +'<a class="ct-table-link" href="'+escapeHtml(p.url||NOTION_CONTENT_URL)+'" target="_blank" style="margin-left:6px;flex-shrink:0">Open</a>';
+    el.appendChild(row);
+  });
+}
+
+function renderSparkTab(){
+  renderSparkQueue();
+  renderSparkIdeaBank();
+}
+
+function sparkTimeAgo(d){
+  if(!d||isNaN(d.getTime()))return '';
+  var s=Math.floor((Date.now()-d.getTime())/1000);
+  if(s<60)return 'just now';
+  if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
 }
 
 /* ═══════════════════════════════════════════════════════════
