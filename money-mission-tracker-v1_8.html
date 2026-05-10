@@ -4763,7 +4763,13 @@ function filterRolodex(){
     if(hit)shown++;
   });
   document.querySelectorAll('#pane-rolodex .rolodex-group').forEach(function(group){
-    var visible=Array.prototype.slice.call(group.querySelectorAll('.rolodex-item')).some(function(item){return item.style.display!=='none';});
+    // Special groups that don't use .rolodex-item — always keep visible
+    if(group.id==='rolodex-ig-group'||group.id==='rolodex-live-group'||group.id==='rolodex-queue-group'){
+      group.style.display='block'; return;
+    }
+    var roleItems=group.querySelectorAll('.rolodex-item');
+    if(!roleItems.length){group.style.display='block';return;}
+    var visible=Array.prototype.slice.call(roleItems).some(function(item){return item.style.display!=='none';});
     group.style.display=visible?'block':'none';
   });
   var meta=document.getElementById('rolodex-search-meta');
