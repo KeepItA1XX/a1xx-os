@@ -742,6 +742,34 @@ input:focus{border-color:#333}
 .ct-stage-card{background:#040c18;border:0.5px solid #0e2030;border-radius:8px;padding:8px 5px;text-align:center;min-height:58px}
 .ct-stage-num{font-size:18px;font-weight:800;color:#5b9cf6;line-height:1}
 .ct-stage-name{font-size:8px;color:#9aa6b2;text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+/* PIPELINE SUB-TABS — v1.9 2026-05-10 */
+.ct-subtabs{display:flex;gap:3px;margin-bottom:10px;background:#040c18;border:0.5px solid #0e2030;border-radius:8px;padding:3px}
+.ct-subtab{flex:1;text-align:center;padding:6px 4px;font-size:10px;font-weight:700;color:#5a7a9a;border-radius:6px;cursor:pointer;border:none;background:transparent;transition:all .15s;font-family:inherit}
+.ct-subtab.active{background:#061020;color:#5b9cf6;border:0.5px solid #1a3050}
+.ct-subtab:hover:not(.active){color:#8aaccc}
+.ct-stage-filters{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.ct-stage-filter{height:24px;padding:0 10px;border-radius:12px;border:0.5px solid #1a2a3a;background:#040c18;color:#5a7a9a;font-size:9px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:.06em;transition:all .15s;white-space:nowrap;font-family:inherit}
+.ct-stage-filter.active{background:#0d2040;border-color:#1a4070;color:#5b9cf6}
+.ct-stage-filter:hover:not(.active){color:#8aaccc;border-color:#2a4060}
+.stage-badge{font-size:8px;font-weight:800;border-radius:10px;padding:2px 7px;white-space:nowrap;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.stage-create,.stage-plan{color:#9b6df5;background:#1a0f30;border:0.5px solid #3a2060}
+.stage-script{color:#9b6df5;background:#1a0f30;border:0.5px solid #3a2060}
+.stage-film{color:#c49060;background:#1a1000;border:0.5px solid #3a2800}
+.stage-edit{color:#639922;background:#0f1a08;border:0.5px solid #2a4015}
+.stage-schedule{color:#3a9bd5;background:#081828;border:0.5px solid #1a4060}
+.stage-posted,.stage-distribute{color:#639922;background:#0f1a08;border:0.5px solid #2a4015}
+.ct-dist-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.ct-dist-tile{background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:10px 8px;text-align:center}
+.ct-dist-val{font-size:20px;font-weight:800;color:#5b9cf6;line-height:1}
+.ct-dist-lbl{font-size:9px;color:#5a7a9a;margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+.ct-comm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:12px}
+.ct-comm-tile{background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:10px 8px;text-align:center}
+.ct-comm-val{font-size:24px;font-weight:800;color:#5b9cf6;line-height:1}
+.ct-comm-lbl{font-size:9px;color:#5a7a9a;margin-top:4px}
+.ct-comm-member{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid #0e2030}
+.ct-comm-name{font-size:11px;font-weight:700;color:#d7dde3;flex:1;min-width:0}
+.ct-comm-handle{font-size:10px;color:#5b9cf6;flex-shrink:0}
+.ct-comm-genre{font-size:10px;color:#5a7a9a}
 .ct-performance-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
 .ct-performance-card{background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:9px;text-align:center}
 .ct-performance-val{font-size:20px;font-weight:800;color:#f0f3f5;line-height:1}
@@ -1528,14 +1556,36 @@ body{background:#090a0b;color:#d8dde1}
     </div>
   </div>
 
+  <!-- PIPELINE TAB — sub-tabs v1.9 2026-05-10 -->
   <div class="ct-view" id="ct-view-pipeline">
-    <div class="ct-bottleneck" id="ct-pipeline-summary">Reading pipeline...</div>
-    <div class="ct-stage-strip" id="ct-stage-strip"></div>
-    <div class="ct-pipeline" id="ct-pipeline"></div>
-    <div class="ct-mini-table" id="ct-pipeline-table"></div>
-    <div class="ct-format-split">
-      <div class="ct-format-box"><div class="ct-format-num" id="ct-long-count">0</div><div class="ct-format-label">Longs</div></div>
-      <div class="ct-format-box"><div class="ct-format-num" id="ct-short-count">0</div><div class="ct-format-label">Shorts</div></div>
+    <div class="ct-subtabs">
+      <button class="ct-subtab active" id="pipe-subtab-projects" onclick="setPipelineSubTab('projects')">Projects</button>
+      <button class="ct-subtab" id="pipe-subtab-distribution" onclick="setPipelineSubTab('distribution')">Distribution</button>
+      <button class="ct-subtab" id="pipe-subtab-community" onclick="setPipelineSubTab('community')">Community</button>
+    </div>
+    <!-- PROJECTS -->
+    <div id="pipe-view-projects">
+      <div class="ct-stage-filters">
+        <button class="ct-stage-filter active" id="pipe-filter-all" onclick="setPipelineFilter('all')">All</button>
+        <button class="ct-stage-filter" id="pipe-filter-script" onclick="setPipelineFilter('Script')">Script</button>
+        <button class="ct-stage-filter" id="pipe-filter-film" onclick="setPipelineFilter('Film')">Film</button>
+        <button class="ct-stage-filter" id="pipe-filter-edit" onclick="setPipelineFilter('Edit')">Edit</button>
+        <button class="ct-stage-filter" id="pipe-filter-schedule" onclick="setPipelineFilter('Schedule')">Schedule</button>
+      </div>
+      <div id="pipe-projects-list" class="ct-mini-table"><div class="ct-loading">Loading projects...</div></div>
+      <div class="ct-bottleneck" id="ct-pipeline-summary" style="margin-top:8px"></div>
+      <div class="ct-format-split" style="margin-top:10px">
+        <div class="ct-format-box"><div class="ct-format-num" id="ct-long-count">0</div><div class="ct-format-label">Longs</div></div>
+        <div class="ct-format-box"><div class="ct-format-num" id="ct-short-count">0</div><div class="ct-format-label">Shorts</div></div>
+      </div>
+    </div>
+    <!-- DISTRIBUTION -->
+    <div id="pipe-view-distribution" style="display:none">
+      <div id="pipe-dist-body"><div class="ct-loading">Loading distribution data...</div></div>
+    </div>
+    <!-- COMMUNITY -->
+    <div id="pipe-view-community" style="display:none">
+      <div id="pipe-comm-body"><div class="ct-loading">Loading community data...</div></div>
     </div>
   </div>
 
@@ -5943,6 +5993,7 @@ function setContentView(view){
     if(pane)pane.classList.toggle('active',v===contentView);
   });
   renderContextResources('content',contentView);
+  if(contentView==='pipeline')renderProjectsTab();
   if(contentView==='live')renderLiveTab();
   if(contentView==='spark')renderSparkTab();
   renderContentCard();
@@ -6091,7 +6142,8 @@ function renderContentCard(){
 
   // Pull today's Notion content into the card
   renderTodayContentInCard();
-  renderContentPipeline();
+  // ARCHIVED 2026-05-10: renderContentPipeline() — replaced by sub-tab system
+  if(contentView==='pipeline')renderProjectsTab();
   renderContentPerformance();
   // ARCHIVED 2026-05-10: renderContentRepurpose() — replaced by renderSparkTab()
   if(contentView==='spark')renderSparkTab();
@@ -6180,61 +6232,230 @@ function contentMetric(piece,name){
   return parseFloat(v)||0;
 }
 
-function renderContentPipeline(){
-  var pieces=window.__contentPipelinePieces||window.__contentPieces||[];
-  var stages=['Idea','Script','Record','Edit','Post','Clip'];
-  var counts={Idea:0,Script:0,Record:0,Edit:0,Post:0,Clip:0};
-  pieces.forEach(function(p){counts[normalizeContentStage(p)]++;});
-  var strip=document.getElementById('ct-stage-strip');
-  if(strip){
-    strip.innerHTML=stages.map(function(stage){
-      return '<div class="ct-stage-card"><div class="ct-stage-num">'+counts[stage]+'</div><div class="ct-stage-name">'+stage+'</div></div>';
-    }).join('');
-  }
-  var pipe=document.getElementById('ct-pipeline');
-  if(pipe){
-    var max=Math.max(1,Math.max.apply(null,stages.map(function(s){return counts[s];})));
-    pipe.innerHTML=stages.map(function(stage){
-      var count=counts[stage],w=Math.max(count?8:0,Math.round(count/max*100));
-      return '<div class="ct-pipe-row"><div class="ct-pipe-name">'+stage+'</div><div class="ct-pipe-track"><div class="ct-pipe-fill" style="width:'+w+'%"></div></div><div class="ct-pipe-count">'+count+'</div></div>';
-    }).join('');
-  }
-  var table=document.getElementById('ct-pipeline-table');
-  if(table){
-    var active=pieces.slice().sort(function(a,b){
-      var ap=String(a.priority||'').toLowerCase(),bp=String(b.priority||'').toLowerCase();
-      return (bp.indexOf('high')>=0?1:0)-(ap.indexOf('high')>=0?1:0);
-    }).slice(0,6);
-    if(active.length){
-      table.innerHTML=active.map(function(p){
-        var stage=normalizeContentStage(p);
-        var meta=getContentPillar(p)+' · '+getContentOffer(p);
-        return '<div class="ct-table-row"><div><div class="ct-table-title">'+escapeHtml(p.title||'Untitled')+'</div><div class="ct-table-meta">'+escapeHtml(meta)+'</div></div><div class="ct-table-pill">'+escapeHtml(stage)+'</div><a class="ct-table-link" href="'+escapeHtml(p.url||NOTION_CONTENT_URL)+'" target="_blank">Open</a></div>';
-      }).join('');
-    }else{
-      table.innerHTML='<div class="ct-empty-note">No active content projects are visible yet. Connect the active content pipeline endpoint or add status/stage data in Notion.</div>';
-    }
-  }
+// ARCHIVED 2026-05-10 — renderContentPipeline() replaced by Pipeline sub-tab system
+/*
+function renderContentPipeline(){ ... }
+*/
+
+/* ══════════════════════════════════════════════════════════
+   PIPELINE SUB-TABS — v1.9 2026-05-10
+   Projects / Distribution / Community
+══════════════════════════════════════════════════════════ */
+var pipelineSubTab=’projects’;
+var pipelineStageFilter=’all’;
+
+function setPipelineSubTab(tab){
+  pipelineSubTab=tab;
+  [‘projects’,’distribution’,’community’].forEach(function(t){
+    var btn=document.getElementById(‘pipe-subtab-’+t);
+    var pane=document.getElementById(‘pipe-view-’+t);
+    if(btn)btn.classList.toggle(‘active’,t===tab);
+    if(pane)pane.style.display=t===tab?’block’:’none’;
+  });
+  if(tab===’projects’)renderProjectsTab();
+  if(tab===’distribution’)loadAndRenderDistribution();
+  if(tab===’community’)loadAndRenderCommunity();
+}
+
+function setPipelineFilter(stage){
+  pipelineStageFilter=stage;
+  [‘all’,’Script’,’Film’,’Edit’,’Schedule’].forEach(function(s){
+    var btn=document.getElementById(‘pipe-filter-’+s.toLowerCase());
+    if(btn)btn.classList.toggle(‘active’,s===stage||(stage===’all’&&s===’all’));
+  });
+  if(stage===’all’){renderProjectsTab();}
+  else{loadPipelineByStage(stage);}
+}
+
+function stageBadgeClass(readyTo){
+  var s=String(readyTo||’’).toLowerCase();
+  if(/create/.test(s))return ‘stage-create’;
+  if(/plan/.test(s))return ‘stage-plan’;
+  if(/script/.test(s))return ‘stage-script’;
+  if(/film|record|shoot/.test(s))return ‘stage-film’;
+  if(/edit/.test(s))return ‘stage-edit’;
+  if(/schedule/.test(s))return ‘stage-schedule’;
+  if(/distribut|posted|done/.test(s))return ‘stage-posted’;
+  return ‘stage-create’;
+}
+
+function normalizeNotionContentItem(item){
+  // Handles already-normalized Apps Script pipeline response (readyTo, format, channel, etc.)
+  if(!item)return null;
+  return {
+    title:item.title||’Untitled’,
+    readyTo:item.readyTo||item.stage||item.status||’’,
+    phase:item.phase||’’,
+    format:item.format||’’,
+    platform:Array.isArray(item.platform)?item.platform:(item.platform?[item.platform]:[]),
+    channel:item.channel||’’,
+    score:item.score||’’,
+    productionDate:item.productionDate||’’,
+    publishDate:item.publishDate||’’,
+    url:item.url||NOTION_CONTENT_URL
+  };
+}
+
+function renderProjectsTab(overridePieces){
+  var el=document.getElementById(‘pipe-projects-list’);
+  if(!el)return;
+  var raw=overridePieces||(window.__contentPipelinePieces||window.__contentPieces||[]);
+  // Items from Apps Script pipeline endpoint are already normalized; items from Notion page normalizer may need mapping
+  var pieces=raw.map(function(p){return p.readyTo!==undefined?p:normalizeNotionContentItem(p);}).filter(Boolean);
   var longCount=pieces.filter(function(p){return !isShortContent(p);}).length;
   var shortCount=pieces.filter(isShortContent).length;
-  var longEl=document.getElementById('ct-long-count'),shortEl=document.getElementById('ct-short-count');
+  var longEl=document.getElementById(‘ct-long-count’),shortEl=document.getElementById(‘ct-short-count’);
   if(longEl)longEl.textContent=longCount;
   if(shortEl)shortEl.textContent=shortCount;
-  var summary=document.getElementById('ct-pipeline-summary');
-  if(summary){
-    if(!pieces.length){
-      summary.innerHTML='<strong>Pipeline needs a wider Notion sync.</strong> Right now this card can only read today’s loaded content. Next backend upgrade: pull all active content, not just today.';
-      return;
-    }
-    var bottleneck=stages.slice().sort(function(a,b){return counts[b]-counts[a];})[0];
-    var limited=window.__contentPipelineLimited;
-    if(counts[bottleneck]===0){
-      summary.innerHTML='<strong>No active bottleneck visible.</strong> Today’s loaded content is light. Use Notion to choose the next piece.';
-    }else{
-      var action=bottleneck==='Idea'?'choose one idea and schedule production':bottleneck==='Script'?'turn one idea into a shootable outline':bottleneck==='Record'?'record one piece before switching tasks':bottleneck==='Edit'?'finish one edit and prepare it to post':bottleneck==='Post'?'publish or schedule the ready piece':'turn one long piece into shorts';
-      summary.innerHTML='<strong>Bottleneck: '+bottleneck+'.</strong> '+action+'.'+(limited?' <span style="color:#2a4a70">Limited view: Apps Script still needs the active pipeline endpoint.</span>':'');
-    }
+  if(!pieces.length){
+    el.innerHTML=’<div class="ct-empty-note">No active projects visible. Connect Apps Script or add content in Notion.</div>’;
+    var sum=document.getElementById(‘ct-pipeline-summary’);
+    if(sum)sum.innerHTML=’’;
+    return;
   }
+  el.innerHTML=’’;
+  pieces.slice(0,12).forEach(function(p){
+    var stage=p.readyTo||normalizeContentStage(p);
+    var badgeCls=stageBadgeClass(stage);
+    var meta=[p.format,p.channel].filter(Boolean).join(‘ · ‘);
+    var dateStr=p.productionDate?new Date(p.productionDate+’T12:00:00’).toLocaleDateString(‘en-US’,{month:’short’,day:’numeric’}):’’;
+    var row=document.createElement(‘div’);
+    row.className=’ct-table-row’;
+    row.style.gridTemplateColumns=’1fr auto auto’;
+    row.innerHTML=’<div>’
+      +’<div class="ct-table-title">’+escapeHtml(p.title||’Untitled’)+(p.score?’ <span style="font-size:10px">’+escapeHtml(p.score)+’</span>’:’’)+’</div>’
+      +’<div class="ct-table-meta">’+escapeHtml(meta||’No format set’)+(dateStr?’ · ‘+dateStr:’’)+’</div>’
+      +’</div>’
+      +’<span class="stage-badge ‘+badgeCls+’">’+escapeHtml(stage||’—‘)+’</span>’
+      +’<a class="ct-table-link" href="’+escapeHtml(p.url||NOTION_CONTENT_URL)+’" target="_blank">Open</a>’;
+    el.appendChild(row);
+  });
+  // Bottleneck
+  var stageCounts={Idea:0,Script:0,Film:0,Edit:0,Schedule:0,Posted:0};
+  pieces.forEach(function(p){var s=normalizeContentStage(p);if(stageCounts[s]!==undefined)stageCounts[s]++;});
+  var bottleneck=Object.keys(stageCounts).sort(function(a,b){return stageCounts[b]-stageCounts[a];})[0];
+  var sum=document.getElementById(‘ct-pipeline-summary’);
+  if(sum){
+    if(!stageCounts[bottleneck]){sum.innerHTML=’’;}
+    else{sum.innerHTML=’<strong>Bottleneck: ‘+bottleneck+’</strong> — ‘+stageCounts[bottleneck]+’ item’+(stageCounts[bottleneck]===1?’’:’ ‘+’stacked here.’);}
+  }
+}
+
+async function loadPipelineByStage(stage){
+  var el=document.getElementById(‘pipe-projects-list’);
+  if(!el)return;
+  var url=localStorage.getItem(SHEETS_KEY);
+  if(!url){el.innerHTML=’<div class="ct-empty-note">Connect Apps Script in setup ⚙ to filter by stage.</div>’;return;}
+  el.innerHTML=’<div class="ct-loading">Loading ‘+escapeHtml(stage)+’...</div>’;
+  try{
+    var sep=url.indexOf(‘?’)>=0?’&’:’?’;
+    var res=await fetchWithRetry(url+sep+’action=content_pipeline&readyTo=’+encodeURIComponent(stage)+’&_=’+Date.now(),{method:’GET’,redirect:’follow’},2);
+    if(!res.ok)throw new Error(‘HTTP ‘+res.status);
+    var data=JSON.parse(await res.text());
+    if(data.status===’error’)throw new Error(data.message||’Apps Script error’);
+    var pieces=(data.items||[]).map(normalizeNotionContentItem).filter(Boolean);
+    renderProjectsTab(pieces);
+  }catch(ex){
+    el.innerHTML=’<div class="ct-empty-note">Stage filter error: ‘+escapeHtml(ex.message)+’</div>’;
+  }
+}
+
+async function loadAndRenderDistribution(){
+  if(window.__distributionData){renderDistributionTab(window.__distributionData);return;}
+  var el=document.getElementById(‘pipe-dist-body’);
+  if(!el)return;
+  var url=localStorage.getItem(SHEETS_KEY);
+  if(!url){el.innerHTML=’<div class="ct-empty-note">Connect Apps Script in setup ⚙.</div>’;return;}
+  el.innerHTML=’<div class="ct-loading">Loading distribution...</div>’;
+  try{
+    var sep=url.indexOf(‘?’)>=0?’&’:’?’;
+    var res=await fetchWithRetry(url+sep+’action=content_pipeline&view=distribution&_=’+Date.now(),{method:’GET’,redirect:’follow’},2);
+    if(!res.ok)throw new Error(‘HTTP ‘+res.status);
+    var data=JSON.parse(await res.text());
+    if(data.status===’error’)throw new Error(data.message||’Apps Script error’);
+    window.__distributionData=data;
+    renderDistributionTab(data);
+  }catch(ex){
+    el.innerHTML=’<div class="ct-empty-note">Distribution error: ‘+escapeHtml(ex.message)+’</div>’;
+  }
+}
+
+function renderDistributionTab(data){
+  var el=document.getElementById(‘pipe-dist-body’);
+  if(!el)return;
+  var items=data.items||[];
+  if(!items.length){
+    el.innerHTML=’<div class="ct-empty-note">No distributed content yet. Items with readyTo=Distribute in Notion will appear here.</div>’;
+    return;
+  }
+  var longs=items.filter(function(p){return !isShortContent(p);}).length;
+  var shorts=items.filter(isShortContent).length;
+  var platforms=[‘YouTube’,’YouTube Shorts’,’Instagram Reels’,’TikTok’,’Threads’,’Skool’];
+  var platCounts={};
+  platforms.forEach(function(pl){platCounts[pl]=0;});
+  items.forEach(function(p){
+    var plat=Array.isArray(p.platform)?p.platform:(p.platform?[p.platform]:[]);
+    plat.forEach(function(pl){if(platCounts[pl]!==undefined)platCounts[pl]++;});
+  });
+  var html=’<div class="ct-dist-grid">’
+    +’<div class="ct-dist-tile"><div class="ct-dist-val">’+items.length+’</div><div class="ct-dist-lbl">Total Posted</div></div>’
+    +’<div class="ct-dist-tile"><div class="ct-dist-val">’+longs+’</div><div class="ct-dist-lbl">Long-form</div></div>’
+    +’<div class="ct-dist-tile"><div class="ct-dist-val">’+shorts+’</div><div class="ct-dist-lbl">Short-form</div></div>’
+    +’</div>’
+    +’<div style="font-size:9px;font-weight:800;color:#5a7a9a;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">By Platform</div>’
+    +’<div class="ct-dist-grid">’
+    +platforms.map(function(pl){
+      return ‘<div class="ct-dist-tile"><div class="ct-dist-val" style="font-size:16px">’+(platCounts[pl]||0)+’</div><div class="ct-dist-lbl">’+escapeHtml(pl)+’</div></div>’;
+    }).join(‘’)
+    +’</div>’;
+  el.innerHTML=html;
+}
+
+async function loadAndRenderCommunity(){
+  if(window.__communityData){renderCommunityTab(window.__communityData);return;}
+  var el=document.getElementById(‘pipe-comm-body’);
+  if(!el)return;
+  var url=localStorage.getItem(SHEETS_KEY);
+  if(!url){el.innerHTML=’<div class="ct-empty-note">Connect Apps Script in setup ⚙.</div>’;return;}
+  el.innerHTML=’<div class="ct-loading">Loading community data...</div>’;
+  try{
+    var sep=url.indexOf(‘?’)>=0?’&’:’?’;
+    var res=await fetchWithRetry(url+sep+’action=skool_community&_=’+Date.now(),{method:’GET’,redirect:’follow’},2);
+    if(!res.ok)throw new Error(‘HTTP ‘+res.status);
+    var data=JSON.parse(await res.text());
+    if(data.status===’error’)throw new Error(data.message||’Apps Script error’);
+    window.__communityData=data;
+    renderCommunityTab(data);
+  }catch(ex){
+    el.innerHTML=’<div class="ct-empty-note">Community error: ‘+escapeHtml(ex.message)+’ — make sure action=skool_community is deployed in Apps Script.</div>’;
+  }
+}
+
+function renderCommunityTab(data){
+  var el=document.getElementById(‘pipe-comm-body’);
+  if(!el)return;
+  var m=data.metrics||{};
+  var members=data.members||[];
+  var html=’<div class="ct-comm-grid">’
+    +’<div class="ct-comm-tile"><div class="ct-comm-val">’+(m.newThisMonth||0)+’</div><div class="ct-comm-lbl">New This Month</div></div>’
+    +’<div class="ct-comm-tile"><div class="ct-comm-val">’+(m.callsBooked||0)+’</div><div class="ct-comm-lbl">Calls Booked</div></div>’
+    +’<div class="ct-comm-tile"><div class="ct-comm-val">’+(m.masterclassAttended||0)+’</div><div class="ct-comm-lbl">Masterclass</div></div>’
+    +’<div class="ct-comm-tile"><div class="ct-comm-val">’+(m.upgraded||0)+’</div><div class="ct-comm-lbl">Upgraded</div></div>’
+    +’</div>’;
+  if(members.length){
+    html+=’<div style="font-size:9px;font-weight:800;color:#5a7a9a;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Newest Members</div>’;
+    members.forEach(function(mem){
+      html+=’<div class="ct-comm-member">’
+        +’<div style="flex:1;min-width:0"><span class="ct-comm-name">’+escapeHtml(mem.name||’Unknown’)+’</span>’
+        +(mem.genre?’ <span class="ct-comm-genre">’+escapeHtml(mem.genre)+’</span>’:’’)
+        +’</div>’
+        +(mem.instagram?’<span class="ct-comm-handle">@’+escapeHtml(mem.instagram)+’</span>’:’’)
+        +’</div>’;
+    });
+  }else{
+    html+=’<div class="ct-empty-note">No new Skool members yet — or CRM tagging not set up. See Chief of Staff handoff for Make.com/Zapier setup.</div>’;
+  }
+  el.innerHTML=html;
 }
 
 function renderContentPerformance(){
