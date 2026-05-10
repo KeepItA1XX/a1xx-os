@@ -692,7 +692,7 @@ input:focus{border-color:#333}
 .ct-open-btn:hover{background:#0a1830}
 .ct-none{font-size:11px;color:#2a4a70;line-height:1.6}
 .ct-none a{color:#5b9cf6;text-decoration:none}
-.ct-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:3px;margin-bottom:10px}
+.ct-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#040c18;border:0.5px solid #0e2030;border-radius:9px;padding:3px;margin-bottom:10px}
 .close-log-section{background:#0e0e0e;border:0.5px solid #1a1a1a;border-radius:12px;padding:1.25rem;margin-bottom:10px}
 .close-log-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .close-log-title{font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.08em}
@@ -1474,6 +1474,7 @@ body{background:#090a0b;color:#d8dde1}
     <button class="ct-tab active" id="ct-tab-today" onclick="setContentView('today')">Today</button>
     <button class="ct-tab" id="ct-tab-pipeline" onclick="setContentView('pipeline')">Pipeline</button>
     <button class="ct-tab" id="ct-tab-repurpose" onclick="setContentView('repurpose')">Repurpose</button>
+    <button class="ct-tab" id="ct-tab-live" onclick="setContentView('live')">Live</button>
   </div>
   <div class="ct-view active" id="ct-view-today">
   <!-- TODAY'S SCHEDULED CONTENT (from Notion) -->
@@ -1553,6 +1554,12 @@ body{background:#090a0b;color:#d8dde1}
 
   <!-- STATUS LINE -->
   <div class="ct-status" id="ct-status">Loading your content record...</div>
+  </div>
+
+  <!-- LIVE TAB — v1.9 2026-05-10 -->
+  <div class="ct-view" id="ct-view-live">
+    <div id="ct-live-list"><div class="ct-loading">Loading live events...</div></div>
+    <a href="https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5" target="_blank" style="display:block;text-align:center;font-size:10px;color:#5b9cf6;font-weight:700;text-decoration:none;margin-top:12px;padding:6px;border:0.5px solid #1a3050;border-radius:6px">+ Add event in Notion →</a>
   </div>
 
   <div class="context-resources collapsed" id="ct-resources">
@@ -1720,16 +1727,8 @@ body{background:#090a0b;color:#d8dde1}
     </div>
   </div>
 </div>
-<!-- UPCOMING STREAMS & EVENTS -->
-<div class="cal-card collapsible-card" id="streams-card">
-  <div class="cal-label collapse-head" onclick="toggleCollapse('streams-card')">
-    <div class="collapse-title">Upcoming streams &amp; events <span class="collapse-chevron">▼</span></div>
-  </div>
-  <div class="collapse-body">
-    <div id="streams-list"><div class="cal-empty">Loading events...</div></div>
-    <a href="https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5" target="_blank" style="display:block;text-align:center;font-size:10px;color:#5b9cf6;font-weight:700;text-decoration:none;margin-top:10px;padding:6px;border:0.5px solid #1a3050;border-radius:6px">+ Add event in Notion →</a>
-  </div>
-</div>
+<!-- UPCOMING STREAMS & EVENTS — ARCHIVED 2026-05-10: moved to Content card Live tab -->
+<!-- streams-card removed from Manager; live stream events now render in ct-view-live -->
 </div><!-- end manager-split-wrapper -->
 
 <div id="confetti" class="confetti-bang">🎯</div>
@@ -4159,6 +4158,67 @@ function renderLiveEvents(events){
 }
 
 /* ══════════════════════════════════════════════════════════
+   LIVE TAB RENDERER (Content card) — v1.9 2026-05-10
+   Filters __liveEvents to streaming types only.
+   Business events (Masterclass, Conference, etc.) will get
+   their own Manager card panel in a future build.
+══════════════════════════════════════════════════════════ */
+var LIVE_STREAM_TYPES=['Twitch Stream','IRL Stream','YouTube Live','Studio Session'];
+
+function renderLiveTab(){
+  var el=document.getElementById('ct-live-list');
+  if(!el)return;
+  var all=window.__liveEvents||[];
+  // Filter to streaming/production types only
+  var events=all.filter(function(ev){
+    return !ev.type||LIVE_STREAM_TYPES.indexOf(ev.type)>=0;
+  });
+  if(!all.length){
+    el.innerHTML='<div class="ct-loading">Loading live events...</div>';
+    return;
+  }
+  if(!events.length){
+    el.innerHTML='<div class="ct-empty-note">No upcoming streams scheduled. Add one in Notion to see it here.</div>';
+    return;
+  }
+  var now=new Date();
+  var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  el.innerHTML='';
+  events.forEach(function(ev){
+    var icon=LIVE_EVENT_TYPE_ICONS[ev.type]||'📡';
+    var statusColor=ev.status==='Confirmed'?'#639922':ev.status==='Live Now'?'#e05555':'#444';
+    var cpColor=LIVE_CONTENT_COLORS[ev.contentPotential]||'#444';
+    var dateStr='';
+    var daysOut='';
+    if(ev.date){
+      var d=new Date(ev.date+'T12:00:00');
+      if(!isNaN(d.getTime())){
+        dateStr=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+        var diff=Math.round((d-today)/(864e5));
+        daysOut=diff===0?'Today':diff===1?'Tomorrow':diff>0?'In '+diff+' days':'';
+      }
+    }
+    var platforms=Array.isArray(ev.platform)?ev.platform.join(' · '):(ev.platform||'');
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:0.5px solid #0e2030';
+    row.innerHTML='<div style="font-size:20px;line-height:1;padding-top:2px">'+icon+'</div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">'
+          +'<span style="font-size:12px;font-weight:700;color:#d7dde3">'+escapeHtml(ev.title||'Untitled')+'</span>'
+          +(ev.status?'<span style="font-size:9px;font-weight:700;color:'+statusColor+';text-transform:uppercase;letter-spacing:.07em">'+escapeHtml(ev.status)+'</span>':'')
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'
+          +(dateStr?'<span style="font-size:10px;color:#8a9ba8">'+dateStr+'</span>':'')
+          +(daysOut?'<span style="font-size:10px;font-weight:700;color:'+cpColor+'">'+daysOut+'</span>':'')
+        +'</div>'
+        +(platforms?'<div style="font-size:10px;color:#5b9cf6;margin-bottom:2px">'+escapeHtml(platforms)+'</div>':'')
+        +(ev.topic?'<div style="font-size:10px;color:#5a7a9a;font-style:italic">'+escapeHtml(ev.topic)+'</div>':'')
+      +'</div>';
+    el.appendChild(row);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
    TODOIST
 ══════════════════════════════════════════════════════════ */
 async function loadTodoist(){
@@ -5339,7 +5399,8 @@ async function loadTodayData(){
   var resources=loaded[2]||[];
   var crmLeads=loaded[3]||[];
   var calEvents=loaded[4]||[];
-  // loaded[5] = liveEvents — renderLiveEvents() called inside loadLiveEvents automatically
+  // loaded[5] = liveEvents — renderLiveEvents() called inside loadLiveEvents (Manager archived)
+  safeRender('live tab',function(){renderLiveTab();});
   window.__contentPieces=notionPieces||[];
   window.__contentPipelinePieces=pipelinePieces||notionPieces||[];
   window.__productionPieces=productionPieces||[];
@@ -5864,13 +5925,14 @@ function getContentLog(){
 
 function setContentView(view){
   contentView=view||'today';
-  ['today','pipeline','repurpose'].forEach(function(v){
+  ['today','pipeline','repurpose','live'].forEach(function(v){
     var tab=document.getElementById('ct-tab-'+v);
     var pane=document.getElementById('ct-view-'+v);
     if(tab)tab.classList.toggle('active',v===contentView);
     if(pane)pane.classList.toggle('active',v===contentView);
   });
   renderContextResources('content',contentView);
+  if(contentView==='live')renderLiveTab();
   renderContentCard();
 }
 
@@ -5927,7 +5989,7 @@ function renderContentCard(){
   var streak=getContentStreak();
   var streakEl=document.getElementById('ct-streak-num');
   if(streakEl)streakEl.textContent=streak;
-  ['today','pipeline','repurpose'].forEach(function(v){
+  ['today','pipeline','repurpose','live'].forEach(function(v){
     var tab=document.getElementById('ct-tab-'+v);
     var pane=document.getElementById('ct-view-'+v);
     if(tab)tab.classList.toggle('active',v===contentView);
@@ -6056,12 +6118,14 @@ function renderTodayContentInCard(){
 }
 
 function normalizeContentStage(piece){
-  var raw=String((piece&&piece.stage)||(piece&&piece.status)||'').toLowerCase();
-  if(/idea|plan|concept|backlog|draft/.test(raw))return 'Idea';
+  // readyTo is the field returned by Apps Script v1.4+ — always check it first
+  var raw=String((piece&&piece.readyTo)||(piece&&piece.stage)||(piece&&piece.status)||'').toLowerCase();
+  if(/idea|plan|concept|backlog|draft|create/.test(raw))return 'Idea';
   if(/script|outline|write|writing/.test(raw))return 'Script';
-  if(/record|film|shoot|produce|production/.test(raw))return 'Record';
+  if(/record|film|shoot|produce|production/.test(raw))return 'Film';
   if(/edit|editing|review|cut/.test(raw))return 'Edit';
-  if(/post|publish|scheduled|ready|done|live/.test(raw))return 'Post';
+  if(/schedule|ready/.test(raw))return 'Schedule';
+  if(/post|publish|done|live|distribut/.test(raw))return 'Posted';
   if(/clip|repurpose|short|shorts|reel/.test(raw))return 'Clip';
   return 'Idea';
 }
