@@ -1720,6 +1720,16 @@ body{background:#090a0b;color:#d8dde1}
     </div>
   </div>
 </div>
+<!-- UPCOMING STREAMS & EVENTS -->
+<div class="cal-card collapsible-card" id="streams-card">
+  <div class="cal-label collapse-head" onclick="toggleCollapse('streams-card')">
+    <div class="collapse-title">Upcoming streams &amp; events <span class="collapse-chevron">▼</span></div>
+  </div>
+  <div class="collapse-body">
+    <div id="streams-list"><div class="cal-empty">Loading events...</div></div>
+    <a href="https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5" target="_blank" style="display:block;text-align:center;font-size:10px;color:#5b9cf6;font-weight:700;text-decoration:none;margin-top:10px;padding:6px;border:0.5px solid #1a3050;border-radius:6px">+ Add event in Notion →</a>
+  </div>
+</div>
 </div><!-- end manager-split-wrapper -->
 
 <div id="confetti" class="confetti-bang">🎯</div>
@@ -4061,6 +4071,94 @@ function formatCalTime(value){
 }
 
 /* ══════════════════════════════════════════════════════════
+   LIVE EVENTS & STREAMS (v1.9 — 2026-05-10)
+   Notion DB: 99fcf23b-0cdc-49e7-9e23-9e99c08438d5
+   Apps Script action: live_events
+══════════════════════════════════════════════════════════ */
+async function loadLiveEvents(){
+  var url=localStorage.getItem(SHEETS_KEY);
+  var el=document.getElementById('streams-list');
+  if(!el)return[];
+  if(!url){
+    el.innerHTML='<div class="cal-empty">Connect Apps Script in setup to see events.</div>';
+    return[];
+  }
+  el.innerHTML='<div class="cal-empty">Loading events...</div>';
+  try{
+    var sep=url.indexOf('?')>=0?'&':'?';
+    var res=await fetchWithRetry(url+sep+'action=live_events&_='+Date.now(),{method:'GET',redirect:'follow'},2);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    var data=JSON.parse(await res.text());
+    if(data&&data.status==='error')throw new Error(data.message||'Apps Script error');
+    var events=data.items||[];
+    window.__liveEvents=events;
+    renderLiveEvents(events);
+    return events;
+  }catch(ex){
+    el.innerHTML='<div class="cal-empty">Events unavailable — '+ex.message+'</div>';
+    console.warn('loadLiveEvents error',ex);
+    return[];
+  }
+}
+
+var LIVE_EVENT_TYPE_ICONS={
+  'Twitch Stream':'🎮',
+  'IRL Stream':'📡',
+  'Performance':'🎤',
+  'Open Mic':'🎙️',
+  'Conference':'🏛️',
+  'Industry Event':'🤝',
+  'YouTube Live':'▶️',
+  'Studio Session':'🎹'
+};
+var LIVE_CONTENT_COLORS={'🔥 High':'#d4a017','⚡ Medium':'#639922','📌 Low':'#444'};
+
+function renderLiveEvents(events){
+  var el=document.getElementById('streams-list');
+  if(!el)return;
+  if(!events||!events.length){
+    el.innerHTML='<div class="cal-empty">No upcoming events — add one in Notion.</div>';
+    return;
+  }
+  var now=new Date();
+  var upcoming=events.filter(function(ev){
+    if(!ev.date)return true;
+    var d=new Date(ev.date);
+    return isNaN(d.getTime())||d>=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  });
+  if(!upcoming.length){
+    el.innerHTML='<div class="cal-empty">No upcoming events — add one in Notion.</div>';
+    return;
+  }
+  el.innerHTML='';
+  upcoming.forEach(function(ev){
+    var icon=LIVE_EVENT_TYPE_ICONS[ev.type]||'📅';
+    var statusColor=ev.status==='Confirmed'?'#639922':ev.status==='Live Now'?'#e05555':'#555';
+    var cpColor=LIVE_CONTENT_COLORS[ev.contentPotential]||'#555';
+    var dateStr='';
+    if(ev.date){
+      var d=new Date(ev.date+'T12:00:00');
+      if(!isNaN(d.getTime()))dateStr=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    }
+    var platforms=Array.isArray(ev.platform)?ev.platform.join(' · '):(ev.platform||'');
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:0.5px solid #1a1a1a';
+    row.innerHTML='<div style="font-size:18px;line-height:1;padding-top:2px">'+icon+'</div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px">'
+          +'<span style="font-size:12px;font-weight:600;color:#e0e0e0">'+escapeHtml(ev.title||'Untitled')+'</span>'
+          +(ev.status?'<span style="font-size:9px;font-weight:700;color:'+statusColor+';text-transform:uppercase;letter-spacing:.06em">'+escapeHtml(ev.status)+'</span>':'')
+          +(ev.contentPotential?'<span style="font-size:9px;color:'+cpColor+'">'+escapeHtml(ev.contentPotential)+'</span>':'')
+        +'</div>'
+        +(dateStr?'<div style="font-size:10px;color:#888;margin-bottom:2px">'+dateStr+(ev.location?' · '+escapeHtml(ev.location):'')+'</div>':'')
+        +(platforms?'<div style="font-size:10px;color:#5b9cf6">'+escapeHtml(platforms)+'</div>':'')
+        +(ev.topic?'<div style="font-size:10px;color:#666;margin-top:2px;font-style:italic">'+escapeHtml(ev.topic)+'</div>':'')
+      +'</div>';
+    el.appendChild(row);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
    TODOIST
 ══════════════════════════════════════════════════════════ */
 async function loadTodoist(){
@@ -5233,13 +5331,15 @@ async function loadTodayData(){
     safeLoad('production pipeline',function(){return loadProductionPipeline();},[],12000),
     safeLoad('resource library',function(){return loadResources();},[],12000),
     safeLoad('CRM leads',function(){return loadCRMLeads();},[],12000),
-    safeLoad('Google Calendar',function(){return loadCalendar();},[],12000)
+    safeLoad('Google Calendar',function(){return loadCalendar();},[],12000),
+    safeLoad('live events',function(){return loadLiveEvents();},[],12000)
   ]);
   var pipelinePieces=loaded[0]||notionPieces||[];
   var productionPieces=loaded[1]||[];
   var resources=loaded[2]||[];
   var crmLeads=loaded[3]||[];
   var calEvents=loaded[4]||[];
+  // loaded[5] = liveEvents — renderLiveEvents() called inside loadLiveEvents automatically
   window.__contentPieces=notionPieces||[];
   window.__contentPipelinePieces=pipelinePieces||notionPieces||[];
   window.__productionPieces=productionPieces||[];
