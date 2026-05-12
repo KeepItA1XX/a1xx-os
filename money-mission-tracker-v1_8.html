@@ -2427,7 +2427,7 @@ body{background:#090a0b;color:#d8dde1}
     <a class="rolodex-item" href="https://app.clickfunnels.com" target="_blank" rel="noopener noreferrer"><div class="ri-icon blue">🎯</div><div><div class="ri-name">ClickFunnels</div><div class="ri-type">CRM &amp; Pipeline</div></div></a>
     <a class="rolodex-item" href="https://app.honeybook.com" target="_blank" rel="noopener noreferrer"><div class="ri-icon amber">📄</div><div><div class="ri-name">HoneyBook</div><div class="ri-type">Invoicing &amp; Clients</div></div></a>
     <a class="rolodex-item" href="https://app.manychat.com" target="_blank" rel="noopener noreferrer"><div class="ri-icon green">🤖</div><div><div class="ri-name">ManyChat</div><div class="ri-type">ATL Automation</div></div></a>
-    <a class="rolodex-item" href="https://docs.google.com/spreadsheets/d/1xVgCKTmJ6KrqIKUGLkM52HUqbNe_4GnduBgnebte7Dc/edit" target="_blank" rel="noopener noreferrer"><div class="ri-icon green">📊</div><div><div class="ri-name">Revenue Tracker Sheet</div><div class="ri-type">Google Sheets · Active backend</div></div></a>
+    <a class="rolodex-item" href="https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit" target="_blank" rel="noopener noreferrer"><div class="ri-icon green">📊</div><div><div class="ri-name">Revenue Tracker Sheet</div><div class="ri-type">Google Sheets · Active backend (Apps Script bound)</div></div></a>
     <a class="rolodex-item" href="https://www.skool.com" target="_blank" rel="noopener noreferrer"><div class="ri-icon purple">🎓</div><div><div class="ri-name">Skool</div><div class="ri-type">Rappreneur OS Community</div></div></a>
     <a class="rolodex-item" href="https://todoist.com" target="_blank" rel="noopener noreferrer"><div class="ri-icon red">✅</div><div><div class="ri-name">Todoist</div><div class="ri-type">Daily Execution</div></div></a>
   </div>
@@ -6102,7 +6102,54 @@ function saveWeekly(){
   document.getElementById('streak-n').textContent=streak.count;
 }
 function captureWeekData(){
-  return{rev:parseFloat(document.getElementById('w-rev').value)||0,wk:parseFloat(document.getElementById('w-wk').value)||400,ad:parseFloat(document.getElementById('w-ad').value)||0,sw:parseFloat(document.getElementById('w-sw').value)||0,sv:parseFloat(document.getElementById('w-sv').value)||0,ot:parseFloat(document.getElementById('w-ot').value)||0,dms:parseFloat(document.getElementById('w-dms').value)||0,resp:parseFloat(document.getElementById('w-resp').value)||0,calls:parseFloat(document.getElementById('w-calls').value)||0,closes:parseFloat(document.getElementById('w-closes').value)||0,content:parseFloat(document.getElementById('w-content').value)||0,sessions:parseFloat(document.getElementById('w-sessions').value)||0,noteWin:document.getElementById('w-win').value,noteLesson:document.getElementById('w-lesson').value,streams:['s-studio','s-mix','s-os','s-deals','s-beats','s-other'].map(function(id){var e=document.getElementById(id);return e?parseFloat(e.value)||0:0;}),weekRevs:(function(){var a=[];for(var i=0;i<8;i++){var e=document.getElementById('wrv-'+i);a.push(e?parseFloat(e.value)||0:0);}return a;})()};
+  // 2026-05-12 — rewritten to include all fields the Apps Script Weekly Saves row expects.
+  // Original short keys (rev/wk/ad/...) are preserved for backward compat with loadWeekData / exportCSV.
+  // New long keys (revenue/weekTarget/adSpend/cycleNum/...) match WEEKLY_HEADERS in the Apps Script.
+  function n(id){var e=document.getElementById(id);return e?parseFloat(e.value)||0:0;}
+  function t(id){var e=document.getElementById(id);return e?(e.value||''):'';}
+  var ci=getCycleIdx(),c=CYCLES[ci]||{};
+  var rev=n('w-rev'),wk=n('w-wk')||400;
+  var ad=n('w-ad'),sw=n('w-sw'),sv=n('w-sv'),ot=n('w-ot');
+  var dms=n('w-dms'),resp=n('w-resp'),calls=n('w-calls'),closes=n('w-closes'),content=n('w-content'),sessions=n('w-sessions');
+  var noteWin=t('w-win'),noteLesson=t('w-lesson');
+  var streams=['s-studio','s-mix','s-os','s-deals','s-beats','s-other'].map(function(id){return n(id);});
+  var weekRevs=[];for(var i=0;i<8;i++){weekRevs.push(n('wrv-'+i));}
+  // Computed/derived fields
+  var elapsed=typeof daysElapsed==='function'?daysElapsed(ci):0;
+  var left=typeof daysLeft==='function'?daysLeft(ci):0;
+  var total=typeof totalDays==='function'?totalDays(ci):55;
+  var adP=Math.round(ad/30*elapsed),swP=Math.round(sw/30*elapsed);
+  var totalExpenses=adP+swP+sv+ot;
+  var netProfit=rev-totalExpenses;
+  var margin=rev>0?Math.round(netProfit/rev*100):0;
+  var pace=elapsed>0?+(rev/elapsed).toFixed(2):0;
+  var projected=Math.round(pace*total);
+  var roas=adP>0?+(rev/adP).toFixed(2):0;
+  var dealVal=closes>0?+(rev/closes).toFixed(2):0;
+  var cycleDates=(c.start&&c.end)?(c.start+' → '+c.end):'';
+  return{
+    // Original short keys (kept for loadWeekData + exportCSV + any legacy callers)
+    rev:rev,wk:wk,ad:ad,sw:sw,sv:sv,ot:ot,
+    dms:dms,resp:resp,calls:calls,closes:closes,content:content,sessions:sessions,
+    noteWin:noteWin,noteLesson:noteLesson,streams:streams,weekRevs:weekRevs,
+    // Apps Script Weekly Saves row keys
+    timestamp:new Date().toISOString(),
+    date:new Date().toLocaleDateString(),
+    cycleNum:c.num||'',cycleName:c.name||'',cycleDates:cycleDates,cycleTarget:c.target||0,
+    daysElapsed:elapsed,daysLeft:left,
+    revenue:rev,weekTarget:wk,
+    adSpend:ad,software:sw,services:sv,otherExp:ot,totalExpenses:totalExpenses,
+    netProfit:netProfit,margin:margin,roas:roas,
+    dailyPace:pace,projectedTotal:projected,
+    leads:resp,dealVal:dealVal,
+    dmSent:dms,dmResp:resp,dmOffer:0,dmClose:closes,
+    cumDms:dms,cumPosts:content,
+    studioCommission:streams[0],mixMaster:streams[1],rapreneurOS:streams[2],
+    productionDeals:streams[3],customBeats:streams[4],otherIncome:streams[5],
+    weeklyRevenue:weekRevs,
+    weeklyServices:[0,0,0,0,0,0,0,0],
+    weeklyOther:[0,0,0,0,0,0,0,0]
+  };
 }
 function loadWeekData(){
   var d=getStore(STORE);if(!d)return;
