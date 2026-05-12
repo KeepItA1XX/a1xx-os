@@ -2216,8 +2216,8 @@ body{background:#090a0b;color:#d8dde1}
 <div class="report-hero">
   <div class="report-card"><div class="rc-label">Revenue to date</div><div class="rc-value green" id="r-rev">—</div><div class="rc-sub">This cycle</div></div>
   <div class="report-card"><div class="rc-label">True net profit</div><div class="rc-value" id="r-net">—</div><div class="rc-sub" id="r-net-sub">after all expenses</div></div>
-  <div class="report-card"><div class="rc-label">To week target</div><div class="rc-value" id="r-week">—</div><div class="rc-sub" id="r-week-sub">of —</div></div>
-  <div class="report-card"><div class="rc-label">To cycle target</div><div class="rc-value" id="r-cycle">—</div><div class="rc-sub" id="r-cycle-sub">of —</div></div>
+  <div class="report-card"><div class="rc-label">Week progress</div><div class="rc-value" id="r-week">—</div><div class="rc-sub" id="r-week-sub">of —</div></div>
+  <div class="report-card"><div class="rc-label">Cycle progress</div><div class="rc-value" id="r-cycle">—</div><div class="rc-sub" id="r-cycle-sub">of —</div></div>
 </div>
 
 <div class="prog-section">
@@ -6053,8 +6053,17 @@ function updateReport(){
   var sc=function(id,cls){var e=document.getElementById(id);if(e)e.className=cls;};
   s('r-rev',fmt(rev));s('r-net',fmt(net));sc('r-net','rc-value '+(net>0?'green':'red'));
   s('r-net-sub','after '+fmt(totalExp)+' expenses');
-  s('r-week',fmt(Math.max(0,wk-rev)));s('r-week-sub','of '+fmt(wk));
-  s('r-cycle',fmt(Math.max(0,c.target-rev)));s('r-cycle-sub','of '+fmt(c.target));
+  // 2026-05-12 — show earned amount as the big number, target + status as subtext.
+  // Previous version showed remaining-to-goal which became misleading once a target was met.
+  var wkPct=wk>0?Math.round(rev/wk*100):0;
+  var cycPct=c.target>0?Math.round(rev/c.target*100):0;
+  var wkMet=rev>=wk,cycMet=rev>=c.target;
+  s('r-week',fmt(rev));
+  s('r-week-sub',wkMet?'✓ '+fmt(wk)+' goal met · +'+fmt(rev-wk)+' over':'of '+fmt(wk)+' · '+wkPct+'%');
+  sc('r-week','rc-value '+(wkMet?'green':''));
+  s('r-cycle',fmt(rev));
+  s('r-cycle-sub',cycMet?'✓ '+fmt(c.target)+' goal met · +'+fmt(rev-c.target)+' over':'of '+fmt(c.target)+' · '+cycPct+'%');
+  sc('r-cycle','rc-value '+(cycMet?'green':''));
   var pw=pct(rev,wk),pc2=pct(rev,c.target),pg=pct(rev,goal);
   s('pp-week',pw+'%');s('pp-cycle',pc2+'%');s('pp-goal',pg+'%');
   s('pb-cycle-lbl','Cycle '+c.num+' — '+c.name);
@@ -6080,6 +6089,8 @@ function updateReport(){
 /* SAVE / LOAD */
 function saveWeekly(){
   syncProductionData();updateStreakChain();
+  if(typeof calcWeek==='function')calcWeek();
+  if(typeof updateReport==='function')updateReport();  /* 2026-05-12: refresh Report tab cards on every weekly save */
   var data=captureWeekData();data.ts=Date.now();setStore(STORE,data);
   var url=localStorage.getItem(SHEETS_KEY);
   if(url)fetch(url,{method:'POST',body:JSON.stringify(Object.assign({type:'weekly_save'},data)),mode:'no-cors',redirect:'follow'});
