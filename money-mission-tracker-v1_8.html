@@ -6781,11 +6781,13 @@ function updateTopbarBiz(){
       daysEl.textContent=dl===1?'1 day left':dl+' days left';
     }
     // 2026-05-12 — cycle progress percentage in topbar (revenue / target)
+    // Fixed 2026-05-12: show "100%+" instead of clamping at "999%" when goal is exceeded.
     if(pctEl&&cy&&cy.target){
       var revStr=String((cpRev&&cpRev.textContent)||'0').replace(/[^0-9.\-]/g,'');
       var revNum=parseFloat(revStr)||0;
-      var pct=Math.max(0,Math.min(999,Math.round(revNum/cy.target*100)));
-      pctEl.textContent=pct+'%';
+      var raw=Math.round(revNum/cy.target*100);
+      if(raw<0)raw=0;
+      pctEl.textContent=raw>100?'100%+':raw+'%';
     }
   }catch(e){}
 }
