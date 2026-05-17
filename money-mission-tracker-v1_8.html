@@ -660,6 +660,7 @@ input:focus{border-color:#333}
 .dpc-lead-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
 .dpc-lead-card{display:grid;grid-template-columns:1fr auto;gap:10px;background:#050f02;border:0.5px solid #1a2a0a;border-radius:10px;padding:10px}
 .dpc-lead-name{font-size:12px;font-weight:800;color:#f0f3f5;margin-bottom:4px}
+.dpc-lead-subname{font-size:10px;font-weight:700;color:#8b949e;margin:-1px 0 5px}
 .dpc-lead-phone-line,.hl-phone-line{font-size:11px;font-weight:800;margin:0 0 4px}
 .dpc-lead-phone-line a,.hl-phone-line a{color:#7ec845;text-decoration:none}
 .dpc-lead-phone-line a:hover,.hl-phone-line a:hover{color:#9ee45c}
@@ -1528,6 +1529,12 @@ body{background:#090a0b;color:#d8dde1}
           color: #f0f3f5;
           margin-bottom: 3px;
           line-height: 1.25;
+        }
+        .hl-subname {
+          font-size: 11px;
+          font-weight: 700;
+          color: #8b949e;
+          margin: -2px 0 6px;
         }
         .hl-meta {
           font-size: 10px;
@@ -3902,12 +3909,52 @@ function sortLeadsByQueue(a,b){
 function uniqueLeads(leads){
   var seen={};
   return (leads||[]).filter(function(lead){
-    var key=(lead.url||lead.email||lead.phone||lead.name||'').toLowerCase();
+    var key=(lead.url||lead.email||lead.phone||getLeadDisplayName(lead)||lead.name||'').toLowerCase();
     if(!key)return false;
     if(seen[key])return false;
     seen[key]=true;
     return true;
   });
+}
+
+function cleanLeadText(value){
+  return String(value||'').trim();
+}
+
+function getLeadField(lead,keys){
+  lead=lead||{};
+  for(var i=0;i<keys.length;i++){
+    var value=cleanLeadText(lead[keys[i]]);
+    if(value)return value;
+  }
+  return '';
+}
+
+function getLeadStageName(lead){
+  return getLeadField(lead,['stageName','Stage Name','artistName','Artist Name','performerName','stage_name']);
+}
+
+function getLeadRealName(lead){
+  return getLeadField(lead,['realName','Real Name','legalName','Legal Name','contactName','Contact Name','fullName','Full Name']);
+}
+
+function getLeadDisplayName(lead){
+  lead=lead||{};
+  return getLeadStageName(lead)||cleanLeadText(lead.name||lead.Name||lead.title)||getLeadRealName(lead)||'Unnamed lead';
+}
+
+function getLeadSecondaryName(lead){
+  var display=getLeadDisplayName(lead).toLowerCase();
+  var real=getLeadRealName(lead);
+  if(real&&real.toLowerCase()!==display)return real;
+  return '';
+}
+
+function buildLeadNameBlock(lead,nameClass,subClass,fallback){
+  var display=getLeadDisplayName(lead)||fallback||'Lead';
+  var secondary=getLeadSecondaryName(lead);
+  return '<div class="'+escapeHtml(nameClass)+'">'+escapeHtml(display)+'</div>'
+    +(secondary?'<div class="'+escapeHtml(subClass)+'">'+escapeHtml(secondary)+'</div>':'');
 }
 
 function getFollowAttentionLeads(activeCRM,dueCRM,hotCRM){
@@ -3929,7 +3976,7 @@ function renderQueueLeadCard(lead){
   var callBtn=tel?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(tel)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
   return '<div class="dpc-lead-card">'
     +'<div>'
-      +'<div class="dpc-lead-name">'+escapeHtml(lead.name||'Unnamed lead')+'</div>'
+      +buildLeadNameBlock(lead,'dpc-lead-name','dpc-lead-subname','Unnamed lead')
       +buildLeadPhoneLine(phone,'dpc-lead-phone-line')
       +'<div class="dpc-lead-meta">'+escapeHtml([recency,lead.stage||lead.status||'',funnel].filter(Boolean).join(' · '))+'</div>'
       +renderLeadBadges({heat:heat.label,stage:lead.stage||lead.status||'',cfTags:lead.cfTags||[]},true)
@@ -3963,10 +4010,10 @@ function renderCallLeadCard(lead){
   var meta=[lead.funnelSource||lead.source||'Manual',lead.stage||lead.status||'',asArray(lead.offerInterest).join(', ')].filter(Boolean).join(' · ');
   var tel=phone.replace(/[^0-9+]/g,'');
   var callBtn=tel?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(tel)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
-  var rescheduleLabel=encodeURIComponent(lead.name||'Lead');
+  var rescheduleLabel=encodeURIComponent(getLeadDisplayName(lead)||'Lead');
   return '<div class="dpc-lead-card">'
     +'<div>'
-      +'<div class="dpc-lead-name">'+escapeHtml(lead.name||'Unnamed lead')+'</div>'
+      +buildLeadNameBlock(lead,'dpc-lead-name','dpc-lead-subname','Unnamed lead')
       +buildLeadPhoneLine(phone,'dpc-lead-phone-line')
       +'<div class="dpc-lead-meta">'+escapeHtml([recency.join(' · '),meta].filter(Boolean).join(' · '))+'</div>'
       +renderLeadBadges({heat:getLeadHeatBucket(lead).label,stage:lead.stage||lead.status||'',cfTags:lead.cfTags||[]},true)
@@ -3992,10 +4039,10 @@ function renderLeadCard(lead){
   var phone=String(lead.phone||'').trim();
   var tel=phone.replace(/[^0-9+]/g,'');
   var callBtn=tel?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(tel)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
-  var rescheduleLabel=encodeURIComponent(lead.name||'Lead');
+  var rescheduleLabel=encodeURIComponent(getLeadDisplayName(lead)||'Lead');
   var rescheduleBtn='<button type="button" class="dpc-mini-btn" onclick="quickRescheduleCall(decodeURIComponent(\''+rescheduleLabel+'\'))">Reschedule</button>';
   var openUrl=lead.instagramUrl||lead.url||NOTION_CRM_URL;
-  return '<div class="dpc-lead-card"><div><div class="dpc-lead-name">'+escapeHtml(lead.name)+'</div>'
+  return '<div class="dpc-lead-card"><div>'+buildLeadNameBlock(lead,'dpc-lead-name','dpc-lead-subname','Lead')
     +buildLeadPhoneLine(phone,'dpc-lead-phone-line')
     +'<div class="dpc-lead-meta">'+escapeHtml(lead.heat+' · '+lead.meta)+'</div>'
     +renderLeadBadges(lead,false)
@@ -4066,6 +4113,8 @@ function buildCRMLeadCard(lead){
   var next=lead.followUpDate?'Follow up: '+formatContentDate(lead.followUpDate):'Next: move this lead one stage forward';
   return renderLeadCard({
     name:lead.name||'Unnamed lead',
+    stageName:getLeadStageName(lead),
+    realName:getLeadRealName(lead),
     meta:[source,stage,offer].filter(Boolean).join(' · '),
     next:next,
     heat:isHotCRMLead(lead)?'Hot':'Active',
@@ -4118,7 +4167,8 @@ function isATLLead(lead){
 function buildHLPhone(lead){
   var phone=String(lead.phone||'').trim();
   if(!phone)return '';
-  return '<span class="hl-phone" onclick="hlCopyPhone(\''+escapeHtml(phone)+'\')" id="hlph-'+escapeHtml(lead.name.replace(/\s/g,''))+'">📋 '+escapeHtml(phone)+'</span>';
+  var leadId=getLeadDisplayName(lead).replace(/\s/g,'');
+  return '<span class="hl-phone" onclick="hlCopyPhone(\''+escapeHtml(phone)+'\')" id="hlph-'+escapeHtml(leadId)+'">📋 '+escapeHtml(phone)+'</span>';
 }
 
 function buildLeadPhoneLine(phone,lineClass){
@@ -4143,7 +4193,7 @@ function hlCopyPhone(phone){
 }
 
 function getFollowUpScript(lead){
-  var name=(lead.name||'').split(' ')[0]||'hey';
+  var name=firstName(getLeadDisplayName(lead));
   var key=getCRMStageKey(lead);
   var stageLabel={new:'New Lead',resource:'Downloaded Resource',skool:'Joined Community',masterclass:'Watched Masterclass',follow:'Follow-Up',booked:'Call Booked',paid:'Client Check-In'};
   var scripts={
@@ -4179,7 +4229,7 @@ function leadContext(lead){
 
 function buildReplyMessage(lead,goal){
   lead=lead||{};
-  var name=firstName(lead.name);
+  var name=firstName(getLeadDisplayName(lead));
   var ctx=leadContext(lead);
   var stage=getCRMStageKey(lead);
   var templates={
@@ -4259,9 +4309,9 @@ function renderReplyBuilder(){
   // state matches __replyGoal even after re-renders.
   function opt(val,text){return '<option value="'+val+'"'+(goal===val?' selected':'')+'>'+text+'</option>';}
   box.innerHTML='<div class="dpc-reply-pickers">'+leads.map(function(l,i){
-      return '<button class="dpc-reply-pill '+(i===selectedIdx?'active':'')+'" onclick="selectReplyLead('+i+')">'+escapeHtml(l.name||'Lead')+'</button>';
+      return '<button class="dpc-reply-pill '+(i===selectedIdx?'active':'')+'" onclick="selectReplyLead('+i+')">'+escapeHtml(getLeadDisplayName(l)||'Lead')+'</button>';
     }).join('')+'</div>'
-    +'<div class="dpc-reply-selected">'+escapeHtml(lead.name||'Lead')+' · '+escapeHtml(getCRMStageKey(lead))+'</div>'
+    +'<div class="dpc-reply-selected">'+escapeHtml(getLeadDisplayName(lead)||'Lead')+' · '+escapeHtml(getCRMStageKey(lead))+'</div>'
     +'<div class="dpc-reply-controls"><select class="dpc-reply-select" id="reply-goal" onpointerdown="holdReplyBuilder(3500)" onfocus="holdReplyBuilder(3500)" onchange="setReplyGoal(this.value)">'
       +opt('book','My goal is to book a call')
       +opt('reengage','My goal is to re-engage')
@@ -4632,7 +4682,7 @@ function buildHLCard(lead,variant){
   var scriptId='hls-'+Math.random().toString(36).slice(2,8);
   return '<div class="hl-card '+variant+'">'
     +'<div>'
-    +'<div class="hl-name">'+escapeHtml(lead.name||'Unknown')+'</div>'
+    +buildLeadNameBlock(lead,'hl-name','hl-subname','Unknown')
     +buildLeadPhoneLine(phone,'hl-phone-line')
     +(badges?'<div class="hl-badges">'+badges+'</div>':'')
     +'</div>'
@@ -5225,6 +5275,8 @@ function normalizeCRMLeads(data){
     if(item.properties)return notionPageToCRMLead(item);
     return {
       name:item.name||item.title||item.Name||'Unnamed lead',
+      stageName:item.stageName||item['Stage Name']||item.artistName||item['Artist Name']||'',
+      realName:item.realName||item['Real Name']||item.legalName||item['Legal Name']||'',
       source:item.source||item.Source||'',
       funnelSource:item.funnelSource||item.cfFunnelSource||item['CF Funnel Source']||'',
       cfTags:asArray(item.cfTags||item['CF Tags']||[]),
@@ -5247,7 +5299,7 @@ function normalizeCRMLeads(data){
       recentActivity:item.recentActivity||item['Recent Activity']||'',
       url:item.url||item.notionUrl||NOTION_CRM_URL
     };
-  }).filter(function(lead){return lead&&lead.name;});
+  }).filter(function(lead){return lead&&getLeadDisplayName(lead);});
 }
 
 function notionPageToCRMLead(page){
@@ -5255,6 +5307,8 @@ function notionPageToCRMLead(page){
   var ig=getFirstNotionText(props,['Instagram'])||getFirstNotionOption(props,['Instagram']);
   return {
     name:getFirstNotionText(props,['Name','Lead Name','Title'])||getAnyNotionTitle(props)||'Unnamed lead',
+    stageName:getFirstNotionText(props,['Stage Name','Artist Name'])||'',
+    realName:getFirstNotionText(props,['Real Name','Legal Name','Contact Name'])||'',
     source:getFirstNotionOption(props,['Source'])||'',
     funnelSource:getFirstNotionOption(props,['CF Funnel Source','Funnel Name','Page Name'])||'',
     cfTags:asArray(getNotionMulti(props['CF Tags'])||getFirstNotionOption(props,['CF Tags'])),
@@ -6489,7 +6543,7 @@ function renderRolodexLive(){
   });
   var leads=(window.__crmLeads||[]).slice(0,6).map(function(l){
     var tag=l.stage||l.status||l.source||'CRM Lead';
-    return {name:l.name,type:tag+(l.followUpDate?' · follow up '+formatContentDate(l.followUpDate):''),url:l.url||NOTION_CRM_URL,icon:l.hot?'🔥':'👤',color:l.hot?'amber':'green'};
+    return {name:getLeadDisplayName(l),type:tag+(l.followUpDate?' · follow up '+formatContentDate(l.followUpDate):''),url:l.url||NOTION_CRM_URL,icon:l.hot?'🔥':'👤',color:l.hot?'amber':'green'};
   });
   var items=leads.concat(resources);
   if(!items.length){
@@ -6601,7 +6655,7 @@ function getMostUrgentLeadLine(){
   var lead=ranked[0];
   var recency=getRecencyLabel(lead.optInDate||lead.lastContact||'');
   var due=lead.followUpDate?'follow up due':lead.phone?'call ready':'new lead';
-  return (lead.name||'Unknown lead')+' · '+(recency||lead.stage||'active')+' · '+due;
+  return (getLeadDisplayName(lead)||'Unknown lead')+' · '+(recency||lead.stage||'active')+' · '+due;
 }
 
 function renderMissionBrief(contentPieces,calEvents){

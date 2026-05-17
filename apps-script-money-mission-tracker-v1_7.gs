@@ -658,6 +658,8 @@ function getCRMLeads(e) {
     var props = page.properties || {};
     return {
       name: readNotionTitle(props.Name), source: readNotionSelect(props.Source),
+      stageName: readNotionText(props['Stage Name']),
+      realName: readNotionText(props['Real Name']),
       funnelSource: readNotionSelect(props['CF Funnel Source']),
       stage: readNotionSelect(props['Pipeline Stage']),
       status: readNotionSelect(props['Lead Status']),
