@@ -642,8 +642,9 @@ input:focus{border-color:#333}
 .mj-resource-btn:hover{border-color:#3a5070;color:#7ab8ff}
 .mj-complete-btn{display:block;width:100%;background:#1a3a0a;border:0.5px solid #639922;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;color:#7ec845;cursor:pointer;text-align:center;letter-spacing:.02em}
 .mj-complete-btn:hover{background:#213f10}
-#manager-split-wrapper{gap:10px}
+#manager-split-wrapper{gap:10px;flex-wrap:wrap}
 #manager-split-wrapper>*{flex:1;min-width:0}
+.manager-journey-card{flex:0 0 100%}
 .mission-path-next strong{color:#d7dde3}
 .dpc-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#050f02;border:0.5px solid #1a2a0a;border-radius:9px;padding:3px;margin-bottom:10px}
 .dpc-tab{height:28px;border:0;border-radius:7px;background:transparent;color:#d7dde3;font-size:10px;font-weight:800;cursor:pointer;transition:all .15s}
@@ -1407,10 +1408,10 @@ body{background:#090a0b;color:#d8dde1}
     <div class="dpc-now-sub" id="dpc-now-sub"></div>
   </div>
 
-  <div class="mission-path-card collapsed" id="mission-path-card">
-    <div class="mission-path-summary" onclick="toggleMissionPath()">
-      <div class="mission-path-step" id="mission-path-step">Step 1</div>
-      <div class="mission-path-title" id="mission-path-title">Loading objective...</div>
+  <div class="mission-path-card collapsed" id="mission-path-card" data-mission-path-card data-mission-journey-type="outreach">
+    <div class="mission-path-summary" onclick="toggleMissionPath(this)">
+      <div class="mission-path-step" id="mission-path-step" data-mission-path-step>Step 1</div>
+      <div class="mission-path-title" id="mission-path-title" data-mission-path-title>Loading objective...</div>
       <div class="mission-path-toggle-icon">▼</div>
     </div>
     <div class="mission-path-detail">
@@ -1418,7 +1419,7 @@ body{background:#090a0b;color:#d8dde1}
       <div id="mission-path-proof" style="display:none"></div>
       <div id="mission-path-loadout" style="display:none"></div>
       <div id="mission-path-next" style="display:none"></div>
-      <div id="mission-journey-detail"></div>
+      <div id="mission-journey-detail" data-mission-journey-detail data-mission-journey-type="outreach"></div>
     </div>
   </div>
 
@@ -1821,6 +1822,14 @@ body{background:#090a0b;color:#d8dde1}
       <div class="ct-command-box"><div class="ct-command-label">Primary CTA</div><div class="ct-command-value">Free Skool community</div></div>
       <div class="ct-command-box"><div class="ct-command-label">Main Channel</div><div class="ct-command-value">YouTube → Shorts/Reels</div></div>
     </div>
+    <div class="mission-path-card collapsed" data-mission-path-card data-mission-journey-type="content">
+      <div class="mission-path-summary" onclick="toggleMissionPath(this)">
+        <div class="mission-path-step" data-mission-path-step>Step 1</div>
+        <div class="mission-path-title" data-mission-path-title>Loading content journey...</div>
+        <div class="mission-path-toggle-icon">▼</div>
+      </div>
+      <div class="mission-path-detail"><div data-mission-journey-detail data-mission-journey-type="content"></div></div>
+    </div>
     <!-- INSTAGRAM LAST POST SIGNAL — v1.5 (hidden until data loads) -->
     <div class="ct-ig-signal" id="ct-ig-signal" style="display:none">
       <div class="ct-ig-header">
@@ -1935,6 +1944,14 @@ body{background:#090a0b;color:#d8dde1}
       <div class="prod-command-label">Production move</div>
       <div class="prod-command-text" id="prod-command-text">Reading this week’s production pressure...</div>
     </div>
+    <div class="mission-path-card collapsed" data-mission-path-card data-mission-journey-type="beat">
+      <div class="mission-path-summary" onclick="toggleMissionPath(this)">
+        <div class="mission-path-step" data-mission-path-step>Step 1</div>
+        <div class="mission-path-title" data-mission-path-title>Loading production journey...</div>
+        <div class="mission-path-toggle-icon">▼</div>
+      </div>
+      <div class="mission-path-detail"><div data-mission-journey-detail data-mission-journey-type="beat"></div></div>
+    </div>
     <div id="prod-today-content">
       <div class="ct-loading">Pulling active beats from Notion Master Beat Catalog...</div>
     </div>
@@ -2032,6 +2049,14 @@ body{background:#090a0b;color:#d8dde1}
 
 <!-- MANAGER SPLIT: calendar + tasks side by side -->
 <div id="manager-split-wrapper" class="mission-hidden" style="display:none">
+<div class="mission-path-card collapsed manager-journey-card" data-mission-path-card data-mission-journey-type="manager">
+  <div class="mission-path-summary" onclick="toggleMissionPath(this)">
+    <div class="mission-path-step" data-mission-path-step>Step 1</div>
+    <div class="mission-path-title" data-mission-path-title>Loading manager journey...</div>
+    <div class="mission-path-toggle-icon">▼</div>
+  </div>
+  <div class="mission-path-detail"><div data-mission-journey-detail data-mission-journey-type="manager"></div></div>
+</div>
 <!-- CALENDAR -->
 <div class="cal-card collapsible-card" id="calendar-card">
   <div class="cal-label collapse-head" onclick="toggleCollapse('calendar-card')"><div class="collapse-title">On your calendar today <span class="collapse-chevron">▼</span></div></div>
@@ -6825,8 +6850,8 @@ function applyMissionFocus(){
 window.openMissionTool=openMissionTool;
 window.selectMissionDayTool=selectMissionDayTool;
 
-function toggleMissionPath(){
-  var card=document.getElementById('mission-path-card');
+function toggleMissionPath(trigger){
+  var card=trigger&&trigger.closest?trigger.closest('[data-mission-path-card]'):document.getElementById('mission-path-card');
   if(card)card.classList.toggle('collapsed');
 }
 window.toggleMissionPath=toggleMissionPath;
@@ -7000,74 +7025,99 @@ var MISSION_STEPS={
   ]
 };
 
-function getMissionJourneyState(){
+function getMissionJourneyState(dayType){
   var today=dateKey(new Date());
-  var dayType=getMissionDayType();
+  dayType=dayType||getMissionDayType();
   var raw=getStore(MISSION_STEPS_KEY);
+  if(raw&&raw.date===today&&raw.journeys&&raw.journeys[dayType])return raw.journeys[dayType];
   if(raw&&raw.date===today&&raw.dayType===dayType)return raw;
   return{date:today,dayType:dayType,currentStep:0,checks:{}};
 }
 
-function saveMissionJourneyState(s){setStore(MISSION_STEPS_KEY,s);}
-
-function renderMissionJourney(){
-  var el=document.getElementById('mission-journey-detail');
-  if(!el)return;
-  var state=getMissionJourneyState();
-  var dayType=getMissionDayType();
-  var steps=MISSION_STEPS[dayType];
-  if(!steps){el.innerHTML='<div style="font-size:11px;color:#444;padding:8px 0">No journey defined for this day type yet.</div>';return;}
-  var idx=Math.min(state.currentStep||0,steps.length-1);
-  var step=steps[idx];
-  var total=steps.length;
-  var stateChecks=state.checks[step.id]||[];
-
-  var stepEl=document.getElementById('mission-path-step');
-  var titleEl=document.getElementById('mission-path-title');
-  if(stepEl)stepEl.textContent='Step '+(idx+1)+' of '+total;
-  if(titleEl)titleEl.textContent=step.title;
-
-  var dots=steps.map(function(s,i){
-    var cls=i<idx?'done':i===idx?'active':'';
-    return '<span class="mj-dot '+cls+'">'+(i<idx?'●':'○')+'</span>';
-  }).join('');
-
-  var checksHtml=step.checks.map(function(item,i){
-    var checked=!!stateChecks[i];
-    return '<label class="mj-check'+(checked?' done':'')+'"><input type="checkbox" onchange="toggleMissionCheck(\''+step.id+'\','+i+',this.checked)"'+(checked?' checked':'')+'><span>'+item+'</span></label>';
-  }).join('');
-
-  var allDone=step.checks.every(function(_,i){return!!stateChecks[i];});
-
-  var resourceHtml='';
-  if(step.resource){
-    resourceHtml='<button class="mj-resource-btn" onclick="openMissionResource(\''+step.resource.replace(/\'/g,"\\'")+'\')" >→ '+step.resource+'</button>';
-  }
-
-  var completeHtml=allDone&&idx<total-1?'<button class="mj-complete-btn" onclick="completeMissionStep()">Step Complete → '+(idx+2)+' of '+total+'</button>':'';
-  if(allDone&&idx===total-1)completeHtml='<div style="font-size:11px;font-weight:700;color:#ffffff;text-align:center;padding:8px 0">Mission complete. Log it and go again.</div>';
-
-  el.innerHTML='<div class="mj-dots">'+dots+'</div><div class="mj-action">'+step.action+'</div><div class="mj-checks">'+checksHtml+'</div>'+resourceHtml+completeHtml;
+function saveMissionJourneyState(s){
+  var today=dateKey(new Date());
+  var raw=getStore(MISSION_STEPS_KEY);
+  if(!raw||raw.date!==today||!raw.journeys)raw={date:today,journeys:{}};
+  raw.journeys[s.dayType||getMissionDayType()]=s;
+  setStore(MISSION_STEPS_KEY,raw);
 }
 
-function toggleMissionCheck(stepId,idx,val){
-  var state=getMissionJourneyState();
+function renderMissionJourney(){
+  var detailEls=[].slice.call(document.querySelectorAll('[data-mission-journey-detail]'));
+  if(!detailEls.length){
+    var legacy=document.getElementById('mission-journey-detail');
+    if(legacy)detailEls=[legacy];
+  }
+  if(!detailEls.length)return;
+  detailEls.forEach(function(el){
+    var card=el.closest&&el.closest('[data-mission-path-card]');
+    var dayType=el.getAttribute('data-mission-journey-type')||(card&&card.getAttribute('data-mission-journey-type'))||getMissionDayType();
+    var state=getMissionJourneyState(dayType);
+    var steps=MISSION_STEPS[dayType];
+    if(!steps){
+      el.innerHTML='<div style="font-size:11px;color:#444;padding:8px 0">No journey defined for this day type yet.</div>';
+      return;
+    }
+    var idx=Math.min(state.currentStep||0,steps.length-1);
+    var step=steps[idx];
+    var total=steps.length;
+    var stateChecks=state.checks[step.id]||[];
+
+    if(card){
+      var stepEl=card.querySelector('[data-mission-path-step]');
+      var titleEl=card.querySelector('[data-mission-path-title]');
+      if(stepEl)stepEl.textContent='Step '+(idx+1)+' of '+total;
+      if(titleEl)titleEl.textContent=step.title;
+    }
+
+    var dots=steps.map(function(s,i){
+      var cls=i<idx?'done':i===idx?'active':'';
+      return '<span class="mj-dot '+cls+'">'+(i<idx?'●':'○')+'</span>';
+    }).join('');
+
+    var checksHtml=step.checks.map(function(item,i){
+      var checked=!!stateChecks[i];
+      return '<label class="mj-check'+(checked?' done':'')+'"><input type="checkbox" onchange="toggleMissionCheck(\''+dayType+'\',\''+step.id+'\','+i+',this.checked)"'+(checked?' checked':'')+'><span>'+item+'</span></label>';
+    }).join('');
+
+    var allDone=step.checks.every(function(_,i){return!!stateChecks[i];});
+
+    var resourceHtml='';
+    if(step.resource){
+      resourceHtml='<button class="mj-resource-btn" onclick="openMissionResource(\''+step.resource.replace(/\'/g,"\\'")+'\')" >→ '+step.resource+'</button>';
+    }
+
+    var completeHtml=allDone&&idx<total-1?'<button class="mj-complete-btn" onclick="completeMissionStep(\''+dayType+'\')">Step Complete → '+(idx+2)+' of '+total+'</button>':'';
+    if(allDone&&idx===total-1)completeHtml='<div style="font-size:11px;font-weight:700;color:#ffffff;text-align:center;padding:8px 0">Mission complete. Log it and go again.</div>';
+
+    el.innerHTML='<div class="mj-dots">'+dots+'</div><div class="mj-action">'+step.action+'</div><div class="mj-checks">'+checksHtml+'</div>'+resourceHtml+completeHtml;
+  });
+}
+
+function toggleMissionCheck(dayType,stepId,idx,val){
+  if(arguments.length===3){
+    val=idx;
+    idx=stepId;
+    stepId=dayType;
+    dayType=getMissionDayType();
+  }
+  var state=getMissionJourneyState(dayType);
   if(!state.checks[stepId])state.checks[stepId]=[];
   state.checks[stepId][idx]=val;
   saveMissionJourneyState(state);
   renderMissionJourney();
 }
 
-function completeMissionStep(){
-  var state=getMissionJourneyState();
-  var steps=MISSION_STEPS[getMissionDayType()];
+function completeMissionStep(dayType){
+  dayType=dayType||getMissionDayType();
+  var state=getMissionJourneyState(dayType);
+  var steps=MISSION_STEPS[dayType];
   if(!steps)return;
   var next=Math.min((state.currentStep||0)+1,steps.length-1);
   if(next===(state.currentStep||0))return;
   state.currentStep=next;
   saveMissionJourneyState(state);
-  var card=document.getElementById('mission-path-card');
-  if(card)card.classList.remove('collapsed');
+  [].slice.call(document.querySelectorAll('[data-mission-path-card][data-mission-journey-type="'+dayType+'"]')).forEach(function(card){card.classList.remove('collapsed');});
   renderMissionJourney();
 }
 
