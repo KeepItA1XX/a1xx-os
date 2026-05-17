@@ -4262,7 +4262,7 @@ function renderReplyBuilder(){
       return '<button class="dpc-reply-pill '+(i===selectedIdx?'active':'')+'" onclick="selectReplyLead('+i+')">'+escapeHtml(l.name||'Lead')+'</button>';
     }).join('')+'</div>'
     +'<div class="dpc-reply-selected">'+escapeHtml(lead.name||'Lead')+' · '+escapeHtml(getCRMStageKey(lead))+'</div>'
-    +'<div class="dpc-reply-controls"><select class="dpc-reply-select" id="reply-goal" onchange="setReplyGoal(this.value)">'
+    +'<div class="dpc-reply-controls"><select class="dpc-reply-select" id="reply-goal" onpointerdown="holdReplyBuilder(3500)" onfocus="holdReplyBuilder(3500)" onchange="setReplyGoal(this.value)">'
       +opt('book','My goal is to book a call')
       +opt('reengage','My goal is to re-engage')
       +opt('qualify','My goal is to qualify')
@@ -4276,6 +4276,16 @@ function renderReplyBuilder(){
   if(sel)sel.value=goal;
 }
 
+function holdReplyBuilder(ms){
+  window.__replyBuilderHoldUntil=Date.now()+(ms||2500);
+}
+
+function isReplyBuilderHeld(){
+  var box=document.getElementById('dpc-reply-builder');
+  var active=document.activeElement;
+  return Date.now()<(window.__replyBuilderHoldUntil||0)||(box&&active&&box.contains(active));
+}
+
 function selectReplyLead(idx){
   window.__replyLeadIdx=idx||0;
   renderReplyBuilder();
@@ -4283,6 +4293,7 @@ function selectReplyLead(idx){
 
 function setReplyGoal(goal){
   // Keep the native select stable while the change event commits.
+  holdReplyBuilder(1200);
   window.__replyGoal=goal||'book';
   generateReplyMessage();
 }
@@ -4808,7 +4819,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   }
   var queueCount=document.getElementById('dpc-queue-count');
   if(queueCount)queueCount.textContent=attentionLeads.length+' lead'+(attentionLeads.length===1?'':'s')+' need attention';
-  renderReplyBuilder();
+  if(!isReplyBuilderHeld())renderReplyBuilder();
 
   /* 2026-05-12 — ARCHIVED: dpc-call-stack render block.
      The Follow-Up → Calls sub-tab has been repurposed as the prospect Capture form
@@ -6706,8 +6717,7 @@ function openMissionTool(tool,shouldScroll){
     console.warn('A1XX mission state save skipped',saveErr);
   }
   try{
-    if(tool==='campaign'&&typeof setDPCView==='function'){
-      setDPCView('now');
+    if(tool==='campaign'&&typeof renderDailyCoach==='function'){
       renderDailyCoach(window.__contentPieces||[],window.__calEvents||[]);
       renderMissionJourney();
     }
