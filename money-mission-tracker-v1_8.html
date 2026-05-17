@@ -659,6 +659,10 @@ input:focus{border-color:#333}
 .dpc-lead-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
 .dpc-lead-card{display:grid;grid-template-columns:1fr auto;gap:10px;background:#050f02;border:0.5px solid #1a2a0a;border-radius:10px;padding:10px}
 .dpc-lead-name{font-size:12px;font-weight:800;color:#f0f3f5;margin-bottom:4px}
+.dpc-lead-phone-line,.hl-phone-line{font-size:11px;font-weight:800;margin:0 0 4px}
+.dpc-lead-phone-line a,.hl-phone-line a{color:#7ec845;text-decoration:none}
+.dpc-lead-phone-line a:hover,.hl-phone-line a:hover{color:#9ee45c}
+.lead-phone-empty{color:#636b72;font-weight:700}
 .dpc-lead-meta{font-size:10px;color:#8b949e;line-height:1.45}
 .dpc-lead-next{font-size:11px;color:#c6ccd2;line-height:1.45;margin-top:6px}
 .dpc-lead-badges{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0}
@@ -1742,7 +1746,7 @@ body{background:#090a0b;color:#d8dde1}
     <div class="dpc-future-rhythm" id="dpc-future-rhythm" style="display:none"></div>
     <div class="dpc-log-grid" id="dpc-log-grid">
       <div class="dpc-log-item"><div class="dpc-log-label">DMs sent</div><input type="number" id="coach-dms" min="0" value=""/></div>
-      <div class="dpc-log-item"><div class="dpc-log-label">Cold calls made</div><input type="number" id="coach-cold-calls" min="0" value=""/></div>
+      <div class="dpc-log-item"><div class="dpc-log-label">Calls made</div><input type="number" id="coach-cold-calls" min="0" value=""/></div>
       <div class="dpc-log-item"><div class="dpc-log-label">Content posted</div><input type="number" id="coach-content" min="0" value=""/></div>
       <div class="dpc-log-item"><div class="dpc-log-label">Calls booked</div><input type="number" id="coach-calls" min="0" value=""/></div>
       <div class="dpc-log-item"><div class="dpc-log-label">Closes (paid)</div><input type="number" id="coach-closes" min="0" value=""/></div>
@@ -3906,15 +3910,18 @@ function renderQueueLeadCard(lead){
   var recency=getRecencyLabel(getLeadTouchDate(lead));
   var offer=asArray(lead.offerInterest).join(', ')||'';
   var funnel=[lead.funnelSource,offer].filter(Boolean).join(' · ');
+  var tel=phone.replace(/[^0-9+]/g,'');
+  var callBtn=tel?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(tel)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
   return '<div class="dpc-lead-card">'
     +'<div>'
       +'<div class="dpc-lead-name">'+escapeHtml(lead.name||'Unnamed lead')+'</div>'
+      +buildLeadPhoneLine(phone,'dpc-lead-phone-line')
       +'<div class="dpc-lead-meta">'+escapeHtml([recency,lead.stage||lead.status||'',funnel].filter(Boolean).join(' · '))+'</div>'
       +renderLeadBadges({heat:heat.label,stage:lead.stage||lead.status||'',cfTags:lead.cfTags||[]},true)
     +'</div>'
     +'<div class="dpc-lead-actions">'
       +'<a class="dpc-mini-btn" href="'+escapeHtml(igUrl)+'" target="_blank">Follow Up</a>'
-      +'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank"'+(phone?' onclick="hlCopyPhone(\''+escapeHtml(phone)+'\')"':'')+'>Call</a>'
+      +callBtn
       +'<a class="dpc-mini-btn" href="'+escapeHtml(openUrl)+'" target="_blank">Open</a>'
     +'</div>'
     +'</div>';
@@ -3939,11 +3946,13 @@ function renderCallLeadCard(lead){
   if(lead.optInDate)recency.push('opted in '+getRecencyLabel(lead.optInDate));
   if(lead.lastContact)recency.push('last contact: '+getRecencyLabel(lead.lastContact));
   var meta=[lead.funnelSource||lead.source||'Manual',lead.stage||lead.status||'',asArray(lead.offerInterest).join(', ')].filter(Boolean).join(' · ');
-  var callBtn=phone?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(phone)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
+  var tel=phone.replace(/[^0-9+]/g,'');
+  var callBtn=tel?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(tel)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
   var rescheduleLabel=encodeURIComponent(lead.name||'Lead');
   return '<div class="dpc-lead-card">'
     +'<div>'
       +'<div class="dpc-lead-name">'+escapeHtml(lead.name||'Unnamed lead')+'</div>'
+      +buildLeadPhoneLine(phone,'dpc-lead-phone-line')
       +'<div class="dpc-lead-meta">'+escapeHtml([recency.join(' · '),meta].filter(Boolean).join(' · '))+'</div>'
       +renderLeadBadges({heat:getLeadHeatBucket(lead).label,stage:lead.stage||lead.status||'',cfTags:lead.cfTags||[]},true)
       +'<div class="dpc-lead-next">'+escapeHtml(lead.recentActivity||'Prep the offer, confirm the next step, and log the result after the call.')+'</div>'
@@ -3965,12 +3974,14 @@ function renderLeadBadges(lead,includeHeat){
 }
 
 function renderLeadCard(lead){
-  var phone=lead.phone?String(lead.phone).replace(/[^0-9+]/g,''):'';
-  var callBtn=phone?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(phone)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
+  var phone=String(lead.phone||'').trim();
+  var tel=phone.replace(/[^0-9+]/g,'');
+  var callBtn=tel?'<a class="dpc-mini-btn" href="tel:'+escapeHtml(tel)+'">Call</a>':'<a class="dpc-mini-btn" href="https://voice.google.com/u/0/calls" target="_blank">Voice</a>';
   var rescheduleLabel=encodeURIComponent(lead.name||'Lead');
   var rescheduleBtn='<button type="button" class="dpc-mini-btn" onclick="quickRescheduleCall(decodeURIComponent(\''+rescheduleLabel+'\'))">Reschedule</button>';
   var openUrl=lead.instagramUrl||lead.url||NOTION_CRM_URL;
   return '<div class="dpc-lead-card"><div><div class="dpc-lead-name">'+escapeHtml(lead.name)+'</div>'
+    +buildLeadPhoneLine(phone,'dpc-lead-phone-line')
     +'<div class="dpc-lead-meta">'+escapeHtml(lead.heat+' · '+lead.meta)+'</div>'
     +renderLeadBadges(lead,false)
     +'<div class="dpc-lead-next">'+escapeHtml(lead.next)+'</div></div>'
@@ -4093,6 +4104,15 @@ function buildHLPhone(lead){
   var phone=String(lead.phone||'').trim();
   if(!phone)return '';
   return '<span class="hl-phone" onclick="hlCopyPhone(\''+escapeHtml(phone)+'\')" id="hlph-'+escapeHtml(lead.name.replace(/\s/g,''))+'">📋 '+escapeHtml(phone)+'</span>';
+}
+
+function buildLeadPhoneLine(phone,lineClass){
+  phone=String(phone||'').trim();
+  lineClass=lineClass||'dpc-lead-phone-line';
+  if(!phone)return '<div class="'+escapeHtml(lineClass)+' lead-phone-empty">No phone</div>';
+  var tel=phone.replace(/[^0-9+]/g,'');
+  if(!tel)return '<div class="'+escapeHtml(lineClass)+' lead-phone-empty">No phone</div>';
+  return '<div class="'+escapeHtml(lineClass)+'"><a href="tel:'+escapeHtml(tel)+'">'+escapeHtml(phone)+'</a></div>';
 }
 
 function hlCopyPhone(phone){
@@ -4576,7 +4596,7 @@ function buildHLCard(lead,variant){
   var instagram=String(lead.instagram||'').trim().replace(/^@/,'');
   var igUrl=instagram?'https://instagram.com/'+encodeURIComponent(instagram):'https://www.instagram.com/explore/';
   var phone=String(lead.phone||'').trim();
-  var voiceUrl=phone?'https://voice.google.com/u/0/calls':'https://voice.google.com/u/0/calls';
+  var tel=phone.replace(/[^0-9+]/g,'');
   var badges='';
   if(recency)badges+='<span class="hl-badge '+recencyColor+'">'+escapeHtml(recency)+'</span>';
   if(atl)badges+='<span class="hl-badge atl">🏙️ ATL</span>';
@@ -4587,12 +4607,12 @@ function buildHLCard(lead,variant){
   return '<div class="hl-card '+variant+'">'
     +'<div>'
     +'<div class="hl-name">'+escapeHtml(lead.name||'Unknown')+'</div>'
+    +buildLeadPhoneLine(phone,'hl-phone-line')
     +(badges?'<div class="hl-badges">'+badges+'</div>':'')
-    +(phone?'<div>'+buildHLPhone(lead)+'</div>':'<div class="hl-meta">No phone captured</div>')
     +'</div>'
     +'<div class="hl-actions">'
     +'<a class="hl-btn ig" href="'+igUrl+'" target="_blank">DM on IG</a>'
-    +(phone?'<a class="hl-btn call" href="'+escapeHtml(voiceUrl)+'" target="_blank" onclick="hlCopyPhone(\''+escapeHtml(phone)+'\')">Call</a>':'')
+    +(tel?'<a class="hl-btn call" href="tel:'+escapeHtml(tel)+'">Call</a>':'')
     +'</div>'
     +'<div class="hl-script">'
     +'<div class="hl-script-header">'
