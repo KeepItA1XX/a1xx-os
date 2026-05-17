@@ -6969,42 +6969,43 @@ var MISSION_STEPS={
      resource:'Community Invite Script'}
   ],
   beat:[
-    {id:'plan-session',title:'Plan the Session',action:'Set up your workspace and pick your vibe',
-     checks:['Open your DAW','Pull up 1-2 reference tracks','Set a BPM and key','Decide: original beat or loop-based?'],resource:null},
-    {id:'build-beat',title:'Build the Beat',action:'Make something in 90 minutes flat',
-     checks:['Lay the drums first','Add bass and melody','Rough mix — levels only, no mastering','Export a WAV for review'],resource:null},
-    {id:'review',title:'Review and Name It',action:'Listen back fresh and finish it',
-     checks:['Play it back on different speakers or headphones','Fix the one thing that bothers you','Name the beat','Tag it: genre, BPM, key'],resource:null},
-    {id:'upload',title:'Upload and Publish',action:'Get it out there',
-     checks:['Upload to Soundee','Upload to BANGIN+','Post a preview clip to Instagram','Log the beat in the weekly tracker'],resource:null}
+    {id:'lock-beat-target',title:'Lock the Beat Target',action:'Choose the one production move that proves today counted',
+     checks:['Open Production tracker and find the highest-value active project','Pick the deliverable: new beat, revision, mix pass, or upload','Choose the lane: BANGIN+, Soundee, client pack, or promo clip','Write the finish line in one sentence before opening the DAW'],resource:'Production Pipeline'},
+    {id:'produce-core',title:'Produce the Core',action:'Run the focused maker block and get the beat to a bounce',
+     checks:['Open DAW and set timer for 90 minutes','Set BPM/key and pull one reference only','Build structure: drums, bass, melody, hook/drop section','Rough mix for translation, then export a review WAV/MP3'],resource:null},
+    {id:'package-beat',title:'Package the Beat',action:'Turn the bounce into an actual product entry',
+     checks:['Name the beat and tag genre, mood, BPM, and key','Upload or update the beat in Soundee/BANGIN+','Attach cover/preview assets if needed','Update production status so the pipeline reflects reality'],resource:'BANGIN+ Upload Checklist'},
+    {id:'ship-beat-proof',title:'Ship the Proof',action:'Make the production work visible and log the win',
+     checks:['Post or schedule one preview clip, story, or beat snippet','Send the beat to one relevant artist/client if there is a match','Log production/content numbers in the Daily Profit Campaign','Write the next production move before closing the session'],resource:null}
   ],
   content:[
-    {id:'pick-piece',title:'Pick Your Piece',action:'Decide what you\'re posting today',
-     checks:['Check content pipeline — what\'s due or overdue','Pick one piece from queue','Pull the hook and caption notes','Confirm format: Reel, Story, or carousel'],resource:'Content Calendar'},
-    {id:'create',title:'Create It',action:'Record or design the post',
-     checks:['Set up your space','Record or design the asset','Review: does it hook in 2 seconds?','Caption and hashtags ready'],resource:null},
-    {id:'post-it',title:'Post It',action:'Get it live',
-     checks:['Post to Instagram','Share to Story if it\'s a Reel','Log in content tracker','Update content streak'],resource:null},
-    {id:'spark',title:'Spark an Idea',action:'Capture your next content move',
-     checks:['Open the Spark tab','Drop the idea or angle you\'ve been sitting on','Pick a format','Push it to Notion or save it locally'],resource:null}
+    {id:'pick-angle',title:'Pick the Angle',action:'Choose the single post that advances today\'s mission',
+     checks:['Open Content tracker and find due or overdue pieces','Pick one format: Reel, Story, carousel, short, or email','Pull the hook, promise, CTA, and caption notes','Confirm which offer, lead magnet, or relationship the post supports'],resource:'Content Calendar'},
+    {id:'build-asset',title:'Build the Asset',action:'Record, edit, or design until the post is publishable',
+     checks:['Set up recording/editing space and remove distractions','Create the asset with a clear first two seconds','Add caption, title text, hashtags, and CTA','Review once for clarity, sound, crop, and spelling'],resource:null},
+    {id:'publish-distribute',title:'Publish and Distribute',action:'Get the content live and push it into the right channels',
+     checks:['Post to the primary platform','Share to Story or secondary channel if it fits','Send or tag it to one relevant prospect/community if useful','Mark the content item live in the tracker'],resource:null},
+    {id:'capture-next-angle',title:'Capture the Next Angle',action:'Convert today\'s momentum into tomorrow\'s queue',
+     checks:['Open Spark or content capture','Write one follow-up angle from today\'s post','Save any comments, replies, or objections as future hooks','Log the content count in Daily Profit Campaign'],resource:null}
   ],
   manager:[
-    {id:'review-board',title:'Review the Scoreboard',action:'See exactly where you stand',
-     checks:['Check weekly numbers vs target','Note the biggest gap right now','Check Hit List — who needs a follow-up today?','Pull up calendar — what\'s actually on today?'],resource:null},
-    {id:'clear-tasks',title:'Clear the Tasks',action:'Handle what\'s actually due',
-     checks:['Open Todoist — sort by priority','Work through top 3 tasks','Move or delete anything stale','Update any lead stages in Notion CRM'],resource:null},
-    {id:'plan-tomorrow',title:'Plan Tomorrow',action:'Set yourself up so you sit down ready',
-     checks:['Pick tomorrow\'s day type','Pre-load Dream 100 tabs if outreach day','Prep content hook if content day','Set a beat session goal if beat day'],resource:null},
-    {id:'log-numbers',title:'Log the Numbers',action:'Update your weekly scoreboard',
-     checks:['Log DMs, posts, calls, closes','Check revenue vs weekly target','Note what worked and what didn\'t','Submit weekly update if it\'s Sunday'],resource:null}
+    {id:'command-review',title:'Command Review',action:'Get the business picture on one screen before touching tasks',
+     checks:['Check weekly revenue, DMs, calls, closes, content, and production numbers','Identify the biggest gap between target and actual','Review today\'s calendar and any hard commitments','Pick the one operational outcome that makes the day a win'],resource:null},
+    {id:'clear-commitments',title:'Clear Commitments',action:'Handle the obligations that would create drag if ignored',
+     checks:['Open Todoist and sort by priority/date','Clear or reschedule the top 3 real commitments','Handle calendar prep, missed replies, and admin blockers','Archive stale tasks only after confirming where they moved'],resource:null},
+    {id:'move-pipeline',title:'Move the Pipeline',action:'Update the money and relationship systems so nothing goes stale',
+     checks:['Review Hit List / CRM follow-ups due today','Update lead stages, notes, phone status, and next action','Book, reschedule, or close any open loop that is ready','Confirm the most urgent lead has a next step'],resource:null},
+    {id:'close-loop',title:'Close the Loop',action:'Log the numbers and preload the next working day',
+     checks:['Log DMs, calls, closes, posts, production, and revenue','Write one short note on what worked or stalled','Pick tomorrow\'s day type and first action','Preload tabs/assets for outreach, content, or beat day as needed'],resource:null}
   ]
 };
 
 function getMissionJourneyState(){
   var today=dateKey(new Date());
+  var dayType=getMissionDayType();
   var raw=getStore(MISSION_STEPS_KEY);
-  if(raw&&raw.date===today)return raw;
-  return{date:today,dayType:getMissionDayType(),currentStep:0,checks:{}};
+  if(raw&&raw.date===today&&raw.dayType===dayType)return raw;
+  return{date:today,dayType:dayType,currentStep:0,checks:{}};
 }
 
 function saveMissionJourneyState(s){setStore(MISSION_STEPS_KEY,s);}
