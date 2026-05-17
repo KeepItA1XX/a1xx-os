@@ -2203,6 +2203,48 @@ body{background:#090a0b;color:#d8dde1}
     <div id="week-rev-inputs" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:10px"></div>
   </div>
 </div>
+<div class="close-log-section">
+  <div class="close-log-head">
+    <div class="close-log-title">Close Log</div>
+    <span class="close-log-count" id="cl-count">0 closes · $0</span>
+  </div>
+  <div class="btn-row" style="margin-bottom:8px">
+    <button class="btn primary" onclick="toggleCloseForm()">+ Log a close</button>
+  </div>
+  <div class="close-form" id="close-form">
+    <div class="close-form-grid">
+      <div class="wi-group"><div class="wi-label">Lead name</div><input class="wi-input" type="text" id="cl-name" placeholder="e.g. Mike T."></div>
+      <div class="wi-group"><div class="wi-label">Amount ($)</div><input class="wi-input" type="number" id="cl-amount" placeholder="0" min="0"></div>
+      <div class="wi-group"><div class="wi-label">Product</div>
+        <select id="cl-product" class="close-form select">
+          <option value="">Select product</option>
+          <option>Studio Session</option>
+          <option>Beat Pack ($7)</option>
+          <option>Rappreneur OS ($97)</option>
+          <option>Production Deal</option>
+          <option>Mix &amp; Master</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="wi-group"><div class="wi-label">Source</div>
+        <select id="cl-source" class="close-form select">
+          <option value="">Select source</option>
+          <option>Instagram DM</option>
+          <option>ClickFunnels</option>
+          <option>Referral</option>
+          <option>Content</option>
+          <option>Cold outreach</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveClose()">Save close ✓</button>
+      <button class="btn" onclick="toggleCloseForm()">Cancel</button>
+    </div>
+  </div>
+  <div id="close-log-list"></div>
+</div>
 <div class="btn-row">
   <button class="btn primary" onclick="saveWeekly()">💾 Save Weekly Update</button>
   <button class="btn amber" onclick="archiveCycleBtn()">📦 Archive Cycle</button>
@@ -2307,45 +2349,10 @@ body{background:#090a0b;color:#d8dde1}
 </div>
 <div class="close-log-section">
   <div class="close-log-head">
-    <div class="close-log-title">Close Log</div>
-    <span class="close-log-count" id="cl-count">0 closes · $0</span>
+    <div class="close-log-title">Recent Closes</div>
+    <span class="close-log-count" id="rcl-count">0 closes · $0</span>
   </div>
-  <div class="btn-row" style="margin-bottom:8px">
-    <button class="btn primary" onclick="toggleCloseForm()">+ Log a close</button>
-  </div>
-  <div class="close-form" id="close-form">
-    <div class="close-form-grid">
-      <div class="wi-group"><div class="wi-label">Lead name</div><input class="wi-input" type="text" id="cl-name" placeholder="e.g. Mike T."></div>
-      <div class="wi-group"><div class="wi-label">Amount ($)</div><input class="wi-input" type="number" id="cl-amount" placeholder="0" min="0"></div>
-      <div class="wi-group"><div class="wi-label">Product</div>
-        <select id="cl-product" class="close-form select">
-          <option value="">Select product</option>
-          <option>Studio Session</option>
-          <option>Beat Pack ($7)</option>
-          <option>Rappreneur OS ($97)</option>
-          <option>Production Deal</option>
-          <option>Mix &amp; Master</option>
-          <option>Other</option>
-        </select>
-      </div>
-      <div class="wi-group"><div class="wi-label">Source</div>
-        <select id="cl-source" class="close-form select">
-          <option value="">Select source</option>
-          <option>Instagram DM</option>
-          <option>ClickFunnels</option>
-          <option>Referral</option>
-          <option>Content</option>
-          <option>Cold outreach</option>
-          <option>Other</option>
-        </select>
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn primary" onclick="saveClose()">Save close ✓</button>
-      <button class="btn" onclick="toggleCloseForm()">Cancel</button>
-    </div>
-  </div>
-  <div id="close-log-list"></div>
+  <div id="recent-close-list"></div>
 </div>
 <div class="report-note">Revenue is the result of your actions — not your to-do list. Hit your daily three consistently and this number takes care of itself.</div>
 
@@ -2843,14 +2850,22 @@ function renderCloseLog(){
   var log=getCloseLog();
   var list=document.getElementById('close-log-list');
   var countEl=document.getElementById('cl-count');
-  if(!list)return;
+  var recentList=document.getElementById('recent-close-list');
+  var recentCountEl=document.getElementById('rcl-count');
   var total=log.reduce(function(s,c){return s+(c.amount||0);},0);
   if(countEl)countEl.textContent=log.length+' close'+(log.length!==1?'s':'')+' · '+fmt(total);
-  if(!log.length){list.innerHTML='<div class="close-empty">No closes logged yet. Hit a deal? Log it here.</div>';return;}
-  list.innerHTML=log.slice(0,10).map(function(c){
+  if(recentCountEl)recentCountEl.textContent=log.length+' close'+(log.length!==1?'s':'')+' · '+fmt(total);
+  if(!log.length){
+    if(list)list.innerHTML='<div class="close-empty">No closes logged yet. Hit a deal? Log it here.</div>';
+    if(recentList)recentList.innerHTML='<div class="close-empty">No closes logged yet.</div>';
+    return;
+  }
+  function closeItem(c){
     var meta=[c.product,c.source,c.date].filter(Boolean).join(' · ');
     return '<div class="close-item"><div class="close-item-left"><div class="close-item-name">'+escapeHtml(c.name)+'</div><div class="close-item-meta">'+escapeHtml(meta)+'</div></div><div class="close-item-amount">'+fmt(c.amount)+'</div></div>';
-  }).join('');
+  }
+  if(list)list.innerHTML=log.slice(0,10).map(closeItem).join('');
+  if(recentList)recentList.innerHTML=log.slice(0,5).map(closeItem).join('');
 }
 
 async function restoreBackup(){
