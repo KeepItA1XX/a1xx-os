@@ -32,6 +32,7 @@ var NOTION_CONTENT_DB    = '1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18: was incorrectly set to the data source ID (...8188...). Notion /v1/databases/{id}/query expects the DATABASE ID (URL slug). Parent database "Master Beat Catalog" lives at notion.so/1a76115281da8199a5dffc423d447f31. */
 var NOTION_RESOURCE_DB   = '35861152-81da-8053-8d5e-c5e6c5042e6c';
 var NOTION_CRM_DB        = 'b82e7140-b3b0-48d1-915d-34e4cdf9f65a';
+var NOTION_OPS_DAILY_DB  = '36461152-81da-809d-baa7-d6638dd2077b';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -115,8 +116,9 @@ function doPost(e) {
     }
     if (data.type === 'daily_save') {
       var row = saveDailySnapshot(data);
+      var notionDaily = syncDailyDpcToNotion(row, data);
       logActivity('Daily save — ' + data.date + ' (' + (data.mode || 'replace') + ') — Money: $' + (data.money || 0));
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: row }))
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: row, notionDaily: notionDaily }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'prospect_save') {
@@ -425,6 +427,80 @@ function notionQuery(databaseId, payload, cacheKey) {
   var text = res.getContentText(); var code = res.getResponseCode();
   if (cacheKey && code < 400) { try { if (text.length < 90000) cache.put(cacheKey, text, 600); } catch (e) {} }
   return { text: text, code: code };
+}
+
+function notionRequest(method, url, payload) {
+  var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
+  var opts = {
+    method: method,
+    headers: { Authorization: 'Bearer ' + secret, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+    muteHttpExceptions: true
+  };
+  if (payload) opts.payload = JSON.stringify(payload);
+  var res = UrlFetchApp.fetch(url, opts);
+  return { text: res.getContentText(), code: res.getResponseCode() };
+}
+
+function syncDailyDpcToNotion(row, source) {
+  try {
+    var dayType = normalizeDailyDayType(source.dayType);
+    var properties = {
+      'Name': notionTitle('Daily DPC Log — ' + row.date),
+      'Date': { date: { start: row.date } },
+      'DMs Sent': { number: row.dms || 0 },
+      'Calls Made': { number: row.coldCalls || 0 },
+      'Content Posted': { number: row.content || 0 },
+      'Calls Booked': { number: row.calls || 0 },
+      'Closes': { number: row.closes || 0 },
+      'Money Collected': { number: row.money || 0 },
+      'New Warm Leads': { number: row.leads || 0 },
+      'Streak Hit': { checkbox: isDailyStreakHit(row) },
+      'Cycle': notionText(source.cycle || ''),
+      'Notes': notionText(source.notes || '')
+    };
+    if (dayType) properties['Day Type'] = { select: { name: dayType } };
+
+    var query = notionQuery(NOTION_OPS_DAILY_DB, {
+      filter: { property: 'Date', date: { equals: row.date } },
+      page_size: 1
+    });
+    if (query.code >= 400) {
+      logActivity('Notion Daily DPC query — code: ' + query.code + ' — ' + query.text);
+      return { status: 'error', stage: 'query', code: query.code };
+    }
+    var parsed = JSON.parse(query.text || '{}');
+    var existing = parsed.results && parsed.results.length ? parsed.results[0] : null;
+    var result = existing
+      ? notionRequest('patch', 'https://api.notion.com/v1/pages/' + existing.id, { properties: properties })
+      : notionRequest('post', 'https://api.notion.com/v1/pages', { parent: { database_id: NOTION_OPS_DAILY_DB }, properties: properties });
+
+    logActivity('Notion Daily DPC upsert — ' + row.date + ' — code: ' + result.code);
+    return { status: result.code < 400 ? 'ok' : 'error', stage: existing ? 'update' : 'create', code: result.code };
+  } catch (err) {
+    logActivity('Notion Daily DPC ERROR: ' + err.toString());
+    return { status: 'error', message: err.toString() };
+  }
+}
+
+function notionTitle(text) {
+  return { title: [{ text: { content: String(text || '') } }] };
+}
+
+function notionText(text) {
+  return { rich_text: String(text || '') ? [{ text: { content: String(text || '') } }] : [] };
+}
+
+function normalizeDailyDayType(value) {
+  var v = String(value || '').toLowerCase();
+  if (v === 'outreach') return 'Outreach';
+  if (v === 'beat') return 'Beat';
+  if (v === 'content') return 'Content';
+  if (v === 'manager') return 'Manager';
+  return '';
+}
+
+function isDailyStreakHit(row) {
+  return (row.dms || 0) >= 40 || (row.content || 0) >= 1 || (row.calls || 0) >= 1 || (row.closes || 0) >= 1 || (row.money || 0) > 0;
 }
 
 function getCalendarEvents(e) {

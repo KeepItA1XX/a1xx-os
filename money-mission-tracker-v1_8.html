@@ -3519,6 +3519,10 @@ function postDailySave(dKey,row,saveMode){
   var url=localStorage.getItem(SHEETS_KEY);
   if(!url)return;
   try{
+    var rhythm=(typeof getDayRhythm==='function')?getDayRhythm(new Date(dKey+'T00:00:00').getDay()):null;
+    var dayType=deriveOpsDayType(rhythm);
+    var ci=(typeof getCycleIdx==='function')?getCycleIdx():0;
+    var cycle=CYCLES[ci]?('Cycle '+CYCLES[ci].num+' — '+CYCLES[ci].name):'';
     fetch(url,{
       method:'POST',
       body:JSON.stringify({
@@ -3532,12 +3536,22 @@ function postDailySave(dKey,row,saveMode){
         closes:row.closes||0,
         money:row.money||0,
         leads:row.leads||0,
+        dayType:dayType,
+        cycle:cycle,
         ts:new Date().toISOString()
       }),
       mode:'no-cors',
       redirect:'follow'
     });
   }catch(e){}
+}
+
+function deriveOpsDayType(rhythm){
+  var name=((rhythm&&rhythm.name)||'').toLowerCase();
+  if(name.indexOf('beat')>=0)return 'Beat';
+  if(name.indexOf('content')>=0)return 'Content';
+  if(name.indexOf('reset')>=0||name.indexOf('manager')>=0)return 'Manager';
+  return 'Outreach';
 }
 
 function submitDailyCoachLog(){
