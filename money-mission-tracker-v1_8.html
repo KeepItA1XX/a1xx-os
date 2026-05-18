@@ -436,7 +436,8 @@ input:focus{border-color:#333}
   .rolodex-grid{grid-template-columns:1fr}
   .mission-grid,.mission-check,.mission-tools{grid-template-columns:1fr}
   .mission-choice-row{width:100%}
-  .dpc-action-list,.dpc-kpi-grid{grid-template-columns:1fr}
+  .dpc-action-list,.dpc-kpi-grid,.studio-pipeline-stages,.studio-playbook{grid-template-columns:1fr}
+  .studio-playbook-actions{justify-content:flex-start}
   .dpc-scoreboard{grid-template-columns:repeat(2,1fr)}
 }
 
@@ -703,6 +704,24 @@ input:focus{border-color:#333}
 .dpc-action-card{background:#050f02;border:0.5px solid #1a2a0a;border-radius:10px;padding:10px;min-height:96px}
 .dpc-action-title{font-size:12px;font-weight:800;color:#d8efd0;line-height:1.35;margin-bottom:6px}
 .dpc-action-copy{font-size:11px;color:#6f9b56;line-height:1.45}
+.studio-pipeline{background:#050f02;border:0.5px solid #1a2a0a;border-radius:12px;padding:11px 12px;margin-bottom:10px}
+.studio-pipeline-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.studio-pipeline-label{font-size:9px;font-weight:800;color:#7ec845;text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px}
+.studio-pipeline-title{font-size:13px;font-weight:900;color:#f0f3f5;line-height:1.25}
+.studio-pipeline-sub{font-size:10px;color:#8b949e;line-height:1.35;margin-top:3px}
+.studio-pipeline-score{min-width:58px;text-align:center;background:#0b0d0f;border:0.5px solid #2a3036;border-radius:9px;padding:7px 8px}
+.studio-pipeline-num{font-size:18px;font-weight:900;color:#d4a017;line-height:1}
+.studio-pipeline-cap{font-size:8px;color:#8b949e;text-transform:uppercase;letter-spacing:.08em;margin-top:3px;font-weight:800}
+.studio-pipeline-stages{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
+.studio-stage{background:#07090b;border:0.5px solid #1a2028;border-radius:9px;padding:8px 9px;min-height:88px}
+.studio-stage.active{border-color:#3a5a2a;background:#081204}
+.studio-stage-name{font-size:10px;font-weight:900;color:#f0f3f5;margin-bottom:5px;line-height:1.25}
+.studio-stage-goal{font-size:10px;color:#9aa3aa;line-height:1.35}
+.studio-stage-count{font-size:18px;font-weight:900;color:#7ec845;line-height:1;margin-bottom:5px}
+.studio-playbook{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#07090b;border:0.5px solid #1a2028;border-radius:9px;padding:9px 10px}
+.studio-playbook-title{font-size:11px;font-weight:900;color:#d7dde3;margin-bottom:3px}
+.studio-playbook-copy{font-size:10px;color:#8b949e;line-height:1.4}
+.studio-playbook-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .dpc-script{background:#061006;border:0.5px solid #1a2a0a;border-radius:9px;padding:9px 11px;font-size:11px;color:#8fbf66;line-height:1.55;margin-bottom:10px}
 .dpc-script strong{color:#c8e8a8}
 .dpc-reply-builder{background:#050f02;border:0.5px solid #1a2a0a;border-radius:10px;padding:10px;margin-bottom:10px}
@@ -1482,6 +1501,9 @@ body{background:#090a0b;color:#d8dde1}
         <div class="dpc-coach-text" id="dpc-pipeline-command">Reading money pipeline...</div>
       </div>
       <div class="dpc-action-list" id="dpc-pipeline-actions"></div>
+      <div class="studio-pipeline" id="studio-leadgen-pipeline">
+        <div class="ct-loading">Building studio lead-gen pipeline...</div>
+      </div>
     </div>
     <div class="dpc-mini-view active" id="dpc-pipeline-view-board">
 
@@ -4768,6 +4790,66 @@ function renderBarRows(rows,maxVal){
   }).join('')+'</div>';
 }
 
+function isStudioLead(lead){
+  var txt=[
+    lead&&lead.name,
+    getLeadDisplayName(lead),
+    lead&&lead.source,
+    lead&&lead.funnelSource,
+    lead&&lead.stage,
+    lead&&lead.status,
+    lead&&lead.recentActivity,
+    asArray(lead&&lead.offerInterest).join(' '),
+    asArray(lead&&lead.cfTags).join(' ')
+  ].join(' ').toLowerCase();
+  return /studio|session|atl|booking|engineer|producer|recording|mix|master/.test(txt);
+}
+
+function renderStudioLeadGenPipeline(activeCRM,d,coldCalls){
+  var el=document.getElementById('studio-leadgen-pipeline');
+  if(!el)return;
+  var studioLeads=(activeCRM||[]).filter(isStudioLead);
+  var partnerLeads=studioLeads.filter(function(lead){
+    return /studio|partner|venue|engineer/i.test([lead.source,lead.funnelSource,lead.stage,lead.status,lead.recentActivity].join(' '));
+  });
+  var bookedLeads=studioLeads.filter(function(lead){
+    return /book|schedul|call|session/i.test([lead.stage,lead.status,lead.bookingPriority,lead.conversionEvent,lead.recentActivity].join(' '));
+  });
+  var hotStudio=studioLeads.filter(isHotCRMLead);
+  var targetStudios=3;
+  var targetBookings=15;
+  var studioTouches=Math.max(studioLeads.length,(d&&d.leads)||0);
+  var bookingCount=Math.max(bookedLeads.length,(d&&d.calls)||0);
+  var partnerCount=partnerLeads.length;
+  var score=Math.min(100,Math.round((partnerCount/targetStudios*45)+(bookingCount/targetBookings*35)+(Math.min(studioTouches,20)/20*20)));
+  var activeIndex=partnerCount<targetStudios?0:studioTouches<20?1:bookingCount<Math.max(1,Math.ceil(targetBookings/4))?2:3;
+  var stages=[
+    {name:'1. Find studios',count:partnerCount,goal:'Build or refresh ATL studio partner list. Target: '+targetStudios+' signed partners.'},
+    {name:'2. DM owners',count:studioTouches,goal:'Send partner pitch plus artist-booking angle. Log every reply.'},
+    {name:'3. Book sessions',count:bookingCount,goal:'Convert warm replies into calls or booked studio sessions.'},
+    {name:'4. Upsell OS',count:hotStudio.length,goal:'After session, move artists into Rappreneur OS or next offer.'}
+  ];
+  var focus=stages[activeIndex];
+  var openLead=hotStudio[0]||bookedLeads[0]||studioLeads[0]||null;
+  var nextCopy=partnerCount<targetStudios
+    ?'Find one ATL studio or engineer today and add them to CRM before outreach.'
+    :bookingCount<1
+      ?'Pitch one partner and one artist: studio gets bookings, artist gets session plus OS path.'
+      :'Follow up with the warmest studio/session lead and set a real next step.';
+  el.innerHTML='<div class="studio-pipeline-top">'
+    +'<div><div class="studio-pipeline-label">Studio lead-gen pipeline</div><div class="studio-pipeline-title">ATL studio bookings engine</div><div class="studio-pipeline-sub">'+escapeHtml(nextCopy)+'</div></div>'
+    +'<div class="studio-pipeline-score"><div class="studio-pipeline-num">'+score+'%</div><div class="studio-pipeline-cap">cycle fit</div></div>'
+    +'</div>'
+    +'<div class="studio-pipeline-stages">'+stages.map(function(stage,i){
+      return '<div class="studio-stage '+(i===activeIndex?'active':'')+'"><div class="studio-stage-count">'+stage.count+'</div><div class="studio-stage-name">'+escapeHtml(stage.name)+'</div><div class="studio-stage-goal">'+escapeHtml(stage.goal)+'</div></div>';
+    }).join('')+'</div>'
+    +'<div class="studio-playbook"><div><div class="studio-playbook-title">Focus now: '+escapeHtml(focus.name)+'</div><div class="studio-playbook-copy">'+escapeHtml('Calls made today: '+(coldCalls||0)+' · Studio leads: '+studioLeads.length+' · Booked/session signals: '+bookingCount+'. '+focus.goal)+'</div></div>'
+    +'<div class="studio-playbook-actions">'
+      +'<a class="dpc-mini-btn" href="https://www.notion.so/35d6115281da81ec9eced6e21ff91f41" target="_blank">Partners</a>'
+      +'<a class="dpc-mini-btn" href="'+escapeHtml(openLead?(openLead.url||NOTION_CRM_URL):NOTION_CRM_URL)+'" target="_blank">'+(openLead?'Open lead':'CRM')+'</a>'
+    +'</div></div>';
+}
+
 function getMissionPath(d,modeKey,calEvents,contentPieces){
   var dayType=getMissionDayType();
   var nextEvent=getNextCalendarEvent(calEvents||[]);
@@ -4882,6 +4964,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
       {title:'Next: '+nextMetric,copy:'Open the Hot List or Follow-Up tab and take the next action.'}
     ].map(renderDPCAction).join('');
   }
+  renderStudioLeadGenPipeline(activeCRM,d,coldCalls);
 
   renderHitList();
   var attentionLeads=getFollowAttentionLeads(activeCRM,dueCRM,hotCRM);
