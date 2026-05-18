@@ -488,6 +488,7 @@ function syncDailyDpcToNotion(row, source) {
 function syncWeeklyReviewToNotion(row, source) {
   try {
     var weekOf = row.weekOf || source.weekOf || mondayDateKey(new Date());
+    logActivity('Notion Weekly Review sync starting — ' + weekOf + ' — db: ' + NOTION_OPS_WEEKLY_DB);
     var properties = {
       'Name': notionTitle('Weekly Review — ' + weekOf),
       'Week Of': { date: { start: weekOf } },
@@ -510,6 +511,7 @@ function syncWeeklyReviewToNotion(row, source) {
       filter: { property: 'Week Of', date: { equals: weekOf } },
       page_size: 1
     });
+    logActivity('Notion Weekly Review query — ' + weekOf + ' — code: ' + query.code);
     if (query.code >= 400) {
       logActivity('Notion Weekly Review query — code: ' + query.code + ' — ' + query.text);
       return { status: 'error', stage: 'query', code: query.code };
@@ -521,6 +523,7 @@ function syncWeeklyReviewToNotion(row, source) {
       : notionRequest('post', 'https://api.notion.com/v1/pages', { parent: { database_id: NOTION_OPS_WEEKLY_DB }, properties: properties });
 
     logActivity('Notion Weekly Review upsert — ' + weekOf + ' — code: ' + result.code);
+    if (result.code >= 400) logActivity('Notion Weekly Review upsert error — code: ' + result.code + ' — ' + result.text);
     return { status: result.code < 400 ? 'ok' : 'error', stage: existing ? 'update' : 'create', code: result.code };
   } catch (err) {
     logActivity('Notion Weekly Review ERROR: ' + err.toString());
