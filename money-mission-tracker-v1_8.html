@@ -5249,20 +5249,37 @@ async function loadProductionPipeline(){
   var appUrl=localStorage.getItem(SHEETS_KEY);
   window.__productionPipelineLimited=true;
   window.__productionPipelineError='';
+  window.__productionPipelineHint='';
   if(!appUrl)return [];
   try{
     var data=await fetchProductionPipeline(appUrl,NOTION_PRODUCTION_DB);
     var items=normalizeProductionItems(data).filter(function(item){return !isProductionComplete(item);});
     window.__productionPipelineLimited=false;
     window.__productionPipelineError='';
+    window.__productionPipelineHint='';
     if(items.length)setHealth('content','ok','Production pipeline loaded: '+items.length+' active beat(s)');
     return items;
   }catch(e){
     window.__productionPipelineLimited=true;
     window.__productionPipelineError=e.message||'Production pipeline endpoint did not return active beats';
-    setHealth('content','err','Production pipeline needs Apps Script redeploy/update: '+window.__productionPipelineError);
+    window.__productionPipelineHint=getProductionPipelineHint(window.__productionPipelineError);
+    setHealth('content','err','Production pipeline sync pending: '+window.__productionPipelineHint);
     return [];
   }
+}
+
+function getProductionPipelineHint(message){
+  var text=String(message||'');
+  if(/object_not_found|Could not find database|404/i.test(text)){
+    return 'Share Master Beat Catalog with the Money Mission 01 Notion integration, then refresh.';
+  }
+  if(/missing the production pipeline handler|Backend is live/i.test(text)){
+    return 'Redeploy the Apps Script Web App with the latest bridge code.';
+  }
+  if(/NOTION_SECRET/i.test(text)){
+    return 'Add NOTION_SECRET to Apps Script Properties.';
+  }
+  return 'Check Apps Script deployment and Notion integration access, then refresh.';
 }
 
 async function fetchProductionPipeline(appUrl,databaseId){
@@ -8766,7 +8783,7 @@ function renderProductionPipeline(beats,soundee,banginDone){
       var advice=productionStageKey(bottleneck.name)==='assets'?'finish visual assets and metadata for one beat':productionStageKey(bottleneck.name)==='upload'?'push one beat through Beatstore and social upload':/Exported/i.test(bottleneck.name)?'choose one exported beat and package it':'start or choose one beat to move forward';
       summary.innerHTML='<strong>Bottleneck: '+escapeHtml(bottleneck.name)+'.</strong> '+advice+'.'+(limited?' <span style="color:#4a3a7a">Limited view: deployed Apps Script needs the latest production pipeline update.</span>':'');
     }else if(window.__productionPipelineLimited){
-      summary.innerHTML='<strong>Production sync pending.</strong> The local Apps Script bridge includes <code>production_pipeline</code>; redeploy/update the Web App so Master Beat Catalog can load here.'+(window.__productionPipelineError?' <span style="color:#8b949e">Last error: '+escapeHtml(window.__productionPipelineError)+'</span>':'');
+      summary.innerHTML='<strong>Production sync pending.</strong> '+escapeHtml(window.__productionPipelineHint||'Check Apps Script deployment and Notion integration access, then refresh.');
     }else if(beats===0){
       summary.innerHTML='<strong>Bottleneck: Create.</strong> No beats logged this week. Start one beat before you evaluate anything else.';
     }else if(!banginDone){
@@ -8795,7 +8812,7 @@ function renderProductionToday(){
   var items=getFilteredProductions();
   if(!items.length){
     if(window.__productionPipelineLimited){
-      wrap.innerHTML='<div class="ct-none">Production database found. The local Apps Script bridge already includes <strong>production_pipeline</strong>; redeploy/update the Web App, then active beats will appear here.'+(window.__productionPipelineError?'<br><span style="color:#8b949e">Last backend error: '+escapeHtml(window.__productionPipelineError)+'</span>':'')+' <a href="'+NOTION_PRODUCTION_URL+'" target="_blank">Open catalog →</a></div>';
+      wrap.innerHTML='<div class="ct-none">Production sync pending. '+escapeHtml(window.__productionPipelineHint||'Check Apps Script deployment and Notion integration access, then refresh.')+' <a href="'+NOTION_PRODUCTION_URL+'" target="_blank">Open catalog →</a></div>';
     }else{
       wrap.innerHTML='<div class="ct-none">No active beats found outside completed status. <a href="'+NOTION_PRODUCTION_URL+'" target="_blank">Open Master Beat Catalog →</a></div>';
     }
