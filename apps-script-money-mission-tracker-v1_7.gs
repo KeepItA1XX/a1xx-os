@@ -33,6 +33,7 @@ var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18
 var NOTION_RESOURCE_DB   = '35861152-81da-8053-8d5e-c5e6c5042e6c';
 var NOTION_CRM_DB        = 'b82e7140-b3b0-48d1-915d-34e4cdf9f65a';
 var NOTION_OPS_DAILY_DB  = '36461152-81da-809d-baa7-d6638dd2077b';
+var NOTION_OPS_WEEKLY_DB = '515171aa-890f-405f-a035-a37c09348f35';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -100,9 +101,11 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'weekly_save') {
-      saveWeekly(data);
+      var weeklyRow = saveWeekly(data);
+      var notionWeekly = syncWeeklyReviewToNotion(weeklyRow, data);
       logActivity('Weekly save — Cycle ' + data.cycleNum + ' — Revenue: $' + data.revenue);
-      return ok('Weekly save complete.');
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: weeklyRow, notionWeekly: notionWeekly }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'cycle_archive') {
       archiveCycle(data);
@@ -482,6 +485,49 @@ function syncDailyDpcToNotion(row, source) {
   }
 }
 
+function syncWeeklyReviewToNotion(row, source) {
+  try {
+    var weekOf = row.weekOf || source.weekOf || mondayDateKey(new Date());
+    var properties = {
+      'Name': notionTitle('Weekly Review — ' + weekOf),
+      'Week Of': { date: { start: weekOf } },
+      'Cycle': notionText(row.cycle || ''),
+      'Revenue This Week': { number: row.revenue || 0 },
+      'Week Target': { number: row.weekTarget || 0 },
+      'Ad Spend': { number: row.adSpend || 0 },
+      'Software & Tools': { number: row.software || 0 },
+      'Other Expenses': { number: row.otherExp || 0 },
+      'DMs Sent': { number: row.dms || 0 },
+      'Calls Booked': { number: row.callsBooked || 0 },
+      'Closes': { number: row.closes || 0 },
+      'Content Posted': { number: row.content || 0 },
+      'Sessions Closed': { number: row.sessions || 0 },
+      'Big Win': notionText(row.bigWin || ''),
+      'Biggest Lesson': notionText(row.biggestLesson || '')
+    };
+
+    var query = notionQuery(NOTION_OPS_WEEKLY_DB, {
+      filter: { property: 'Week Of', date: { equals: weekOf } },
+      page_size: 1
+    });
+    if (query.code >= 400) {
+      logActivity('Notion Weekly Review query — code: ' + query.code + ' — ' + query.text);
+      return { status: 'error', stage: 'query', code: query.code };
+    }
+    var parsed = JSON.parse(query.text || '{}');
+    var existing = parsed.results && parsed.results.length ? parsed.results[0] : null;
+    var result = existing
+      ? notionRequest('patch', 'https://api.notion.com/v1/pages/' + existing.id, { properties: properties })
+      : notionRequest('post', 'https://api.notion.com/v1/pages', { parent: { database_id: NOTION_OPS_WEEKLY_DB }, properties: properties });
+
+    logActivity('Notion Weekly Review upsert — ' + weekOf + ' — code: ' + result.code);
+    return { status: result.code < 400 ? 'ok' : 'error', stage: existing ? 'update' : 'create', code: result.code };
+  } catch (err) {
+    logActivity('Notion Weekly Review ERROR: ' + err.toString());
+    return { status: 'error', message: err.toString() };
+  }
+}
+
 function notionTitle(text) {
   return { title: [{ text: { content: String(text || '') } }] };
 }
@@ -497,6 +543,14 @@ function normalizeDailyDayType(value) {
   if (v === 'content') return 'Content';
   if (v === 'manager') return 'Manager';
   return '';
+}
+
+function mondayDateKey(date) {
+  var d = new Date(date || new Date());
+  d.setHours(0, 0, 0, 0);
+  var day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
 }
 
 function isDailyStreakHit(row) {
@@ -528,8 +582,10 @@ function saveWeekly(d) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_WEEKLY, WEEKLY_HEADERS);
   var wkRev = d.weeklyRevenue || []; var wkSv = d.weeklyServices || []; var wkOt = d.weeklyOther || [];
+  var timestamp = d.timestamp || new Date().toISOString();
+  var saveDate = d.date || new Date().toLocaleDateString();
   var row = [
-    d.timestamp || new Date().toISOString(), d.date || new Date().toLocaleDateString(),
+    timestamp, saveDate,
     d.cycleNum || '', d.cycleName || '', d.cycleDates || '', d.cycleTarget || 0,
     d.daysElapsed || 0, d.daysLeft || 0, d.revenue || 0, d.weekTarget || 0,
     d.adSpend || 0, d.software || 0, d.services || 0, d.otherExp || 0, d.totalExpenses || 0,
@@ -548,6 +604,25 @@ function saveWeekly(d) {
     d.noteWin || '', d.noteLesson || ''
   ];
   sheet.appendRow(row); formatSheet(sheet);
+  return {
+    timestamp: timestamp,
+    saveDate: saveDate,
+    weekOf: d.weekOf || mondayDateKey(new Date()),
+    cycle: d.cycleName ? ('Cycle ' + (d.cycleNum || '') + ' — ' + d.cycleName) : ('Cycle ' + (d.cycleNum || '')),
+    revenue: d.revenue || 0,
+    weekTarget: d.weekTarget || 0,
+    adSpend: d.adSpend || 0,
+    software: d.software || 0,
+    services: d.services || 0,
+    otherExp: (d.services || 0) + (d.otherExp || 0),
+    dms: d.dmSent || 0,
+    callsBooked: d.calls || 0,
+    closes: d.dmClose || 0,
+    content: d.cumPosts || 0,
+    sessions: d.sessions || 0,
+    bigWin: d.noteWin || '',
+    biggestLesson: d.noteLesson || ''
+  };
 }
 
 function archiveCycle(d) {
