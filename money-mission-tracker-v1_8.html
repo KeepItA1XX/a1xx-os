@@ -414,6 +414,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .status{font-size:11px;color:#444;margin-top:6px;min-height:16px}
 .status.ok{color:#639922}
 .status.err{color:#e05555}
+.archive-sync-panel{display:none;margin-top:8px;background:#100d04;border:0.5px solid #3a2800;border-radius:8px;padding:9px 10px}
+.archive-sync-panel.active{display:block}
+.archive-sync-title{font-size:11px;font-weight:800;color:#d4a017;margin-bottom:4px}
+.archive-sync-copy{font-size:10px;color:#8a6a24;line-height:1.45;margin-bottom:8px}
+.archive-sync-track{height:4px;background:#1a1304;border-radius:999px;overflow:hidden}
+.archive-sync-fill{height:100%;width:0%;background:#d4a017;border-radius:999px;transition:width .35s ease}
 
 input[type=number],input[type=text],input[type=password],input[type=time]{border:0.5px solid #1e1e1e;border-radius:8px;background:#111;color:#e0e0e0;outline:none;transition:border-color .2s}
 input:hover{border-color:#2a2a2a}
@@ -2332,6 +2338,11 @@ body{background:#090a0b;color:#d8dde1}
   <button class="btn" onclick="exportCSV()">Export CSV ↓</button>
 </div>
 <div class="status" id="week-status"></div>
+<div class="archive-sync-panel" id="archive-sync-panel">
+  <div class="archive-sync-title" id="archive-sync-title">Archive ready</div>
+  <div class="archive-sync-copy" id="archive-sync-copy">Click Archive Cycle again to send the cycle archive to Sheets and Notion.</div>
+  <div class="archive-sync-track"><div class="archive-sync-fill" id="archive-sync-fill"></div></div>
+</div>
 
 </div><!-- end week pane -->
 
@@ -6495,22 +6506,40 @@ function updateLastSaved(ts){
   else if(diff<=7)el.textContent=diff+' days ago';
   else el.textContent=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
+function setArchiveSyncState(title,copy,pct,cls){
+  var panel=document.getElementById('archive-sync-panel');
+  var titleEl=document.getElementById('archive-sync-title');
+  var copyEl=document.getElementById('archive-sync-copy');
+  var fill=document.getElementById('archive-sync-fill');
+  var status=document.getElementById('week-status');
+  if(panel)panel.className='archive-sync-panel active';
+  if(titleEl)titleEl.textContent=title||'Archive ready';
+  if(copyEl)copyEl.textContent=copy||'';
+  if(fill)fill.style.width=Math.max(0,Math.min(100,pct||0))+'%';
+  if(status&&copy){status.textContent=copy;status.className='status '+(cls||'');}
+}
 function archiveCycleBtn(){
   var url=localStorage.getItem(SHEETS_KEY);
   var status=document.getElementById('week-status');
   if(!url){alert('Connect Google Sheets first via Sheets setup');return;}
-  if(!confirm('Archive Cycle 1 to Google Sheets?'))return;
   try{
     var ci=getCycleIdx(),c=CYCLES[ci];
-    if(status){status.textContent='Sending cycle archive request...';status.className='status';}
+    var now=Date.now();
+    if(!window.__archiveCycleArmed||window.__archiveCycleArmed.cycleNum!==c.num||(now-window.__archiveCycleArmed.ts)>20000){
+      window.__archiveCycleArmed={cycleNum:c.num,ts:now};
+      setArchiveSyncState('Confirm archive','Click Archive Cycle again to send Cycle '+c.num+' to Sheets and Notion.',18,'');
+      return;
+    }
+    window.__archiveCycleArmed=null;
+    setArchiveSyncState('Sending archive','Sending Cycle '+c.num+' archive request to Apps Script...',55,'');
     fetch(url,{method:'POST',body:JSON.stringify({type:'cycle_archive_probe',cycleNum:c.num,source:'archiveCycleBtn'}),mode:'no-cors',redirect:'follow'});
     var data=captureWeekData();
     var payload=Object.assign({type:'cycle_archive',cycleNum:c.num,cycleName:c.name,cycleTarget:c.target,cycleStart:c.start,cycleEnd:c.end},data);
     fetch(url,{method:'POST',body:JSON.stringify(payload),mode:'no-cors',redirect:'follow'});
-    if(status){status.textContent='Cycle archive request sent. Check Activity Log for Cycle archive button ping and Notion Cycle Archive upsert.';status.className='status ok';}
+    setArchiveSyncState('Archive request sent','Check Activity Log for Cycle archive button ping and Notion Cycle Archive upsert.',100,'ok');
     setTimeout(function(){var s=document.getElementById('week-status');if(s){s.textContent='';s.className='status';}},7000);
   }catch(err){
-    if(status){status.textContent='Archive request failed before sending: '+err.message;status.className='status err';}
+    setArchiveSyncState('Archive request failed','Archive request failed before sending: '+err.message,100,'err');
   }
 }
 function exportCSV(){
