@@ -34,6 +34,7 @@ var NOTION_RESOURCE_DB   = '35861152-81da-8053-8d5e-c5e6c5042e6c';
 var NOTION_CRM_DB        = 'b82e7140-b3b0-48d1-915d-34e4cdf9f65a';
 var NOTION_OPS_DAILY_DB  = '36461152-81da-809d-baa7-d6638dd2077b';
 var NOTION_OPS_WEEKLY_DB = '515171aa-890f-405f-a035-a37c09348f35';
+var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -108,9 +109,11 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'cycle_archive') {
-      archiveCycle(data);
+      var cycleRow = archiveCycle(data);
+      var notionCycle = syncCycleArchiveToNotion(cycleRow, data);
       logActivity('CYCLE ARCHIVE — Cycle ' + data.cycleNum + ' archived permanently.');
-      return ok('Cycle archive complete.');
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: cycleRow, notionCycle: notionCycle }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'backup_save') {
       saveBackup(data);
@@ -531,6 +534,51 @@ function syncWeeklyReviewToNotion(row, source) {
   }
 }
 
+function syncCycleArchiveToNotion(row, source) {
+  try {
+    var cycleNum = parseFloat(row.cycleNum || source.cycleNum) || 0;
+    logActivity('Notion Cycle Archive sync starting — Cycle ' + cycleNum + ' — db: ' + NOTION_OPS_CYCLE_DB);
+    var properties = {
+      'Cycle Name': notionTitle(row.cycleName || ('Cycle ' + cycleNum)),
+      'Cycle Number': { number: cycleNum },
+      'Status': { select: { name: 'Archived' } },
+      'Target': { number: row.target || 0 },
+      'Revenue Collected': { number: row.revenue || 0 },
+      'Net Profit': { number: row.netProfit || 0 },
+      'Total DMs Sent': { number: row.totalDms || 0 },
+      'Total Calls Made': { number: row.totalCalls || 0 },
+      'Total Closes': { number: row.totalCloses || 0 },
+      'Total Content Posted': { number: row.totalContent || 0 },
+      'Cycle Win': notionText(row.cycleWin || ''),
+      'Cycle Lesson': notionText(row.cycleLesson || '')
+    };
+    if (row.startDate) properties['Start Date'] = { date: { start: row.startDate } };
+    if (row.endDate) properties['End Date'] = { date: { start: row.endDate } };
+
+    var query = notionQuery(NOTION_OPS_CYCLE_DB, {
+      filter: { property: 'Cycle Number', number: { equals: cycleNum } },
+      page_size: 1
+    });
+    logActivity('Notion Cycle Archive query — Cycle ' + cycleNum + ' — code: ' + query.code);
+    if (query.code >= 400) {
+      logActivity('Notion Cycle Archive query error — code: ' + query.code + ' — ' + query.text);
+      return { status: 'error', stage: 'query', code: query.code };
+    }
+    var parsed = JSON.parse(query.text || '{}');
+    var existing = parsed.results && parsed.results.length ? parsed.results[0] : null;
+    var result = existing
+      ? notionRequest('patch', 'https://api.notion.com/v1/pages/' + existing.id, { properties: properties })
+      : notionRequest('post', 'https://api.notion.com/v1/pages', { parent: { database_id: NOTION_OPS_CYCLE_DB }, properties: properties });
+
+    logActivity('Notion Cycle Archive upsert — Cycle ' + cycleNum + ' — code: ' + result.code);
+    if (result.code >= 400) logActivity('Notion Cycle Archive upsert error — code: ' + result.code + ' — ' + result.text);
+    return { status: result.code < 400 ? 'ok' : 'error', stage: existing ? 'update' : 'create', code: result.code };
+  } catch (err) {
+    logActivity('Notion Cycle Archive ERROR: ' + err.toString());
+    return { status: 'error', message: err.toString() };
+  }
+}
+
 function notionTitle(text) {
   return { title: [{ text: { content: String(text || '') } }] };
 }
@@ -631,8 +679,9 @@ function saveWeekly(d) {
 function archiveCycle(d) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_ARCHIVE, ARCHIVE_HEADERS);
+  var archivedAt = new Date().toISOString();
   var row = [
-    new Date().toISOString(),
+    archivedAt,
     d.cycleNum || '', d.cycleName || '', d.cycleDates || '', d.cycleTarget || 0,
     d.daysElapsed || 0, d.revenue || 0, d.totalExpenses || 0, d.netProfit || 0, d.margin || 0,
     d.roas || 0, d.dailyPace || 0, d.sessions || 0, d.cumDms || 0, d.cumPosts || 0,
@@ -643,6 +692,22 @@ function archiveCycle(d) {
   ];
   sheet.appendRow(row);
   sheet.getRange(sheet.getLastRow(), 1, 1, ARCHIVE_HEADERS.length).setFontWeight('bold').setBackground('#0d1808');
+  return {
+    archivedAt: archivedAt,
+    cycleNum: d.cycleNum || '',
+    cycleName: d.cycleName || '',
+    startDate: d.cycleStart || '',
+    endDate: d.cycleEnd || '',
+    target: d.cycleTarget || 0,
+    revenue: d.revenue || 0,
+    netProfit: d.netProfit || 0,
+    totalDms: d.cumDms || d.dmSent || 0,
+    totalCalls: d.calls || 0,
+    totalCloses: d.dmClose || d.closes || 0,
+    totalContent: d.cumPosts || d.content || 0,
+    cycleWin: d.noteWin || '',
+    cycleLesson: d.noteLesson || ''
+  };
 }
 
 function saveBackup(d) {
