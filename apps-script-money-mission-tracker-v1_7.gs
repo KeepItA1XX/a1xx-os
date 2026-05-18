@@ -29,7 +29,7 @@ var SHEET_PROSPECTS    = 'Captured Leads';
 var SHEET_RESET_AUDIT  = 'Reset Audit';      // ← NEW in 1.7
 
 var NOTION_CONTENT_DB    = '1a061152-81da-81bc-b7ec-cecbcba9ed8e';
-var NOTION_PRODUCTION_DB = '1a761152-81da-8178-ad45-000b48fc3735';
+var NOTION_PRODUCTION_DB = '1a761152-81da-8188-be8a-000b3648f066';
 var NOTION_RESOURCE_DB   = '35861152-81da-8053-8d5e-c5e6c5042e6c';
 var NOTION_CRM_DB        = 'b82e7140-b3b0-48d1-915d-34e4cdf9f65a';
 

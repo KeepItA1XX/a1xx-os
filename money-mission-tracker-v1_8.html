@@ -2522,8 +2522,8 @@ var HEALTH_KEY='a1xx_system_health_v1';
 var NOTION_CONTENT_DB='1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_CONTENT_URL='https://www.notion.so/1a06115281da81bcb7eccecbcba9ed8e';
 var NOTION_CONTENT_DATE_FIELD='Production Date';
-var NOTION_PRODUCTION_DB='1a761152-81da-8178-ad45-000b48fc3735';
-var NOTION_PRODUCTION_URL='https://www.notion.so/1a76115281da8178ad45000b48fc3735'; /* 2026-05-12: typo fix — URL now matches DB ID */
+var NOTION_PRODUCTION_DB='1a761152-81da-8188-be8a-000b3648f066';
+var NOTION_PRODUCTION_URL='https://www.notion.so/1a76115281da8199a5dffc423d447f31?v=1a76115281da8194b7f4000cde877d8e'; /* 2026-05-18: correct Master Beat Catalog database/data source */
 var NOTION_RESOURCE_DB='35861152-81da-8053-8d5e-c5e6c5042e6c';
 var NOTION_CRM_DB='b82e7140-b3b0-48d1-915d-34e4cdf9f65a';
 var NOTION_CRM_URL='https://www.notion.so/b82e7140b3b048d1915d34e4cdf9f65a?v=75fdbde5608a4dbdb6e5730e35399916'; /* 2026-05-12: People HQ CRM Lead Pipeline view */
@@ -8780,7 +8780,7 @@ function renderProductionPipeline(beats,soundee,banginDone){
     if(items.length){
       var bottleneck=stages.slice().sort(function(a,b){return b.count-a.count;})[0];
       var limited=window.__productionPipelineLimited;
-      var advice=productionStageKey(bottleneck.name)==='assets'?'finish visual assets and metadata for one beat':productionStageKey(bottleneck.name)==='upload'?'push one beat through Beatstore and social upload':/Exported/i.test(bottleneck.name)?'choose one exported beat and package it':'start or choose one beat to move forward';
+      var advice=productionStageKey(bottleneck.name)==='assets'?'finish visual assets and metadata for one beat':productionStageKey(bottleneck.name)==='upload'?'push one beat through DSP, EVEN, and social upload':/Exported/i.test(bottleneck.name)?'choose one exported beat and package it':'start or choose one beat to move forward';
       summary.innerHTML='<strong>Bottleneck: '+escapeHtml(bottleneck.name)+'.</strong> '+advice+'.'+(limited?' <span style="color:#4a3a7a">Limited view: deployed Apps Script needs the latest production pipeline update.</span>':'');
     }else if(window.__productionPipelineLimited){
       summary.innerHTML='<strong>Production sync pending.</strong> '+escapeHtml(window.__productionPipelineHint||'Check Apps Script deployment and Notion integration access, then refresh.');
@@ -8821,7 +8821,7 @@ function renderProductionToday(){
   selectedProductionIdx=Math.min(selectedProductionIdx,Math.max(0,items.length-1));
   var item=items[selectedProductionIdx]||items[0];
   var controls=items.length>1?'<div class="prod-picker"><button class="prod-nav" onclick="pickProduction(-1)" '+(selectedProductionIdx<=0?'disabled':'')+'>‹</button><div class="prod-count">Production '+(selectedProductionIdx+1)+' of '+items.length+' · '+productionStageLabel(productionFilter)+'</div><button class="prod-nav" onclick="pickProduction(1)" '+(selectedProductionIdx>=items.length-1?'disabled':'')+'>›</button></div>':'';
-  var next=productionStageKey(item.status)==='start'?'Start the beat or choose its direction.':productionStageKey(item.status)==='exported'?'Package it: artwork, metadata, and next upload path.':productionStageKey(item.status)==='assets'?'Finish visual assets and metadata.':productionStageKey(item.status)==='upload'?'Push this through Beatstore and social upload.':'Move this production one clear stage forward.';
+  var next=productionStageKey(item.status)==='start'?'Start the beat or choose its direction.':productionStageKey(item.status)==='exported'?'Package it: artwork, metadata, and next upload path.':productionStageKey(item.status)==='assets'?'Finish visual assets and metadata.':productionStageKey(item.status)==='upload'?'Push this through DSP, EVEN, and social upload.':'Move this production one clear stage forward.';
   wrap.innerHTML=controls+'<div class="prod-focus-card"><div class="prod-focus-top"><div class="prod-focus-title">'+escapeHtml(item.title)+'</div><div class="prod-status-pill">'+escapeHtml(item.status)+'</div></div><div class="prod-focus-meta">'+escapeHtml(next)+(item.owner?' · Assigned: '+escapeHtml(item.owner):'')+'</div><a class="prod-open" href="'+escapeHtml(item.url||NOTION_PRODUCTION_URL)+'" target="_blank">Open in Notion →</a></div>';
 }
 
