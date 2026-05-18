@@ -261,6 +261,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .settings-close:hover{border-color:#3a444e;color:#f0f3f5}
 .settings-pane{display:none}
 .settings-pane.active{display:block}
+.settings-subtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#080a0c;border:0.5px solid #20272e;border-radius:9px;padding:3px;margin-bottom:10px}
+.settings-subtab{height:28px;border:0;border-radius:7px;background:transparent;color:#8b949e;font-size:10px;font-weight:800;cursor:pointer;transition:all .15s}
+.settings-subtab:hover{color:#d7dde3}
+.settings-subtab.active{background:#121712;border:0.5px solid #3a5a2a;color:#7ec845}
+.health-subpane{display:none}
+.health-subpane.active{display:block}
 .settings-section{background:#0f1215;border:0.5px solid #20272e;border-radius:10px;padding:11px 12px;margin-bottom:10px}
 .settings-section-title{font-size:10px;font-weight:800;color:#8b949e;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
 .settings-list{display:grid;gap:7px}
@@ -279,6 +285,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   .system-panel{width:96vw;grid-template-columns:118px 1fr}
   .settings-nav{padding:12px 8px}
   .settings-tab{height:32px;font-size:10px;padding:0 8px}
+  .settings-subtabs{grid-template-columns:repeat(2,1fr)}
   .settings-main{padding:14px 12px 16px}
   .settings-row{flex-direction:column;gap:7px}
 }
@@ -1360,13 +1367,10 @@ body{background:#090a0b;color:#d8dde1}
 <div class="system-panel" id="system-panel">
   <div class="settings-nav">
     <div class="settings-brand">System Hub</div>
-    <button class="settings-tab active" data-settings-tab="health" onclick="setSettingsTab('health')">Health</button>
-    <button class="settings-tab" data-settings-tab="account" onclick="setSettingsTab('account')">Account</button>
+    <button class="settings-tab active" data-settings-tab="account" onclick="setSettingsTab('account')">Account</button>
     <button class="settings-tab" data-settings-tab="connections" onclick="setSettingsTab('connections')">Connections</button>
-    <button class="settings-tab" data-settings-tab="backups" onclick="setSettingsTab('backups')">Backups</button>
-    <button class="settings-tab" data-settings-tab="diagnostics" onclick="setSettingsTab('diagnostics')">Diagnostics</button>
-    <button class="settings-tab" data-settings-tab="version" onclick="setSettingsTab('version')">Version</button>
     <button class="settings-tab" data-settings-tab="ai" onclick="setSettingsTab('ai')">AI Controls</button>
+    <button class="settings-tab" data-settings-tab="health" onclick="setSettingsTab('health')">Health</button>
   </div>
   <div class="settings-main">
     <div class="system-head">
@@ -1377,18 +1381,7 @@ body{background:#090a0b;color:#d8dde1}
       <button class="settings-close" onclick="closeSystemPanel()" title="Close settings">×</button>
     </div>
 
-    <div class="settings-pane active" id="settings-pane-health">
-      <div class="settings-section">
-        <div class="settings-section-title">System Health</div>
-        <div class="system-grid" id="system-grid"></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn" onclick="loadTodayData()">Run sync check</button>
-        <button class="btn primary" onclick="sendBackup()">Save backup ↑</button>
-      </div>
-    </div>
-
-    <div class="settings-pane" id="settings-pane-account">
+    <div class="settings-pane active" id="settings-pane-account">
       <div class="settings-section">
         <div class="settings-section-title">Account / Profile</div>
         <div class="settings-list">
@@ -1427,82 +1420,6 @@ body{background:#090a0b;color:#d8dde1}
       </div>
     </div>
 
-    <div class="settings-pane" id="settings-pane-backups">
-      <div class="settings-section">
-        <div class="settings-section-title">Archive & Backup Management</div>
-        <div class="auto-backup-bar">
-          <span>Auto-save:</span>
-          <span id="auto-backup-status">Starting...</span>
-          <button class="auto-backup-now-btn" id="backup-save-now-btn" onclick="checkAutoBackup(true)">Save now</button>
-        </div>
-        <div class="btn-row">
-          <button class="btn primary" id="backup-save-btn" onclick="sendBackup()">Save backup ↑</button>
-          <button class="btn" id="backup-restore-btn" onclick="restoreBackup()">Restore backup ↓</button>
-        </div>
-        <div class="backup-status-box" id="backup-status-box">
-          <div class="backup-status-top">
-            <div class="backup-status-title" id="backup-status-title">Backup ready</div>
-            <div class="settings-badge off" id="backup-status-badge">Idle</div>
-          </div>
-          <div class="backup-status-detail" id="backup-status-detail">Use Save backup to push the current app data into Google Sheets.</div>
-          <div class="backup-status-track"><div class="backup-status-fill"></div></div>
-        </div>
-      </div>
-
-      <!-- RESET TEST DATA — added 2026-05-12 -->
-      <div class="reset-section">
-        <div class="reset-head">
-          <div class="reset-title">Reset test data</div>
-          <div class="reset-sub">Archive/truncate test entries without touching your config or connected accounts.</div>
-        </div>
-        <div class="reset-row">
-          <button class="btn reset-toggle" id="reset-browser-toggle" onclick="toggleResetPanel('browser')">Reset Browser Data ↺</button>
-          <button class="btn reset-toggle" id="reset-sheet-toggle" onclick="toggleResetPanel('sheet')">Reset Sheet Rows ↺</button>
-        </div>
-        <div class="reset-panel" id="reset-panel-browser" style="display:none">
-          <div class="reset-panel-title">Pick what to wipe in this browser</div>
-          <label class="reset-check"><input type="checkbox" id="reset-cat-dpc"/> <span>DPC daily logs (today's snapshot + this week's saved rows)</span></label>
-          <label class="reset-check"><input type="checkbox" id="reset-cat-captures"/> <span>Captured leads (prospects)</span></label>
-          <label class="reset-check"><input type="checkbox" id="reset-cat-streaks"/> <span>Streaks + close log + content log</span></label>
-          <label class="reset-check"><input type="checkbox" id="reset-cat-banners"/> <span>Missed-day banner dismissals</span></label>
-          <label class="reset-check reset-check-danger"><input type="checkbox" id="reset-cat-everything"/> <span><strong>Everything</strong> a1xx_* (full wipe — preserves only setup tokens)</span></label>
-          <div class="reset-preserve">Always preserved: Apps Script URL, Todoist token, Instagram token.</div>
-          <button class="btn primary reset-execute" id="reset-browser-exec" onclick="armBrowserReset()">Reset Browser Data</button>
-          <div class="reset-status" id="reset-browser-status"></div>
-        </div>
-        <div class="reset-panel" id="reset-panel-sheet" style="display:none">
-          <div class="reset-panel-title">Pick which Google Sheet tabs to truncate</div>
-          <label class="reset-check"><input type="checkbox" id="reset-sheet-daily"/> <span>Daily Log tab rows</span></label>
-          <label class="reset-check"><input type="checkbox" id="reset-sheet-prospects"/> <span>Captured Leads tab rows</span></label>
-          <div class="reset-preserve">Rows are archived to a "Reset Audit" tab before truncation. Weekly Saves, Cycle Archives, Activity Log, State Backups are untouched.</div>
-          <button class="btn primary reset-execute" id="reset-sheet-exec" onclick="armSheetReset()">Reset Sheet Rows</button>
-          <div class="reset-status" id="reset-sheet-status"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-pane" id="settings-pane-diagnostics">
-      <div class="settings-section">
-        <div class="settings-section-title">Diagnostics</div>
-        <div class="settings-list" id="settings-diagnostics-list">
-          <div class="settings-row"><div><div class="settings-row-name">Recent checks</div><div class="settings-row-meta">Run sync check to refresh live services. Activity Log remains the source of truth for backend events.</div></div><span class="settings-badge warn">Review</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Cycle Archive</div><div class="settings-row-meta">Use the two-click Archive Cycle flow, then confirm Activity Log shows ping, archive, and Notion upsert.</div></div><span class="settings-badge">Ready</span></div>
-        </div>
-      </div>
-      <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
-    </div>
-
-    <div class="settings-pane" id="settings-pane-version">
-      <div class="settings-section">
-        <div class="settings-section-title">Version / Build</div>
-        <div class="settings-list">
-          <div class="settings-row"><div><div class="settings-row-name">App version</div><div class="settings-row-meta">Money Mission OS v1.9 · Account identity foundation</div></div><span class="settings-badge">v1.9</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Next milestone</div><div class="settings-row-meta">v1.9: visual modernization, stronger meeting visibility, AI-ready surfaces</div></div><span class="settings-badge warn">Next</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Apps Script</div><div class="settings-row-meta">Redeploy after backend changes. HTML-only changes need a hard refresh.</div></div><span class="settings-badge off">Manual</span></div>
-        </div>
-      </div>
-    </div>
-
     <div class="settings-pane" id="settings-pane-ai">
       <div class="settings-section">
         <div class="settings-section-title">AI / Agent Controls</div>
@@ -1511,6 +1428,98 @@ body{background:#090a0b;color:#d8dde1}
           <div class="settings-row"><div><div class="settings-row-name">AI Chat</div><div class="settings-row-meta">Planned drawer interface for questions, summaries, and diagnostics.</div></div><span class="settings-badge off">Off</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Allowed sources</div><div class="settings-row-meta">App state, Notion, Google Sheets, Calendar. Add CRM/production scopes later.</div></div><span class="settings-badge warn">Planned</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Write permissions</div><div class="settings-row-meta">Off by default. Any future AI write must ask first and leave an audit trail.</div></div><span class="settings-badge off">Locked</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-pane" id="settings-pane-health">
+      <div class="settings-subtabs">
+        <button class="settings-subtab active" data-health-subtab="status" onclick="setHealthSubTab('status')">Status</button>
+        <button class="settings-subtab" data-health-subtab="backups" onclick="setHealthSubTab('backups')">Backups</button>
+        <button class="settings-subtab" data-health-subtab="diagnostics" onclick="setHealthSubTab('diagnostics')">Diagnostics</button>
+        <button class="settings-subtab" data-health-subtab="version" onclick="setHealthSubTab('version')">Version</button>
+      </div>
+      <div class="health-subpane active" id="health-subpane-status">
+        <div class="settings-section">
+          <div class="settings-section-title">System Health</div>
+          <div class="system-grid" id="system-grid"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="loadTodayData()">Run sync check</button>
+          <button class="btn primary" onclick="sendBackup()">Save backup ↑</button>
+        </div>
+      </div>
+      <div class="health-subpane" id="health-subpane-backups">
+        <div class="settings-section">
+          <div class="settings-section-title">Archive & Backup Management</div>
+          <div class="auto-backup-bar">
+            <span>Auto-save:</span>
+            <span id="auto-backup-status">Starting...</span>
+            <button class="auto-backup-now-btn" id="backup-save-now-btn" onclick="checkAutoBackup(true)">Save now</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="backup-save-btn" onclick="sendBackup()">Save backup ↑</button>
+            <button class="btn" id="backup-restore-btn" onclick="restoreBackup()">Restore backup ↓</button>
+          </div>
+          <div class="backup-status-box" id="backup-status-box">
+            <div class="backup-status-top">
+              <div class="backup-status-title" id="backup-status-title">Backup ready</div>
+              <div class="settings-badge off" id="backup-status-badge">Idle</div>
+            </div>
+            <div class="backup-status-detail" id="backup-status-detail">Use Save backup to push the current app data into Google Sheets.</div>
+            <div class="backup-status-track"><div class="backup-status-fill"></div></div>
+          </div>
+        </div>
+
+        <!-- RESET TEST DATA — added 2026-05-12 -->
+        <div class="reset-section">
+          <div class="reset-head">
+            <div class="reset-title">Reset test data</div>
+            <div class="reset-sub">Archive/truncate test entries without touching your config or connected accounts.</div>
+          </div>
+          <div class="reset-row">
+            <button class="btn reset-toggle" id="reset-browser-toggle" onclick="toggleResetPanel('browser')">Reset Browser Data ↺</button>
+            <button class="btn reset-toggle" id="reset-sheet-toggle" onclick="toggleResetPanel('sheet')">Reset Sheet Rows ↺</button>
+          </div>
+          <div class="reset-panel" id="reset-panel-browser" style="display:none">
+            <div class="reset-panel-title">Pick what to wipe in this browser</div>
+            <label class="reset-check"><input type="checkbox" id="reset-cat-dpc"/> <span>DPC daily logs (today's snapshot + this week's saved rows)</span></label>
+            <label class="reset-check"><input type="checkbox" id="reset-cat-captures"/> <span>Captured leads (prospects)</span></label>
+            <label class="reset-check"><input type="checkbox" id="reset-cat-streaks"/> <span>Streaks + close log + content log</span></label>
+            <label class="reset-check"><input type="checkbox" id="reset-cat-banners"/> <span>Missed-day banner dismissals</span></label>
+            <label class="reset-check reset-check-danger"><input type="checkbox" id="reset-cat-everything"/> <span><strong>Everything</strong> a1xx_* (full wipe — preserves only setup tokens)</span></label>
+            <div class="reset-preserve">Always preserved: Apps Script URL, Todoist token, Instagram token.</div>
+            <button class="btn primary reset-execute" id="reset-browser-exec" onclick="armBrowserReset()">Reset Browser Data</button>
+            <div class="reset-status" id="reset-browser-status"></div>
+          </div>
+          <div class="reset-panel" id="reset-panel-sheet" style="display:none">
+            <div class="reset-panel-title">Pick which Google Sheet tabs to truncate</div>
+            <label class="reset-check"><input type="checkbox" id="reset-sheet-daily"/> <span>Daily Log tab rows</span></label>
+            <label class="reset-check"><input type="checkbox" id="reset-sheet-prospects"/> <span>Captured Leads tab rows</span></label>
+            <div class="reset-preserve">Rows are archived to a "Reset Audit" tab before truncation. Weekly Saves, Cycle Archives, Activity Log, State Backups are untouched.</div>
+            <button class="btn primary reset-execute" id="reset-sheet-exec" onclick="armSheetReset()">Reset Sheet Rows</button>
+            <div class="reset-status" id="reset-sheet-status"></div>
+          </div>
+        </div>
+      </div>
+      <div class="health-subpane" id="health-subpane-diagnostics">
+        <div class="settings-section">
+          <div class="settings-section-title">Diagnostics</div>
+          <div class="settings-list" id="settings-diagnostics-list">
+            <div class="settings-row"><div><div class="settings-row-name">Recent checks</div><div class="settings-row-meta">Run sync check to refresh live services. Activity Log remains the source of truth for backend events.</div></div><span class="settings-badge warn">Review</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Cycle Archive</div><div class="settings-row-meta">Use the two-click Archive Cycle flow, then confirm Activity Log shows ping, archive, and Notion upsert.</div></div><span class="settings-badge">Ready</span></div>
+          </div>
+        </div>
+        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
+      </div>
+      <div class="health-subpane" id="health-subpane-version">
+        <div class="settings-section">
+          <div class="settings-section-title">Version / Build</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">App version</div><div class="settings-row-meta">Money Mission OS v1.9 · Account identity foundation</div></div><span class="settings-badge">v1.9</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Next milestone</div><div class="settings-row-meta">v1.9: visual modernization, stronger meeting visibility, AI-ready surfaces</div></div><span class="settings-badge warn">Next</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Apps Script</div><div class="settings-row-meta">Redeploy after backend changes. HTML-only changes need a hard refresh.</div></div><span class="settings-badge off">Manual</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -3131,7 +3140,7 @@ function toggleSystemPanel(){
   var open=!p.classList.contains('open');
   p.classList.toggle('open',open);
   if(b)b.classList.toggle('open',open);
-  if(open){setSettingsTab(window.__settingsTab||'health');renderSystemHealth();}
+  if(open){setSettingsTab(window.__settingsTab||'account');renderSystemHealth();}
 }
 
 function closeSystemPanel(){
@@ -3142,15 +3151,27 @@ function closeSystemPanel(){
 }
 
 function setSettingsTab(tab){
-  window.__settingsTab=tab||'health';
+  window.__settingsTab=tab||'account';
   document.querySelectorAll('[data-settings-tab]').forEach(function(btn){
     btn.classList.toggle('active',btn.getAttribute('data-settings-tab')===window.__settingsTab);
   });
   document.querySelectorAll('.settings-pane').forEach(function(pane){
     pane.classList.toggle('active',pane.id==='settings-pane-'+window.__settingsTab);
   });
+  if(window.__settingsTab==='health')setHealthSubTab(window.__healthSubTab||'status');
   updateSettingsConnections();
   renderAccountIdentity();
+}
+
+function setHealthSubTab(tab){
+  window.__healthSubTab=tab||'status';
+  document.querySelectorAll('[data-health-subtab]').forEach(function(btn){
+    btn.classList.toggle('active',btn.getAttribute('data-health-subtab')===window.__healthSubTab);
+  });
+  document.querySelectorAll('.health-subpane').forEach(function(pane){
+    pane.classList.toggle('active',pane.id==='health-subpane-'+window.__healthSubTab);
+  });
+  if(window.__healthSubTab==='status')renderSystemHealth();
 }
 
 function updateSettingsConnections(){
