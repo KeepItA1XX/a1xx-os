@@ -576,7 +576,20 @@ input:focus{border-color:#333}
 .dpc-mode{font-size:14px;font-weight:600;color:#f0f0f0;line-height:1.3}
 .dpc-timer-wrap{text-align:right;flex-shrink:0}
 .dpc-timer-label{font-size:9px;color:#4a7a20;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
-.dpc-timer{font-size:22px;font-weight:700;color:#7ec845;letter-spacing:.02em;line-height:1}
+.dpc-timer{font-size:18px;font-weight:700;color:#7ec845;letter-spacing:0;line-height:1;white-space:nowrap}
+.ct-header-tools{display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.mini-block-timer{text-align:right;flex-shrink:0;background:#071006;border:0.5px solid #1d3010;border-radius:8px;padding:6px 10px;min-width:104px}
+.mini-block-timer-label{font-size:8px;color:#4a7a20;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:3px}
+.mini-block-timer-clock{font-size:12px;font-weight:800;color:#7ec845;line-height:1.15;white-space:nowrap}
+.mini-block-timer-sub{font-size:9px;color:#5f8d3d;margin-top:3px;line-height:1.2;white-space:nowrap}
+.content-tracker-card .mini-block-timer{background:#050f20;border-color:#1a3050}
+.content-tracker-card .mini-block-timer-label{color:#2a4a70}
+.content-tracker-card .mini-block-timer-clock{color:#5b9cf6}
+.content-tracker-card .mini-block-timer-sub{color:#4f78a4}
+.production-card .mini-block-timer{background:#0a0614;border-color:#2a1848}
+.production-card .mini-block-timer-label{color:#6a5acd}
+.production-card .mini-block-timer-clock{color:#9b6df5}
+.production-card .mini-block-timer-sub{color:#6d5aae}
 
 .dpc-one-thing{background:#050f02;border:0.5px solid #2a4a10;border-radius:10px;padding:16px 16px 14px;margin-bottom:10px;text-align:center}
 .mission-one-thing{margin:0 0 10px;text-align:center}
@@ -1818,9 +1831,16 @@ body{background:#090a0b;color:#d8dde1}
       <div class="ct-label">Content</div>
       <div class="ct-title" id="ct-title">Publishing consistency</div>
     </div>
-    <div class="ct-streak-wrap">
-      <div class="ct-streak-num" id="ct-streak-num">0</div>
-      <div class="ct-streak-lbl">day streak</div>
+    <div class="ct-header-tools">
+      <div class="mini-block-timer" data-block-timer>
+        <div class="mini-block-timer-label" data-block-timer-label>Block timer</div>
+        <div class="mini-block-timer-clock" data-block-timer-clock>-- min -- sec</div>
+        <div class="mini-block-timer-sub" data-block-timer-sub>Reading block...</div>
+      </div>
+      <div class="ct-streak-wrap">
+        <div class="ct-streak-num" id="ct-streak-num">0</div>
+        <div class="ct-streak-lbl">day streak</div>
+      </div>
     </div>
   </div>
 
@@ -1949,10 +1969,17 @@ body{background:#090a0b;color:#d8dde1}
       <div class="ct-label" style="color:#9b6df5">Production</div>
       <div class="ct-title" id="prod-title">Beat output consistency</div>
     </div>
-    <div class="prod-bangin-status" id="prod-bangin-status">
-      <div class="pbs-icon" id="pbs-icon">⏰</div>
-      <div class="pbs-label">BANGIN+</div>
-      <div class="pbs-sub" id="pbs-sub">checking...</div>
+    <div class="ct-header-tools">
+      <div class="mini-block-timer" data-block-timer>
+        <div class="mini-block-timer-label" data-block-timer-label>Block timer</div>
+        <div class="mini-block-timer-clock" data-block-timer-clock>-- min -- sec</div>
+        <div class="mini-block-timer-sub" data-block-timer-sub>Reading block...</div>
+      </div>
+      <div class="prod-bangin-status" id="prod-bangin-status">
+        <div class="pbs-icon" id="pbs-icon">⏰</div>
+        <div class="pbs-label">BANGIN+</div>
+        <div class="pbs-sub" id="pbs-sub">checking...</div>
+      </div>
     </div>
   </div>
 
@@ -3099,11 +3126,54 @@ function minsToStr(m){
   return h+':'+(mm<10?'0':'')+mm+' '+ap;
 }
 
+function fmtTimeLeftMs(ms){
+  var total=Math.max(0,Math.floor(ms/1000));
+  var h=Math.floor(total/3600);
+  var m=Math.floor((total%3600)/60);
+  var s=total%60;
+  var parts=[];
+  if(h>0)parts.push(h+' hr');
+  parts.push(m+' min');
+  parts.push(String(s).padStart(2,'0')+' sec');
+  return parts.join(' ');
+}
+
 function fmtCountdown(mins){
-  if(mins<=0)return '';
-  var h=Math.floor(mins/60),m=mins%60;
-  if(h>0)return h+'h '+m+'m left';
-  return m+'m left';
+  if(mins<=0)return '0 min 00 sec';
+  return fmtTimeLeftMs(mins*60000);
+}
+
+function blockEdgeDate(block,edge){
+  var target=new Date();
+  var mins=edge==='start'?block.start:block.end;
+  target.setHours(Math.floor(mins/60),mins%60,0,0);
+  return target;
+}
+
+function getBlockTimerState(){
+  var bi=getCurrentBlock();
+  var now=new Date();
+  if(bi<0){
+    var first=TIME_BLOCKS[0];
+    return {label:'Starts in',clock:fmtTimeLeftMs(blockEdgeDate(first,'start')-now),sub:first.name};
+  }
+  if(bi>=TIME_BLOCKS.length){
+    return {label:'Day complete',clock:'0 min 00 sec',sub:'All blocks done'};
+  }
+  var b=TIME_BLOCKS[bi];
+  return {label:'Block ends in',clock:fmtTimeLeftMs(blockEdgeDate(b,'end')-now),sub:b.name};
+}
+
+function updateSharedBlockTimers(state){
+  var timerState=state||getBlockTimerState();
+  document.querySelectorAll('[data-block-timer]').forEach(function(el){
+    var label=el.querySelector('[data-block-timer-label]');
+    var clock=el.querySelector('[data-block-timer-clock]');
+    var sub=el.querySelector('[data-block-timer-sub]');
+    if(label)label.textContent=timerState.label;
+    if(clock)clock.textContent=timerState.clock;
+    if(sub)sub.textContent=timerState.sub;
+  });
 }
 
 function updateTimeBlock(){
@@ -3116,10 +3186,19 @@ function updateTimeBlock(){
   var fillEl=document.getElementById('block-fill');
 
   if(bi<0||bi>=TIME_BLOCKS.length){
-    nameEl.textContent='Before maker time';
-    timeEl.textContent='Maker Time starts at 10:00 AM';
-    cdEl.textContent='';nextEl.textContent='';
+    var preState=getBlockTimerState();
+    if(bi<0){
+      nameEl.textContent='Before maker time';
+      timeEl.textContent='Maker Time starts at 10:00 AM';
+    }else{
+      nameEl.textContent='Day complete';
+      timeEl.textContent='All blocks done for today';
+    }
+    cdEl.className='block-countdown';
+    cdEl.textContent=preState.label+' '+preState.clock;
+    nextEl.textContent='';
     fillEl.style.width='0%';
+    updateSharedBlockTimers(preState);
     return;
   }
   var b=TIME_BLOCKS[bi];
@@ -3130,14 +3209,16 @@ function updateTimeBlock(){
   fillEl.style.width=p+'%';
   fillEl.className='block-progress-fill'+(b.cls?' '+b.cls:'');
 
-  if(remaining<=15){cdEl.className='block-countdown warn';cdEl.textContent=fmtCountdown(remaining)+' — wrapping up';}
-  else{cdEl.className='block-countdown';cdEl.textContent=fmtCountdown(remaining);}
+  var timerState=getBlockTimerState();
+  if(remaining<=15){cdEl.className='block-countdown warn';cdEl.textContent=timerState.clock+' — wrapping up';}
+  else{cdEl.className='block-countdown';cdEl.textContent=timerState.clock;}
 
   var nextIdx=bi+1;
   if(nextIdx<TIME_BLOCKS.length){nextEl.textContent='Next: '+TIME_BLOCKS[nextIdx].name+' at '+minsToStr(TIME_BLOCKS[nextIdx].start);}
   else{nextEl.textContent='';}
 
   updateChecklist(bi);
+  updateSharedBlockTimers(timerState);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -3808,7 +3889,7 @@ function renderModeBrief(mode){
 }
 
 function renderPressureTimer(modeKey,block,calEvents){
-  var clock=document.getElementById('timer-clock'),title=document.getElementById('timer-title'),next=document.getElementById('timer-next');
+  var clock=document.getElementById('timer-clock'),labelEl=document.getElementById('dpc-timer-label'),title=document.getElementById('timer-title'),next=document.getElementById('timer-next');
   if(!clock||!title||!next)return;
   var now=new Date();
   var target=null,label='';
@@ -3823,9 +3904,8 @@ function renderPressureTimer(modeKey,block,calEvents){
     label='Until Maker Time starts';
   }
   var ms=Math.max(0,target-now);
-  var mins=Math.floor(ms/60000),secs=Math.floor((ms%60000)/1000);
-  var h=Math.floor(mins/60),m=mins%60;
-  clock.textContent=(h>0?h+':':'')+String(m).padStart(h>0?2:1,'0')+':'+String(secs).padStart(2,'0');
+  clock.textContent=fmtTimeLeftMs(ms);
+  if(labelEl)labelEl.textContent=block?'Block ends in':'Starts in';
   var mode=MODE_BRIEFS[modeKey]||MODE_BRIEFS.focus;
   var goldenNote=nowMins()>=goldenStart&&nowMins()<goldenEnd?' · Golden Hour active':nowMins()<goldenStart&&goldenStart-nowMins()<=60?' · Golden Hour soon':'';
   title.textContent=label+' · '+mode.name+' pressure'+goldenNote;
