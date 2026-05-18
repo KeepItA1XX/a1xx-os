@@ -67,7 +67,7 @@ var ARCHIVE_HEADERS = [
 
 var DAILY_HEADERS = [
   'Date',
-  'DMs Sent','Cold Calls','Content Posted','Calls Booked','Closes (Paid)',
+  'DMs Sent','Calls Made','Content Posted','Calls Booked','Closes (Paid)',
   'Money Collected ($)','New Warm Leads',
   'First Saved At','Last Updated At','Save Count'
 ];

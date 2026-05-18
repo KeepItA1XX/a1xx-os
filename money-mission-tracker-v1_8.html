@@ -3253,7 +3253,7 @@ function selectWeekDay(day,calEvents,notionPieces,showBrief){
   if(state!=='future'&&rowForDisplay){
     var parts=[];
     if(rowForDisplay.dms)parts.push(rowForDisplay.dms+' DMs');
-    if(rowForDisplay.coldCalls)parts.push(rowForDisplay.coldCalls+' cold calls');
+    if(rowForDisplay.coldCalls)parts.push(rowForDisplay.coldCalls+' calls made');
     if(rowForDisplay.calls)parts.push(rowForDisplay.calls+' calls booked');
     if(rowForDisplay.closes)parts.push(rowForDisplay.closes+' closes');
     if(rowForDisplay.money)parts.push((typeof fmt==='function'?fmt(rowForDisplay.money):'$'+rowForDisplay.money)+' collected');
@@ -3476,7 +3476,7 @@ function renderDpcDateView(){
       tsf.style.display='block';
       var parts=[];
       if(row.dms)parts.push('<strong>'+row.dms+'</strong> DMs');
-      if(row.coldCalls)parts.push('<strong>'+row.coldCalls+'</strong> cold calls');
+      if(row.coldCalls)parts.push('<strong>'+row.coldCalls+'</strong> calls made');
       if(row.calls)parts.push('<strong>'+row.calls+'</strong> calls booked');
       if(row.closes)parts.push('<strong>'+row.closes+'</strong> closes');
       if(row.money)parts.push('<strong>'+fmt(row.money)+'</strong> collected');
@@ -3590,7 +3590,7 @@ function submitDailyCoachLog(){
   if(status){
     status.className='dpc-save-status ok';
     var verb=mode==='delta'?'Added to':'Updated';
-    status.textContent=verb+' '+viewKey+': '+newRow.dms+' DMs · '+newRow.coldCalls+' cold calls · '+newRow.calls+' booked · '+fmt(newRow.money)+' collected';
+    status.textContent=verb+' '+viewKey+': '+newRow.dms+' DMs · '+newRow.coldCalls+' calls made · '+newRow.calls+' booked · '+fmt(newRow.money)+' collected';
     setTimeout(function(){
       var s=document.getElementById('dpc-save-status');
       if(s){s.className='dpc-save-status';s.textContent='Saves to today’s daily log + Google Sheet.';}
@@ -4928,7 +4928,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
   var cmd=document.getElementById('dpc-pipeline-command');
   if(cmd){
     if(activeCRM.length)cmd.textContent='Pipeline live: '+activeCRM.length+' active lead'+(activeCRM.length===1?'':'s')+' · '+hotCRM.length+' hot · '+dueCRM.length+' due now · top source: '+topSource.name+'.';
-    else if(dmGap>0)cmd.textContent='No live CRM leads loaded yet. Send '+dmGap+' more DMs, make '+Math.max(0,10-coldCalls)+' cold calls, and log the first lead in Notion CRM.';
+    else if(dmGap>0)cmd.textContent='No live CRM leads loaded yet. Send '+dmGap+' more DMs, make '+Math.max(0,10-coldCalls)+' calls, and log the first lead in Notion CRM.';
     else cmd.textContent='CRM waiting on Apps Script endpoint. Manual DPC numbers are active until leads sync.';
   }
 
@@ -4959,7 +4959,7 @@ function renderDPCViews(d,modeKey,block,calEvents,dailyNeeded,gap){
     var sourceFocus=activeCRM.length?topSource.name:(dms<20?'IG DMs':(leads>0?'Warm replies':'Content comments + IG DMs'));
     var nextMetric=dueCRM.length?dueCRM.length+' follow-up'+(dueCRM.length===1?'':'s')+' due':hotCRM.length?hotCRM.length+' hot lead'+(hotCRM.length===1?'':'s'):dmGap>0?dmGap+' more DMs':'1 booked call';
     pipeActions.innerHTML=[
-      {title:'Source: '+sourceFocus,copy:activeCRM.length?topSource.value+' active lead'+(topSource.value===1?'':'s')+' coming from this source.':'Current pull: '+dms+' DMs, '+coldCalls+' cold calls, '+(d.content||0)+' post, '+leads+' warm lead'+(leads===1?'':'s')+'.'},
+      {title:'Source: '+sourceFocus,copy:activeCRM.length?topSource.value+' active lead'+(topSource.value===1?'':'s')+' coming from this source.':'Current pull: '+dms+' DMs, '+coldCalls+' calls made, '+(d.content||0)+' post, '+leads+' warm lead'+(leads===1?'':'s')+'.'},
       {title:'Stage: '+flowStuck.name,copy:activeCRM.length?flowStuck.value+' lead'+(flowStuck.value===1?'':'s')+' sitting here. Move the best one forward.':bottleneck.msg},
       {title:'Next: '+nextMetric,copy:'Open the Hot List or Follow-Up tab and take the next action.'}
     ].map(renderDPCAction).join('');
@@ -5089,7 +5089,7 @@ function renderDailyCoach(contentPieces,calEvents){
     var ot='';
     // Blount logic: most urgent deficit drives the one thing
     if(dms===0&&(modeKey==='outreach'||modeKey==='prep')){
-      ot='Pipeline is empty. You have not sent a single DM or made a single cold call today. Open Instagram and Google Voice now. Start with 40 DMs plus 10 calls.';
+      ot='Pipeline is empty. You have not sent a single DM or made a single call today. Open Instagram and Google Voice now. Start with 40 DMs plus 10 calls.';
     } else if(dms>0&&dms<20&&modeKey==='outreach'){
       ot='You have sent '+dms+' DMs. That is not enough. You need 40 minimum. Stop everything and hit that number before '+('block'&&block?('this block ends in '+blockLeft):'the end of Money Time')+'.';
     } else if(dms>=20&&dms<40&&modeKey==='outreach'){
@@ -5116,14 +5116,14 @@ function renderDailyCoach(contentPieces,calEvents){
   var mathEl=document.getElementById('dpc-math-text');
   if(mathEl){
     if(dms===0){
-      mathEl.innerHTML='Log your DMs and cold calls to see your conversion math.';
+      mathEl.innerHTML='Log your DMs and calls made to see your conversion math.';
     } else {
       var revPerDm=dms>0?(rev2/Math.max(dms,1)).toFixed(2):0;
       var wkDms=parseFloat(document.getElementById('w-dms').value)||dms;
       var wkCloses=parseFloat(document.getElementById('w-closes').value)||closes;
       var closeRate=wkDms>0&&wkCloses>0?Math.round(wkCloses/wkDms*100):0;
       var dmsToClose=closeRate>0?Math.ceil(100/closeRate):0;
-      var mathMsg='<strong>$'+revPerDm+'</strong> revenue per DM sent this cycle. Cold calls today: <strong>'+coldCalls+'</strong>. ';
+      var mathMsg='<strong>$'+revPerDm+'</strong> revenue per DM sent this cycle. Calls made today: <strong>'+coldCalls+'</strong>. ';
       if(closeRate>0){mathMsg+='<strong>'+closeRate+'%</strong> close rate — you need ~<strong>'+dmsToClose+' DMs</strong> per close at this rate. ';}
       if(gap>0&&dms>0){var dmsNeededToday=Math.ceil(gap/Math.max(parseFloat(revPerDm)||1,0.01));mathMsg+='To close the <strong>'+fmt(gap)+'</strong> week gap: send at least <strong>'+Math.min(dmsNeededToday,200)+' more DMs</strong>.';}
       mathEl.innerHTML=mathMsg;
