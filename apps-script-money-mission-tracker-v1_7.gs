@@ -101,6 +101,11 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ok:true}))
         .setMimeType(ContentService.MimeType.JSON);
     }
+    if (data.type === 'cycle_archive_probe') {
+      logActivity('Cycle archive button ping — Cycle ' + (data.cycleNum || '?') + ' — ' + (data.source || 'app'));
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', message: 'Cycle archive ping logged.' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
     if (data.type === 'weekly_save') {
       var weeklyRow = saveWeekly(data);
       var notionWeekly = syncWeeklyReviewToNotion(weeklyRow, data);

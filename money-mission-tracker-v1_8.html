@@ -6497,13 +6497,21 @@ function updateLastSaved(ts){
 }
 function archiveCycleBtn(){
   var url=localStorage.getItem(SHEETS_KEY);
+  var status=document.getElementById('week-status');
   if(!url){alert('Connect Google Sheets first via Sheets setup');return;}
   if(!confirm('Archive Cycle 1 to Google Sheets?'))return;
-  var data=captureWeekData();var ci=getCycleIdx(),c=CYCLES[ci];
-  var payload=Object.assign({type:'cycle_archive',cycleNum:c.num,cycleName:c.name,cycleTarget:c.target,cycleStart:c.start,cycleEnd:c.end},data);
-  fetch(url,{method:'POST',body:JSON.stringify(payload),mode:'no-cors',redirect:'follow'});
-  document.getElementById('week-status').textContent='Cycle archived.';document.getElementById('week-status').className='status ok';
-  setTimeout(function(){document.getElementById('week-status').textContent='';document.getElementById('week-status').className='status';},4000);
+  try{
+    var ci=getCycleIdx(),c=CYCLES[ci];
+    if(status){status.textContent='Sending cycle archive request...';status.className='status';}
+    fetch(url,{method:'POST',body:JSON.stringify({type:'cycle_archive_probe',cycleNum:c.num,source:'archiveCycleBtn'}),mode:'no-cors',redirect:'follow'});
+    var data=captureWeekData();
+    var payload=Object.assign({type:'cycle_archive',cycleNum:c.num,cycleName:c.name,cycleTarget:c.target,cycleStart:c.start,cycleEnd:c.end},data);
+    fetch(url,{method:'POST',body:JSON.stringify(payload),mode:'no-cors',redirect:'follow'});
+    if(status){status.textContent='Cycle archive request sent. Check Activity Log for Cycle archive button ping and Notion Cycle Archive upsert.';status.className='status ok';}
+    setTimeout(function(){var s=document.getElementById('week-status');if(s){s.textContent='';s.className='status';}},7000);
+  }catch(err){
+    if(status){status.textContent='Archive request failed before sending: '+err.message;status.className='status err';}
+  }
 }
 function exportCSV(){
   var d=captureWeekData();var ci=getCycleIdx(),c=CYCLES[ci];
