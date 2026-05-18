@@ -16,7 +16,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media (max-width:520px){.brand{font-size:24px;margin-bottom:8px}}
 .identity-greeting{font-size:11px;color:#8b949e;margin-top:5px;line-height:1.35}
 .identity-greeting strong{color:#f0f3f5}
+.identity-greeting .identity-pill{margin-left:6px;vertical-align:1px}
 .identity-pill{display:inline-flex;align-items:center;gap:5px;border:0.5px solid #2a4015;background:#0d1808;color:#7ec845;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;white-space:nowrap}
+.topbar-data-strip{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:nowrap;font-size:10px;color:#6a737a;letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
 .topbar-pct{color:#9ee878;font-weight:700}
 .topbar-clock{font-size:10px;color:#555;margin-bottom:3px;letter-spacing:.02em;font-variant-numeric:tabular-nums}
 .topbar-biz-row{font-size:10px;color:#6a737a;display:flex;align-items:center;gap:5px;margin-bottom:5px}
@@ -1311,7 +1313,7 @@ body{background:#090a0b;color:#d8dde1}
         <div class="save-nudge" id="save-nudge" onclick="checkAutoBackup(true)" title="Unsaved changes — tap to save now" style="display:none">💾</div>
       </div>
       <!-- Row 2: Time/Date · Revenue · % · Days left — condensed data strip -->
-      <div class="topbar-data-strip" style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;font-size:10px;color:#6a737a;letter-spacing:.02em;font-variant-numeric:tabular-nums">
+      <div class="topbar-data-strip">
         <span id="topbar-clock">--:-- · ---</span>
         <span style="color:#333">·</span>
         <span class="topbar-biz-val" id="topbar-rev">$—</span>
@@ -1322,12 +1324,11 @@ body{background:#090a0b;color:#d8dde1}
       </div>
       <!-- Banner at the bottom of the data stack -->
       <div class="brand">Money Mission OS</div>
-      <div class="identity-greeting" id="identity-greeting">Welcome back, <strong>Executive Producer</strong>.</div>
+      <div class="identity-greeting" id="identity-greeting">Welcome back, <strong>Executive Producer</strong>. <span class="identity-pill" id="identity-pill">A1XX</span></div>
     </div>
   </div>
   <!-- RIGHT: saved tags + streak + cycle stack -->
   <div class="topright">
-    <span class="identity-pill" id="identity-pill">A1XX</span>
     <span class="tag green" id="saved-tag">Saved</span>
     <span class="tag blue" id="synced-tag">Synced</span>
     <div class="streak" style="margin-top:14px"><span style="font-size:12px">🔥</span><span class="streak-num" id="streak-n">0</span><span class="streak-lbl">week streak</span></div>
@@ -2868,8 +2869,8 @@ function renderAccountIdentity(){
   var signed=document.getElementById('account-signed-in');
   var accountUser=document.getElementById('account-username');
   var rpName=document.getElementById('rp-name');
-  if(greeting)greeting.innerHTML='Welcome back, <strong>Executive Producer</strong>.';
-  if(pill)pill.textContent=name;
+  if(greeting)greeting.innerHTML='Welcome back, <strong>Executive Producer</strong>. <span class="identity-pill" id="identity-pill">'+escapeHtml(name)+'</span>';
+  else if(pill)pill.textContent=name;
   if(signed)signed.textContent=name+' · Executive Producer';
   if(accountUser)accountUser.value=name;
   if(rpName)rpName.textContent=name;
