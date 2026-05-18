@@ -3671,7 +3671,9 @@ function submitDailyCoachLog(){
   }
   window.__dpcLastSnapshot={date:viewKey,prevRow:prevRow,mode:mode,existed:!!(store[weekStart][viewKey]&&Object.keys(prevRow).length),ts:Date.now()};
   var undoBtn=document.getElementById('dpc-undo-btn');if(undoBtn)undoBtn.style.display='inline-flex';
-  postDailySave(viewKey,newRow,mode==='delta'?'add':'replace');
+  // The UI already folds today's delta into newRow. Send the corrected day total
+  // to Sheets/Notion so repeat saves do not double-count prior values.
+  postDailySave(viewKey,newRow,'replace');
   syncDPCtoWeekly(false);
   if(typeof calcWeek==='function')calcWeek();
   if(typeof updateReport==='function')updateReport();
