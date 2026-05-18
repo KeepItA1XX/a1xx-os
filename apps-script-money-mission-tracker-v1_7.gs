@@ -1062,3 +1062,36 @@ function testResetTestData() {
   var r = resetTestData({ daily: true, prospects: true, reason: 'smoke test via Apps Script editor' });
   Logger.log('Reset result: ' + JSON.stringify(r));
 }
+
+function testCycleArchiveSync() {
+  var payload = {
+    cycleNum: 1,
+    cycleName: 'CEO Roadmap',
+    cycleDates: '2026-05-05 → 2026-06-28',
+    cycleStart: '2026-05-05',
+    cycleEnd: '2026-06-28',
+    cycleTarget: 20000,
+    daysElapsed: 14,
+    revenue: 10,
+    totalExpenses: 0,
+    netProfit: 10,
+    margin: 100,
+    roas: 0,
+    dailyPace: 0.71,
+    sessions: 0,
+    cumDms: 0,
+    cumPosts: 0,
+    studioCommission: 0,
+    mixMaster: 0,
+    rapreneurOS: 0,
+    productionDeals: 0,
+    customBeats: 0,
+    otherIncome: 0,
+    noteWin: 'Manual archive sync test',
+    noteLesson: 'Triggered from Apps Script editor'
+  };
+  var row = archiveCycle(payload);
+  var notion = syncCycleArchiveToNotion(row, payload);
+  logActivity('Cycle archive manual test — code: ' + (notion && notion.code ? notion.code : 'unknown'));
+  Logger.log(JSON.stringify({ row: row, notion: notion }));
+}
