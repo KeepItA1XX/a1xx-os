@@ -301,6 +301,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 #auto-backup-status{color:#7b838b;flex:1}
 .auto-backup-now-btn{background:none;border:0.5px solid #2a3036;border-radius:6px;color:#7b838b;font-size:10px;padding:3px 8px;cursor:pointer;flex-shrink:0}
 .auto-backup-now-btn:hover{border-color:#4a6a30;color:#c8e8a8}
+.backup-status-box{display:none;margin-top:10px;background:#07090b;border:0.5px solid #20272e;border-radius:9px;padding:9px 10px}
+.backup-status-box.active{display:block}
+.backup-status-box.ok{border-color:#2a4015;background:#0a1207}
+.backup-status-box.err{border-color:#3a1010;background:#120707}
+.backup-status-box.warn{border-color:#3a2800;background:#120d02}
+.backup-status-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.backup-status-title{font-size:10px;font-weight:800;color:#d7dde3;text-transform:uppercase;letter-spacing:.08em}
+.backup-status-detail{font-size:10px;color:#7b838b;line-height:1.45}
+.backup-status-box.ok .backup-status-title{color:#7ec845}
+.backup-status-box.err .backup-status-title{color:#ff8a70}
+.backup-status-box.warn .backup-status-title{color:#d4a017}
+.backup-status-track{height:4px;background:#151a1f;border-radius:999px;overflow:hidden}
+.backup-status-fill{height:100%;width:42%;border-radius:999px;background:#7ec845;transform:translateX(-100%);animation:backupSlide 1.1s ease-in-out infinite}
+.backup-status-box.ok .backup-status-fill{width:100%;transform:none;animation:none}
+.backup-status-box.err .backup-status-fill{width:100%;transform:none;animation:none;background:#e05555}
+.backup-status-box.warn .backup-status-fill{background:#d4a017}
+@keyframes backupSlide{0%{transform:translateX(-110%)}55%{transform:translateX(70%)}100%{transform:translateX(220%)}}
 .system-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .system-title{font-size:12px;font-weight:700;color:#e0e0e0;text-transform:uppercase;letter-spacing:.08em}
 .system-last{font-size:10px;color:#444}
@@ -1347,11 +1364,19 @@ body{background:#090a0b;color:#d8dde1}
         <div class="auto-backup-bar">
           <span>Auto-save:</span>
           <span id="auto-backup-status">Starting...</span>
-          <button class="auto-backup-now-btn" onclick="checkAutoBackup(true)">Save now</button>
+          <button class="auto-backup-now-btn" id="backup-save-now-btn" onclick="checkAutoBackup(true)">Save now</button>
         </div>
         <div class="btn-row">
-          <button class="btn primary" onclick="sendBackup()">Save backup ↑</button>
+          <button class="btn primary" id="backup-save-btn" onclick="sendBackup()">Save backup ↑</button>
           <button class="btn" onclick="restoreBackup()">Restore backup ↓</button>
+        </div>
+        <div class="backup-status-box" id="backup-status-box">
+          <div class="backup-status-top">
+            <div class="backup-status-title" id="backup-status-title">Backup ready</div>
+            <div class="settings-badge off" id="backup-status-badge">Idle</div>
+          </div>
+          <div class="backup-status-detail" id="backup-status-detail">Use Save backup to push the current app data into Google Sheets.</div>
+          <div class="backup-status-track"><div class="backup-status-fill"></div></div>
         </div>
       </div>
 
@@ -2978,9 +3003,38 @@ function testSheets(){
   setTimeout(function(){document.getElementById('sheets-status').style.color='#639922';document.getElementById('sheets-status').textContent='Sent — check Activity Log in your Sheet.';},800);
 }
 
+function setBackupStatus(state,title,detail,badge){
+  var box=document.getElementById('backup-status-box');
+  var titleEl=document.getElementById('backup-status-title');
+  var detailEl=document.getElementById('backup-status-detail');
+  var badgeEl=document.getElementById('backup-status-badge');
+  if(box){
+    box.className='backup-status-box active '+(state||'');
+  }
+  if(titleEl)titleEl.textContent=title||'Backup ready';
+  if(detailEl)detailEl.textContent=detail||'Use Save backup to push the current app data into Google Sheets.';
+  if(badgeEl){
+    badgeEl.textContent=badge||'Idle';
+    badgeEl.className='settings-badge '+(state==='ok'?'':state==='err'||state==='warn'?'warn':'off');
+  }
+}
+
+function setBackupBusy(isBusy){
+  ['backup-save-btn','backup-save-now-btn'].forEach(function(id){
+    var btn=document.getElementById(id);
+    if(btn)btn.disabled=!!isBusy;
+  });
+}
+
 async function sendBackup(silent){
   var appUrl=localStorage.getItem(SHEETS_KEY);
-  if(!appUrl){if(!silent)alert('Add your Apps Script URL in Sheets setup first.');return;}
+  if(!appUrl){
+    if(!silent){
+      if(document.getElementById('system-panel'))setSettingsTab('backups');
+      setBackupStatus('err','Backup needs setup','Add your Apps Script URL in Sheets / Notion setup first.','Setup');
+    }
+    return {ok:false,error:'missing_url'};
+  }
   var payload={};
   for(var i=0;i<localStorage.length;i++){
     var k=localStorage.key(i);
@@ -2988,8 +3042,11 @@ async function sendBackup(silent){
   }
   var json=JSON.stringify(payload);
   var keyCount=Object.keys(payload).length;
-  if(!silent&&json.length>45000){
-    if(!confirm('Your backup data is getting large ('+Math.round(json.length/1000)+'KB). Send anyway?'))return;
+  if(!silent){
+    if(document.getElementById('system-panel'))setSettingsTab('backups');
+    var size=Math.max(1,Math.round(json.length/1000));
+    setBackupStatus(json.length>45000?'warn':'','Saving backup...','Sending '+keyCount+' keys ('+size+'KB) to your Sheet. Keep this window open for a moment.','Saving');
+    setBackupBusy(true);
   }
   try{
     await fetch(appUrl,{
@@ -2998,10 +3055,14 @@ async function sendBackup(silent){
       mode:'no-cors',
       redirect:'follow'
     });
-    if(!silent)alert('Backup saved — '+keyCount+' keys sent to your Sheet.');
+    if(!silent)setBackupStatus('ok','Backup saved','Saved '+keyCount+' keys to Google Sheets. Activity Log should show the backup event shortly.','Done');
     if(!silent)logDevChange('Claude (A1XX OS)','data → Sheets','Manual backup: '+keyCount+' keys, '+Math.round(json.length/1000)+'KB');
+    return {ok:true,keyCount:keyCount,size:json.length};
   }catch(e){
-    if(!silent)alert('Backup failed: '+e.message);
+    if(!silent)setBackupStatus('err','Backup failed',e.message||'The backup request did not complete. Check your Apps Script URL and try again.','Error');
+    return {ok:false,error:e.message};
+  }finally{
+    if(!silent)setBackupBusy(false);
   }
 }
 
@@ -7257,7 +7318,7 @@ function isHibernateHour(){
   return h>=0&&h<6;
 }
 
-function checkAutoBackup(force){
+async function checkAutoBackup(force){
   try{
     var raw=localStorage.getItem(AUTO_BACKUP_META_KEY);
     var meta=raw?JSON.parse(raw):{lastModified:0,lastSaved:0,hibernateSave:0};
@@ -7276,7 +7337,11 @@ function checkAutoBackup(force){
       updateAutoBackupIndicator();
       return;
     }
-    sendBackup(true);
+    var result=await sendBackup(!force);
+    if(!result||!result.ok){
+      updateAutoBackupIndicator();
+      return;
+    }
     if(force)logDevChange('Claude (A1XX OS)','data → Sheets','Manual backup triggered from Save Now button');
     var now=Date.now();
     meta.lastSaved=now;
