@@ -644,10 +644,13 @@ input:focus{border-color:#333}
 .mission-bubble-row.assistant{justify-content:flex-start}
 .mission-bubble-row.new{animation:missionBubbleIn .28s ease-out}
 .mission-bubble-row.thinking-row .mission-bubble{border-color:#3a2f12;background:#100d05;color:#d7dde3}
-.mission-bubble{max-width:88%;border:0.5px solid #263039;border-radius:12px;padding:9px 11px;color:#d7dde3;background:#101418;line-height:1.55}
+.mission-bubble{max-width:88%;border:0.5px solid #263039;border-radius:12px;padding:10px 12px;color:#d7dde3;background:#101418;line-height:1.65}
 .mission-bubble-row.user .mission-bubble{background:#0d1808;border-color:#2a4015;color:#dcefd2}
 .mission-bubble-row.assistant .mission-bubble{background:#0b0d0f;border-color:#2a3036}
 .mission-bubble-meta{font-size:8px;color:#6f7a82;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:4px}
+.mission-bubble p{margin:0 0 10px}
+.mission-bubble p:last-child{margin-bottom:0}
+.mission-bubble br+br{line-height:2.1}
 .mission-bubble a{color:#7ec845;text-decoration:none;font-weight:800}
 .mission-bubble a:hover{text-decoration:underline}
 .mission-link-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
@@ -7604,6 +7607,25 @@ function missionLinkifyHtml(html){
   }).join('');
 }
 
+function missionReadableHtml(html){
+  var src=String(html||'');
+  var preserved=[];
+  src=src.replace(/<div class="mission-link-row">[\s\S]*?<\/div>/gi,function(match){
+    preserved.push(match);
+    return '%%MISSION_LINK_ROW_'+(preserved.length-1)+'%%';
+  });
+  src=src.replace(/<br\s*\/?>\s*<br\s*\/?>/gi,'\n\n').replace(/<br\s*\/?>/gi,'\n');
+  src=src.replace(/([.!?])\s+(?=(?:<strong>|[A-Z0-9]))/g,'$1\n\n');
+  var blocks=src.split(/\n{2,}/).map(function(block){return block.trim();}).filter(Boolean);
+  var readable=blocks.map(function(block){
+    if(/^%%MISSION_LINK_ROW_\d+%%$/.test(block))return block;
+    if(block.indexOf('\n')>=0)return block.replace(/\n/g,'<br>');
+    if(/^<p[\s>]/i.test(block)||/^<div\b/i.test(block))return block;
+    return '<p>'+block+'</p>';
+  }).join('');
+  return readable.replace(/%%MISSION_LINK_ROW_(\d+)%%/g,function(_,idx){return preserved[Number(idx)]||'';});
+}
+
 function getMissionCommandRouteAnswer(route,ctx,question){
   var now=new Date();
   if(route==='help')return getMissionCommandHelp()+missionLinksHtml([
@@ -7726,7 +7748,7 @@ function renderMissionSources(sources){
 
 function missionBubble(role,body,allowHtml){
   var who=role==='user'?'A1XX':'Mission Command';
-  var text=allowHtml?missionLinkifyHtml(body):escapeHtml(String(body||''));
+  var text=allowHtml?missionReadableHtml(missionLinkifyHtml(body)):escapeHtml(String(body||''));
   return '<div class="mission-bubble-row '+(role==='user'?'user':'assistant')+'"><div class="mission-bubble"><div class="mission-bubble-meta">'+who+'</div>'+text+'</div></div>';
 }
 
@@ -7771,7 +7793,7 @@ function appendMissionBubble(role,body,allowHtml,extraClass){
   meta.className='mission-bubble-meta';
   meta.textContent=role==='user'?'A1XX':'Mission Command';
   var content=document.createElement('div');
-  if(allowHtml)content.innerHTML=missionLinkifyHtml(body);
+  if(allowHtml)content.innerHTML=missionReadableHtml(missionLinkifyHtml(body));
   else content.textContent=String(body||'');
   bubble.appendChild(meta);
   bubble.appendChild(content);
