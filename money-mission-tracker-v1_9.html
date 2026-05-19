@@ -686,6 +686,8 @@ input:focus{border-color:#333}
 .mission-bubble{max-width:88%;border:0.5px solid #263039;border-radius:12px;padding:10px 12px;color:#d7dde3;background:#101418;line-height:1.65}
 .mission-bubble-row.user .mission-bubble{background:#0d1808;border-color:#2a4015;color:#dcefd2}
 .mission-bubble-row.assistant .mission-bubble{background:#0b0d0f;border-color:#2a3036}
+.mission-bubble-row.data-row .mission-bubble{background:#090d10;border-color:#1f2c34;color:#aeb8c0;font-size:11px;line-height:1.55}
+.mission-bubble-row.suggest-row .mission-bubble{background:#080a0c;border-color:#1d242b;color:#9ca7af}
 .mission-bubble-meta{font-size:8px;color:#6f7a82;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:4px}
 .mission-bubble p{margin:0 0 10px}
 .mission-bubble p:last-child{margin-bottom:0}
@@ -8340,7 +8342,7 @@ function getMissionCloseResponse(ctx){
   else if(route==='production')line='Got it. Move one production item one status forward.';
   else if(route==='report'||route==='dpc')line='Got it. Protect the money path and log the result.';
   else if(hist.length>=3)line='Good session. Carry the next block forward.';
-  return '<strong>Mission Command:</strong> '+escapeHtml(line);
+  return escapeHtml(line);
 }
 
 function getMissionContinuationResponse(signal,ctx,question){
@@ -8464,6 +8466,103 @@ function mergeMissionSuggestionBubble(followUp,links,route,question){
   }
   var parts=[prompt,followUp,linkHtml].filter(Boolean);
   return parts.join('<br><br>');
+}
+
+function missionCompactText(html){
+  return String(html||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function missionRouteNeedsDataBubble(route,conv,question){
+  if(!route||!conv)return false;
+  if([CONV_QUICK_READ,CONV_WHY,CONV_WHAT_ELSE,CONV_FOLLOWUP,CONV_CLOSE,CONV_UNCLEAR].indexOf(conv.type)>=0)return false;
+  if(conv.type===CONV_DEEPER)return true;
+  if(conv.type===CONV_COMMAND||conv.type===CONV_DATA_REQUEST)return ['now','leads','report','dpc','cycle','calendar','content','production','sync'].indexOf(route)>=0;
+  return false;
+}
+
+function getMissionHumanBubble(route,conv,ctx,question){
+  var q=normalizeMissionQuestion(question||'');
+  if(route==='leads'){
+    if(getMissionPipelineDiagnosticSignal(question||'')||q.indexOf('pipeline')>=0)return 'Your pipeline has volume, but not enough heat. Start by qualifying one call-ready lead, then make a direct offer if the signal is real.';
+    return 'Start with the warmest person who can actually turn into money today. Do not open a new list until one real follow-up is handled.';
+  }
+  if(route==='report')return 'You are behind on the weekly goal, but the gap is still workable. The next move needs to create or close a conversation, not add more admin.';
+  if(route==='dpc')return 'The daily campaign needs one clean push. Log the next outreach block, then use the result to decide whether to call, follow up, or close.';
+  if(route==='now')return escapeHtml(ctx.nowText||'Move one asset and one pipeline step.')+' That is the focus right now.';
+  if(route==='calendar')return 'Protect the next calendar block like it is part of the money path. Decide the one outcome before the event starts.';
+  if(route==='content')return 'Make one useful proof-of-work asset. Keep it tied to today’s offer, result, or lesson instead of turning it into a brainstorm.';
+  if(route==='production')return 'Move one production item forward. The useful version is the one that can be sold, posted, pitched, or delivered.';
+  if(route==='cycle')return 'The cycle read is simple: keep pressure on the move that changes the number before the timeline gets louder.';
+  if(route==='sync')return 'Check system health only long enough to clear the blocker. Then get back to the active mission.';
+  return '';
+}
+
+function getMissionDataBubble(route,ctx,question){
+  var block=getMissionBlockIntel();
+  var journey=getCurrentJourneyMove(ctx);
+  if(route==='leads'){
+    var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
+    if(!leads.length)return 'Pipeline · no open CRM leads loaded';
+    var top=getMissionLeadsAnswer(ctx).replace(/^<strong>Leads[^<]*<\/strong><br>/,'');
+    return '<strong>Pipeline ·</strong> '+leads.length+' open leads<br>'+top;
+  }
+  if(route==='report'){
+    var pct=ctx.wk?Math.round((ctx.rev/ctx.wk)*100):0;
+    return '<strong>Revenue ·</strong> '+fmt(ctx.rev)+' of '+fmt(ctx.wk)+' · '+pct+'% complete · '+fmt(ctx.gap||0)+' left';
+  }
+  if(route==='dpc')return getMissionDpcAnswer();
+  if(route==='now'){
+    var pieces=[];
+    pieces.push('<strong>Today ·</strong> '+(block.name||'Current block')+(block.minutesLeft?' · '+block.minutesLeft+' min left':''));
+    if(ctx.nextEvent)pieces.push('Next · '+escapeHtml((ctx.nextEvent.title||'event')+' at '+(ctx.nextEvent.startTime||'scheduled time')));
+    if(journey)pieces.push('Step · '+(journey.index+1)+'/'+journey.total+' · '+escapeHtml(journey.nextCheck));
+    if(ctx.gap>0)pieces.push('Gap · '+fmt(ctx.gap));
+    return pieces.join('<br>');
+  }
+  if(route==='calendar')return getMissionCalendarAnswer(ctx);
+  if(route==='content')return getMissionContentAnswer(ctx);
+  if(route==='production')return getMissionProductionAnswer();
+  if(route==='cycle')return getMissionCycleAnswer(ctx);
+  if(route==='sync')return getMissionSyncAnswer();
+  return '';
+}
+
+function getMissionSuggestionBubble(route,conv,followUp,links,question){
+  if(conv&&[CONV_QUICK_READ,CONV_WHY,CONV_CLOSE,CONV_UNCLEAR].indexOf(conv.type)>=0)return '';
+  var items=(links||[]).join('');
+  var prompts=[];
+  var action='';
+  if(route==='leads'){
+    action='Qualify one lead';
+    prompts.push('<span class="mission-chat-link">deeper breakdown →</span>','<span class="mission-chat-link">show top contacts →</span>');
+  }else if(route==='report'||route==='dpc'){
+    action='Make one offer';
+    prompts.push('<span class="mission-chat-link">what should I do next? →</span>');
+  }else if(route==='now'){
+    action='Start current block';
+    prompts.push('<span class="mission-chat-link">quick read →</span>');
+  }else if(route==='calendar')action='Prep next event';
+  else if(route==='content')action='Open content';
+  else if(route==='production')action='Move one item';
+  else if(route==='sync')action='Check health';
+  var parts=[];
+  if(action)parts.push('<strong>Next:</strong> '+escapeHtml(action));
+  if(items)parts.push(items);
+  if(prompts.length)parts.push('<div class="mission-link-row">'+prompts.slice(0,2).join('')+'</div>');
+  return parts.join('<br><br>');
+}
+
+function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links){
+  var needsData=missionRouteNeedsDataBubble(route,conv,question||'');
+  if(!needsData)return {b1:answer,b2:'',b3:followUp};
+  var human=getMissionHumanBubble(route,conv,ctx,question||'')||answer;
+  var mode=getMissionResponseMode(question||'',route,ctx);
+  var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,mode);
+  return {
+    b1:applyMissionResponseVariant(human,variant,{opener:true,closer:true}),
+    b2:getMissionDataBubble(route,ctx,question||''),
+    b3:getMissionSuggestionBubble(route,conv,followUp,links,question||'')
+  };
 }
 
 function getCurrentJourneyMove(ctx){
@@ -9397,6 +9496,9 @@ function renderMissionCommand(kind,question,forceCurrent){
     answer=stripMissionLinkRows(answer);
     followUp=mergeMissionSuggestionBubble(followUp,actionLinks,route,question||'');
   }
+  var bubblePacket=buildMissionBubblePacket(route,conv,ctx,question||'',answer,followUp,actionLinks);
+  answer=bubblePacket.b1||'';
+  followUp=bubblePacket.b3||'';
   packet.followUp=followUp;
   if(!shouldShowCurrent){
     ensureMissionThreadReady('','','');
@@ -9407,7 +9509,8 @@ function renderMissionCommand(kind,question,forceCurrent){
   var hadThinking=!!removeMissionThinkingBubble(thread);
   if(question&&!hadThinking)appendMissionBubble('user',question,false);
   if(answer)appendMissionBubble('assistant',answer,true);
-  if(followUp)appendMissionBubble('assistant',followUp,true);
+  if(bubblePacket.b2)appendMissionBubble('assistant',bubblePacket.b2,true,'data-row');
+  if(followUp)appendMissionBubble('assistant',followUp,true,'suggest-row');
   clearMissionCommandLoading(packet.sources);
   if(answer&&(question||forceCurrent)&&(kind==='ask'||question))rememberMissionCommandTurn(kind||'ask',question||'',answer,packet);
 }
