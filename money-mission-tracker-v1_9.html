@@ -7671,6 +7671,8 @@ function summarizeMissionPacket(packet){
 
 function saveMissionChatTurn(turn){
   var hist=getMissionChatHistory();
+  var last=hist[hist.length-1]||{};
+  if(last.question===(turn.question||'')&&last.answer===(turn.answer||'')&&(Date.now()-new Date(last.ts||0).getTime())<5000)return hist;
   hist.push(turn);
   if(hist.length>50)hist=hist.slice(hist.length-50);
   setStore(MISSION_CHAT_HISTORY_KEY,hist);
@@ -7727,7 +7729,7 @@ function clearMissionCommandLoading(sources){
   if(btn)btn.disabled=false;
 }
 
-function renderMissionCommand(kind,question){
+function renderMissionCommand(kind,question,forceCurrent){
   var thread=document.getElementById('mission-command-thread');
   if(!thread)return;
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
@@ -7735,11 +7737,13 @@ function renderMissionCommand(kind,question){
   packet.chatMemory=getMissionChatHistory().slice(-10);
   packet.chatMemorySummary=getMissionChatMemorySummary();
   window.__missionDataPacket=packet;
-  var answer=getMissionCommandResponse(kind||'now',ctx,question||'');
+  var hist=getMissionChatHistory();
+  var shouldShowCurrent=!!(forceCurrent||question||!hist.length);
+  var answer=shouldShowCurrent?getMissionCommandResponse(kind||'now',ctx,question||''):'';
   thread.innerHTML=renderMissionThread(question||'',answer,packet.sources);
   thread.scrollTop=thread.scrollHeight;
   clearMissionCommandLoading(packet.sources);
-  if(kind==='ask'||question)rememberMissionCommandTurn(kind||'ask',question||'',answer,packet);
+  if(answer&&(question||forceCurrent)&&(kind==='ask'||question))rememberMissionCommandTurn(kind||'ask',question||'',answer,packet);
 }
 
 function runMissionPrompt(kind){
@@ -7747,7 +7751,7 @@ function runMissionPrompt(kind){
   var input=document.getElementById('mission-command-input');
   if(input)input.value='';
   setMissionCommandLoading('');
-  setTimeout(function(){renderMissionCommand(kind||'now','');},350);
+  setTimeout(function(){renderMissionCommand(kind||'now','',true);},1300);
 }
 
 function askMissionCommand(){
@@ -7756,7 +7760,7 @@ function askMissionCommand(){
   window.__missionCommandLastPrompt='ask';
   if(input)input.value='';
   setMissionCommandLoading(q);
-  setTimeout(function(){renderMissionCommand('ask',q);},550);
+  setTimeout(function(){renderMissionCommand('ask',q,true);},1500);
 }
 
 function renderMissionBrief(contentPieces,calEvents){
