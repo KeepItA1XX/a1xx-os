@@ -7608,13 +7608,13 @@ var A1XX_PROFILE={
 
 var MISSION_A1XX_RECOGNITION={
   leads:['pipe','pipeline check','where is the pipeline at','what is the pipeline looking like','who do i need to call','who should i hit up','who do i need to follow up with','who is warm','who is hot','any hot leads','lead count','follow ups','outreach check','dm outreach','booked calls','call check','cold calling','honeybook','honey book','invoice check','triage call','sales presentation','atlanta leads','atlanta market','atlanta artists','atl','new prospects','anyone new in skool','skool dms','starting conversations'],
-  report:['sales check','did anything close','anything close today','where is the revenue at','money coming in','what came in','what is the money looking like','rappreneur','rappreneur os','bangin deal','production deal','bpd','bangin+','membership check','direct buy','beat license','beat sale','sold a beat','funnel check','clickfunnels'],
+  report:['sales check','did anything close','anything close today','where is the revenue at','money coming in','what came in','what is the money looking like','rappreneur','rappreneur os','bangin deal','production deal','bpd','bangin+','membership check','direct buy','beat license','beat sale','sold a beat','funnel check','clickfunnels','how am i performing','performance','what happened this week','what has happened this week','whats happened this week','yesterday','what did i do yesterday','show me what i did yesterday','expenses','expense check','new sales','any new sales'],
   content:['content check','where is the content at','content status','how is content','twitch','stream check','youtube check','did i post','shorts','short clips','opus clip','capcut','did i edit','did i script','did i shoot','posting','posted anything','post check','content block','content time','content session','behind the scenes','bts','weekly beat drop','drop a beat','beat release'],
   now:['what do i do','what should i do','what do i do now','what do i focus on','what is the focus','what is first','where do i start','where do i begin','what is the move','what is the next move','lock in','lock it in','i need to lock in','help me lock in','i am distracted','i am off track','i am not focused','i am spinning','decision fatigue','too many options','do not know where to start','what is the plan','today plan','game plan','briefing','update me','catch me up','what is going on','quick read','quick update','quick check'],
   production:['new beat','making beats','produced a beat','mixing','mastering','placements','sync licensing','sync version','cover art','lyric video','music video','visual','pre-production','production phase','post-production','promo phase','project drop','releasing','launching','distribution','recording session','independent artist','independent rapper','atl artist','atlanta artist','my client','my artist','music project','artist project'],
   cycle:['goal check','how am i doing','how am i doing on the goal','am i on track','where am i at','how far am i','how close am i','consistency','am i being consistent','cycle check','how many days left','weekly check','how is the week looking','progress check','what is the progress','stats','numbers','the numbers','what are the numbers'],
   dpc:['dpc check','daily progress check','how is dpc','daily numbers','today numbers','what did i log','my daily log','dpc update','log numbers','daily check'],
-  calendar:['money block','money time','sales block','outreach block','maker day','money day','manager day','finale day','morning','afternoon block','end of day','closing out'],
+  calendar:['money block','money time','sales block','outreach block','maker day','money day','manager day','finale day','morning','afternoon block','end of day','closing out','booked calls','cooked calls','calls today','how many calls'],
   profile:['why am i doing this','why does this matter','remind me why','marathon','it is a marathon','long road','keep going','keep pushing','where am i at in life'],
   help:['what can you do','how do i ask','show commands','slash commands']
 };
@@ -7756,6 +7756,9 @@ function getMissionConversationType(question,ctx,intent,brainState){
   if(!q)return {type:CONV_NEW_TOPIC,route:'now',activeRoute:active&&active.intentRoute||''};
   if(/^\/[a-z]+/.test(q))return {type:CONV_COMMAND,route:intent.route||q.replace(/^\/([a-z]+).*/,'$1'),activeRoute:active&&active.intentRoute||''};
   if(getMissionCloseSignal(q))return {type:CONV_CLOSE,route:'',activeRoute:active&&active.intentRoute||''};
+  if(/\b(what is|whats|what's|explain|tell me about)\b.*\b(bangin deal|bangin production deal|production deal|bpd)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'profile',activeRoute:active&&active.intentRoute||''};
+  if(/\b(what happened|whats happened|what has happened|show me what i did|how am i performing|performance|expenses|new sales|any new sales|made this week|how much have i made)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'report',activeRoute:active&&active.intentRoute||''};
+  if(/\b(how many).*\b(cooked calls|booked calls|calls)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'calendar',activeRoute:active&&active.intentRoute||''};
   if(/\b(i dont know what to do|i do not know what to do|i'm stuck|im stuck|stuck right now|can you help me|help me figure|help me decide|walk me through it)\b/.test(q))return {type:CONV_FOLLOWUP,route:active&&active.intentRoute||'now',activeRoute:active&&active.intentRoute||''};
   if(/\b(what am i struggling with|struggling with the most|where am i stuck|biggest bottleneck|biggest constraint|what is holding me back|whats holding me back)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'report',activeRoute:active&&active.intentRoute||''};
   if(/^(quick read|quick|short version|tldr|tl dr|brief|summarize|sum it up|quick take)$/.test(q))return {type:CONV_QUICK_READ,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
@@ -7995,7 +7998,7 @@ function getMissionBrainState(ctx,question,route){
   base.userEnergy=getMissionBrainUserEnergy(question||'',Object.assign({},state,{messageTimestamps:(state.messageTimestamps||[]).concat(nowIso).slice(-5)}));
   base.sessionIntent=getMissionBrainSessionIntent(Object.assign({},state,{topicHistory:previewHistory,sessionArc:base.sessionArc}),question||'');
   base.frustrationSignal=/\b(still|again|not working|nothing|ugh|come on|seriously|stuck|wrong|broken)\b/i.test(String(question||''))||base.sessionIntent==='troubleshooting';
-  base.momentumSignal=/\b(done|logged|finished|sent|called|booked|closed|posted|paid|won)\b/i.test(String(question||''))||base.dpcMomentum==='ahead';
+  base.momentumSignal=/\b(i did it|done|logged it|finished it|sent it|called them|booked one|closed|posted it|got paid|paid|won|win|good news)\b/i.test(String(question||''));
   base.engagementLevel=base.sessionArc==='opening'?'checking_in':(String(question||'').split(/\s+/).filter(Boolean).length>20||/\b(deeper|break down|explain|tell me more)\b/i.test(String(question||''))?'deep':'scanning');
   base.nextBestMove=getMissionBrainNextBestMove(ctx,base);
   base.blockingFactor=getMissionBrainBlockingFactor(base);
@@ -8213,7 +8216,7 @@ function getMissionResponseMode(question,route,ctx,brainState){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return {mode:'coach',label:'Coach',tone:'default'};
   if(/\b(nothing is working|stuck|ugh|frustrated|this is hard|not working|struggling|dont get it|do not get it|why bother|whats the point|what is the point|keep trying and nothing moves)\b/.test(q))return {mode:'empathy',label:'Empathy',tone:'steady'};
-  if(/\b(won|win|closed|closed it|paid|booked|booked one|got paid|made money|hit target|success|good news|done|finished|lets go|lfg|it worked|got the close)\b/.test(q))return {mode:'celebration',label:'Celebration',tone:'momentum'};
+  if(/\b(i won|big win|closed it|got paid|made money|hit target|good news|i did it|it worked|got the close|booked one|paid me)\b/.test(q))return {mode:'celebration',label:'Celebration',tone:'momentum'};
   if(/\b(slow|tired|drained|not feeling it|cant focus|cannot focus|dragging|losing steam|unmotivated|blah|just not there|overwhelmed|burned out|burnt out)\b/.test(q))return {mode:'motivation',label:'Motivation',tone:'steady'};
   if(/\b(quick|fast|asap|right now|just tell me|short version|skip the context|bottom line)\b/.test(q))return {mode:'assertive',label:'Assertive',tone:'direct'};
   if(/\b(broken|error|not working|failed|issue|problem|diagnose|diagnostic|why isnt|why is not|fix|bug)\b/.test(q)||route==='sync')return {mode:'diagnostic',label:'Diagnostic',tone:'calm'};
@@ -8542,6 +8545,9 @@ function getMissionCommandRouteAnswer(route,ctx,question){
   if(route==='help')return getMissionCommandHelp()+getMissionIntentLinks('help');
   if(route==='time')return '<strong>Time:</strong> '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   if(route==='day')return '<strong>Day:</strong> '+now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  if(route==='profile'&&/\b(bangin deal|bangin production deal|production deal|bpd)\b/i.test(String(question||''))){
+    return '<strong>BANGIN Production Deal:</strong> high-ticket, done-for-you music project support for independent artists.<br><br>It can cover planning, beats, songs, mix/master, visuals, content, distribution, funnels, promotion, and launch assets so the artist is not trying to build the whole project alone.<br><br><span style="color:#8f9aa3">Simple read: BANGIN Deal is the premium offer. Rappreneur OS teaches the system. BANGIN+ keeps the low-ticket beat/community lane open.</span>'+getMissionIntentLinks('profile');
+  }
   if(route==='profile')return getMissionProfileAnswer()+getMissionIntentLinks('profile');
   if(route==='calendar')return continuity+getMissionCalendarAnswer(ctx)+getMissionContextNudge('calendar',ctx)+getMissionIntentLinks('calendar');
   if(route==='report'&&/\b(make more money|more money|make money|get paid|close more|sell more|book more calls)\b/i.test(String(question||'')))return getMissionMoneyActionAnswer(ctx)+getMissionIntentLinks('leads')+getMissionIntentLinks('report');
@@ -8566,7 +8572,7 @@ function getMissionMultiIntentAnswer(intent,ctx,question){
 }
 
 function getMissionQuestionShapeAddon(shape,route,ctx){
-  if(!shape||!route||shape.type==='command'||shape.type==='what')return '';
+  if(!shape||!route||['help','time','day','profile','memory'].indexOf(route)>=0||shape.type==='command'||shape.type==='what'||shape.type==='ask')return '';
   var block=getMissionBlockIntel();
   var journey=getCurrentJourneyMove(ctx);
   var copy='';
@@ -8584,8 +8590,6 @@ function getMissionQuestionShapeAddon(shape,route,ctx){
     copy=route==='leads'?'Who first: start with the hottest overdue follow-up, then the warmest call-ready lead.':'Who owns it: A1XX, Executive Producer. Keep the answer filtered through that role.';
   }else if(shape.type==='where'){
     copy=route==='cycle'?'Position read: check the day count, revenue percent, and the next pressure point.':'Where to look: use the linked card first, then return to Mission Command after the result is logged.';
-  }else if(shape.type==='ask'){
-    copy='Want the quick read or the deeper breakdown?';
   }else if(shape.type==='prompt'){
     copy='One move: turn that into either a logged result or a cleaner question.';
   }
@@ -8852,6 +8856,10 @@ function getMissionHumanBubble(route,conv,ctx,question){
     return 'Start with the warmest person who can actually turn into money today. Do not open a new list until one real follow-up is handled.';
   }
   if(route==='report'&&/\b(struggling|stuck|bottleneck|holding me back|constraint)\b/.test(q))return 'The biggest constraint looks like revenue pressure plus weak pipeline heat. That means the fix is not more planning; it is one qualified conversation and one direct offer.';
+  if(route==='report'&&/\b(expense|expenses|costs|spending)\b/.test(q))return 'I can read the revenue pace right now, but I do not see a live expense feed in this chat yet. Best read: treat expenses as a separate finance lane until we connect that table.';
+  if(route==='report'&&/\b(yesterday|what happened|whats happened|what has happened|updates|whats new|new updates)\b/.test(q))return 'For updates, I can summarize what is loaded into the app packet: revenue pace, pipeline state, calendar, content, and production. The deeper yesterday/week recap needs the Sheet or Notion logs connected into this chat brain.';
+  if(route==='report'&&/\b(new sales|any new sales|what came in|money coming in|sales today|anything close)\b/.test(q))return 'I do not see a new closed sale beyond the current weekly total in the loaded packet. The clean next check is the Sheet revenue log or the latest DPC save.';
+  if(route==='report'&&/\b(performing|performance|how am i doing)\b/.test(q))return 'Performance read: the effort is pointed in the right direction, but the money signal is behind. The next improvement is not more planning; it is more qualified conversations and direct offers.';
   if(route==='report')return 'You are behind on the weekly goal, but the gap is still workable. The next move needs to create or close a conversation, not add more admin.';
   if(route==='dpc')return 'The daily campaign needs one clean push. Log the next outreach block, then use the result to decide whether to call, follow up, or close.';
   if(route==='now'&&/\b(lock in|distracted|off track|spinning|overwhelmed|too many options|decision fatigue)\b/.test(q))return pickMissionLibraryLine('lockIn',vars)||escapeHtml(ctx.nowText||'Move one asset and one pipeline step.');
