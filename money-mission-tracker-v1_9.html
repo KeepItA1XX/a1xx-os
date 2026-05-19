@@ -8114,6 +8114,86 @@ function getMissionResponseModeAddon(mode,route,ctx){
   return copy?'<br><br><span style="color:#8f9aa3">'+escapeHtml(copy)+'</span>':'';
 }
 
+function getMissionCloseSignal(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return false;
+  if(/^(thanks|thank you|appreciate it|ok|okay|cool|got it|done|finished|thats it|that's it|later|logging off|im out|i am out|good night|goodnight)$/.test(q))return true;
+  return /\b(thanks mission|done for now|that is it|thats it for now|that's it for now|logging off|i am done|we can stop here|close out here)\b/.test(q);
+}
+
+function getMissionContinuationSignal(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return '';
+  if(/^(tell me more|go deeper|expand on that|what do you mean|explain that|and then what|what next|next|why|do that again|run that back|say more)$/.test(q))return q;
+  if(/\b(tell me more|go deeper|expand on that|explain that|what do you mean|run that back|say more)\b/.test(q))return 'expand';
+  return '';
+}
+
+function getLastMissionTopicTurn(){
+  var hist=getMissionChatHistory().slice(-12).filter(function(t){
+    return t&&t.intentRoute&&t.intentRoute!=='ask';
+  });
+  if(hist.length)return hist[hist.length-1];
+  var any=getMissionChatHistory().slice(-12).filter(function(t){return t&&t.intentRoute;});
+  return any.length?any[any.length-1]:null;
+}
+
+function getMissionCloseResponse(ctx){
+  var hist=getMissionChatHistory().slice(-8);
+  var last=hist.length?hist[hist.length-1]:null;
+  var route=last&&last.intentRoute?last.intentRoute:'mission';
+  var line='Got it. Carry it forward.';
+  if(route==='leads')line='Got it. Close the loop on the next warm conversation.';
+  else if(route==='content')line='Got it. Keep the next asset simple and finishable.';
+  else if(route==='production')line='Got it. Move one production item one status forward.';
+  else if(route==='report'||route==='dpc')line='Got it. Protect the money path and log the result.';
+  else if(hist.length>=3)line='Good session. Carry the next block forward.';
+  return '<strong>Mission Command:</strong> '+escapeHtml(line);
+}
+
+function getMissionContinuationResponse(signal,ctx,question){
+  var last=getLastMissionTopicTurn();
+  if(!last||!last.intentRoute)return '';
+  var route=last.intentRoute;
+  var base=getMissionCommandRouteAnswer(route,ctx,question||last.question||'');
+  if(!base)return '';
+  var q=normalizeMissionQuestion(signal||question||'');
+  var layer='';
+  if(q==='why'){
+    layer='Deeper read: this matters because it changes the next action, not because it adds more dashboard noise.';
+    if(route==='leads')layer='Deeper read: leads are closest to cash. Every warm follow-up is either a conversation, an offer, or clean information.';
+    else if(route==='content')layer='Deeper read: content is useful when it creates proof and gives the next lead a reason to respond.';
+    else if(route==='production')layer='Deeper read: production only becomes leverage when the asset can be sold, posted, pitched, or delivered.';
+    else if(route==='calendar')layer='Deeper read: the calendar is there to protect focus blocks, not just record where time went.';
+    else if(route==='report'||route==='dpc')layer='Deeper read: the numbers are pressure signals. They tell you where to push next.';
+  }else if(q==='what next'||q==='next'||q==='and then what'){
+    layer='Next layer: pick the smallest visible move, finish it, then come back with the result so I can adjust the read.';
+  }else if(q==='do that again'||q==='run that back'){
+    layer='Same lane, cleaner pass: stay on this route until the next result is logged.';
+  }else{
+    layer='Deeper layer: the useful move is hiding inside this lane. Keep the question tied to the next result you can actually log.';
+  }
+  return base+'<br><br><span style="color:#526944">'+escapeHtml(layer)+'</span>';
+}
+
+function getMissionConversationEnding(route,shape,mode,ctx,question){
+  if(getMissionCloseSignal(question||''))return '';
+  var journey=getCurrentJourneyMove(ctx);
+  var type='directive';
+  if(mode&&mode.mode==='empathy')type='observation';
+  else if(mode&&mode.mode==='celebration')type='bridge';
+  else if(mode&&mode.mode==='assertive')type='directive';
+  else if(shape&&shape.type==='why')type='observation';
+  else if(shape&&shape.type==='ask')type='question';
+  else if(route==='calendar'||route==='cycle')type='bridge';
+  if(type==='question')return '<strong>Question:</strong> Want the quick read or the deeper breakdown?';
+  if(type==='observation')return '<strong>Read:</strong> Pressure is information. Move the one thing that changes the number.';
+  if(type==='bridge'){
+    return '<strong>Carry forward:</strong> '+(journey?escapeHtml('Next step: '+journey.nextCheck+'.'):'That sets up the next block.');
+  }
+  return getMissionFollowUp(route,ctx,question||'');
+}
+
 function getCurrentJourneyMove(ctx){
   var dayType=(ctx&&ctx.dayType)||getMissionDayType();
   var steps=MISSION_STEPS&&MISSION_STEPS[dayType];
@@ -8184,6 +8264,12 @@ function getMissionCommandResponse(kind,ctx,question){
   var intent=multi.primary;
   var route=intent.route;
   var responseMode=getMissionResponseMode(question||'',route,ctx);
+  if(getMissionCloseSignal(question||''))return getMissionCloseResponse(ctx);
+  var continuation=getMissionContinuationSignal(question||'');
+  if(continuation){
+    var continued=getMissionContinuationResponse(continuation,ctx,question||'');
+    if(continued)return continued+getMissionResponseModeAddon(responseMode,route,ctx);
+  }
   if(!route&&responseMode.mode==='empathy'){
     return '<strong>Mission Command:</strong> Heard. Let me narrow it down instead of dumping the whole dashboard.<br><br><span style="color:#8f9aa3">What feels stuck right now: leads, content, DPCs, production, or the schedule?</span>';
   }
@@ -9015,7 +9101,9 @@ function renderMissionCommand(kind,question,forceCurrent){
   var shouldShowCurrent=!!(forceCurrent||question||!hist.length);
   var answer=shouldShowCurrent?getMissionCommandResponse(kind||'now',ctx,question||''):'';
   var route=getMissionCommandRoute(question||'');
-  var followUp=shouldShowCurrent?getMissionFollowUp(route,ctx,question||''):'';
+  var shape=shouldShowCurrent?getMissionQuestionShape(question||''):{};
+  var mode=shouldShowCurrent?getMissionResponseMode(question||'',route,ctx):{};
+  var followUp=shouldShowCurrent?getMissionConversationEnding(route,shape,mode,ctx,question||''):'';
   packet.followUp=followUp;
   if(!shouldShowCurrent){
     ensureMissionThreadReady('','','');
