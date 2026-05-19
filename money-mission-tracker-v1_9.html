@@ -7907,6 +7907,7 @@ function getMissionConversationType(question,ctx,intent,brainState){
   if(!q)return {type:CONV_NEW_TOPIC,route:'now',activeRoute:active&&active.intentRoute||''};
   if(/^\/[a-z]+/.test(q))return {type:CONV_COMMAND,route:intent.route||q.replace(/^\/([a-z]+).*/,'$1'),activeRoute:active&&active.intentRoute||''};
   if(getMissionCloseSignal(q))return {type:CONV_CLOSE,route:'',activeRoute:active&&active.intentRoute||''};
+  if(intent&&intent.route==='diagnostic')return {type:CONV_DATA_REQUEST,route:'diagnostic',activeRoute:active&&active.intentRoute||''};
   if(/\b(what is|whats|what's|explain|tell me about)\b.*\b(bangin deal|bangin production deal|production deal|bpd)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'profile',activeRoute:active&&active.intentRoute||''};
   if(/\b(what happened|whats happened|what has happened|show me what i did|how am i performing|performance|expenses|new sales|any new sales|made this week|how much have i made)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'report',activeRoute:active&&active.intentRoute||''};
   if(/\b(how many).*\b(cooked calls|booked calls|calls)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'calendar',activeRoute:active&&active.intentRoute||''};
@@ -8291,6 +8292,8 @@ function getMissionIntentLinks(id){
 function getMissionCommandIntent(question){
   var raw=String(question||'').trim();
   var q=normalizeMissionQuestion(raw);
+  var diagnostic=getMissionDiagnosticIntent(q);
+  if(diagnostic)return diagnostic;
   var slash=(q.match(/^\/([a-z]+)/)||[])[1]||'';
   var tags=(q.match(/#[a-z]+/g)||[]).map(function(t){return t.slice(1);});
   var words=q.split(/\s+/).filter(Boolean);
@@ -8354,6 +8357,14 @@ function getMissionMultiIntent(question){
 
 function getMissionCommandRoute(question){
   return getMissionCommandIntent(question).route;
+}
+
+function getMissionDiagnosticIntent(q){
+  q=normalizeMissionQuestion(q||'');
+  if(!q)return null;
+  var diagnosticPhrase=/\b(i am stuck|im stuck|i'm stuck|stuck right now|nothing is working|nothing works|is this even working|does this work|why isnt|why isn't|why is not|why is my|why are my|what is wrong with|whats wrong with|broken|problem|issue|diagnose|diagnostic|biggest bottleneck|biggest constraint|what am i struggling with|where am i stuck|what is holding me back|whats holding me back)\b/.test(q);
+  if(!diagnosticPhrase)return null;
+  return {route:'diagnostic',score:9,label:'Diagnostic',suggestions:[{id:'leads',label:'Leads',score:4},{id:'report',label:'Report',score:4},{id:'now',label:'Now',score:3}]};
 }
 
 function getMissionQuestionShape(question){
@@ -8624,6 +8635,74 @@ function getMissionSyncAnswer(){
   return '<strong>Sync:</strong><br>'+names.map(function(n){var s=services[n]||{};return escapeHtml(n+': '+(s.status||'checked')+(s.msg?' · '+s.msg:''));}).join('<br>');
 }
 
+function getMissionDiagnosticArea(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(/\b(pipeline|lead|leads|crm|follow|followup|contact|dm|call)\b/.test(q))return 'leads';
+  if(/\b(content|post|script|hook|reel|short|youtube|instagram)\b/.test(q))return 'content';
+  if(/\b(production|beat|beats|catalog|song|mix|master|studio)\b/.test(q))return 'production';
+  if(/\b(money|revenue|goal|target|sales|sale|income|paid|close|closing)\b/.test(q))return 'report';
+  if(/\b(dpc|daily|dms|calls|booked)\b/.test(q))return 'dpc';
+  if(/\b(calendar|schedule|meeting|block|time|focus)\b/.test(q))return 'calendar';
+  return '';
+}
+
+function getMissionDiagnosticMetric(area,ctx){
+  ctx=ctx||{};
+  if(area==='leads'){
+    var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
+    var hot=leads.filter(function(l){return !!l.hot;}).length;
+    var warm=leads.filter(function(l){return !!l.warm;}).length;
+    var callReady=leads.filter(function(l){return !!l.phone;}).length;
+    return {label:'Pipeline',metric:leads.length+' open · '+(hot+warm)+' warm/hot · '+callReady+' call-ready',weak:(hot+warm)===0&&leads.length>0,action:'qualify one call-ready lead and make the direct offer'};
+  }
+  if(area==='content'){
+    var pieces=(window.__contentPipelinePieces||window.__contentPieces||[]);
+    return {label:'Content',metric:pieces.length+' active item'+(pieces.length===1?'':'s')+' loaded',weak:pieces.length===0,action:'make one proof-of-work post tied to today’s offer'};
+  }
+  if(area==='production'){
+    var items=(window.__productionPieces||[]);
+    return {label:'Production',metric:items.length+' active item'+(items.length===1?'':'s')+' loaded',weak:items.length===0,action:'move one beat or project one status forward'};
+  }
+  if(area==='dpc'){
+    var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+    var activity=(d.dms||0)+(d.coldCalls||0);
+    return {label:'DPC',metric:(d.dms||0)+' DMs · '+(d.coldCalls||0)+' calls · '+(d.calls||0)+' booked',weak:activity===0,action:'log one measurable outreach block'};
+  }
+  if(area==='calendar'){
+    var block=getMissionBlockIntel();
+    return {label:'Calendar',metric:(block.name||'Current block')+(block.minutesLeft?' · '+block.minutesLeft+' min left':''),weak:false,action:'define the one result this block should produce'};
+  }
+  var pct=ctx.wk?Math.round((ctx.rev/ctx.wk)*100):0;
+  return {label:'Money',metric:fmt(ctx.rev||0)+' of '+fmt(ctx.wk||0)+' · '+pct+'% · '+fmt(Math.max(0,ctx.gap||0))+' gap',weak:(ctx.gap||0)>0,action:'do one revenue-facing action before admin'};
+}
+
+function getMissionDiagnosticResponse(question,ctx){
+  var q=normalizeMissionQuestion(question||'');
+  var area=getMissionDiagnosticArea(question)||'report';
+  var metric=getMissionDiagnosticMetric(area,ctx);
+  var block=getMissionBlockIntel();
+  var pace=getMissionPaceState(ctx||{});
+  if(/\b(i am stuck|im stuck|i'm stuck|stuck right now|where am i stuck)\b/.test(q)){
+    var active=getCurrentJourneyMove(ctx);
+    var next=active&&active.nextCheck?active.nextCheck:metric.action;
+    return 'Stuck read: this is not the whole OS being broken. It is the next step getting too wide.<br><br><strong>Next pressure point:</strong> '+escapeHtml(next)+'.<br><br><span style="color:#8f9aa3">'+escapeHtml(metric.label+' · '+metric.metric)+'.</span>';
+  }
+  if(/\b(nothing is working|nothing works|is this even working|does this work)\b/.test(q)){
+    return 'Honest read: the system is working enough to show pressure, but the result loop needs a cleaner test.<br><br><strong>Signal:</strong> '+escapeHtml(metric.label+' · '+metric.metric)+'.<br><br><strong>Action:</strong> '+escapeHtml(metric.action)+'.';
+  }
+  if(/\b(why isnt|why isn't|why is not|why is my|why are my|what is wrong with|whats wrong with|diagnose|diagnostic)\b/.test(q)){
+    var cause=metric.weak?'the signal is too thin to make the next decision clean':'the next action is probably not specific enough';
+    return 'Diagnostic read: '+escapeHtml(metric.label.toLowerCase())+' is not failing by default. The likely issue is '+escapeHtml(cause)+'.<br><br><strong>Metric:</strong> '+escapeHtml(metric.metric)+'.<br><br><strong>Action:</strong> '+escapeHtml(metric.action)+'.';
+  }
+  if(/\b(biggest bottleneck|biggest constraint|what am i struggling with|what is holding me back|whats holding me back)\b/.test(q)){
+    var moneyMetric=getMissionDiagnosticMetric('report',ctx);
+    var leadMetric=getMissionDiagnosticMetric('leads',ctx);
+    var bottleneck=(ctx&&ctx.gap>0)?moneyMetric:leadMetric;
+    return 'Constraint read: the biggest pressure point is '+escapeHtml(bottleneck.label.toLowerCase())+'.<br><br><strong>Signal:</strong> '+escapeHtml(bottleneck.metric)+'.<br><br><strong>Move:</strong> '+escapeHtml(bottleneck.action)+'.';
+  }
+  return 'Diagnostic read: '+escapeHtml(metric.label)+' is the lane to check first.<br><br><strong>Signal:</strong> '+escapeHtml(metric.metric)+'.<br><br><strong>Move:</strong> '+escapeHtml(metric.action)+'.';
+}
+
 function getMissionMemoryAnswer(question){
   var intent=getMissionCommandIntent(question||'');
   var route=intent.route||'';
@@ -8700,6 +8779,7 @@ function getMissionCommandRouteAnswer(route,ctx,question){
      the same session hour. Harmless when no history exists. */
   var now=new Date();
   var continuity=getMissionHistoryContinuityLine(route);
+  if(route==='diagnostic')return getMissionDiagnosticResponse(question,ctx)+getMissionIntentLinks(getMissionDiagnosticArea(question)||'now');
   if(route==='leads'&&getMissionPipelineDiagnosticSignal(question||''))return continuity+getMissionPipelineDiagnosisAnswer(ctx)+getMissionContextNudge('leads',ctx)+getMissionIntentLinks('leads');
   if(route==='now')return continuity+getMissionNowAnswer(ctx)+getMissionContextNudge('now',ctx)+getMissionIntentLinks('now');
   if(route==='help')return getMissionCommandHelp()+getMissionIntentLinks('help');
@@ -8834,6 +8914,8 @@ function normalizeMissionPacketRoute(packet,route,question){
 }
 
 function getMissionCloseResponse(ctx){
+  var sessionClose=getMissionSessionCloseResponse(ctx);
+  if(sessionClose)return sessionClose;
   var hist=getMissionChatHistory().slice(-8);
   var last=hist.length?hist[hist.length-1]:null;
   var route=window.__missionCommandActiveTopicRoute||(last&&last.intentRoute)||'mission';
@@ -8844,6 +8926,77 @@ function getMissionCloseResponse(ctx){
   else if(route==='report'||route==='dpc')line='Got it. Protect the money path and log the result.';
   else if(hist.length>=3)line='Good session. Carry the next block forward.';
   return escapeHtml(line);
+}
+
+function getMissionSessionOpenLine(ctx){
+  var key='a1xx_mc_session_opened_'+dateKey(new Date());
+  if(sessionStorage.getItem(key)==='1')return '';
+  var hist=getMissionChatHistory();
+  if(hist.length>0)return '';
+  var block=getMissionBlockIntel();
+  var pace=getMissionPaceState(ctx||{});
+  var line='Session frame: '+(block.name||'current block')+(block.minutesLeft?' has '+block.minutesLeft+' min left':' is active')+'.';
+  if(ctx&&ctx.gap>0)line+=' '+fmt(ctx.gap)+' remains on the weekly target.';
+  else if(pace&&pace.label==='covered')line+=' Weekly target pressure is covered.';
+  try{sessionStorage.setItem(key,'1');}catch(e){}
+  return line;
+}
+
+function getMissionCallbackLine(route,ctx){
+  route=route||'';
+  if(!route||['help','time','day','profile'].indexOf(route)>=0)return '';
+  var state=getMissionBrainSession();
+  if((state.turnCount||0)<2)return '';
+  if(state.lastCallbackRoute===route)return '';
+  var hist=getMissionChatHistory().slice(-6);
+  var same=hist.filter(function(turn){return turn&&turn.intentRoute===route;}).length;
+  var line='';
+  if(same>=2){
+    if(route==='leads')line='Callback: we keep circling pipeline, so the useful test is one qualified touch.';
+    else if(route==='report'||route==='dpc')line='Callback: we keep coming back to the money read, so the next answer needs an action attached.';
+    else if(route==='content')line='Callback: content keeps coming up, so shrink it to one publishable asset.';
+    else if(route==='production')line='Callback: production keeps coming up, so move one item one status forward.';
+    else line='Callback: this lane has come up a few times. The next useful thing is one logged result.';
+  }
+  if(!line)return '';
+  state.lastCallbackRoute=route;
+  saveMissionBrainSession(state);
+  return line;
+}
+
+function getMissionSessionCloseResponse(ctx){
+  var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var moved=[];
+  if(d.money)moved.push(fmt(d.money)+' collected');
+  if(d.dms)moved.push(d.dms+' DMs');
+  if(d.coldCalls)moved.push(d.coldCalls+' calls made');
+  if(d.calls)moved.push(d.calls+' booked');
+  if(d.closes)moved.push(d.closes+' closes');
+  var hist=getMissionChatHistory().slice(-6);
+  var lastRoute='';
+  for(var i=hist.length-1;i>=0;i--){if(hist[i]&&hist[i].intentRoute){lastRoute=hist[i].intentRoute;break;}}
+  var line='Good session.';
+  if(moved.length)line+=' Logged today: '+moved.slice(0,4).join(' · ')+'.';
+  else line+=' Nothing new is logged in the daily numbers yet.';
+  if(lastRoute==='leads')line+=' Close the loop on the warmest conversation.';
+  else if(lastRoute==='content')line+=' Keep the next asset simple enough to publish.';
+  else if(lastRoute==='production')line+=' Leave the production lane with one visible status move.';
+  else if(lastRoute==='report'||lastRoute==='dpc')line+=' Protect the next money-facing action.';
+  else line+=' Carry the next block forward.';
+  return escapeHtml(line);
+}
+
+function applyMissionSessionArc(html,route,ctx,question,brainState,opts){
+  opts=opts||{};
+  if(!html||getMissionCloseSignal(question||''))return html;
+  if(['help','time','day'].indexOf(route)>=0)return html;
+  var parts=[];
+  var openLine=getMissionSessionOpenLine(ctx);
+  if(openLine)parts.push('<span style="color:#8f9aa3">'+escapeHtml(openLine)+'</span>');
+  var callback=getMissionCallbackLine(route,ctx);
+  if(callback)parts.push('<span style="color:#526944">'+escapeHtml(callback)+'</span>');
+  parts.push(html);
+  return parts.join('<br><br>');
 }
 
 function getMissionContinuationResponse(signal,ctx,question){
@@ -9018,6 +9171,7 @@ function missionCompactText(html){
 
 function missionRouteNeedsDataBubble(route,conv,question){
   if(!route||!conv)return false;
+  if(route==='diagnostic')return false;
   if([CONV_QUICK_READ,CONV_WHY,CONV_WHAT_ELSE,CONV_FOLLOWUP,CONV_CLOSE,CONV_UNCLEAR].indexOf(conv.type)>=0)return false;
   if(conv.type===CONV_DEEPER)return true;
   if(conv.type===CONV_COMMAND||conv.type===CONV_DATA_REQUEST)return ['now','leads','report','dpc','cycle','calendar','content','production','resources','sync'].indexOf(route)>=0;
@@ -9226,29 +9380,32 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var route=(conv&&conv.route)||intent.route;
   var responseMode=getMissionResponseMode(question||'',route,ctx,brainState);
   var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,responseMode);
+  function finishMissionAnswer(html){
+    return applyMissionSessionArc(html,route,ctx,question||'',brainState);
+  }
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,question||'');
   if(conversationFirst){
     if(route)setMissionCommandActiveTopic(route,question||'');
-    return applyMissionResponseVariant(conversationFirst,variant,{opener:true,closer:true});
+    return finishMissionAnswer(applyMissionResponseVariant(conversationFirst,variant,{opener:true,closer:true}));
   }
   if(getMissionCloseSignal(question||''))return getMissionCloseResponse(ctx);
   var continuation=getMissionContinuationSignal(question||'');
   if(continuation){
     var continued=getMissionContinuationResponse(continuation,ctx,question||'');
-    if(continued)return applyMissionResponseVariant(continued+getMissionResponseModeAddon(responseMode,route,ctx),variant,{opener:true,closer:true});
+    if(continued)return finishMissionAnswer(applyMissionResponseVariant(continued+getMissionResponseModeAddon(responseMode,route,ctx),variant,{opener:true,closer:true}));
   }
   if(!route&&responseMode.mode==='empathy'){
-    return '<strong>Mission Command:</strong> Heard. Let me narrow it down instead of dumping the whole dashboard.<br><br><span style="color:#8f9aa3">What feels stuck right now: leads, content, DPCs, production, or the schedule?</span>';
+    return finishMissionAnswer('<strong>Mission Command:</strong> Heard. Let me narrow it down instead of dumping the whole dashboard.<br><br><span style="color:#8f9aa3">What feels stuck right now: leads, content, DPCs, production, or the schedule?</span>');
   }
   var multiAnswer=getMissionMultiIntentAnswer(multi,ctx,question||'');
-  if(multiAnswer)return multiAnswer.replace('<strong>Split read:</strong> I see two lanes in that ask.<br><br>','');
+  if(multiAnswer)return finishMissionAnswer(multiAnswer.replace('<strong>Split read:</strong> I see two lanes in that ask.<br><br>',''));
   var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
   if(routed){
     setMissionCommandActiveTopic(route,question||'');
     var shapeAddon=(route==='leads'&&getMissionPipelineDiagnosticSignal(question||''))?'':getMissionQuestionShapeAddon(shape,route,ctx);
     var routedAnswer=routed+shapeAddon+getMissionResponseModeAddon(responseMode,route,ctx);
     if(['help','time','day','profile','memory'].indexOf(route)<0)routedAnswer=applyMissionResponseVariant(routedAnswer,variant,{opener:true,closer:true});
-    return routedAnswer;
+    return finishMissionAnswer(routedAnswer);
   }
   /* 2026-05-19 (Claude deep pass): partial fallback for low-confidence signals (score >0
      but below the threshold). Gives a best-guess partial answer + asks for confirmation
@@ -9258,20 +9415,20 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var partialAnswer=getMissionCommandRouteAnswer(partialRoute,ctx,question||'');
     if(partialAnswer){
       var altSuggestions=intent.suggestions&&intent.suggestions.length?intent.suggestions.map(function(s){return '/'+s.id;}).join(' · '):'/now · /leads · /calendar';
-      return '<span style="color:#526944">Partial read - I think you mean '+escapeHtml(intent.label)+'. Here is what I see:</span><br><br>'+partialAnswer+'<br><br><span style="color:#8f9aa3">Not quite right? Try: '+escapeHtml(altSuggestions)+'</span>';
+      return finishMissionAnswer('<span style="color:#526944">Partial read - I think you mean '+escapeHtml(intent.label)+'. Here is what I see:</span><br><br>'+partialAnswer+'<br><br><span style="color:#8f9aa3">Not quite right? Try: '+escapeHtml(altSuggestions)+'</span>');
     }
   }
   var gapLine=ctx.gap>0?"You still have "+fmt(ctx.gap)+" left against this week's target.":'Weekly target pressure is protected right now.';
-  if(q.indexOf('remember')>=0||q.indexOf('history')>=0||q.indexOf('asked')>=0)return '<strong>Memory:</strong> I can now keep recent Mission Command questions in this browser and send them to the Mission Command Chat Log once Apps Script is redeployed. I will use the recent turns as context for future answers.';
-  if(q.indexOf('calendar')>=0||q.indexOf('meeting')>=0||q.indexOf('class')>=0||q.indexOf('call')>=0)return '<strong>Calendar read:</strong> '+(ctx.nextEvent?('Next up is '+escapeHtml(ctx.nextEvent.title||'an event')+' at '+escapeHtml(ctx.nextEvent.startTime||'the scheduled time')+'. Prep the one outcome you need before it starts.'):('I do not see a loaded upcoming event in the current packet. If Calendar is connected, refresh and I will read it again.'));
-  if(q.indexOf('sync')>=0||q.indexOf('health')>=0||q.indexOf('broken')>=0||q.indexOf('error')>=0)return '<strong>System read:</strong> I am watching local system health and sync status in the packet. If something looks wrong, ask me about the exact service and I will point you to the likely next check.';
-  if(q.indexOf('lead')>=0||q.indexOf('follow')>=0||q.indexOf('dm')>=0||q.indexOf('who')>=0)return '<strong>Lead focus:</strong> '+escapeHtml(ctx.leadText)+'. Start there, then log the outcome so the next answer has fresher context.';
-  if(q.indexOf('content')>=0||q.indexOf('make')>=0||q.indexOf('post')>=0||q.indexOf('create')>=0)return '<strong>Content focus:</strong> Use today’s proof, one result, or one lesson. '+(ctx.contentCount?ctx.contentCount+' content item'+(ctx.contentCount===1?' is':'s are')+' loaded for today.':'No loaded content item yet, so make one simple proof-of-work post.');
-  if(q.indexOf('money')>=0||q.indexOf('revenue')>=0||q.indexOf('target')>=0||q.indexOf('gap')>=0)return '<strong>Money read:</strong> '+gapLine+' The move is to protect the active income path before adding more admin.';
-  if(kind==='lead')return '<strong>Lead focus:</strong> '+escapeHtml(ctx.leadText)+'. Open the Campaign card or Hit List and handle that next conversation.';
-  if(kind==='content')return '<strong>Content angle:</strong> Use today’s proof, one result, or one lesson. '+(ctx.contentCount?ctx.contentCount+' content item'+(ctx.contentCount===1?' is':'s are')+' loaded for today.':'No loaded content item yet, so create one simple proof-of-work post.');
+  if(q.indexOf('remember')>=0||q.indexOf('history')>=0||q.indexOf('asked')>=0)return finishMissionAnswer('<strong>Memory:</strong> I can now keep recent Mission Command questions in this browser and send them to the Mission Command Chat Log once Apps Script is redeployed. I will use the recent turns as context for future answers.');
+  if(q.indexOf('calendar')>=0||q.indexOf('meeting')>=0||q.indexOf('class')>=0||q.indexOf('call')>=0)return finishMissionAnswer('<strong>Calendar read:</strong> '+(ctx.nextEvent?('Next up is '+escapeHtml(ctx.nextEvent.title||'an event')+' at '+escapeHtml(ctx.nextEvent.startTime||'the scheduled time')+'. Prep the one outcome you need before it starts.'):('I do not see a loaded upcoming event in the current packet. If Calendar is connected, refresh and I will read it again.')));
+  if(q.indexOf('sync')>=0||q.indexOf('health')>=0||q.indexOf('broken')>=0||q.indexOf('error')>=0)return finishMissionAnswer('<strong>System read:</strong> I am watching local system health and sync status in the packet. If something looks wrong, ask me about the exact service and I will point you to the likely next check.');
+  if(q.indexOf('lead')>=0||q.indexOf('follow')>=0||q.indexOf('dm')>=0||q.indexOf('who')>=0)return finishMissionAnswer('<strong>Lead focus:</strong> '+escapeHtml(ctx.leadText)+'. Start there, then log the outcome so the next answer has fresher context.');
+  if(q.indexOf('content')>=0||q.indexOf('make')>=0||q.indexOf('post')>=0||q.indexOf('create')>=0)return finishMissionAnswer('<strong>Content focus:</strong> Use today’s proof, one result, or one lesson. '+(ctx.contentCount?ctx.contentCount+' content item'+(ctx.contentCount===1?' is':'s are')+' loaded for today.':'No loaded content item yet, so make one simple proof-of-work post.'));
+  if(q.indexOf('money')>=0||q.indexOf('revenue')>=0||q.indexOf('target')>=0||q.indexOf('gap')>=0)return finishMissionAnswer('<strong>Money read:</strong> '+gapLine+' The move is to protect the active income path before adding more admin.');
+  if(kind==='lead')return finishMissionAnswer('<strong>Lead focus:</strong> '+escapeHtml(ctx.leadText)+'. Open the Campaign card or Hit List and handle that next conversation.');
+  if(kind==='content')return finishMissionAnswer('<strong>Content angle:</strong> Use today’s proof, one result, or one lesson. '+(ctx.contentCount?ctx.contentCount+' content item'+(ctx.contentCount===1?' is':'s are')+' loaded for today.':'No loaded content item yet, so create one simple proof-of-work post.'));
   if(question)return getMissionPersonalityFallback(ctx,question);
-  return getMissionNowAnswer(ctx);
+  return finishMissionAnswer(getMissionNowAnswer(ctx));
 }
 
 function runMissionCommandSelfCheck(){
@@ -9294,11 +9451,15 @@ function runMissionCommandSelfCheck(){
     {q:'when should I work on production?',route:'production',must:'when',shape:'when'},
     {q:'how to make more money',route:'report',mustAny:['report','target','revenue'],shape:'how'},
     {q:'why should I focus on leads?',route:'leads',must:'why it matters',shape:'why',mode:'coach'},
-    {q:'sync is broken',route:'sync',must:'diagnostic read',mode:'diagnostic'},
+    {q:'sync is broken',route:'diagnostic',must:'diagnostic read'},
     {q:'I closed a paid session',route:'report',must:'lock the win',mode:'celebration'},
     {q:'I just booked one',route:'dpc',must:'lock the win',mode:'celebration'},
     {q:'quick - what is my DPC count?',route:'dpc',mustAny:['dpc','bottom line'],mode:'assertive'},
-    {q:'nothing is working',route:'sync',must:'heard',mode:'empathy'}
+    {q:'nothing is working',route:'diagnostic',must:'honest read'},
+    {q:'I am stuck',route:'diagnostic',must:'stuck read'},
+    {q:'why is my pipeline not working',route:'diagnostic',must:'diagnostic read'},
+    {q:'is this even working',route:'diagnostic',must:'honest read'},
+    {q:'what is my biggest bottleneck',route:'diagnostic',must:'constraint read'}
   ];
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
