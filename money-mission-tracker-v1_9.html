@@ -7664,6 +7664,11 @@ function getMissionIntentConfig(id){
   return null;
 }
 
+function getMissionPipelineDiagnosticSignal(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(pipeline|leads|crm|follow up|followup|prospects)\b/.test(q)&&/\b(wrong|broken|problem|issue|stuck|why|diagnose|diagnostic|fix|off|weak|bad)\b/.test(q);
+}
+
 function getMissionIntentLinks(id){
   var cfg=getMissionIntentConfig(id);
   var links=(cfg&&cfg.links||[]).map(function(link){
@@ -7939,6 +7944,29 @@ function getMissionLeadsAnswer(ctx){
   }).join('<br>');
 }
 
+function getMissionPipelineDiagnosisAnswer(ctx){
+  var now=new Date();
+  var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
+  if(!leads.length)return '<strong>Pipeline diagnosis:</strong> I do not see open CRM leads loaded right now. First check CRM sync, then reload the Campaign card.';
+  var hot=leads.filter(function(l){return !!l.hot;}).length;
+  var warm=leads.filter(function(l){return !!l.warm;}).length;
+  var callReady=leads.filter(function(l){return !!l.phone;}).length;
+  var overdue=leads.filter(function(l){
+    if(!l.followUpDate)return false;
+    var d=new Date(l.followUpDate);
+    return !isNaN(d.getTime())&&d<=now;
+  }).length;
+  var cold=Math.max(0,leads.length-hot-warm);
+  var diagnosis=[];
+  if(!hot&&!warm)diagnosis.push('not enough warm signal at the top');
+  if(callReady>0)diagnosis.push(callReady+' call-ready lead'+(callReady===1?'':'s')+' need a direct touch');
+  if(overdue>0)diagnosis.push(overdue+' follow-up'+(overdue===1?' is':'s are')+' overdue');
+  if(cold>hot+warm)diagnosis.push('too much of the list is cold, so the first move is qualification');
+  if(!diagnosis.length)diagnosis.push('the list is loaded; the bottleneck is likely next action clarity');
+  var top=getMissionLeadsAnswer(ctx).replace(/^<strong>Leads[^<]*<\/strong><br>/,'');
+  return '<strong>Pipeline diagnosis:</strong><br>'+escapeHtml(diagnosis.join('. '))+'.<br><br><strong>Best next contacts:</strong><br>'+top;
+}
+
 function getMissionContentAnswer(ctx){
   /* 2026-05-19 (Claude deep pass): status icons (done/in-progress/planned) + format/platform. */
   var pieces=(window.__contentPipelinePieces||window.__contentPieces||[]);
@@ -8043,6 +8071,7 @@ function getMissionCommandRouteAnswer(route,ctx,question){
      the same session hour. Harmless when no history exists. */
   var now=new Date();
   var continuity=getMissionHistoryContinuityLine(route);
+  if(route==='leads'&&getMissionPipelineDiagnosticSignal(question||''))return continuity+getMissionPipelineDiagnosisAnswer(ctx)+getMissionContextNudge('leads',ctx)+getMissionIntentLinks('leads');
   if(route==='now')return continuity+getMissionNowAnswer(ctx)+getMissionContextNudge('now',ctx)+getMissionIntentLinks('now');
   if(route==='help')return getMissionCommandHelp()+getMissionIntentLinks('help');
   if(route==='time')return '<strong>Time:</strong> '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
@@ -8130,18 +8159,42 @@ function getMissionContinuationSignal(question){
 }
 
 function getLastMissionTopicTurn(){
+  if(window.__missionCommandActiveTopicRoute)return {intentRoute:window.__missionCommandActiveTopicRoute,question:window.__missionCommandActiveTopicQuestion||''};
   var hist=getMissionChatHistory().slice(-12).filter(function(t){
-    return t&&t.intentRoute&&t.intentRoute!=='ask';
+    return t&&t.intentRoute&&t.intentRoute!=='ask'&&!getMissionContinuationSignal(t.question||'')&&!getMissionCloseSignal(t.question||'');
   });
   if(hist.length)return hist[hist.length-1];
   var any=getMissionChatHistory().slice(-12).filter(function(t){return t&&t.intentRoute;});
   return any.length?any[any.length-1]:null;
 }
 
+function setMissionCommandActiveTopic(route,question){
+  if(!route||route==='help'||route==='time'||route==='day'||route==='memory')return;
+  if(getMissionContinuationSignal(question||'')||getMissionCloseSignal(question||''))return;
+  window.__missionCommandActiveTopicRoute=route;
+  window.__missionCommandActiveTopicQuestion=question||'';
+}
+
+function getMissionRenderRoute(question){
+  if(getMissionCloseSignal(question||''))return '';
+  if(getMissionContinuationSignal(question||'')){
+    var last=getLastMissionTopicTurn();
+    return last&&last.intentRoute?last.intentRoute:'';
+  }
+  return getMissionCommandRoute(question||'');
+}
+
+function normalizeMissionPacketRoute(packet,route,question){
+  if(!packet||!route||!getMissionContinuationSignal(question||''))return;
+  packet.intent=packet.intent||{};
+  packet.intent.route=route;
+  packet.intent.label=(getMissionIntentConfig(route)||{}).label||route;
+}
+
 function getMissionCloseResponse(ctx){
   var hist=getMissionChatHistory().slice(-8);
   var last=hist.length?hist[hist.length-1]:null;
-  var route=last&&last.intentRoute?last.intentRoute:'mission';
+  var route=window.__missionCommandActiveTopicRoute||(last&&last.intentRoute)||'mission';
   var line='Got it. Carry it forward.';
   if(route==='leads')line='Got it. Close the loop on the next warm conversation.';
   else if(route==='content')line='Got it. Keep the next asset simple and finishable.';
@@ -8276,7 +8329,10 @@ function getMissionCommandResponse(kind,ctx,question){
   var multiAnswer=getMissionMultiIntentAnswer(multi,ctx,question||'');
   if(multiAnswer)return multiAnswer.replace('<strong>Split read:</strong> I see two lanes in that ask.<br><br>','');
   var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
-  if(routed)return routed+getMissionQuestionShapeAddon(shape,route,ctx)+getMissionResponseModeAddon(responseMode,route,ctx);
+  if(routed){
+    setMissionCommandActiveTopic(route,question||'');
+    return routed+getMissionQuestionShapeAddon(shape,route,ctx)+getMissionResponseModeAddon(responseMode,route,ctx);
+  }
   /* 2026-05-19 (Claude deep pass): partial fallback for low-confidence signals (score >0
      but below the threshold). Gives a best-guess partial answer + asks for confirmation
      rather than going straight to personality fallback. */
@@ -9100,7 +9156,8 @@ function renderMissionCommand(kind,question,forceCurrent){
   var hist=getMissionChatHistory();
   var shouldShowCurrent=!!(forceCurrent||question||!hist.length);
   var answer=shouldShowCurrent?getMissionCommandResponse(kind||'now',ctx,question||''):'';
-  var route=getMissionCommandRoute(question||'');
+  var route=getMissionRenderRoute(question||'');
+  normalizeMissionPacketRoute(packet,route,question||'');
   var shape=shouldShowCurrent?getMissionQuestionShape(question||''):{};
   var mode=shouldShowCurrent?getMissionResponseMode(question||'',route,ctx):{};
   var followUp=shouldShowCurrent?getMissionConversationEnding(route,shape,mode,ctx,question||''):'';
