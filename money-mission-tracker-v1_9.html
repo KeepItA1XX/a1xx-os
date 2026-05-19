@@ -1535,8 +1535,10 @@ body{background:#090a0b;color:#d8dde1}
         </div>
         <div class="btn-row">
           <button class="btn" onclick="syncAllMissionChatSessions('manual')">Sync chats now</button>
+          <button class="btn" onclick="runMissionCommandSelfCheck()">Run chat check</button>
         </div>
         <div class="reset-status" id="mission-chat-sync-status"></div>
+        <div class="reset-status" id="mission-command-test-status"></div>
       </div>
     </div>
 
@@ -8114,6 +8116,40 @@ function getMissionCommandResponse(kind,ctx,question){
   if(kind==='content')return '<strong>Content angle:</strong> Use today’s proof, one result, or one lesson. '+(ctx.contentCount?ctx.contentCount+' content item'+(ctx.contentCount===1?' is':'s are')+' loaded for today.':'No loaded content item yet, so create one simple proof-of-work post.');
   if(question)return getMissionPersonalityFallback(ctx,question);
   return getMissionNowAnswer(ctx);
+}
+
+function runMissionCommandSelfCheck(){
+  var el=document.getElementById('mission-command-test-status');
+  if(el){el.textContent='Checking Mission Command routes...';el.className='reset-status';}
+  var checks=[
+    {q:'/calendar',route:'calendar',must:'Calendar'},
+    {q:'/sync',route:'sync',must:'Sync'},
+    {q:'who is A1XX',route:'profile',must:'A1XX'},
+    {q:'what should I do today?',route:'now',must:'Do this right now'},
+    {q:'who should I contact?',route:'leads',must:'Leads'},
+    {q:'what should I make?',route:'content',must:'Content'},
+    {q:'how to make more money',route:'report',must:'Report'}
+  ];
+  var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+  var failures=[];
+  checks.forEach(function(check){
+    var cleaned=sanitizeMissionCommandInput(check.q);
+    var route=getMissionCommandRoute(cleaned);
+    var answer=String(getMissionCommandResponse('ask',ctx,cleaned)||'').replace(/<[^>]+>/g,' ');
+    if(route!==check.route||answer.indexOf(check.must)<0){
+      failures.push(check.q+' -> '+(route||'none'));
+    }
+  });
+  if(el){
+    if(failures.length){
+      el.textContent='Chat check needs review: '+failures.join(' | ');
+      el.className='reset-status err';
+    }else{
+      el.textContent='Chat check passed: '+checks.length+' core prompts routed correctly.';
+      el.className='reset-status ok';
+    }
+  }
+  return {passed:!failures.length,failures:failures,total:checks.length};
 }
 
 function getMissionDataPacket(question){
