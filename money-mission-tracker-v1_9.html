@@ -7549,6 +7549,12 @@ function missionWordMatches(word,vocab){
   return false;
 }
 
+function normalizeMissionQuestion(raw){
+  var q=String(raw||'').toLowerCase().replace(/[^\w#\/\s-]/g,' ');
+  var fixes={shuld:'should',shoud:'should',folow:'follow',follo:'follow',followup:'followup',calender:'calendar',calandar:'calendar',scheduele:'schedule',shedule:'schedule',meting:'meeting',meetng:'meeting',contnt:'content',prodction:'production',prodution:'production',revnue:'revenue',revenu:'revenue',synch:'sync',helth:'health',anythng:'anything',brokn:'broken',memry:'memory'};
+  return q.split(/\s+/).map(function(word){return fixes[word]||word;}).join(' ');
+}
+
 var MISSION_COMMAND_INTENTS=[
   {id:'now',label:'Now',slash:['now','next','move','focus'],tags:['now','next','focus'],phrases:['what should i do','what do i do','right now','next move','focus on','where do i start','start now','do next','priority','most important','where am i','what now','where to focus','next step','where should i start','what is most important','top priority'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Content',url:'#content-tracker-card'},{label:'Open Production',url:'#production-card'}]},
   {id:'time',label:'Time',slash:['time','clock'],tags:['time'],phrases:['what time','current time','time is it','clock','how late','what time is it','the time'],links:[]},
@@ -7586,7 +7592,7 @@ function getMissionIntentLinks(id){
 
 function getMissionCommandIntent(question){
   var raw=String(question||'').trim();
-  var q=raw.toLowerCase().replace(/[^\w#\/\s-]/g,' ');
+  var q=normalizeMissionQuestion(raw);
   var slash=(q.match(/^\/([a-z]+)/)||[])[1]||'';
   var tags=(q.match(/#[a-z]+/g)||[]).map(function(t){return t.slice(1);});
   var words=q.split(/\s+/).filter(Boolean);
@@ -7623,6 +7629,16 @@ function getMissionCommandIntent(question){
   return best;
 }
 
+function getMissionMultiIntent(question){
+  var primary=getMissionCommandIntent(question);
+  if(!primary.route)return {primary:primary,secondary:null,routes:[]};
+  var second=(primary.suggestions||[]).filter(function(item){
+    return item&&item.id&&item.score>=2&&['help','time','day'].indexOf(item.id)<0;
+  })[0]||null;
+  var closeEnough=!!(second&&primary.score&&second.score>=Math.max(2,primary.score*.72));
+  return {primary:primary,secondary:closeEnough?second:null,routes:closeEnough?[primary.route,second.id]:[primary.route]};
+}
+
 function getMissionCommandRoute(question){
   return getMissionCommandIntent(question).route;
 }
@@ -7635,6 +7651,45 @@ function getMissionNowAnswer(ctx){
   var eventLine=ctx.nextEvent?' Your next calendar item starts at '+ctx.nextEvent.startTime+'.':' No urgent calendar item is loaded in the brief.';
   var gapLine=ctx.gap>0?'You still have '+fmt(ctx.gap)+' left against this week’s target.':'Weekly target pressure is protected right now.';
   return '<strong>Do this right now:</strong><br>'+escapeHtml(ctx.nowText)+'<br><br><span style="color:#8f9aa3">'+gapLine+eventLine+'</span>';
+}
+
+function getMissionBlockIntel(){
+  var idx=typeof getCurrentBlock==='function'?getCurrentBlock():-1;
+  var block=idx>=0&&idx<TIME_BLOCKS.length?TIME_BLOCKS[idx]:null;
+  if(!block)return {idx:idx,name:idx<0?'Pre-flight':'After hours',cls:'',phase:idx<0?'prep':'closed',minutesLeft:0};
+  var left=Math.max(0,block.end-nowMins());
+  var phase=block.cls==='money'?'money':block.cls==='maker'?'maker':block.cls==='manager'?'manager':block.cls==='finale'?'finale':'focus';
+  return {idx:idx,name:block.name,cls:block.cls||'',phase:phase,minutesLeft:left};
+}
+
+function getMissionPaceState(ctx){
+  var wk=ctx&&ctx.wk||0,rev=ctx&&ctx.rev||0,gap=ctx&&ctx.gap||0;
+  var pct=wk?Math.round((rev/wk)*100):0;
+  if(!wk)return {label:'unknown',copy:'Weekly pace is not loaded yet.'};
+  if(gap<=0)return {label:'covered',copy:'Target pressure is covered; protect delivery and next-cycle setup.'};
+  if(pct>=70)return {label:'close',copy:'You are close enough that one focused money block can change the week.'};
+  if(pct>=35)return {label:'active',copy:'Pace is alive, but the next action needs to be revenue-facing.'};
+  return {label:'behind',copy:'Pace is behind; prioritize conversations and closes over admin.'};
+}
+
+function getMissionContextNudge(route,ctx){
+  var block=getMissionBlockIntel();
+  var pace=getMissionPaceState(ctx||{});
+  var line='';
+  if(route==='leads'){
+    line=block.phase==='money'?'Money block is active. Start with the warmest reply or call-ready lead.':'Lead work is still valid, but protect the current block before opening a new rabbit hole.';
+  }else if(route==='content'){
+    line=block.phase==='maker'?'Maker time favors one finished asset over five half-ideas.':'Keep the content move tied to proof from today, not a random brainstorm.';
+  }else if(route==='production'){
+    line=block.phase==='maker'?'Good window for production. Pick one beat and move it to a bounce/export.':'If this is not maker time, define the next production move and schedule the actual DAW block.';
+  }else if(route==='report'||route==='dpc'||route==='now'){
+    line=pace.copy;
+  }else if(route==='calendar'){
+    line=block.minutesLeft?('Current block: '+block.name+' · '+block.minutesLeft+' min left.'):'Use the next event to protect the money path, not scatter it.';
+  }else if(route==='sync'){
+    line='Check health only long enough to clear the blocker, then return to the active mission.';
+  }
+  return line?'<br><br><span style="color:#8f9aa3">'+escapeHtml(line)+'</span>':'';
 }
 
 function getMissionCalendarAnswer(ctx){
@@ -7692,8 +7747,19 @@ function getMissionSyncAnswer(){
   return '<strong>Sync:</strong><br>'+names.map(function(n){var s=services[n]||{};return escapeHtml(n+': '+(s.status||'checked')+(s.msg?' · '+s.msg:''));}).join('<br>');
 }
 
-function getMissionMemoryAnswer(){
-  var hist=getMissionChatHistory().slice(-5);
+function getMissionMemoryAnswer(question){
+  var intent=getMissionCommandIntent(question||'');
+  var route=intent.route||'';
+  var all=getMissionChatHistory();
+  var hist=all;
+  if(route){
+    var relevant=all.filter(function(turn){
+      return turn.intentRoute===route||(turn.topicTags||[]).indexOf(route)>=0;
+    });
+    var fill=all.filter(function(turn){return relevant.indexOf(turn)<0;});
+    hist=relevant.slice(-3).concat(fill.slice(-2));
+  }
+  hist=hist.slice(-5);
   if(!hist.length)return '<strong>Memory:</strong> No previous Mission Command questions are saved in this browser yet.';
   return '<strong>Memory:</strong><br>'+hist.map(function(t){return escapeHtml((t.question||t.kind||'prompt')+' → '+String(t.answer||'').slice(0,90));}).join('<br>');
 }
@@ -7754,20 +7820,28 @@ function missionReadableHtml(html){
 
 function getMissionCommandRouteAnswer(route,ctx,question){
   var now=new Date();
-  if(route==='now')return getMissionNowAnswer(ctx)+getMissionIntentLinks('now');
+  if(route==='now')return getMissionNowAnswer(ctx)+getMissionContextNudge('now',ctx)+getMissionIntentLinks('now');
   if(route==='help')return getMissionCommandHelp()+getMissionIntentLinks('help');
   if(route==='time')return '<strong>Time:</strong> '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   if(route==='day')return '<strong>Day:</strong> '+now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  if(route==='calendar')return getMissionCalendarAnswer(ctx)+getMissionIntentLinks('calendar');
-  if(route==='report')return getMissionReportAnswer(ctx)+getMissionIntentLinks('report');
-  if(route==='dpc')return getMissionDpcAnswer()+getMissionIntentLinks('dpc');
+  if(route==='calendar')return getMissionCalendarAnswer(ctx)+getMissionContextNudge('calendar',ctx)+getMissionIntentLinks('calendar');
+  if(route==='report')return getMissionReportAnswer(ctx)+getMissionContextNudge('report',ctx)+getMissionIntentLinks('report');
+  if(route==='dpc')return getMissionDpcAnswer()+getMissionContextNudge('dpc',ctx)+getMissionIntentLinks('dpc');
   if(route==='cycle')return getMissionCycleAnswer(ctx)+getMissionIntentLinks('cycle');
-  if(route==='leads')return getMissionLeadsAnswer(ctx)+getMissionIntentLinks('leads');
-  if(route==='content')return getMissionContentAnswer(ctx)+getMissionIntentLinks('content');
-  if(route==='production')return getMissionProductionAnswer()+getMissionIntentLinks('production');
-  if(route==='sync')return getMissionSyncAnswer()+getMissionIntentLinks('sync');
-  if(route==='memory')return getMissionMemoryAnswer()+getMissionIntentLinks('memory');
+  if(route==='leads')return getMissionLeadsAnswer(ctx)+getMissionContextNudge('leads',ctx)+getMissionIntentLinks('leads');
+  if(route==='content')return getMissionContentAnswer(ctx)+getMissionContextNudge('content',ctx)+getMissionIntentLinks('content');
+  if(route==='production')return getMissionProductionAnswer()+getMissionContextNudge('production',ctx)+getMissionIntentLinks('production');
+  if(route==='sync')return getMissionSyncAnswer()+getMissionContextNudge('sync',ctx)+getMissionIntentLinks('sync');
+  if(route==='memory')return getMissionMemoryAnswer(question)+getMissionIntentLinks('memory');
   return '';
+}
+
+function getMissionMultiIntentAnswer(intent,ctx,question){
+  if(!intent||!intent.secondary)return '';
+  var first=getMissionCommandRouteAnswer(intent.primary.route,ctx,question);
+  var second=getMissionCommandRouteAnswer(intent.secondary.id,ctx,question);
+  if(!first||!second)return '';
+  return '<strong>Split read:</strong> I see two lanes in that ask.<br><br>'+first+'<br><br>'+second;
 }
 
 function getCurrentJourneyMove(ctx){
@@ -7822,19 +7896,23 @@ function getMissionPersonalityFallback(ctx,question){
   for(var i=0;i<q.length;i++)idx=(idx+q.charCodeAt(i))%options.length;
   var suggested=intent.suggestions&&intent.suggestions.length?intent.suggestions.map(function(item){return '/'+item.id;}).join(' · '):'/now · /calendar · /leads · /content · /production · /report · /dpc · /sync · /memory';
   var tip='<strong>Try this instead:</strong> '+escapeHtml(suggested)+'.';
+  var recovery=intent.suggestions&&intent.suggestions.length?'<br><br><span style="color:#8f9aa3">Closest read I found: '+escapeHtml(intent.suggestions.map(function(item){return item.label;}).join(' / '))+'. Ask it as one clear lane and I can give a sharper answer.</span>':'';
   var context=(ctx&&ctx.nowText)?'<span style="color:#8f9aa3">Current mission signal: '+escapeHtml(ctx.nowText)+'</span>':'';
   var links=(intent.suggestions&&intent.suggestions.length?intent.suggestions:[{id:'now',label:'Now'},{id:'calendar',label:'Calendar'},{id:'leads',label:'Leads'},{id:'content',label:'Content'},{id:'help',label:'Help'}]).slice(0,5).map(function(item){
     var cfg=getMissionIntentConfig(item.id)||{};
     var first=(cfg.links&&cfg.links[0])||{label:item.label,url:'#'};
     return Object.assign({label:item.label},first);
   });
-  return '<strong>Mission Command:</strong> '+escapeHtml(options[idx])+'<br><br>'+tip+(context?'<br><br>'+context:'')+missionLinksHtml(links);
+  return '<strong>Mission Command:</strong> '+escapeHtml(options[idx])+'<br><br>'+tip+recovery+(context?'<br><br>'+context:'')+missionLinksHtml(links);
 }
 
 function getMissionCommandResponse(kind,ctx,question){
   var q=String(question||'').toLowerCase();
-  var intent=getMissionCommandIntent(question||'');
+  var multi=getMissionMultiIntent(question||'');
+  var intent=multi.primary;
   var route=intent.route;
+  var multiAnswer=getMissionMultiIntentAnswer(multi,ctx,question||'');
+  if(multiAnswer)return multiAnswer;
   var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
   if(routed)return routed;
   var gapLine=ctx.gap>0?'You still have '+fmt(ctx.gap)+' left against this week’s target.':'Weekly target pressure is protected right now.';
@@ -7854,7 +7932,10 @@ function getMissionDataPacket(question){
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var health=typeof getHealth==='function'?getHealth():{};
   var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
-  var intent=getMissionCommandIntent(question||'');
+  var multi=getMissionMultiIntent(question||'');
+  var intent=multi.primary;
+  var block=getMissionBlockIntel();
+  var pace=getMissionPaceState(ctx);
   var sources=['App State'];
   if(window.__crmLeads&&window.__crmLeads.length)sources.push('Notion CRM');
   if(window.__contentPipelinePieces&&window.__contentPipelinePieces.length)sources.push('Notion Content');
@@ -7864,12 +7945,12 @@ function getMissionDataPacket(question){
   if(health.lastSync||health.services)sources.push('System Health');
   return {
     question:question||'',
-    intent:{route:intent.route||'',score:intent.score||0,label:intent.label||'',suggestions:intent.suggestions||[]},
+    intent:{route:intent.route||'',score:intent.score||0,label:intent.label||'',suggestions:intent.suggestions||[],secondary:multi.secondary||null,routes:multi.routes||[]},
     date:dateKey(new Date()),
     /* 2026-05-19 (Claude): expanded profile bundle pulls full A1XX_PROFILE so every
        packet carries identity, mission, time blocks, work style, tools, and hard rules. */
     profile:Object.assign({name:getAccountName()},A1XX_PROFILE),
-    mission:{tool:ctx.tool,dayType:ctx.dayType,rhythm:(ctx.rhythm||{}).name,nowText:ctx.nowText},
+    mission:{tool:ctx.tool,dayType:ctx.dayType,rhythm:(ctx.rhythm||{}).name,nowText:ctx.nowText,block:block,pace:pace},
     cycle:{num:(ctx.cycle||{}).num,name:(ctx.cycle||{}).name,target:(ctx.cycle||{}).target,weeklyTarget:ctx.wk,revenue:ctx.rev,gap:ctx.gap},
     dpc:{money:daily.money||0,dms:daily.dms||0,coldCalls:daily.coldCalls||0,leads:daily.leads||0,content:daily.content||0,calls:daily.calls||0,closes:daily.closes||0},
     counts:{openTasks:(ctx.openTasks||[]).length,crmLeads:(window.__crmLeads||[]).length,content:(window.__contentPipelinePieces||window.__contentPieces||[]).length,production:(window.__productionPieces||[]).length,calendar:(window.__calEvents||[]).length},
@@ -7976,6 +8057,19 @@ function summarizeMissionPacket(packet){
   ].join(' | ');
 }
 
+function getMissionTopicTags(question,packet){
+  var tags=[];
+  var route=packet&&packet.intent&&packet.intent.route;
+  if(route)tags.push(route);
+  var q=String(question||'').toLowerCase();
+  ['calendar','meeting','lead','follow','content','production','beat','money','revenue','sync','health','memory','cycle','dpc'].forEach(function(tag){
+    if(q.indexOf(tag)>=0&&tags.indexOf(tag)<0)tags.push(tag);
+  });
+  if(packet&&packet.mission&&packet.mission.dayType)tags.push('day:'+packet.mission.dayType);
+  if(packet&&packet.mission&&packet.mission.tool)tags.push('tool:'+packet.mission.tool);
+  return tags.slice(0,10);
+}
+
 function saveMissionChatTurn(turn){
   var hist=getMissionChatHistory();
   var last=hist[hist.length-1]||{};
@@ -8000,6 +8094,7 @@ function postMissionChatLog(turn){
 }
 
 function rememberMissionCommandTurn(kind,question,answer,packet){
+  var tags=getMissionTopicTags(question,packet);
   var turn={
     id:'mc_'+Date.now(),
     ts:new Date().toISOString(),
@@ -8009,6 +8104,9 @@ function rememberMissionCommandTurn(kind,question,answer,packet){
     answer:String(answer||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(),
     followUp:String((packet&&packet.followUp)||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(),
     sources:(packet&&packet.sources)||[],
+    intentRoute:(packet&&packet.intent&&packet.intent.route)||kind||'',
+    intentScore:(packet&&packet.intent&&packet.intent.score)||0,
+    topicTags:tags,
     cycle:(packet&&packet.cycle)||{},
     activeTool:(packet&&packet.mission&&packet.mission.tool)||'',
     packetSummary:summarizeMissionPacket(packet),
