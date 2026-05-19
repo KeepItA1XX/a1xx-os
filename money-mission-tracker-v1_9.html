@@ -648,6 +648,11 @@ input:focus{border-color:#333}
 .mission-bubble-row.user .mission-bubble{background:#0d1808;border-color:#2a4015;color:#dcefd2}
 .mission-bubble-row.assistant .mission-bubble{background:#0b0d0f;border-color:#2a3036}
 .mission-bubble-meta{font-size:8px;color:#6f7a82;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:4px}
+.mission-bubble a{color:#7ec845;text-decoration:none;font-weight:800}
+.mission-bubble a:hover{text-decoration:underline}
+.mission-link-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.mission-chat-link{display:inline-flex;align-items:center;gap:5px;min-height:25px;border:0.5px solid #2a4015;border-radius:999px;background:#0d1808;color:#7ec845!important;font-size:10px;font-weight:800;padding:0 9px;text-decoration:none!important}
+.mission-chat-link:hover{background:#102006;border-color:#3a5a2a;text-decoration:none!important}
 .mission-thinking{display:flex;align-items:center;gap:8px;color:#d7dde3;font-weight:800;margin-bottom:9px}
 .mission-thinking-dot{width:7px;height:7px;border-radius:50%;background:#d4a017;box-shadow:0 0 12px rgba(212,160,23,.4);animation:missionPulse 1s ease-in-out infinite}
 .mission-thinking-copy{color:#8f9aa3;font-size:12px;line-height:1.55}
@@ -7564,19 +7569,76 @@ function getMissionMemoryAnswer(){
   return '<strong>Memory:</strong><br>'+hist.map(function(t){return escapeHtml((t.question||t.kind||'prompt')+' → '+String(t.answer||'').slice(0,90));}).join('<br>');
 }
 
+function missionSafeHref(url){
+  var raw=String(url||'').trim();
+  if(!raw)return '#';
+  if(raw.charAt(0)==='#')return raw;
+  if(/^https?:\/\//i.test(raw)||/^mailto:/i.test(raw)||/^tel:/i.test(raw))return raw;
+  return '#';
+}
+
+function missionLinkHtml(label,url,action){
+  var href=missionSafeHref(url);
+  var external=/^https?:\/\//i.test(href);
+  var onClick=action==='system'?' onclick="toggleSystemPanel();return false;"':'';
+  var target=external?' target="_blank" rel="noopener noreferrer"':'';
+  return '<a class="mission-chat-link" href="'+escapeHtml(href)+'"'+target+onClick+'>'+escapeHtml(label)+' →</a>';
+}
+
+function missionLinksHtml(items){
+  var links=(items||[]).filter(function(item){return item&&item.label&&item.url;});
+  if(!links.length)return '';
+  return '<div class="mission-link-row">'+links.map(function(item){return missionLinkHtml(item.label,item.url,item.action);}).join('')+'</div>';
+}
+
+function missionLinkifyHtml(html){
+  var src=String(html||'');
+  var parts=src.split(/(<a\b[\s\S]*?<\/a>)/gi);
+  return parts.map(function(part){
+    if(/^<a\b/i.test(part))return part;
+    return part.replace(/(https?:\/\/[^\s<]+)/g,function(url){
+      var clean=url.replace(/[),.;!?]+$/,'');
+      var tail=url.slice(clean.length);
+      return missionLinkHtml(clean,clean)+tail;
+    });
+  }).join('');
+}
+
 function getMissionCommandRouteAnswer(route,ctx,question){
   var now=new Date();
-  if(route==='help')return getMissionCommandHelp();
+  if(route==='help')return getMissionCommandHelp()+missionLinksHtml([
+    {label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}
+  ]);
   if(route==='time')return '<strong>Time:</strong> '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   if(route==='day')return '<strong>Day:</strong> '+now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  if(route==='calendar')return getMissionCalendarAnswer(ctx);
-  if(route==='report')return getMissionReportAnswer(ctx);
-  if(route==='dpc')return getMissionDpcAnswer();
+  if(route==='calendar')return getMissionCalendarAnswer(ctx)+missionLinksHtml([
+    {label:'Open Manager',url:'#manager-split-wrapper'},
+    {label:'Add Event',url:'https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5'}
+  ]);
+  if(route==='report')return getMissionReportAnswer(ctx)+missionLinksHtml([
+    {label:'Open Campaign',url:'#dpc-card'},
+    {label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}
+  ]);
+  if(route==='dpc')return getMissionDpcAnswer()+missionLinksHtml([
+    {label:'Open Campaign',url:'#dpc-card'}
+  ]);
   if(route==='cycle')return getMissionCycleAnswer(ctx);
-  if(route==='leads')return getMissionLeadsAnswer(ctx);
-  if(route==='content')return getMissionContentAnswer(ctx);
-  if(route==='production')return getMissionProductionAnswer();
-  if(route==='sync')return getMissionSyncAnswer();
+  if(route==='leads')return getMissionLeadsAnswer(ctx)+missionLinksHtml([
+    {label:'Open Campaign',url:'#dpc-card'},
+    {label:'Open CRM',url:NOTION_CRM_URL}
+  ]);
+  if(route==='content')return getMissionContentAnswer(ctx)+missionLinksHtml([
+    {label:'Open Content',url:'#content-tracker-card'},
+    {label:'Open Calendar',url:NOTION_CONTENT_URL}
+  ]);
+  if(route==='production')return getMissionProductionAnswer()+missionLinksHtml([
+    {label:'Open Production',url:'#production-card'},
+    {label:'Open Catalog',url:NOTION_PRODUCTION_URL}
+  ]);
+  if(route==='sync')return getMissionSyncAnswer()+missionLinksHtml([
+    {label:'Open System Hub',url:'#system-panel',action:'system'},
+    {label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}
+  ]);
   if(route==='memory')return getMissionMemoryAnswer();
   return '';
 }
@@ -7664,7 +7726,7 @@ function renderMissionSources(sources){
 
 function missionBubble(role,body,allowHtml){
   var who=role==='user'?'A1XX':'Mission Command';
-  var text=allowHtml?body:escapeHtml(String(body||''));
+  var text=allowHtml?missionLinkifyHtml(body):escapeHtml(String(body||''));
   return '<div class="mission-bubble-row '+(role==='user'?'user':'assistant')+'"><div class="mission-bubble"><div class="mission-bubble-meta">'+who+'</div>'+text+'</div></div>';
 }
 
@@ -7709,7 +7771,7 @@ function appendMissionBubble(role,body,allowHtml,extraClass){
   meta.className='mission-bubble-meta';
   meta.textContent=role==='user'?'A1XX':'Mission Command';
   var content=document.createElement('div');
-  if(allowHtml)content.innerHTML=body||'';
+  if(allowHtml)content.innerHTML=missionLinkifyHtml(body);
   else content.textContent=String(body||'');
   bubble.appendChild(meta);
   bubble.appendChild(content);
