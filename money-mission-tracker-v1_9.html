@@ -632,18 +632,43 @@ input:focus{border-color:#333}
 .mission-simple{display:grid;gap:7px;margin:0;padding:0 10px 10px}
 .mission-simple-line{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:10px 12px;color:#f0f3f5;font-size:13px;font-weight:800;line-height:1.35}
 .mission-simple-line.urgent{border-color:#3a2800;color:#f0d08a;background:#100c02}
-.mission-command{background:#07090b;border:0.5px solid #22303a;border-radius:12px;padding:10px;margin-bottom:10px}
+.mission-command{background:#07090b;border:0.5px solid #22303a;border-radius:12px;padding:10px;margin-bottom:10px;position:relative;overflow:hidden}
 .mission-command-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .mission-command-label{font-size:9px;color:#7ec845;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
 .mission-command-state{font-size:9px;color:#7b858d;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
 .mission-command-state.thinking{color:#d4a017}
+.mission-command-actions{display:flex;align-items:center;gap:6px;margin-left:auto}
+.mission-icon-btn{width:28px;height:28px;border-radius:8px;border:0.5px solid #263039;background:#080a0c;color:#8f9aa3;font-size:12px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.mission-icon-btn:hover{border-color:#3a5a2a;color:#d7dde3;background:#0d120f}
 .mission-command-thread{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:14px 15px;color:#d7dde3;font-size:13px;line-height:1.6;margin-bottom:8px;min-height:156px;max-height:260px;overflow-y:auto;scroll-behavior:smooth}
 .mission-command-thread strong{color:#f0f3f5}
+.mission-history-drawer{position:absolute;inset:0 auto 0 0;width:min(285px,88%);background:#07090b;border-right:0.5px solid #263039;box-shadow:18px 0 36px rgba(0,0,0,.34);z-index:6;padding:10px;transform:translateX(-104%);transition:transform .22s ease;display:flex;flex-direction:column;gap:10px}
+.mission-history-drawer.open{transform:translateX(0)}
+.mission-history-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mission-history-title{font-size:10px;color:#d7dde3;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+.mission-history-projects{display:flex;align-items:center;gap:6px;overflow-x:auto;padding-bottom:2px}
+.mission-project-chip{height:26px;white-space:nowrap;border:0.5px solid #263039;border-radius:999px;background:#080a0c;color:#8f9aa3;font-size:10px;font-weight:800;padding:0 9px;cursor:pointer}
+.mission-project-chip.active{border-color:#2a4015;background:#0d1808;color:#7ec845}
+.mission-project-add{width:26px;height:26px;border-radius:999px;border:0.5px solid #263039;background:#080a0c;color:#8f9aa3;font-size:14px;font-weight:900;cursor:pointer;flex:0 0 auto}
+.mission-project-form{display:none;grid-template-columns:1fr auto;gap:6px}
+.mission-project-form.show{display:grid}
+.mission-project-form input{height:30px;background:#080a0c;border:0.5px solid #2a3036;border-radius:8px;color:#f0f3f5;font-size:11px;padding:0 9px;outline:none}
+.mission-project-form button{height:30px;border:0.5px solid #2a4015;border-radius:8px;background:#0d1808;color:#7ec845;font-size:10px;font-weight:900;cursor:pointer;padding:0 9px}
+.mission-history-list{display:grid;gap:7px;overflow-y:auto;padding-right:2px}
+.mission-chat-item{border:0.5px solid #263039;border-radius:10px;background:#0b0d0f;padding:9px;cursor:pointer}
+.mission-chat-item.active{border-color:#2a4015;background:#0d140a}
+.mission-chat-title{color:#f0f3f5;font-size:12px;font-weight:900;line-height:1.3;margin-bottom:5px}
+.mission-chat-preview{color:#8f9aa3;font-size:10px;line-height:1.35}
+.mission-chat-meta-toggle{margin-top:7px;color:#5f6870;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.mission-chat-meta-toggle summary{cursor:pointer;list-style:none}
+.mission-chat-meta-toggle summary::-webkit-details-marker{display:none}
+.mission-chat-meta{margin-top:6px;color:#78838c;font-size:10px;line-height:1.45}
+.mission-history-empty{border:0.5px dashed #263039;border-radius:10px;color:#78838c;font-size:11px;line-height:1.45;padding:12px}
 .mission-bubble-row{display:flex;margin-bottom:9px}
 .mission-bubble-row.user{justify-content:flex-end}
 .mission-bubble-row.assistant{justify-content:flex-start}
 .mission-bubble-row.new{animation:missionBubbleIn .28s ease-out}
-.mission-bubble-row.thinking-row .mission-bubble{border-color:#3a2f12;background:#100d05;color:#d7dde3}
+.mission-bubble-row.thinking-row .mission-bubble{width:auto;min-width:44px;border-color:#3a2f12;background:#100d05;color:#d7dde3;padding:8px 10px}
 .mission-bubble{max-width:88%;border:0.5px solid #263039;border-radius:12px;padding:10px 12px;color:#d7dde3;background:#101418;line-height:1.65}
 .mission-bubble-row.user .mission-bubble{background:#0d1808;border-color:#2a4015;color:#dcefd2}
 .mission-bubble-row.assistant .mission-bubble{background:#0b0d0f;border-color:#2a3036}
@@ -656,8 +681,10 @@ input:focus{border-color:#333}
 .mission-link-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .mission-chat-link{display:inline-flex;align-items:center;gap:5px;min-height:25px;border:0.5px solid #2a4015;border-radius:999px;background:#0d1808;color:#7ec845!important;font-size:10px;font-weight:800;padding:0 9px;text-decoration:none!important}
 .mission-chat-link:hover{background:#102006;border-color:#3a5a2a;text-decoration:none!important}
-.mission-thinking{display:flex;align-items:center;gap:8px;color:#d7dde3;font-weight:800;margin-bottom:9px}
+.mission-thinking{display:flex;align-items:center;gap:5px;color:#d7dde3;font-weight:800}
 .mission-thinking-dot{width:7px;height:7px;border-radius:50%;background:#d4a017;box-shadow:0 0 12px rgba(212,160,23,.4);animation:missionPulse 1s ease-in-out infinite}
+.mission-thinking-dot:nth-child(2){animation-delay:.16s}
+.mission-thinking-dot:nth-child(3){animation-delay:.32s}
 .mission-thinking-copy{color:#8f9aa3;font-size:12px;line-height:1.55}
 .mission-source-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .mission-source-chip{border:0.5px solid #263039;border-radius:999px;color:#8f9aa3;font-size:9px;font-weight:800;padding:3px 8px;text-transform:uppercase;letter-spacing:.05em}
@@ -1486,6 +1513,8 @@ body{background:#090a0b;color:#d8dde1}
         <div class="settings-ai-box">Future in-app chat starts read-only: it can summarize app, Notion, Sheets, and Calendar data. Write actions stay confirmation-gated and logged.</div>
         <div class="settings-list">
           <div class="settings-row"><div><div class="settings-row-name">AI Chat</div><div class="settings-row-meta">Planned drawer interface for questions, summaries, and diagnostics.</div></div><span class="settings-badge off">Off</span></div>
+          <div class="settings-row"><div><div class="settings-row-name">Chat history</div><div class="settings-row-meta">Local sessions with clean titles, hidden metadata, and project folders.</div></div><span class="settings-badge">Local</span></div>
+          <div class="settings-row"><div><div class="settings-row-name">Context window</div><div class="settings-row-meta">Hidden instruction packet: identity, mission, current stats, sources, and recent memory.</div></div><span class="settings-badge">Ready</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Allowed sources</div><div class="settings-row-meta">App state, Notion, Google Sheets, Calendar. Add CRM/production scopes later.</div></div><span class="settings-badge warn">Planned</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Write permissions</div><div class="settings-row-meta">Off by default. Any future AI write must ask first and leave an audit trail.</div></div><span class="settings-badge off">Locked</span></div>
         </div>
@@ -1660,7 +1689,23 @@ body{background:#090a0b;color:#d8dde1}
   <div class="mission-command">
     <div class="mission-command-top">
       <div class="mission-command-label">Mission Command</div>
-      <div class="mission-command-state">Local coach</div>
+      <div class="mission-command-actions">
+        <button class="mission-icon-btn" onclick="toggleMissionHistory()" title="Chat history">☰</button>
+        <button class="mission-icon-btn" onclick="startMissionNewChat()" title="New chat">+</button>
+        <div class="mission-command-state">Local coach</div>
+      </div>
+    </div>
+    <div class="mission-history-drawer" id="mission-history-drawer" aria-hidden="true">
+      <div class="mission-history-top">
+        <div class="mission-history-title">Chats</div>
+        <button class="mission-icon-btn" onclick="toggleMissionHistory(false)" title="Close history">×</button>
+      </div>
+      <div class="mission-history-projects" id="mission-history-projects"></div>
+      <div class="mission-project-form" id="mission-project-form">
+        <input id="mission-project-input" type="text" placeholder="New project" onkeydown="if(event.key==='Enter')addMissionProject()"/>
+        <button onclick="addMissionProject()">Add</button>
+      </div>
+      <div class="mission-history-list" id="mission-history-list"></div>
     </div>
     <div class="mission-command-thread" id="mission-command-thread">Loading today’s command view...</div>
     <div class="mission-command-suggestions">
@@ -2863,6 +2908,10 @@ var DPC_CALL_RESCHEDULE_KEY='a1xx_dpc_call_reschedules_v1';
 var STREAK_KEY='a1xx_streak';
 var MISSION_KEY='a1xx_mission_brief_v1';
 var MISSION_CHAT_HISTORY_KEY='a1xx_mission_command_history_v1';
+var MISSION_CHAT_SESSIONS_KEY='a1xx_mission_command_sessions_v1';
+var MISSION_CHAT_PROJECTS_KEY='a1xx_mission_command_projects_v1';
+var MISSION_CHAT_ACTIVE_SESSION_KEY='a1xx_mission_command_active_session_v1';
+var MISSION_CHAT_ACTIVE_PROJECT_KEY='a1xx_mission_command_active_project_v1';
 
 var CYCLES=[
   {num:1,name:'Foundation',start:'2026-05-04',end:'2026-06-28',target:1500},
@@ -7987,17 +8036,15 @@ function missionBubble(role,body,allowHtml){
 }
 
 function renderMissionThread(currentQuestion,currentAnswer,sources,currentFollowUp){
-  var hist=getMissionChatHistory().slice(-4);
-  var html=hist.map(function(turn){
-    var q=turn.question||'';
-    var a=turn.answer||'';
-    var f=turn.followUp||'';
-    return (q?missionBubble('user',q,false):'')+missionBubble('assistant',a,false)+(f?missionBubble('assistant',f,false):'');
+  var session=getActiveMissionSession();
+  var messages=((session&&session.messages)||[]).slice(-12);
+  var html=messages.map(function(msg){
+    return missionBubble(msg.role||'assistant',msg.body||'',false);
   }).join('');
   if(currentQuestion)html+=missionBubble('user',currentQuestion,false);
   if(currentAnswer)html+=missionBubble('assistant',currentAnswer,true);
   if(currentFollowUp)html+=missionBubble('assistant',currentFollowUp,true);
-  return html;
+  return html||'<div class="mission-history-empty">New chat ready. Ask Mission Command what to focus on.</div>';
 }
 
 function scrollMissionThread(thread){
@@ -8052,6 +8099,179 @@ function getMissionChatHistory(){
   return Array.isArray(items)?items:[];
 }
 
+function getMissionProjects(){
+  var items=getStore(MISSION_CHAT_PROJECTS_KEY);
+  if(Array.isArray(items)&&items.length)return items;
+  return ['Money Mission $100K','Studio Lead Gen','Rappreneur OS','Content Ideas','Beat Catalog','System Fixes','Weekly Reviews'];
+}
+
+function saveMissionProjects(items){
+  setStore(MISSION_CHAT_PROJECTS_KEY,(items||[]).filter(Boolean));
+}
+
+function getActiveMissionProject(){
+  var active=localStorage.getItem(MISSION_CHAT_ACTIVE_PROJECT_KEY)||'';
+  var projects=getMissionProjects();
+  if(active&&projects.indexOf(active)>=0)return active;
+  return projects[0]||'Money Mission $100K';
+}
+
+function setActiveMissionProject(name){
+  if(!name)return;
+  localStorage.setItem(MISSION_CHAT_ACTIVE_PROJECT_KEY,name);
+  renderMissionHistoryPanel();
+}
+
+function getMissionChatSessions(){
+  var sessions=getStore(MISSION_CHAT_SESSIONS_KEY);
+  if(Array.isArray(sessions))return sessions;
+  var old=getMissionChatHistory();
+  if(!old.length)return [];
+  var imported=[{
+    id:'mc_session_import',
+    title:'Mission Command',
+    project:getActiveMissionProject(),
+    createdAt:(old[0]&&old[0].ts)||new Date().toISOString(),
+    updatedAt:(old[old.length-1]&&old[old.length-1].ts)||new Date().toISOString(),
+    tags:['imported','memory'],
+    contextWindow:'Imported from the original browser chat memory.',
+    messages:old.map(function(turn){
+      return [
+        turn.question?{role:'user',body:turn.question,ts:turn.ts}:null,
+        turn.answer?{role:'assistant',body:turn.answer,ts:turn.ts}:null,
+        turn.followUp?{role:'assistant',body:turn.followUp,ts:turn.ts}:null
+      ].filter(Boolean);
+    }).reduce(function(all,next){return all.concat(next);},[])
+  }];
+  saveMissionChatSessions(imported);
+  return imported;
+}
+
+function saveMissionChatSessions(sessions){
+  setStore(MISSION_CHAT_SESSIONS_KEY,(sessions||[]).slice(0,60));
+}
+
+function makeMissionChatTitle(question,kind){
+  var q=String(question||'').replace(/\s+/g,' ').trim();
+  if(!q)return kind==='now'?'Do this right now':'Mission Command';
+  return q.length>42?q.slice(0,42).replace(/\s+\S*$/,'')+'...':q;
+}
+
+function getActiveMissionSession(){
+  var sessions=getMissionChatSessions();
+  var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';
+  var active=sessions.filter(function(s){return s.id===activeId;})[0];
+  if(active)return active;
+  if(sessions.length){
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,sessions[0].id);
+    return sessions[0];
+  }
+  var now=new Date().toISOString();
+  active={id:'mc_session_'+Date.now(),title:'New Chat',project:getActiveMissionProject(),createdAt:now,updatedAt:now,tags:['new'],contextWindow:'Waiting for the first Mission Command question.',messages:[]};
+  sessions.unshift(active);
+  saveMissionChatSessions(sessions);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,active.id);
+  return active;
+}
+
+function setActiveMissionSession(id){
+  var sessions=getMissionChatSessions();
+  var session=sessions.filter(function(s){return s.id===id;})[0];
+  if(!session)return;
+  localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_PROJECT_KEY,session.project||getActiveMissionProject());
+  renderMissionSessionThread(session);
+  renderMissionHistoryPanel();
+  toggleMissionHistory(false);
+}
+
+function getMissionContextWindow(packet,question){
+  if(!packet)return '';
+  return [
+    'Instruction: Answer A1XX as Executive Producer. Keep it money-first, action-first, concise, and grounded in app data.',
+    'Question: '+(question||''),
+    'Identity: '+(((packet.profile||{}).identity)||'A1XX')+' / '+(((packet.profile||{}).role)||'Executive Producer'),
+    'Mission: '+((((packet.profile||{}).mission)||{}).name||'Money Mission')+' target '+((((packet.profile||{}).mission)||{}).target||''),
+    summarizeMissionPacket(packet),
+    'Memory: '+(packet.chatMemorySummary||getMissionChatMemorySummary())
+  ].filter(Boolean).join('\n');
+}
+
+function renderMissionSessionThread(session){
+  var thread=document.getElementById('mission-command-thread');
+  if(!thread)return;
+  var messages=(session&&session.messages)||[];
+  thread.innerHTML=messages.length?messages.map(function(msg){
+    return missionBubble(msg.role||'assistant',msg.body||'',false);
+  }).join(''):'<div class="mission-history-empty">New chat ready. Ask Mission Command what to focus on.</div>';
+  thread.dataset.ready='1';
+  scrollMissionThread(thread);
+}
+
+function toggleMissionHistory(force){
+  var drawer=document.getElementById('mission-history-drawer');
+  if(!drawer)return;
+  var open=typeof force==='boolean'?force:!drawer.classList.contains('open');
+  drawer.classList.toggle('open',open);
+  drawer.setAttribute('aria-hidden',open?'false':'true');
+  if(open)renderMissionHistoryPanel();
+}
+
+function toggleMissionProjectForm(){
+  var form=document.getElementById('mission-project-form');
+  if(form)form.classList.toggle('show');
+  var input=document.getElementById('mission-project-input');
+  if(input&&form&&form.classList.contains('show'))input.focus();
+}
+
+function addMissionProject(){
+  var input=document.getElementById('mission-project-input');
+  var name=(input&&input.value||'').trim();
+  if(!name)return;
+  var projects=getMissionProjects();
+  if(projects.indexOf(name)<0)projects.push(name);
+  saveMissionProjects(projects);
+  if(input)input.value='';
+  var form=document.getElementById('mission-project-form');
+  if(form)form.classList.remove('show');
+  setActiveMissionProject(name);
+  startMissionNewChat();
+}
+
+function startMissionNewChat(){
+  var now=new Date().toISOString();
+  var session={id:'mc_session_'+Date.now(),title:'New Chat',project:getActiveMissionProject(),createdAt:now,updatedAt:now,tags:['new'],contextWindow:'Waiting for the first Mission Command question.',messages:[]};
+  var sessions=getMissionChatSessions();
+  sessions.unshift(session);
+  saveMissionChatSessions(sessions);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
+  renderMissionSessionThread(session);
+  renderMissionHistoryPanel();
+}
+
+function renderMissionHistoryPanel(){
+  var projectsWrap=document.getElementById('mission-history-projects');
+  var list=document.getElementById('mission-history-list');
+  if(!projectsWrap||!list)return;
+  var projects=getMissionProjects();
+  var activeProject=getActiveMissionProject();
+  projectsWrap.innerHTML=projects.map(function(project){
+    return '<button class="mission-project-chip '+(project===activeProject?'active':'')+'" onclick="setActiveMissionProject(decodeURIComponent(\''+encodeURIComponent(project)+'\'))">'+escapeHtml(project)+'</button>';
+  }).join('')+'<button class="mission-project-add" onclick="toggleMissionProjectForm()" title="Add project">+</button>';
+  var sessions=getMissionChatSessions().filter(function(s){return (s.project||activeProject)===activeProject;});
+  var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';
+  if(!sessions.length){
+    list.innerHTML='<div class="mission-history-empty">No chats in this project yet.</div>';
+    return;
+  }
+  list.innerHTML=sessions.map(function(session){
+    var preview=((session.messages||[]).filter(function(m){return m.role==='assistant';})[0]||{}).body||'No answer yet.';
+    var tags=(session.tags||[]).join(', ')||'none';
+    var meta='Date: '+formatContentDate(session.updatedAt||session.createdAt)+'<br>Project: '+escapeHtml(session.project||'')+'<br>Tags: '+escapeHtml(tags)+'<br>Context: '+escapeHtml(session.contextWindow||'Hidden context window will appear here after the first answer.').slice(0,260);
+    return '<div class="mission-chat-item '+(session.id===activeId?'active':'')+'" onclick="setActiveMissionSession(\''+session.id+'\')"><div class="mission-chat-title">'+escapeHtml(session.title||'Mission Command')+'</div><div class="mission-chat-preview">'+escapeHtml(preview).slice(0,90)+'</div><details class="mission-chat-meta-toggle" onclick="event.stopPropagation()"><summary>Details</summary><div class="mission-chat-meta">'+meta+'</div></details></div>';
+  }).join('');
+}
+
 function getMissionChatMemorySummary(){
   var hist=getMissionChatHistory().slice(-5);
   if(!hist.length)return 'No previous Mission Command questions saved yet.';
@@ -8092,7 +8312,35 @@ function saveMissionChatTurn(turn){
   hist.push(turn);
   if(hist.length>50)hist=hist.slice(hist.length-50);
   setStore(MISSION_CHAT_HISTORY_KEY,hist);
+  saveMissionChatSessionTurn(turn);
   return hist;
+}
+
+function saveMissionChatSessionTurn(turn){
+  var sessions=getMissionChatSessions();
+  var active=getActiveMissionSession();
+  var idx=sessions.findIndex(function(s){return s.id===active.id;});
+  if(idx<0){sessions.unshift(active);idx=0;}
+  var session=sessions[idx];
+  var now=turn.ts||new Date().toISOString();
+  if(!session.title||session.title==='New Chat')session.title=makeMissionChatTitle(turn.question,turn.kind);
+  session.project=session.project||getActiveMissionProject();
+  session.updatedAt=now;
+  session.tags=turn.topicTags||session.tags||[];
+  session.contextWindow=turn.contextWindow||session.contextWindow||'';
+  session.messages=session.messages||[];
+  var last=session.messages[session.messages.length-1]||{};
+  if(!(last.role==='user'&&last.body===(turn.question||''))){
+    if(turn.question)session.messages.push({role:'user',body:turn.question,ts:now});
+  }
+  if(turn.answer)session.messages.push({role:'assistant',body:turn.answer,ts:now});
+  if(turn.followUp)session.messages.push({role:'assistant',body:turn.followUp,ts:now});
+  session.messages=session.messages.slice(-80);
+  sessions.splice(idx,1);
+  sessions.unshift(session);
+  saveMissionChatSessions(sessions);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
+  renderMissionHistoryPanel();
 }
 
 function postMissionChatLog(turn){
@@ -8125,6 +8373,7 @@ function rememberMissionCommandTurn(kind,question,answer,packet){
     cycle:(packet&&packet.cycle)||{},
     activeTool:(packet&&packet.mission&&packet.mission.tool)||'',
     packetSummary:summarizeMissionPacket(packet),
+    contextWindow:getMissionContextWindow(packet,question),
     mode:'local'
   };
   saveMissionChatTurn(turn);
@@ -8141,7 +8390,7 @@ function setMissionCommandLoading(question,showUser){
     ensureMissionThreadReady('','','');
     removeMissionThinkingBubble(thread);
     if(showUser&&question)appendMissionBubble('user',question,false);
-    var row=appendMissionBubble('assistant','<div class="mission-thinking"><span class="mission-thinking-dot"></span><span>Reading mission data...</span></div><div class="mission-thinking-copy">Pulling the current mission packet before answering'+(question?' "'+escapeHtml(question)+'"':'')+'.</div>',true,'thinking-row');
+    var row=appendMissionBubble('assistant','<div class="mission-thinking" aria-label="Thinking"><span class="mission-thinking-dot"></span><span class="mission-thinking-dot"></span><span class="mission-thinking-dot"></span></div>',true,'thinking-row');
     if(row)row.setAttribute('data-mission-thinking','1');
   }
 }
@@ -8725,6 +8974,7 @@ function init(){
   safeRender('clock',function(){startClock();});
   safeRender('topbar biz',function(){updateTopbarBiz();});
   safeRender('initial mission brief',function(){renderMissionBrief([],[]);});
+  safeRender('mission chat history',function(){renderMissionHistoryPanel();});
   safeRender('initial mission buttons',function(){wireMissionButtons();});
   safeRender('initial rolodex',function(){renderRolodex();});
   safeRender('initial mission focus',function(){applyMissionFocus();});
