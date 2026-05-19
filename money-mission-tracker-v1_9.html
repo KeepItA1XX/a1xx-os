@@ -7697,6 +7697,33 @@ function getMissionFollowUp(route,ctx,question){
   return '';
 }
 
+function getMissionPersonalityFallback(ctx,question){
+  var q=String(question||'').trim();
+  var options=[
+    'I read that three times and the OS made the same face producers make when the artist says "just make it sound expensive." Give me a cleaner target and I can actually cook.',
+    'That one landed somewhere between a strategy note and a microwave manual. Try pointing me at calendar, leads, content, production, money, sync, or memory.',
+    'Respectfully, that prompt walked in with no shoes on. Give me a lane and I will stop judging it.',
+    'I can work with a lot, but that one came in wearing sunglasses indoors. Try a slash command so I know which system to read.',
+    'The idea is in there somewhere. It is currently hiding behind the couch. Ask me for one specific read and I will pull it out.',
+    'Mission Command heard you, blinked twice, and opened the emergency folder labeled "needs context." Try one of the buttons below.',
+    'That question has vibes, but vibes do not sync to Notion yet. Pick a data lane and I will give you something useful.',
+    'I am not saying that was unclear. I am saying even the spreadsheet just looked away.',
+    'That prompt is giving "studio session with no charger." Quick fix: ask for calendar, leads, content, production, report, DPC, sync, or memory.',
+    'I almost answered that with confidence, which is how bad dashboards are born. Give me one clear system to check.'
+  ];
+  var idx=0;
+  for(var i=0;i<q.length;i++)idx=(idx+q.charCodeAt(i))%options.length;
+  var tip='<strong>Try this instead:</strong> /calendar, /leads, /content, /production, /report, /dpc, /sync, or /memory.';
+  var context=(ctx&&ctx.nowText)?'<span style="color:#8f9aa3">Current mission signal: '+escapeHtml(ctx.nowText)+'</span>':'';
+  return '<strong>Mission Command:</strong> '+escapeHtml(options[idx])+'<br><br>'+tip+(context?'<br><br>'+context:'')+missionLinksHtml([
+    {label:'Calendar',url:'#manager-split-wrapper'},
+    {label:'Leads',url:'#dpc-card'},
+    {label:'Content',url:'#content-tracker-card'},
+    {label:'Production',url:'#production-card'},
+    {label:'Help',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}
+  ]);
+}
+
 function getMissionCommandResponse(kind,ctx,question){
   var q=String(question||'').toLowerCase();
   var route=getMissionCommandRoute(question||'');
@@ -7712,7 +7739,7 @@ function getMissionCommandResponse(kind,ctx,question){
   if(q.indexOf('money')>=0||q.indexOf('revenue')>=0||q.indexOf('target')>=0||q.indexOf('gap')>=0)return '<strong>Money read:</strong> '+gapLine+' The move is to protect the active income path before adding more admin.';
   if(kind==='lead')return '<strong>Lead focus:</strong> '+escapeHtml(ctx.leadText)+'. Open the Campaign card or Hit List and handle that next conversation.';
   if(kind==='content')return '<strong>Content angle:</strong> Use today’s proof, one result, or one lesson. '+(ctx.contentCount?ctx.contentCount+' content item'+(ctx.contentCount===1?' is':'s are')+' loaded for today.':'No loaded content item yet, so create one simple proof-of-work post.');
-  if(question)return '<strong>OS read:</strong> '+escapeHtml(ctx.nowText)+' '+gapLine+' I am using your current local mission packet, and this will get sharper when the AI backend is connected.';
+  if(question)return getMissionPersonalityFallback(ctx,question);
   return '<strong>Do this right now:</strong><br>'+escapeHtml(ctx.nowText)+'<br><br><span style="color:#8f9aa3">'+gapLine+eventLine+'</span>';
 }
 
