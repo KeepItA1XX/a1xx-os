@@ -7637,7 +7637,7 @@ function missionWordMatches(word,vocab){
 function normalizeMissionQuestion(raw){
   var q=String(raw||'').toLowerCase().replace(/[^\w#\/\s-]/g,' ');
   var fixes={shuld:'should',shoud:'should',folow:'follow',follo:'follow',followup:'followup',calender:'calendar',calandar:'calendar',scheduele:'schedule',shedule:'schedule',meting:'meeting',meetng:'meeting',contnt:'content',prodction:'production',prodution:'production',revnue:'revenue',revenu:'revenue',synch:'sync',helth:'health',anythng:'anything',brokn:'broken',memry:'memory'};
-  return q.split(/\s+/).map(function(word){return fixes[word]||word;}).join(' ');
+  return q.split(/\s+/).map(function(word){return fixes[word]||word;}).join(' ').trim();
 }
 
 var MISSION_COMMAND_INTENTS=[
@@ -7667,6 +7667,36 @@ function getMissionIntentConfig(id){
 function getMissionPipelineDiagnosticSignal(question){
   var q=normalizeMissionQuestion(question||'');
   return /\b(pipeline|leads|crm|follow up|followup|prospects)\b/.test(q)&&/\b(wrong|broken|problem|issue|stuck|why|diagnose|diagnostic|fix|off|weak|bad)\b/.test(q);
+}
+
+var CONV_FOLLOWUP='followup';
+var CONV_QUICK_READ='quick_read';
+var CONV_DEEPER='deeper';
+var CONV_WHY='why';
+var CONV_WHAT_ELSE='what_else';
+var CONV_DATA_REQUEST='data_request';
+var CONV_COMMAND='command';
+var CONV_CLOSE='close';
+var CONV_NEW_TOPIC='new_topic';
+var CONV_UNCLEAR='unclear';
+
+function getMissionConversationType(question,ctx,intent){
+  var q=normalizeMissionQuestion(question||'');
+  var active=getLastMissionTopicTurn();
+  intent=intent||getMissionCommandIntent(question||'');
+  if(!q)return {type:CONV_NEW_TOPIC,route:'now',activeRoute:active&&active.intentRoute||''};
+  if(/^\/[a-z]+/.test(q))return {type:CONV_COMMAND,route:intent.route||q.replace(/^\/([a-z]+).*/,'$1'),activeRoute:active&&active.intentRoute||''};
+  if(getMissionCloseSignal(q))return {type:CONV_CLOSE,route:'',activeRoute:active&&active.intentRoute||''};
+  if(/^(quick read|quick|short version|tldr|tl dr|brief|summarize|sum it up|quick take)$/.test(q))return {type:CONV_QUICK_READ,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
+  if(/^(deeper|deeper breakdown|deep breakdown|break it down|more detail|expand|expand on that|go deeper|elaborate|explain more|break that down)$/.test(q))return {type:CONV_DEEPER,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
+  if(/^(why|why tho|why though|how come|but why|explain why|why is that|what is the reason|whats the reason|why does that matter)$/.test(q))return {type:CONV_WHY,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
+  if(/^(what else|anything else|anything else i should know|what else should i know|anything im missing|anything i am missing|what am i missing|is there more|what else is there)$/.test(q))return {type:CONV_WHAT_ELSE,route:active&&active.intentRoute||intent.route||'',activeRoute:active&&active.intentRoute||''};
+  if(/^(tell me more|what next|next|and then what|go on|and|ok and|yeah but|ok so|makes sense|right|hm|what about|ok what about)$/.test(q))return {type:CONV_FOLLOWUP,route:active&&active.intentRoute||intent.route||'',activeRoute:active&&active.intentRoute||''};
+  if(/\b(goal for today|today goal|focused on|focus on|what should i do next|what should i do today|what should i be focused on)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'now',activeRoute:active&&active.intentRoute||''};
+  if(intent&&intent.route&&intent.score>=6)return {type:CONV_DATA_REQUEST,route:intent.route,activeRoute:active&&active.intentRoute||''};
+  if(intent&&intent.route)return {type:CONV_NEW_TOPIC,route:intent.route,activeRoute:active&&active.intentRoute||''};
+  if(active&&active.intentRoute)return {type:CONV_FOLLOWUP,route:active.intentRoute,activeRoute:active.intentRoute};
+  return {type:CONV_UNCLEAR,route:'',activeRoute:''};
 }
 
 function getMissionIntentLinks(id){
@@ -7795,14 +7825,8 @@ function getMissionCommandHelp(){
 /* 2026-05-19 (Claude deep pass): history continuity helper. Shows a brief note when A1XX
    revisits the same topic within the same session (within the hour). */
 function getMissionHistoryContinuityLine(route){
-  if(!route)return '';
-  var hist=getMissionChatHistory().slice(-8);
-  if(hist.length<1)return '';
-  var matching=hist.filter(function(t){return t.intentRoute===route||(t.topicTags||[]).indexOf(route)>=0;});
-  if(!matching.length)return '';
-  var last=matching[matching.length-1];
-  var ago=last.ts?getMissionTimeSince(last.ts):'earlier';
-  if(ago==='now'||/^\d+m$/.test(ago))return '<span style="color:#526944;font-size:10px">Continuing from '+ago+' ago.</span><br><br>';
+  /* 2026-05-19 v3.1: continuity is now implied by conversational context instead of
+     being printed inside the answer bubble. */
   return '';
 }
 
@@ -7815,7 +7839,7 @@ function getMissionNowAnswer(ctx){
   var gapLine=ctx.gap>0?'Gap: '+fmt(ctx.gap)+' this week.':'Weekly target covered.';
   var blockLine=block.idx>=0?' Block: '+escapeHtml(block.name)+(block.minutesLeft?' ('+block.minutesLeft+' min left)':'')+'.':block.idx<0?' Pre-flight - first block not started yet.':' After hours - blocks closed.';
   var journeyLine=journey?('Journey step '+(journey.index+1)+'/'+journey.total+': '+escapeHtml(journey.nextCheck)+'.'):'';
-  return '<strong>Do this right now:</strong><br>'+escapeHtml(ctx.nowText)+'<br><br><span style="color:#8f9aa3">'+gapLine+blockLine+eventLine+'</span>'+(journeyLine?'<br><span style="color:#526944">'+escapeHtml(journeyLine)+'</span>':'');
+  return escapeHtml(ctx.nowText)+' That is the focus right now.<br><br><strong>Do this right now:</strong> '+escapeHtml(ctx.nowText)+'<br><br><span style="color:#8f9aa3">'+gapLine+blockLine+eventLine+'</span>'+(journeyLine?'<br><span style="color:#526944">'+escapeHtml(journeyLine)+'</span>':'');
 }
 
 function getMissionProfileAnswer(){
@@ -7885,7 +7909,7 @@ function getMissionReportAnswer(ctx){
   var margin=ctx.wk?Math.round((ctx.rev/ctx.wk)*100):0;
   var momentum=margin>=100?'Target hit':margin>=70?'Strong pace':margin>=35?'Active':margin>0?'Behind':'Not started';
   var gapLine=ctx.gap>0?fmt(ctx.gap)+' left to close this week.':'Weekly target covered - protect and stack.';
-  return '<strong>Report:</strong> '+momentum+' - '+fmt(ctx.rev)+' of '+fmt(ctx.wk)+' ('+margin+'%). '+gapLine;
+  return 'You are '+momentum.toLowerCase()+' on the weekly goal: '+fmt(ctx.rev)+' of '+fmt(ctx.wk)+' collected. '+gapLine+'<br><br><strong>Report:</strong> '+margin+'% complete.';
 }
 
 function getMissionMoneyActionAnswer(ctx){
@@ -7965,7 +7989,7 @@ function getMissionPipelineDiagnosisAnswer(ctx){
   if(!diagnosis.length)diagnosis.push('the list is loaded; the bottleneck is likely next action clarity');
   var top=getMissionLeadsAnswer(ctx).replace(/^<strong>Leads[^<]*<\/strong><br>/,'');
   var headline=!hot&&!warm?'The pipeline problem is heat, not volume.':'The pipeline needs one clear next action.';
-  return '<strong>Pipeline diagnosis:</strong><br>'+escapeHtml(headline)+'<br><br>'+escapeHtml(diagnosis.join('. '))+'.<br><br><strong>Best next contacts:</strong><br>'+top;
+  return escapeHtml(headline)+'<br><br><strong>Pipeline diagnosis:</strong> '+escapeHtml(diagnosis.join('. '))+'.<br><br><strong>Best next contacts:</strong><br>'+top;
 }
 
 function getMissionContentAnswer(ctx){
@@ -8171,12 +8195,16 @@ function getLastMissionTopicTurn(){
 
 function setMissionCommandActiveTopic(route,question){
   if(!route||route==='help'||route==='time'||route==='day'||route==='memory')return;
+  var q=normalizeMissionQuestion(question||'');
   if(getMissionContinuationSignal(question||'')||getMissionCloseSignal(question||''))return;
+  if(/^(why|why tho|why though|quick read|quick|short version|what else|anything else|anything else i should know|tell me more|what next|next|deeper breakdown|deep breakdown|break it down)$/.test(q))return;
   window.__missionCommandActiveTopicRoute=route;
   window.__missionCommandActiveTopicQuestion=question||'';
 }
 
 function getMissionRenderRoute(question){
+  var conv=getMissionConversationType(question||'',null,null);
+  if(conv&&conv.route)return conv.route;
   if(getMissionCloseSignal(question||''))return '';
   if(getMissionContinuationSignal(question||'')){
     var last=getLastMissionTopicTurn();
@@ -8233,6 +8261,56 @@ function getMissionContinuationResponse(signal,ctx,question){
   }
   if(leadWithLayerFirst)return '<span style="color:#526944">'+escapeHtml(layer)+'</span><br><br>'+base;
   return base+'<br><br><span style="color:#526944">'+escapeHtml(layer)+'</span>';
+}
+
+function getMissionQuickRead(route,ctx){
+  route=route||'now';
+  if(route==='leads')return 'Quick read: your pipeline has volume, but the heat is weak. Qualify one call-ready lead and make a direct offer before opening another list.';
+  if(route==='report'||route==='dpc')return 'Quick read: you are behind the weekly target, so the next move needs to create or close a conversation. Admin can wait.';
+  if(route==='content')return 'Quick read: make one simple proof-of-work post tied to today’s money move. Do not brainstorm five versions.';
+  if(route==='production')return 'Quick read: pick one production item and move it one status forward. Finished beats beat perfect ideas.';
+  if(route==='calendar')return 'Quick read: protect the next block and decide the one outcome before the event starts.';
+  return 'Quick read: focus on one money-facing move right now. Move one asset and one pipeline step, then log the result.';
+}
+
+function getMissionWhyRead(route,ctx){
+  route=route||'now';
+  if(route==='leads')return 'Because warm signal is what turns activity into money. Cold volume only matters after you qualify who is actually ready to talk.';
+  if(route==='report'||route==='dpc')return 'Because the gap is still open. The fastest way to change the week is a revenue-facing action, not more dashboard work.';
+  if(route==='content')return 'Because content should create proof and start conversations. If it does not point back to the offer, it is just busywork.';
+  if(route==='production')return 'Because production only creates leverage when the asset can be sold, posted, pitched, or delivered.';
+  if(route==='calendar')return 'Because the calendar is there to protect focus, not just record where time went.';
+  return 'Because the next logged result matters more than another system check. The OS should point you back to the move that changes the number.';
+}
+
+function getMissionWhatElseRead(route,ctx){
+  route=route||'now';
+  if(route==='leads')return 'Yes. Do not judge the pipeline only by how many names are in it. Judge it by how many people are warm enough for a direct offer today.';
+  if(route==='report'||route==='dpc')return 'Yes. The number is not judging you; it is pointing at the next constraint. One clean offer or booked call changes the read.';
+  if(route==='content')return 'Yes. Keep the content tied to proof from today. The strongest post is usually the one that shows the work, not the one that explains everything.';
+  if(route==='production')return 'Yes. The production move should end with a usable asset, not just more tweaking.';
+  return 'Yes. Do not open another system yet. Finish the smallest money-facing move, then come back with what happened.';
+}
+
+function getMissionNextActionRead(route,ctx){
+  route=route||'now';
+  if(route==='leads')return 'Next: qualify one call-ready lead, then make a direct offer if they show real interest.';
+  if(route==='report'||route==='dpc')return 'Next: do one revenue-facing action before anything administrative. A DM, call, or offer moves the number.';
+  if(route==='content')return 'Next: turn today’s work into one proof-of-work post. Keep it simple enough to publish.';
+  if(route==='production')return 'Next: choose one beat or production item and move it one status forward.';
+  return 'Next: move one asset and one pipeline step, then log what happened.';
+}
+
+function getMissionConversationFirstResponse(conv,ctx,question){
+  var route=(conv&&conv.route)||'';
+  if(!conv)return '';
+  if(conv.type===CONV_CLOSE)return getMissionCloseResponse(ctx);
+  if(conv.type===CONV_QUICK_READ)return getMissionQuickRead(route,ctx);
+  if(conv.type===CONV_WHY)return getMissionWhyRead(route,ctx);
+  if(conv.type===CONV_FOLLOWUP&&/^(what next|next|and then what)$/.test(normalizeMissionQuestion(question||'')))return getMissionNextActionRead(route,ctx);
+  if(conv.type===CONV_WHAT_ELSE||conv.type===CONV_FOLLOWUP)return getMissionWhatElseRead(route,ctx);
+  if(conv.type===CONV_UNCLEAR)return 'Do you mean pipeline, money, content, or schedule?';
+  return '';
 }
 
 function getMissionConversationEnding(route,shape,mode,ctx,question){
@@ -8346,8 +8424,14 @@ function getMissionCommandResponse(kind,ctx,question){
   var shape=getMissionQuestionShape(question||'');
   var multi=getMissionMultiIntent(question||'');
   var intent=multi.primary;
-  var route=intent.route;
+  var conv=getMissionConversationType(question||'',ctx,intent);
+  var route=(conv&&conv.route)||intent.route;
   var responseMode=getMissionResponseMode(question||'',route,ctx);
+  var conversationFirst=getMissionConversationFirstResponse(conv,ctx,question||'');
+  if(conversationFirst){
+    if(route)setMissionCommandActiveTopic(route,question||'');
+    return conversationFirst;
+  }
   if(getMissionCloseSignal(question||''))return getMissionCloseResponse(ctx);
   var continuation=getMissionContinuationSignal(question||'');
   if(continuation){
@@ -9188,11 +9272,13 @@ function renderMissionCommand(kind,question,forceCurrent){
   var hist=getMissionChatHistory();
   var shouldShowCurrent=!!(forceCurrent||question||!hist.length);
   var answer=shouldShowCurrent?getMissionCommandResponse(kind||'now',ctx,question||''):'';
+  var conv=shouldShowCurrent?getMissionConversationType(question||'',ctx,(packet&&packet.intent)||null):null;
   var route=getMissionRenderRoute(question||'');
   normalizeMissionPacketRoute(packet,route,question||'');
   var shape=shouldShowCurrent?getMissionQuestionShape(question||''):{};
   var mode=shouldShowCurrent?getMissionResponseMode(question||'',route,ctx):{};
   var followUp=shouldShowCurrent?getMissionConversationEnding(route,shape,mode,ctx,question||''):'';
+  if(conv&&[CONV_QUICK_READ,CONV_WHY,CONV_WHAT_ELSE,CONV_FOLLOWUP,CONV_UNCLEAR,CONV_CLOSE].indexOf(conv.type)>=0)followUp='';
   var actionLinks=extractMissionLinkRows(answer);
   if(actionLinks.length){
     answer=stripMissionLinkRows(answer);
