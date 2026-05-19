@@ -7642,7 +7642,7 @@ var MISSION_COMMAND_INTENTS=[
   {id:'report',label:'Report',slash:['report','money','revenue','target','gap'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','weekly number','how much','collected','income','weekly numbers','money in','whats the gap','how am i doing','money pace','revenue pace','to target','closer to target','behind target','ahead of target','pacing','make more money','more money','how to make more money','make money','get paid','close more','sell more','book more calls','earnings','cash flow','am i on track','on track','how are we doing','weekly recap','total collected','weekly revenue','did i hit','hit my target','how am i tracking','tracking','where am i financially','am i behind','total money','money this week','revenue check','are we good','financial check','money check'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
   {id:'dpc',label:'DPC',slash:['dpc','campaign','daily'],tags:['dpc','campaign','daily'],phrases:['dpc','daily profit','daily campaign','dm count','dms','cold calls','calls made','booked calls','closes','daily log','today numbers','daily numbers','today log','todays activity','what i did today','daily score','log today','dpc card','how many calls','how many dms','dms sent','calls made today','what did i log','my daily log','log update','daily activity','activity today','update my log','todays dpc','dpc update','log numbers','did i log','log review','dpc check','daily check'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'cycle',label:'Cycle',slash:['cycle','roadmap','season'],tags:['cycle','roadmap'],phrases:['cycle','roadmap','days left','deadline','current cycle','ceo roadmap','archive cycle','cycle target','cycle progress','cycle pace','days left in cycle','this cycle','foundation cycle','where are we in the cycle','cycle end','days remaining','when does cycle end','end of cycle','cycle deadline','cycle check','how many days remain','cycle score','cycle status','cycle pacing','cycle health','where in cycle','cycle update','on track for cycle','cycle goal','cycle close'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
-  {id:'leads',label:'Leads',slash:['leads','lead','followup','followups','crm'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm','my pipeline','who to talk to','prospects','prospect','outreach','reach out','contact list','warm list','who i should contact','contact today','who to reach','crm leads','follow up today','who needs follow up','atl leads','call ready','best prospect','top prospect','who should i contact first','who is warmest','most urgent lead','contact next'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
+  {id:'leads',label:'Leads',slash:['leads','lead','followup','followups','crm'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm','my pipeline','who to talk to','prospects','prospect','outreach','reach out','contact list','warm list','who i should contact','contact today','who to reach','crm leads','focus on leads','focus on lead','follow up leads','follow up lead','follow up today','who needs follow up','atl leads','call ready','best prospect','top prospect','who should i contact first','who is warmest','most urgent lead','contact next'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
   {id:'content',label:'Content',slash:['content','post','make','create'],tags:['content','post','create'],phrases:['content','make','post','create','caption','reel','story','short','asset','what should i make','content calendar','idea','hook','content idea','what to post','next piece','content move','post idea','content for today','reel idea','short idea','what should i shoot','what should i film','what to film','what to record','social media','social','what to shoot','video idea','clip','reels','tiktok','ig reel','short form','what to make today','next piece of content','piece of content','content piece','instagram','ig post','next post','make today','create today','shoot today','film today','content plan','what to create','content stack'],links:[{label:'Open Content',url:'#content-tracker-card'},{label:'Open Calendar',url:null}]},
   {id:'production',label:'Production',slash:['production','beat','beats','catalog'],tags:['production','beat','beats'],phrases:['production','beat','beats','catalog','daw','music','master beat','upload','soundee','bangin','mix','track','next beat','todays beat','production progress','studio time','beat to finish','beat queue','master beat catalog','studio session','session','bounce','export','finish beat','work on beat','fl studio','logic','protools','ableton','instrumental','sound','music production','music work','rap session','studio block','what beat','which beat','beat work','produce','producing','make a beat','new beat','beat progress','beat update','studio move','studio today'],links:[{label:'Open Production',url:'#production-card'},{label:'Open Catalog',url:null}]},
   {id:'sync',label:'Sync',slash:['sync','health','system','settings'],tags:['sync','health','system'],phrases:['sync','health','system','broken','error','loading','not working','settings','connection','backup','diagnostic','version','logs','activity log','is something wrong','whats broken','sync status','is it working','any errors','status check','health check','is anything off','nothing is working','error message','check the logs','check logs','any issues','troubleshoot','diagnose','something wrong','app broken','sync failed','not syncing','connections','what failed','system check','any problems','problems'],links:[{label:'Open System Hub',url:'#system-panel',action:'system'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
@@ -7734,6 +7734,20 @@ function getMissionMultiIntent(question){
 
 function getMissionCommandRoute(question){
   return getMissionCommandIntent(question).route;
+}
+
+function getMissionQuestionShape(question){
+  var raw=String(question||'').trim();
+  var q=normalizeMissionQuestion(raw);
+  if(!q)return {type:'prompt',label:'Prompt',modifier:''};
+  if(/^\/[a-z]+/.test(q))return {type:'command',label:'Command',modifier:'direct'};
+  if(/\bwhy\b|\breason\b|\bmatter\b|\bimportant\b/.test(q))return {type:'why',label:'Why',modifier:'context'};
+  if(/\bhow\b|\bsteps\b|\bwalk me\b|\bshow me\b|\bprocess\b|\bmethod\b/.test(q))return {type:'how',label:'How',modifier:'steps'};
+  if(/\bwhen\b|\bwhat time\b|\bdeadline\b|\bdue\b|\bschedule\b|\btonight\b|\btomorrow\b/.test(q))return {type:'when',label:'When',modifier:'timing'};
+  if(/\bwho\b|\bwhom\b|\bwhich person\b|\bwhich lead\b/.test(q))return {type:'who',label:'Who',modifier:'person'};
+  if(/\bwhere\b|\bwhich tab\b|\bwhich card\b|\bwhere do i\b/.test(q))return {type:'where',label:'Where',modifier:'place'};
+  if(/\bwhat\b|\bwhich\b/.test(q))return {type:'what',label:'What',modifier:'decision'};
+  return {type:'ask',label:'Ask',modifier:'general'};
 }
 
 function getMissionCommandHelp(){
@@ -8022,6 +8036,30 @@ function getMissionMultiIntentAnswer(intent,ctx,question){
   return '<strong>Split read:</strong> I see two lanes in that ask.<br><br>'+first+'<br><br>'+second;
 }
 
+function getMissionQuestionShapeAddon(shape,route,ctx){
+  if(!shape||!route||shape.type==='command'||shape.type==='what'||shape.type==='ask')return '';
+  var block=getMissionBlockIntel();
+  var journey=getCurrentJourneyMove(ctx);
+  var copy='';
+  if(shape.type==='why'){
+    if(route==='report'||route==='leads'||route==='dpc')copy='Why it matters: this is closest to revenue, and revenue pressure decides the week.';
+    else if(route==='content')copy='Why it matters: content creates proof and starts conversations when it points back to the offer.';
+    else if(route==='production')copy='Why it matters: finished catalog assets can become offers, uploads, or proof instead of sitting as unfinished work.';
+    else if(route==='calendar')copy='Why it matters: the calendar protects the block from turning into scattered admin.';
+    else copy='Why it matters: this keeps the OS focused on the next useful move instead of more noise.';
+  }else if(shape.type==='how'){
+    copy='How to move: pick one item, finish the smallest next step, then log the result before switching cards.';
+  }else if(shape.type==='when'){
+    copy=block.minutesLeft?('When: use the current '+block.name+' block; '+block.minutesLeft+' minutes are left.'):('When: schedule it into the next available money or maker block.');
+  }else if(shape.type==='who'){
+    copy=route==='leads'?'Who first: start with the hottest overdue follow-up, then the warmest call-ready lead.':'Who owns it: A1XX, Executive Producer. Keep the answer filtered through that role.';
+  }else if(shape.type==='where'){
+    copy='Where to look: use the linked card first, then return to Mission Command after the result is logged.';
+  }
+  if(journey&&shape.type==='how')copy+=' Current journey: Step '+(journey.index+1)+'/'+journey.total+' - '+journey.nextCheck+'.';
+  return copy?'<br><br><span style="color:#526944">'+escapeHtml(copy)+'</span>':'';
+}
+
 function getCurrentJourneyMove(ctx){
   var dayType=(ctx&&ctx.dayType)||getMissionDayType();
   var steps=MISSION_STEPS&&MISSION_STEPS[dayType];
@@ -8087,13 +8125,14 @@ function getMissionPersonalityFallback(ctx,question){
 
 function getMissionCommandResponse(kind,ctx,question){
   var q=String(question||'').toLowerCase();
+  var shape=getMissionQuestionShape(question||'');
   var multi=getMissionMultiIntent(question||'');
   var intent=multi.primary;
   var route=intent.route;
   var multiAnswer=getMissionMultiIntentAnswer(multi,ctx,question||'');
   if(multiAnswer)return multiAnswer.replace('<strong>Split read:</strong> I see two lanes in that ask.<br><br>','');
   var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
-  if(routed)return routed;
+  if(routed)return routed+getMissionQuestionShapeAddon(shape,route,ctx);
   /* 2026-05-19 (Claude deep pass): partial fallback for low-confidence signals (score >0
      but below the threshold). Gives a best-guess partial answer + asks for confirmation
      rather than going straight to personality fallback. */
@@ -8128,7 +8167,8 @@ function runMissionCommandSelfCheck(){
     {q:'what should I do today?',route:'now',must:'Do this right now'},
     {q:'who should I contact?',route:'leads',must:'Leads'},
     {q:'what should I make?',route:'content',must:'Content'},
-    {q:'how to make more money',route:'report',mustAny:['report','target','revenue']}
+    {q:'how to make more money',route:'report',mustAny:['report','target','revenue'],shape:'how'},
+    {q:'why should I focus on leads?',route:'leads',must:'why it matters',shape:'why'}
   ];
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
@@ -8136,9 +8176,10 @@ function runMissionCommandSelfCheck(){
     var cleaned=sanitizeMissionCommandInput(check.q);
     var route=getMissionCommandRoute(cleaned);
     var answer=String(getMissionCommandResponse('ask',ctx,cleaned)||'').replace(/<[^>]+>/g,' ').toLowerCase();
+    var shape=getMissionQuestionShape(cleaned);
     var needles=(check.mustAny||[check.must||'']).map(function(item){return String(item||'').toLowerCase();}).filter(Boolean);
     var hasNeedle=!needles.length||needles.some(function(item){return answer.indexOf(item)>=0;});
-    if(route!==check.route||!hasNeedle){
+    if(route!==check.route||!hasNeedle||(check.shape&&shape.type!==check.shape)){
       failures.push(check.q+' -> '+(route||'none'));
     }
   });
@@ -8160,6 +8201,7 @@ function getMissionDataPacket(question){
   var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
   var multi=getMissionMultiIntent(question||'');
   var intent=multi.primary;
+  var questionShape=getMissionQuestionShape(question||'');
   var block=getMissionBlockIntel();
   var pace=getMissionPaceState(ctx);
   var sources=['App State'];
@@ -8172,6 +8214,7 @@ function getMissionDataPacket(question){
   return {
     question:question||'',
     intent:{route:intent.route||'',score:intent.score||0,label:intent.label||'',suggestions:intent.suggestions||[],secondary:multi.secondary||null,routes:multi.routes||[]},
+    questionShape:questionShape,
     date:dateKey(new Date()),
     /* 2026-05-19 (Claude): expanded profile bundle pulls full A1XX_PROFILE so every
        packet carries identity, mission, time blocks, work style, tools, and hard rules. */
@@ -8489,6 +8532,7 @@ function getMissionContextWindow(packet,question){
   return [
     'Instruction: Answer A1XX as Executive Producer. Keep it money-first, action-first, concise, and grounded in app data.',
     'Question: '+(question||''),
+    'Question shape: '+((((packet.questionShape||{}).label)||'Ask')+' / '+(((packet.questionShape||{}).modifier)||'general')),
     'Identity: '+(((packet.profile||{}).identity)||'A1XX')+' / '+(((packet.profile||{}).role)||'Executive Producer'),
     'Mission: '+((((packet.profile||{}).mission)||{}).name||'Money Mission')+' target '+((((packet.profile||{}).mission)||{}).target||''),
     summarizeMissionPacket(packet),
