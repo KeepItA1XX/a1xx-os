@@ -636,8 +636,15 @@ input:focus{border-color:#333}
 .mission-command-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .mission-command-label{font-size:9px;color:#7ec845;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
 .mission-command-state{font-size:9px;color:#7b858d;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.mission-command-state.thinking{color:#d4a017}
 .mission-command-thread{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:14px 15px;color:#d7dde3;font-size:13px;line-height:1.6;margin-bottom:8px;min-height:156px}
 .mission-command-thread strong{color:#f0f3f5}
+.mission-thinking{display:flex;align-items:center;gap:8px;color:#d7dde3;font-weight:800;margin-bottom:9px}
+.mission-thinking-dot{width:7px;height:7px;border-radius:50%;background:#d4a017;box-shadow:0 0 12px rgba(212,160,23,.4);animation:missionPulse 1s ease-in-out infinite}
+.mission-thinking-copy{color:#8f9aa3;font-size:12px;line-height:1.55}
+.mission-source-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.mission-source-chip{border:0.5px solid #263039;border-radius:999px;color:#8f9aa3;font-size:9px;font-weight:800;padding:3px 8px;text-transform:uppercase;letter-spacing:.05em}
+@keyframes missionPulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
 .mission-command-suggestions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
 .mission-command-chip{min-height:28px;background:transparent;border:0.5px solid #263039;border-radius:999px;color:#8f9aa3;font-size:10px;font-weight:800;cursor:pointer;transition:all .2s;padding:0 10px;text-align:left}
 .mission-command-chip:hover{border-color:#3a5a2a;color:#d7dde3;background:#0d120f}
@@ -646,6 +653,7 @@ input:focus{border-color:#333}
 .mission-command-input input:focus{border-color:#3a5a2a}
 .mission-command-input button{height:34px;background:#0d1808;border:0.5px solid #2a4015;border-radius:9px;color:#7ec845;font-size:11px;font-weight:800;cursor:pointer;padding:0 13px}
 .mission-command-input button:hover{background:#102006}
+.mission-command-input button:disabled{opacity:.55;cursor:wait}
 .mission-resource-list{display:flex;gap:6px;flex-wrap:wrap}
 .mission-resource{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:6px 9px;background:#0d1012;border:0.5px solid #2a3036;border-radius:8px;color:#d7dde3;text-decoration:none;font-size:11px;font-weight:700;line-height:1.25;transition:all .2s}
 .mission-resource:hover{border-color:#3a5a2a;color:#f0f3f5;background:#111711}
@@ -1637,7 +1645,7 @@ body{background:#090a0b;color:#d8dde1}
     </div>
     <div class="mission-command-input">
       <input id="mission-command-input" type="text" placeholder="Ask the OS..." onkeydown="if(event.key==='Enter')askMissionCommand()"/>
-      <button onclick="askMissionCommand()">Ask</button>
+      <button id="mission-command-ask-btn" onclick="askMissionCommand()">Ask</button>
     </div>
   </div>
   <details class="mission-intel" id="mission-intel">
@@ -7460,26 +7468,81 @@ function getMissionCommandResponse(kind,ctx,question){
   return '<strong>Do this right now:</strong><br>'+escapeHtml(ctx.nowText)+'<br><br><span style="color:#8f9aa3">'+gapLine+eventLine+'</span>';
 }
 
+function getMissionDataPacket(question){
+  var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+  var health=typeof getHealth==='function'?getHealth():{};
+  var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var sources=['App State'];
+  if(window.__crmLeads&&window.__crmLeads.length)sources.push('Notion CRM');
+  if(window.__contentPipelinePieces&&window.__contentPipelinePieces.length)sources.push('Notion Content');
+  else if(window.__contentPieces&&window.__contentPieces.length)sources.push('Notion Content');
+  if(window.__productionPieces&&window.__productionPieces.length)sources.push('Notion Production');
+  if(window.__calEvents&&window.__calEvents.length)sources.push('Calendar');
+  if(health.lastSync||health.services)sources.push('System Health');
+  return {
+    question:question||'',
+    date:dateKey(new Date()),
+    profile:{name:getAccountName(),role:'Executive Producer'},
+    mission:{tool:ctx.tool,dayType:ctx.dayType,rhythm:(ctx.rhythm||{}).name,nowText:ctx.nowText},
+    cycle:{num:(ctx.cycle||{}).num,name:(ctx.cycle||{}).name,target:(ctx.cycle||{}).target,weeklyTarget:ctx.wk,revenue:ctx.rev,gap:ctx.gap},
+    dpc:{money:daily.money||0,dms:daily.dms||0,coldCalls:daily.coldCalls||0,leads:daily.leads||0,content:daily.content||0,calls:daily.calls||0,closes:daily.closes||0},
+    counts:{openTasks:(ctx.openTasks||[]).length,crmLeads:(window.__crmLeads||[]).length,content:(window.__contentPipelinePieces||window.__contentPieces||[]).length,production:(window.__productionPieces||[]).length,calendar:(window.__calEvents||[]).length},
+    nextEvent:ctx.nextEvent?{title:ctx.nextEvent.title,startTime:ctx.nextEvent.startTime,start:ctx.nextEvent.start}:null,
+    urgentLead:ctx.leadText,
+    health:{lastSync:health.lastSync||null,services:health.services||{}},
+    sources:sources
+  };
+}
+
+function renderMissionSources(sources){
+  return '<div class="mission-source-row">'+(sources||['App State']).map(function(s){return '<span class="mission-source-chip">'+escapeHtml(s)+'</span>';}).join('')+'</div>';
+}
+
+function setMissionCommandLoading(question){
+  var thread=document.getElementById('mission-command-thread');
+  var state=document.querySelector('.mission-command-state');
+  var btn=document.getElementById('mission-command-ask-btn');
+  if(state){state.textContent='Thinking';state.classList.add('thinking');}
+  if(btn)btn.disabled=true;
+  if(thread){
+    thread.innerHTML='<div class="mission-thinking"><span class="mission-thinking-dot"></span><span>Reading mission data...</span></div>'
+      +'<div class="mission-thinking-copy">Pulling today’s app state, DPC numbers, pipeline counts, calendar context, and sync health before answering'+(question?' “'+escapeHtml(question)+'”':'')+'.</div>'
+      +renderMissionSources(['App State','DPC Log','Notion-ready','Calendar-ready']);
+  }
+}
+
+function clearMissionCommandLoading(sources){
+  var state=document.querySelector('.mission-command-state');
+  var btn=document.getElementById('mission-command-ask-btn');
+  if(state){state.textContent=(sources&&sources.length)?'Read '+sources.length+' source'+(sources.length===1?'':'s'):'Local coach';state.classList.remove('thinking');}
+  if(btn)btn.disabled=false;
+}
+
 function renderMissionCommand(kind,question){
   var thread=document.getElementById('mission-command-thread');
   if(!thread)return;
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
-  thread.innerHTML=getMissionCommandResponse(kind||'now',ctx,question||'');
+  var packet=getMissionDataPacket(question||'');
+  window.__missionDataPacket=packet;
+  thread.innerHTML=getMissionCommandResponse(kind||'now',ctx,question||'')+renderMissionSources(packet.sources);
+  clearMissionCommandLoading(packet.sources);
 }
 
 function runMissionPrompt(kind){
   window.__missionCommandLastPrompt=kind||'now';
   var input=document.getElementById('mission-command-input');
   if(input)input.value='';
-  renderMissionCommand(kind||'now','');
+  setMissionCommandLoading('');
+  setTimeout(function(){renderMissionCommand(kind||'now','');},350);
 }
 
 function askMissionCommand(){
   var input=document.getElementById('mission-command-input');
   var q=(input&&input.value||'').trim();
   window.__missionCommandLastPrompt='ask';
-  renderMissionCommand('ask',q);
   if(input)input.value='';
+  setMissionCommandLoading(q);
+  setTimeout(function(){renderMissionCommand('ask',q);},550);
 }
 
 function renderMissionBrief(contentPieces,calEvents){
