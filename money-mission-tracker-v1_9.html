@@ -1528,9 +1528,13 @@ body{background:#090a0b;color:#d8dde1}
         <div class="settings-list">
           <div class="settings-row"><div><div class="settings-row-name">AI Chat</div><div class="settings-row-meta">Planned drawer interface for questions, summaries, and diagnostics.</div></div><span class="settings-badge off">Off</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Chat history</div><div class="settings-row-meta">Local sessions with clean titles, hidden metadata, and project folders.</div></div><span class="settings-badge">Local</span></div>
+          <div class="settings-row"><div><div class="settings-row-name">Google chat sync</div><div class="settings-row-meta">Saves chat sessions/projects to the Mission Command Sessions sheet when the Apps Script is redeployed.</div></div><span class="settings-badge warn">Ready</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Context window</div><div class="settings-row-meta">Hidden instruction packet: identity, mission, current stats, sources, and recent memory.</div></div><span class="settings-badge">Ready</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Allowed sources</div><div class="settings-row-meta">App state, Notion, Google Sheets, Calendar. Add CRM/production scopes later.</div></div><span class="settings-badge warn">Planned</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Write permissions</div><div class="settings-row-meta">Off by default. Any future AI write must ask first and leave an audit trail.</div></div><span class="settings-badge off">Locked</span></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="syncAllMissionChatSessions('manual')">Sync chats now</button>
         </div>
       </div>
     </div>
@@ -2926,6 +2930,7 @@ var MISSION_CHAT_SESSIONS_KEY='a1xx_mission_command_sessions_v1';
 var MISSION_CHAT_PROJECTS_KEY='a1xx_mission_command_projects_v1';
 var MISSION_CHAT_ACTIVE_SESSION_KEY='a1xx_mission_command_active_session_v1';
 var MISSION_CHAT_ACTIVE_PROJECT_KEY='a1xx_mission_command_active_project_v1';
+var MISSION_CHAT_SYNC_STAMP_KEY='a1xx_mission_command_sync_stamp_v1';
 
 var CYCLES=[
   {num:1,name:'Foundation',start:'2026-05-04',end:'2026-06-28',target:1500},
@@ -8182,6 +8187,65 @@ function saveMissionChatSessions(sessions){
   setStore(MISSION_CHAT_SESSIONS_KEY,(sessions||[]).slice(0,60));
 }
 
+function missionSessionSyncPayload(session,reason){
+  session=session||{};
+  var messages=(session.messages||[]).slice(-80).map(function(msg){
+    return {role:msg.role||'assistant',body:String(msg.body||'').slice(0,4000),ts:msg.ts||''};
+  });
+  var lastAssistant=messages.slice().reverse().filter(function(msg){return msg.role==='assistant';})[0]||{};
+  var lastUser=messages.slice().reverse().filter(function(msg){return msg.role==='user';})[0]||{};
+  return {
+    type:'mission_chat_session_sync',
+    sessionId:session.id||'',
+    title:session.title||'Mission Command',
+    project:session.project||getActiveMissionProject(),
+    createdAt:session.createdAt||'',
+    updatedAt:session.updatedAt||new Date().toISOString(),
+    archivedAt:session.archivedAt||'',
+    tags:session.tags||[],
+    contextWindow:session.contextWindow||'',
+    messages:messages,
+    messagesJson:JSON.stringify(messages),
+    sources:session.sources||[],
+    cycle:session.cycleLabel||'',
+    activeTool:session.activeTool||'',
+    lastQuestion:lastUser.body||'',
+    lastAnswer:lastAssistant.body||'',
+    syncReason:reason||'save'
+  };
+}
+
+function syncMissionChatSession(session,reason){
+  var url=localStorage.getItem(SHEETS_KEY);
+  if(!url||!session||!session.id)return;
+  try{
+    var stamp=getStore(MISSION_CHAT_SYNC_STAMP_KEY)||{};
+    var sig=[
+      session.updatedAt||'',
+      session.title||'',
+      session.project||'',
+      session.archivedAt||'',
+      (session.messages||[]).length,
+      reason||''
+    ].join('|');
+    if(stamp[session.id]===sig&&reason!=='manual')return;
+    stamp[session.id]=sig;
+    setStore(MISSION_CHAT_SYNC_STAMP_KEY,stamp);
+    fetch(url,{
+      method:'POST',
+      body:JSON.stringify(missionSessionSyncPayload(session,reason)),
+      mode:'no-cors',
+      redirect:'follow'
+    });
+  }catch(e){console.warn('Mission chat session sync skipped',e);}
+}
+
+function syncAllMissionChatSessions(reason){
+  getMissionChatSessions().forEach(function(session){
+    syncMissionChatSession(session,reason||'bulk');
+  });
+}
+
 function getMissionActiveSessions(project){
   return getMissionChatSessions().filter(function(s){
     return !s.archivedAt&&(!project||(s.project||project)===project);
@@ -8298,6 +8362,7 @@ function startMissionNewChat(){
   var sessions=getMissionChatSessions();
   sessions.unshift(session);
   saveMissionChatSessions(sessions);
+  syncMissionChatSession(session,'new');
   localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
   renderMissionSessionThread(session);
   renderMissionHistoryPanel();
@@ -8328,6 +8393,7 @@ function saveMissionRename(id){
   sessions[idx].title=title;
   sessions[idx].updatedAt=new Date().toISOString();
   saveMissionChatSessions(sessions);
+  syncMissionChatSession(sessions[idx],'rename');
   renderMissionHistoryPanel();
 }
 
@@ -8352,6 +8418,7 @@ function moveMissionSession(id,project){
   sessions[idx].project=project;
   sessions[idx].updatedAt=new Date().toISOString();
   saveMissionChatSessions(sessions);
+  syncMissionChatSession(sessions[idx],'move');
   if(localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)===id)localStorage.setItem(MISSION_CHAT_ACTIVE_PROJECT_KEY,project);
   renderMissionHistoryPanel();
 }
@@ -8363,6 +8430,7 @@ function archiveMissionSession(id){
   sessions[idx].archivedAt=new Date().toISOString();
   sessions[idx].updatedAt=sessions[idx].archivedAt;
   saveMissionChatSessions(sessions);
+  syncMissionChatSession(sessions[idx],'archive');
   if(localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)===id){
     var next=getMissionActiveSessions(getActiveMissionProject())[0];
     if(next){
@@ -8466,6 +8534,7 @@ function saveMissionChatSessionTurn(turn){
   sessions.splice(idx,1);
   sessions.unshift(session);
   saveMissionChatSessions(sessions);
+  syncMissionChatSession(session,'turn');
   localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
   renderMissionHistoryPanel();
 }

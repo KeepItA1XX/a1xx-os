@@ -28,6 +28,7 @@ var SHEET_DAILY        = 'Daily Log';
 var SHEET_PROSPECTS    = 'Captured Leads';
 var SHEET_RESET_AUDIT  = 'Reset Audit';      // ← NEW in 1.7
 var SHEET_MISSION_CHAT = 'Mission Command Chat Log';
+var SHEET_MISSION_SESSIONS = 'Mission Command Sessions';
 
 var NOTION_CONTENT_DB    = '1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18: was incorrectly set to the data source ID (...8188...). Notion /v1/databases/{id}/query expects the DATABASE ID (URL slug). Parent database "Master Beat Catalog" lives at notion.so/1a76115281da8199a5dffc423d447f31. */
@@ -137,6 +138,12 @@ function doPost(e) {
       var chatRow = saveMissionChatLog(data);
       logActivity('Mission Command chat log — ' + (data.date || '') + ' — ' + String(data.question || data.kind || 'prompt').slice(0, 80));
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: chatRow }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (data.type === 'mission_chat_session_sync') {
+      var sessionRow = saveMissionChatSession(data);
+      logActivity('Mission Command session sync — ' + (data.project || 'No project') + ' — ' + String(data.title || data.sessionId || 'chat').slice(0, 80));
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: sessionRow }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'prospect_save') {
@@ -718,6 +725,66 @@ function saveMissionChatLog(d) {
     cycle: row[2],
     question: row[5],
     sources: row[7]
+  };
+}
+
+function saveMissionChatSession(d) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var headers = [
+    'Session ID','Title','Project','Created At','Updated At','Archived At',
+    'Message Count','Last Question','Last Answer','Tags','Context Window',
+    'Messages JSON','Sources','Cycle','Active Tool','Last Sync At','Sync Reason'
+  ];
+  var sheet = getOrCreateSheet(ss, SHEET_MISSION_SESSIONS, headers);
+  var sessionId = String(d.sessionId || d.id || '').trim();
+  if (!sessionId) throw new Error('Missing Mission Command session ID.');
+  var messages = Array.isArray(d.messages) ? d.messages : [];
+  var lastQuestion = '';
+  var lastAnswer = '';
+  for (var i = messages.length - 1; i >= 0; i--) {
+    if (!lastQuestion && messages[i].role === 'user') lastQuestion = messages[i].body || '';
+    if (!lastAnswer && messages[i].role === 'assistant') lastAnswer = messages[i].body || '';
+    if (lastQuestion && lastAnswer) break;
+  }
+  var row = [
+    sessionId,
+    d.title || '',
+    d.project || '',
+    d.createdAt || '',
+    d.updatedAt || '',
+    d.archivedAt || '',
+    messages.length,
+    String(lastQuestion).slice(0, 1000),
+    String(lastAnswer).slice(0, 1000),
+    Array.isArray(d.tags) ? d.tags.join(', ') : (d.tags || ''),
+    String(d.contextWindow || '').slice(0, 4000),
+    String(d.messagesJson || JSON.stringify(messages)).slice(0, 45000),
+    Array.isArray(d.sources) ? d.sources.join(', ') : (d.sources || ''),
+    d.cycle || '',
+    d.activeTool || '',
+    new Date().toISOString(),
+    d.syncReason || ''
+  ];
+  var lastRow = sheet.getLastRow();
+  var targetRow = 0;
+  if (lastRow >= 2) {
+    var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (var r = 0; r < ids.length; r++) {
+      if (String(ids[r][0]) === sessionId) {
+        targetRow = r + 2;
+        break;
+      }
+    }
+  }
+  if (targetRow) sheet.getRange(targetRow, 1, 1, headers.length).setValues([row]);
+  else sheet.appendRow(row);
+  formatSheet(sheet);
+  return {
+    sessionId: sessionId,
+    title: row[1],
+    project: row[2],
+    archivedAt: row[5],
+    messageCount: row[6]
   };
 }
 
