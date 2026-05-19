@@ -7567,6 +7567,7 @@ var MISSION_COMMAND_INTENTS=[
   {id:'content',label:'Content',slash:['content','post','make','create'],tags:['content','post','create'],phrases:['content','make','post','create','caption','reel','story','short','asset','what should i make','content calendar','idea','hook','content idea','what to post','next piece','content move','post idea','content for today','reel idea','short idea','what should i shoot','what should i film'],links:[{label:'Open Content',url:'#content-tracker-card'},{label:'Open Calendar',url:null}]},
   {id:'production',label:'Production',slash:['production','beat','beats','catalog'],tags:['production','beat','beats'],phrases:['production','beat','beats','catalog','daw','music','master beat','upload','soundee','bangin','mix','track','next beat','todays beat','production progress','studio time','beat to finish','beat queue','master beat catalog'],links:[{label:'Open Production',url:'#production-card'},{label:'Open Catalog',url:null}]},
   {id:'sync',label:'Sync',slash:['sync','health','system','settings'],tags:['sync','health','system'],phrases:['sync','health','system','broken','error','loading','not working','settings','connection','backup','diagnostic','version','logs','activity log','is something wrong','whats broken','sync status','is it working','any errors','status check','health check','is anything off'],links:[{label:'Open System Hub',url:'#system-panel',action:'system'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
+  {id:'profile',label:'Profile',slash:['profile','identity','a1xx','account'],tags:['profile','identity','a1xx','account'],phrases:['who is a1xx','what is a1xx','who am i','who are you talking to','who is executive producer','executive producer profile','my profile','my account','what do you know about me','what is my business','tell me about a1xx','a1xx profile','account profile','user profile','who is logged in'],links:[{label:'Open Account',url:'#system-panel',action:'system'},{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]},
   {id:'memory',label:'Memory',slash:['memory','history','remember','chat'],tags:['memory','history'],phrases:['remember','memory','history','asked','previous question','chat log','conversation','what did i ask','previous chat','recent ask','last question','last thing','earlier','before','what did we talk about'],links:[{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]},
   {id:'help',label:'Help',slash:['help','commands','command','cheatsheet'],tags:['help','commands'],phrases:['help','commands','cheat sheet','how do i ask','what can you do','show commands','slash commands','list commands','show me what you do','what are your commands'],links:[{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]}
 ];
@@ -7651,6 +7652,18 @@ function getMissionNowAnswer(ctx){
   var eventLine=ctx.nextEvent?' Your next calendar item starts at '+ctx.nextEvent.startTime+'.':' No urgent calendar item is loaded in the brief.';
   var gapLine=ctx.gap>0?'You still have '+fmt(ctx.gap)+' left against this week’s target.':'Weekly target pressure is protected right now.';
   return '<strong>Do this right now:</strong><br>'+escapeHtml(ctx.nowText)+'<br><br><span style="color:#8f9aa3">'+gapLine+eventLine+'</span>';
+}
+
+function getMissionProfileAnswer(){
+  var p=A1XX_PROFILE||{};
+  var mission=p.mission||{};
+  var streams=(p.revenueStreams||[]).slice(0,4).join(' · ');
+  return '<strong>A1XX:</strong> You are A1XX, the Executive Producer of Money Mission OS.<br><br>'
+    +'<strong>Business:</strong> '+escapeHtml(p.business||'Independent music producer and operator.')+'<br><br>'
+    +'<strong>Mission:</strong> '+escapeHtml(mission.name||'Money Mission')+' · '+fmt(mission.target||100000)+' target · '+escapeHtml(mission.cadence||'cycle-based execution')+'.<br><br>'
+    +'<strong>Audience:</strong> '+escapeHtml(p.audience||'Independent artists and rappers.')+'<br><br>'
+    +'<span style="color:#8f9aa3">Default identity rule: call you A1XX or Executive Producer. Keep Joshua/Josh tucked away in account details, not the main OS.</span>'
+    +(streams?'<br><br><span style="color:#8f9aa3">Revenue lanes: '+escapeHtml(streams)+'.</span>':'');
 }
 
 function getMissionBlockIntel(){
@@ -7824,6 +7837,7 @@ function getMissionCommandRouteAnswer(route,ctx,question){
   if(route==='help')return getMissionCommandHelp()+getMissionIntentLinks('help');
   if(route==='time')return '<strong>Time:</strong> '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   if(route==='day')return '<strong>Day:</strong> '+now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  if(route==='profile')return getMissionProfileAnswer()+getMissionIntentLinks('profile');
   if(route==='calendar')return getMissionCalendarAnswer(ctx)+getMissionContextNudge('calendar',ctx)+getMissionIntentLinks('calendar');
   if(route==='report')return getMissionReportAnswer(ctx)+getMissionContextNudge('report',ctx)+getMissionIntentLinks('report');
   if(route==='dpc')return getMissionDpcAnswer()+getMissionContextNudge('dpc',ctx)+getMissionIntentLinks('dpc');
@@ -7870,6 +7884,7 @@ function getMissionFollowUp(route,ctx,question){
   if(route==='dpc')return '<strong>Next move:</strong> Do the next small DPC block, then come back and log the numbers.';
   if(route==='sync')return '<strong>Next move:</strong> If anything looks off, open System Hub > Health and check the latest Activity Log line.';
   if(route==='memory')return '<strong>Next move:</strong> Ask a follow-up that builds on the last saved question, or use /help to pull a specific area.';
+  if(route==='profile')return '<strong>Next move:</strong> Use that profile as the filter for every answer: A1XX, Executive Producer, money-first, action-first.';
   if(route==='time'||route==='day')return '<strong>Next move:</strong> Use the time check to choose the next block. '+escapeHtml(move);
   if(route==='now')return '<strong>Next move:</strong> Start the recommended block, then come back and log the result.';
   if(route==='help')return '<strong>Next move:</strong> Try one command now: /calendar, /dpc, /report, or /leads.';
