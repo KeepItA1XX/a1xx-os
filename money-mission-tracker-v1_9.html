@@ -7473,8 +7473,115 @@ function getMissionCommandContext(contentPieces,calEvents){
   return {cycle:cy,tool:tool,dayType:dayType,rhythm:rhythm,rev:rev,wk:wk,gap:gap,openTasks:openTasks,nextEvent:nextEvent,nowText:nowText,leadText:leadText,contentCount:contentCount};
 }
 
+function getMissionCommandRoute(question){
+  var raw=String(question||'').trim();
+  var q=raw.toLowerCase();
+  var slash=(q.match(/^\/([a-z]+)/)||[])[1]||'';
+  var tags=(q.match(/#[a-z]+/g)||[]).map(function(t){return t.slice(1);});
+  var tagMap={calendar:'calendar',leads:'leads',lead:'leads',content:'content',production:'production',money:'report',report:'report',sync:'sync',health:'sync',memory:'memory',dpc:'dpc',cycle:'cycle'};
+  if(slash)return slash;
+  for(var i=0;i<tags.length;i++){if(tagMap[tags[i]])return tagMap[tags[i]];}
+  if(q.indexOf('time')>=0)return 'time';
+  if(q.indexOf('day')>=0||q.indexOf('date')>=0)return 'day';
+  if(q.indexOf('calendar')>=0||q.indexOf('meeting')>=0||q.indexOf('class')>=0)return 'calendar';
+  if(q.indexOf('report')>=0||q.indexOf('revenue')>=0||q.indexOf('money')>=0||q.indexOf('target')>=0||q.indexOf('gap')>=0)return 'report';
+  if(q.indexOf('dpc')>=0||q.indexOf('dm')>=0||q.indexOf('calls made')>=0)return 'dpc';
+  if(q.indexOf('cycle')>=0)return 'cycle';
+  if(q.indexOf('lead')>=0||q.indexOf('follow')>=0||q.indexOf('who')>=0)return 'leads';
+  if(q.indexOf('content')>=0||q.indexOf('make')>=0||q.indexOf('post')>=0||q.indexOf('create')>=0)return 'content';
+  if(q.indexOf('production')>=0||q.indexOf('beat')>=0)return 'production';
+  if(q.indexOf('sync')>=0||q.indexOf('health')>=0||q.indexOf('broken')>=0||q.indexOf('error')>=0)return 'sync';
+  if(q.indexOf('remember')>=0||q.indexOf('history')>=0||q.indexOf('asked')>=0)return 'memory';
+  return '';
+}
+
+function getMissionCommandHelp(){
+  return '<strong>Commands I understand:</strong><br>/time · /day · /calendar · /report · /dpc · /cycle · /leads · /content · /production · /sync · /memory<br><br><span style="color:#8f9aa3">You can also use hints like #calendar, #leads, #content, #money, #sync, or #memory inside a normal question.</span>';
+}
+
+function getMissionCalendarAnswer(ctx){
+  var events=(window.__calEvents||[]).filter(function(e){
+    var d=new Date(e.start);
+    return !isNaN(d.getTime())&&d>=new Date(Date.now()-15*60000);
+  }).sort(function(a,b){return new Date(a.start)-new Date(b.start);}).slice(0,3);
+  if(!events.length)return '<strong>Calendar:</strong> I do not see upcoming calendar items loaded right now. Refresh after Calendar sync if you expect something here.';
+  return '<strong>Calendar:</strong><br>'+events.map(function(e){
+    return escapeHtml((e.startTime||formatCalTime(e.start)||'time TBD')+' · '+(e.title||'Untitled event'));
+  }).join('<br>');
+}
+
+function getMissionReportAnswer(ctx){
+  var margin=ctx.wk?Math.round((ctx.rev/ctx.wk)*100):0;
+  return '<strong>Report:</strong> '+fmt(ctx.rev)+' collected against '+fmt(ctx.wk)+' weekly target ('+margin+'%). '+(ctx.gap>0?fmt(ctx.gap)+' left to close this week.':'Weekly target is covered.');
+}
+
+function getMissionDpcAnswer(){
+  var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+  return '<strong>DPC Today:</strong> '+(d.dms||0)+' DMs · '+(d.coldCalls||0)+' calls made · '+(d.calls||0)+' booked · '+(d.closes||0)+' closes · '+fmt(d.money||0)+' collected.';
+}
+
+function getMissionCycleAnswer(ctx){
+  var c=ctx.cycle||{};
+  var start=c.start?pd(c.start):new Date();
+  var end=c.end?pd(c.end):new Date();
+  var daysLeft=Math.max(0,Math.ceil((end-new Date())/86400000));
+  return '<strong>Cycle:</strong> Cycle '+(c.num||'?')+' · '+escapeHtml(c.name||'Current cycle')+' · '+daysLeft+' days left · target '+fmt(c.target||0)+'.';
+}
+
+function getMissionLeadsAnswer(ctx){
+  var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);}).slice(0,3);
+  if(!leads.length)return '<strong>Leads:</strong> '+escapeHtml(ctx.leadText)+'.';
+  return '<strong>Leads:</strong><br>'+leads.map(function(l){return escapeHtml((getLeadDisplayName(l)||'Unknown lead')+' · '+(l.stage||l.status||'active')+(l.followUpDate?' · follow-up '+l.followUpDate:''));}).join('<br>');
+}
+
+function getMissionContentAnswer(ctx){
+  var pieces=(window.__contentPipelinePieces||window.__contentPieces||[]).slice(0,3);
+  if(!pieces.length)return '<strong>Content:</strong> No loaded content item yet. Make one simple proof-of-work post from today’s activity.';
+  return '<strong>Content:</strong><br>'+pieces.map(function(p){return escapeHtml((p.title||p.name||p.topic||'Content item')+' · '+(p.status||p.stage||p.format||'active'));}).join('<br>');
+}
+
+function getMissionProductionAnswer(){
+  var items=(window.__productionPieces||[]).slice(0,3);
+  if(!items.length)return '<strong>Production:</strong> No active production items are loaded right now.';
+  return '<strong>Production:</strong><br>'+items.map(function(p){return escapeHtml((p.title||p.name||p.beat||'Production item')+' · '+(p.status||p.stage||'active'));}).join('<br>');
+}
+
+function getMissionSyncAnswer(){
+  var h=typeof getHealth==='function'?getHealth():{};
+  var services=h.services||{};
+  var names=Object.keys(services).slice(0,5);
+  if(!names.length)return '<strong>Sync:</strong> No detailed sync health is loaded yet. Use System Hub for the full status.';
+  return '<strong>Sync:</strong><br>'+names.map(function(n){var s=services[n]||{};return escapeHtml(n+': '+(s.status||'checked')+(s.msg?' · '+s.msg:''));}).join('<br>');
+}
+
+function getMissionMemoryAnswer(){
+  var hist=getMissionChatHistory().slice(-5);
+  if(!hist.length)return '<strong>Memory:</strong> No previous Mission Command questions are saved in this browser yet.';
+  return '<strong>Memory:</strong><br>'+hist.map(function(t){return escapeHtml((t.question||t.kind||'prompt')+' → '+String(t.answer||'').slice(0,90));}).join('<br>');
+}
+
+function getMissionCommandRouteAnswer(route,ctx,question){
+  var now=new Date();
+  if(route==='help')return getMissionCommandHelp();
+  if(route==='time')return '<strong>Time:</strong> '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  if(route==='day')return '<strong>Day:</strong> '+now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  if(route==='calendar')return getMissionCalendarAnswer(ctx);
+  if(route==='report')return getMissionReportAnswer(ctx);
+  if(route==='dpc')return getMissionDpcAnswer();
+  if(route==='cycle')return getMissionCycleAnswer(ctx);
+  if(route==='leads')return getMissionLeadsAnswer(ctx);
+  if(route==='content')return getMissionContentAnswer(ctx);
+  if(route==='production')return getMissionProductionAnswer();
+  if(route==='sync')return getMissionSyncAnswer();
+  if(route==='memory')return getMissionMemoryAnswer();
+  return '';
+}
+
 function getMissionCommandResponse(kind,ctx,question){
   var q=String(question||'').toLowerCase();
+  var route=getMissionCommandRoute(question||'');
+  var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
+  if(routed)return routed;
   var eventLine=ctx.nextEvent?' Your next calendar item starts at '+ctx.nextEvent.startTime+'.':' No urgent calendar item is loaded in the brief.';
   var gapLine=ctx.gap>0?'You still have '+fmt(ctx.gap)+' left against this week’s target.':'Weekly target pressure is protected right now.';
   if(q.indexOf('remember')>=0||q.indexOf('history')>=0||q.indexOf('asked')>=0)return '<strong>Memory:</strong> I can now keep recent Mission Command questions in this browser and send them to the Mission Command Chat Log once Apps Script is redeployed. I will use the recent turns as context for future answers.';
