@@ -795,7 +795,7 @@ function appendMissionChatSyncAudit(ss, d, row, stage) {
     'Sync At','Stage','Session ID','Title','Project','Archived At',
     'Message Count','Sync Reason','Updated At','Last Question'
   ];
-  var audit = getOrCreateSheet(ss, SHEET_MISSION_SYNC_AUDIT, headers);
+  var audit = getMissionChatSyncAuditSheet(ss, headers);
   audit.appendRow([
     new Date().toISOString(),
     stage || '',
@@ -809,6 +809,48 @@ function appendMissionChatSyncAudit(ss, d, row, stage) {
     String(d.lastQuestion || row[7] || '').slice(0, 500)
   ]);
   formatSheet(audit);
+}
+
+function getMissionChatSyncAuditSheet(ss, headers) {
+  var exact = ss.getSheetByName(SHEET_MISSION_SYNC_AUDIT);
+  if (exact) {
+    ensureSheetHeaders(exact, headers);
+    return exact;
+  }
+
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    var sheet = sheets[i];
+    var name = sheet.getName();
+    if (name.indexOf(SHEET_MISSION_SYNC_AUDIT + '_conflict') === 0 || name.indexOf(SHEET_MISSION_SYNC_AUDIT) === 0) {
+      try {
+        sheet.setName(SHEET_MISSION_SYNC_AUDIT);
+      } catch (err) {
+        // If Google Sheets blocks the rename, still reuse the existing audit tab.
+      }
+      ensureSheetHeaders(sheet, headers);
+      return sheet;
+    }
+  }
+
+  return getOrCreateSheet(ss, SHEET_MISSION_SYNC_AUDIT, headers);
+}
+
+function ensureSheetHeaders(sheet, headers) {
+  if (sheet.getMaxColumns() < headers.length) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), headers.length - sheet.getMaxColumns());
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+  } else {
+    var firstCell = String(sheet.getRange(1, 1).getValue() || '');
+    if (firstCell !== headers[0]) {
+      sheet.insertRowBefore(1);
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+  }
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#1a2910').setFontColor('#7ec845');
+  sheet.setFrozenRows(1);
 }
 
 function archiveCycle(d) {

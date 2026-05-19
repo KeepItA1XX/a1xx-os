@@ -1528,7 +1528,7 @@ body{background:#090a0b;color:#d8dde1}
         <div class="settings-list">
           <div class="settings-row"><div><div class="settings-row-name">AI Chat</div><div class="settings-row-meta">Planned drawer interface for questions, summaries, and diagnostics.</div></div><span class="settings-badge off">Off</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Chat history</div><div class="settings-row-meta">Local sessions with clean titles, hidden metadata, and project folders.</div></div><span class="settings-badge">Local</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Google chat sync</div><div class="settings-row-meta">Saves chat sessions/projects to the Mission Command Sessions sheet when the Apps Script is redeployed.</div></div><span class="settings-badge warn">Ready</span></div>
+          <div class="settings-row"><div><div class="settings-row-name">Google chat sync</div><div class="settings-row-meta">Saves chat sessions/projects to Google Sheets. Session rows update in place; each manual sync adds a fresh audit line.</div></div><span class="settings-badge warn">Ready</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Context window</div><div class="settings-row-meta">Hidden instruction packet: identity, mission, current stats, sources, and recent memory.</div></div><span class="settings-badge">Ready</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Allowed sources</div><div class="settings-row-meta">App state, Notion, Google Sheets, Calendar. Add CRM/production scopes later.</div></div><span class="settings-badge warn">Planned</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Write permissions</div><div class="settings-row-meta">Off by default. Any future AI write must ask first and leave an audit trail.</div></div><span class="settings-badge off">Locked</span></div>
@@ -1733,7 +1733,7 @@ body{background:#090a0b;color:#d8dde1}
       <button class="mission-command-chip" onclick="runMissionPrompt('content')">What should I make?</button>
     </div>
     <div class="mission-command-input">
-      <input id="mission-command-input" type="text" placeholder="Ask the OS..." onkeydown="if(event.key==='Enter')askMissionCommand()"/>
+      <input id="mission-command-input" type="text" maxlength="600" placeholder="Ask the OS..." onkeydown="if(event.key==='Enter')askMissionCommand()"/>
       <button id="mission-command-ask-btn" onclick="askMissionCommand()">Ask</button>
     </div>
   </div>
@@ -2932,6 +2932,9 @@ var MISSION_CHAT_PROJECTS_KEY='a1xx_mission_command_projects_v1';
 var MISSION_CHAT_ACTIVE_SESSION_KEY='a1xx_mission_command_active_session_v1';
 var MISSION_CHAT_ACTIVE_PROJECT_KEY='a1xx_mission_command_active_project_v1';
 var MISSION_CHAT_SYNC_STAMP_KEY='a1xx_mission_command_sync_stamp_v1';
+var MISSION_COMMAND_AUDIT_KEY='a1xx_mission_command_safety_audit_v1';
+var MISSION_COMMAND_INPUT_LIMIT=600;
+var MISSION_COMMAND_RATE_MS=900;
 
 var CYCLES=[
   {num:1,name:'Foundation',start:'2026-05-04',end:'2026-06-28',target:1500},
@@ -8100,7 +8103,7 @@ function getMissionCommandResponse(kind,ctx,question){
       return '<span style="color:#526944">Partial read - I think you mean '+escapeHtml(intent.label)+'. Here is what I see:</span><br><br>'+partialAnswer+'<br><br><span style="color:#8f9aa3">Not quite right? Try: '+escapeHtml(altSuggestions)+'</span>';
     }
   }
-  var gapLine=ctx.gap>0?'You still have '+fmt(ctx.gap)+' left against this week target.':'Weekly target pressure is protected right now.';
+  var gapLine=ctx.gap>0?"You still have "+fmt(ctx.gap)+" left against this week's target.":'Weekly target pressure is protected right now.';
   if(q.indexOf('remember')>=0||q.indexOf('history')>=0||q.indexOf('asked')>=0)return '<strong>Memory:</strong> I can now keep recent Mission Command questions in this browser and send them to the Mission Command Chat Log once Apps Script is redeployed. I will use the recent turns as context for future answers.';
   if(q.indexOf('calendar')>=0||q.indexOf('meeting')>=0||q.indexOf('class')>=0||q.indexOf('call')>=0)return '<strong>Calendar read:</strong> '+(ctx.nextEvent?('Next up is '+escapeHtml(ctx.nextEvent.title||'an event')+' at '+escapeHtml(ctx.nextEvent.startTime||'the scheduled time')+'. Prep the one outcome you need before it starts.'):('I do not see a loaded upcoming event in the current packet. If Calendar is connected, refresh and I will read it again.'));
   if(q.indexOf('sync')>=0||q.indexOf('health')>=0||q.indexOf('broken')>=0||q.indexOf('error')>=0)return '<strong>System read:</strong> I am watching local system health and sync status in the packet. If something looks wrong, ask me about the exact service and I will point you to the likely next check.';
@@ -8717,10 +8720,41 @@ function rememberMissionCommandTurn(kind,question,answer,packet){
   postMissionChatLog(turn);
 }
 
+function sanitizeMissionCommandInput(value){
+  var raw=String(value||'');
+  var cleaned=raw
+    .replace(/<\s*script\b[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi,' ')
+    .replace(/javascript\s*:/gi,'')
+    .replace(/\son\w+\s*=/gi,' ')
+    .replace(/[<>]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+  if(cleaned.length>MISSION_COMMAND_INPUT_LIMIT)cleaned=cleaned.slice(0,MISSION_COMMAND_INPUT_LIMIT).trim();
+  if(cleaned!==raw.trim())auditMissionCommandSafety('input_cleaned',raw.length,cleaned.length);
+  return cleaned;
+}
+
+function auditMissionCommandSafety(stage,before,after){
+  try{
+    var audit=getStore(MISSION_COMMAND_AUDIT_KEY)||[];
+    audit.push({ts:new Date().toISOString(),stage:stage||'unknown',before:before||0,after:after||0});
+    setStore(MISSION_COMMAND_AUDIT_KEY,audit.slice(-80));
+  }catch(e){}
+}
+
+function missionCommandCanSend(){
+  var now=Date.now();
+  if(window.__missionCommandBusy)return false;
+  if(window.__missionCommandLastSendAt&&(now-window.__missionCommandLastSendAt)<MISSION_COMMAND_RATE_MS)return false;
+  window.__missionCommandLastSendAt=now;
+  return true;
+}
+
 function setMissionCommandLoading(question,showUser){
   var thread=document.getElementById('mission-command-thread');
   var state=document.querySelector('.mission-command-state');
   var btn=document.getElementById('mission-command-ask-btn');
+  window.__missionCommandBusy=true;
   if(state){state.textContent='Thinking';state.classList.add('thinking');}
   if(btn)btn.disabled=true;
   if(thread){
@@ -8735,6 +8769,7 @@ function setMissionCommandLoading(question,showUser){
 function clearMissionCommandLoading(sources){
   var state=document.querySelector('.mission-command-state');
   var btn=document.getElementById('mission-command-ask-btn');
+  window.__missionCommandBusy=false;
   if(state){state.textContent='Ready';state.classList.remove('thinking');}
   if(btn)btn.disabled=false;
 }
@@ -8772,6 +8807,7 @@ function renderMissionCommand(kind,question,forceCurrent){
 }
 
 function runMissionPrompt(kind){
+  if(!missionCommandCanSend())return;
   window.__missionCommandLastPrompt=kind||'now';
   var input=document.getElementById('mission-command-input');
   if(input)input.value='';
@@ -8781,7 +8817,9 @@ function runMissionPrompt(kind){
 
 function askMissionCommand(){
   var input=document.getElementById('mission-command-input');
-  var q=(input&&input.value||'').trim();
+  var q=sanitizeMissionCommandInput(input&&input.value||'');
+  if(!q)return;
+  if(!missionCommandCanSend())return;
   window.__missionCommandLastPrompt='ask';
   if(input)input.value='';
   setMissionCommandLoading(q,true);
