@@ -8069,7 +8069,8 @@ function renderMissionThread(currentQuestion,currentAnswer,sources,currentFollow
   var session=getActiveMissionSession();
   var messages=((session&&session.messages)||[]).slice(-12);
   var html=messages.map(function(msg){
-    return missionBubble(msg.role||'assistant',msg.body||'',false);
+    var role=msg.role||'assistant';
+    return missionBubble(role,msg.body||'',role==='assistant');
   }).join('');
   if(currentQuestion)html+=missionBubble('user',currentQuestion,false);
   if(currentAnswer)html+=missionBubble('assistant',currentAnswer,true);
@@ -8254,7 +8255,8 @@ function renderMissionSessionThread(session){
   if(!thread)return;
   var messages=(session&&session.messages)||[];
   thread.innerHTML=messages.length?messages.map(function(msg){
-    return missionBubble(msg.role||'assistant',msg.body||'',false);
+    var role=msg.role||'assistant';
+    return missionBubble(role,msg.body||'',role==='assistant');
   }).join(''):'<div class="mission-history-empty">New chat ready. Ask Mission Command what to focus on.</div>';
   thread.dataset.ready='1';
   scrollMissionThread(thread);
