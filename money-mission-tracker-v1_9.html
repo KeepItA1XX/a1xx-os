@@ -7577,6 +7577,38 @@ function getMissionCommandRouteAnswer(route,ctx,question){
   return '';
 }
 
+function getCurrentJourneyMove(ctx){
+  var dayType=(ctx&&ctx.dayType)||getMissionDayType();
+  var steps=MISSION_STEPS&&MISSION_STEPS[dayType];
+  if(!steps||!steps.length)return null;
+  var state=getMissionJourneyState(dayType);
+  var idx=Math.min(state.currentStep||0,steps.length-1);
+  var step=steps[idx];
+  var checks=state.checks&&state.checks[step.id]||[];
+  var nextCheck='';
+  for(var i=0;i<step.checks.length;i++){
+    if(!checks[i]){nextCheck=step.checks[i];break;}
+  }
+  return {dayType:dayType,index:idx,total:steps.length,title:step.title,action:step.action,nextCheck:nextCheck||step.action};
+}
+
+function getMissionFollowUp(route,ctx,question){
+  var journey=getCurrentJourneyMove(ctx);
+  var move=journey?('Journey: Step '+(journey.index+1)+' of '+journey.total+' — '+journey.title+'. Next: '+journey.nextCheck):'Next move: '+(ctx.nowText||'pick one action and finish it before switching cards.');
+  if(route==='calendar')return '<strong>Next move:</strong> Prep the one outcome you want from the next calendar item. '+(journey?escapeHtml('Then continue '+journey.title+'.'):'');
+  if(route==='leads')return '<strong>Next move:</strong> Contact the hottest follow-up first, then log the result. '+escapeHtml(move);
+  if(route==='content')return '<strong>Next move:</strong> Turn today’s proof into one simple asset. '+escapeHtml(move);
+  if(route==='production')return '<strong>Next move:</strong> Pick one active beat or production item and move it one status forward.';
+  if(route==='report')return '<strong>Next move:</strong> Protect one income-producing action before more admin. '+escapeHtml(move);
+  if(route==='dpc')return '<strong>Next move:</strong> Do the next small DPC block, then come back and log the numbers.';
+  if(route==='sync')return '<strong>Next move:</strong> If anything looks off, open System Hub > Health and check the latest Activity Log line.';
+  if(route==='memory')return '<strong>Next move:</strong> Ask a follow-up that builds on the last saved question, or use /help to pull a specific area.';
+  if(route==='time'||route==='day')return '<strong>Next move:</strong> Use the time check to choose the next block. '+escapeHtml(move);
+  if(route==='help')return '<strong>Next move:</strong> Try one command now: /calendar, /dpc, /report, or /leads.';
+  if(question)return '<strong>Next move:</strong> '+escapeHtml(move);
+  return '';
+}
+
 function getMissionCommandResponse(kind,ctx,question){
   var q=String(question||'').toLowerCase();
   var route=getMissionCommandRoute(question||'');
@@ -7632,15 +7664,17 @@ function missionBubble(role,body,allowHtml){
   return '<div class="mission-bubble-row '+(role==='user'?'user':'assistant')+'"><div class="mission-bubble"><div class="mission-bubble-meta">'+who+'</div>'+text+'</div></div>';
 }
 
-function renderMissionThread(currentQuestion,currentAnswer,sources){
+function renderMissionThread(currentQuestion,currentAnswer,sources,currentFollowUp){
   var hist=getMissionChatHistory().slice(-4);
   var html=hist.map(function(turn){
     var q=turn.question||'';
     var a=turn.answer||'';
-    return (q?missionBubble('user',q,false):'')+missionBubble('assistant',a,false);
+    var f=turn.followUp||'';
+    return (q?missionBubble('user',q,false):'')+missionBubble('assistant',a,false)+(f?missionBubble('assistant',f,false):'');
   }).join('');
   if(currentQuestion)html+=missionBubble('user',currentQuestion,false);
   if(currentAnswer)html+=missionBubble('assistant',currentAnswer,true);
+  if(currentFollowUp)html+=missionBubble('assistant',currentFollowUp,true);
   return html;
 }
 
@@ -7700,6 +7734,7 @@ function rememberMissionCommandTurn(kind,question,answer,packet){
     kind:kind||'now',
     question:question||'',
     answer:String(answer||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(),
+    followUp:String((packet&&packet.followUp)||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(),
     sources:(packet&&packet.sources)||[],
     cycle:(packet&&packet.cycle)||{},
     activeTool:(packet&&packet.mission&&packet.mission.tool)||'',
@@ -7740,7 +7775,10 @@ function renderMissionCommand(kind,question,forceCurrent){
   var hist=getMissionChatHistory();
   var shouldShowCurrent=!!(forceCurrent||question||!hist.length);
   var answer=shouldShowCurrent?getMissionCommandResponse(kind||'now',ctx,question||''):'';
-  thread.innerHTML=renderMissionThread(question||'',answer,packet.sources);
+  var route=getMissionCommandRoute(question||'');
+  var followUp=shouldShowCurrent?getMissionFollowUp(route,ctx,question||''):'';
+  packet.followUp=followUp;
+  thread.innerHTML=renderMissionThread(question||'',answer,packet.sources,followUp);
   thread.scrollTop=thread.scrollHeight;
   clearMissionCommandLoading(packet.sources);
   if(answer&&(question||forceCurrent)&&(kind==='ask'||question))rememberMissionCommandTurn(kind||'ask',question||'',answer,packet);
