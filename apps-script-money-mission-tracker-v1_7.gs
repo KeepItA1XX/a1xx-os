@@ -29,6 +29,7 @@ var SHEET_PROSPECTS    = 'Captured Leads';
 var SHEET_RESET_AUDIT  = 'Reset Audit';      // ← NEW in 1.7
 var SHEET_MISSION_CHAT = 'Mission Command Chat Log';
 var SHEET_MISSION_SESSIONS = 'Mission Command Sessions';
+var SHEET_MISSION_SYNC_AUDIT = 'Mission Command Sync Audit';
 
 var NOTION_CONTENT_DB    = '1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18: was incorrectly set to the data source ID (...8188...). Notion /v1/databases/{id}/query expects the DATABASE ID (URL slug). Parent database "Master Beat Catalog" lives at notion.so/1a76115281da8199a5dffc423d447f31. */
@@ -779,6 +780,7 @@ function saveMissionChatSession(d) {
   if (targetRow) sheet.getRange(targetRow, 1, 1, headers.length).setValues([row]);
   else sheet.appendRow(row);
   formatSheet(sheet);
+  appendMissionChatSyncAudit(ss, d, row, targetRow ? 'update' : 'create');
   return {
     sessionId: sessionId,
     title: row[1],
@@ -786,6 +788,27 @@ function saveMissionChatSession(d) {
     archivedAt: row[5],
     messageCount: row[6]
   };
+}
+
+function appendMissionChatSyncAudit(ss, d, row, stage) {
+  var headers = [
+    'Sync At','Stage','Session ID','Title','Project','Archived At',
+    'Message Count','Sync Reason','Updated At','Last Question'
+  ];
+  var audit = getOrCreateSheet(ss, SHEET_MISSION_SYNC_AUDIT, headers);
+  audit.appendRow([
+    new Date().toISOString(),
+    stage || '',
+    row[0] || '',
+    row[1] || '',
+    row[2] || '',
+    row[5] || '',
+    row[6] || 0,
+    d.syncReason || '',
+    row[4] || '',
+    String(d.lastQuestion || row[7] || '').slice(0, 500)
+  ]);
+  formatSheet(audit);
 }
 
 function archiveCycle(d) {

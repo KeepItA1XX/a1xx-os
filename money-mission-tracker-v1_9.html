@@ -8190,6 +8190,8 @@ function saveMissionChatSessions(sessions){
 
 function missionSessionSyncPayload(session,reason){
   session=session||{};
+  var syncAt=new Date().toISOString();
+  var manual=String(reason||'')==='manual';
   var messages=(session.messages||[]).slice(-80).map(function(msg){
     return {role:msg.role||'assistant',body:String(msg.body||'').slice(0,4000),ts:msg.ts||''};
   });
@@ -8201,7 +8203,7 @@ function missionSessionSyncPayload(session,reason){
     title:session.title||'Mission Command',
     project:session.project||getActiveMissionProject(),
     createdAt:session.createdAt||'',
-    updatedAt:session.updatedAt||new Date().toISOString(),
+    updatedAt:manual?syncAt:(session.updatedAt||syncAt),
     archivedAt:session.archivedAt||'',
     tags:session.tags||[],
     contextWindow:session.contextWindow||'',
@@ -8212,7 +8214,7 @@ function missionSessionSyncPayload(session,reason){
     activeTool:session.activeTool||'',
     lastQuestion:lastUser.body||'',
     lastAnswer:lastAssistant.body||'',
-    syncReason:reason||'save'
+    syncReason:(reason||'save')+' @ '+syncAt
   };
 }
 
@@ -8266,7 +8268,7 @@ function syncAllMissionChatSessions(reason){
     if(syncMissionChatSession(session,reason||'bulk'))sent++;
   });
   setTimeout(function(){
-    setMissionChatSyncStatus('Sent '+sent+' of '+sessions.length+' chat session'+(sessions.length===1?'':'s')+'. If the Sheet did not change, redeploy Apps Script with the latest v1.7 code, then press Sync chats now again.','ok');
+    setMissionChatSyncStatus('Sent '+sent+' of '+sessions.length+' chat session'+(sessions.length===1?'':'s')+'. Session rows update in place; check Mission Command Sessions and the new Mission Command Sync Audit tab for a fresh timestamp.','ok');
   },650);
 }
 
