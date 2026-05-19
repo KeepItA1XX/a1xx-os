@@ -94,6 +94,11 @@ function doPost(e) {
   try {
     var raw = e.postData ? e.postData.contents : '{}';
     var data = JSON.parse(raw);
+    var expectedToken = PropertiesService.getScriptProperties().getProperty('A1XX_WEBHOOK_TOKEN');
+    if (expectedToken && data.token !== expectedToken) {
+      return ContentService.createTextOutput(JSON.stringify({ ok:false, error:'Unauthorized' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
 
     if (data.type === 'test') {
       logActivity('Test connection received');
@@ -256,66 +261,74 @@ function resetTestData(d) {
 
 // ── DAILY LOG (v1.5) ───────────────────────────────────────
 function saveDailySnapshot(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = getOrCreateSheet(ss, SHEET_DAILY, DAILY_HEADERS);
-  var date = String(d.date || '').slice(0, 10);
-  if (!date) throw new Error('daily_save: missing date');
-  var saveMode = (d.mode === 'add') ? 'add' : 'replace';
-  var nowIso = new Date().toISOString();
+  var lock = LockService.getScriptLock();
+  var locked = false;
+  try {
+    lock.waitLock(10000);
+    locked = true;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = getOrCreateSheet(ss, SHEET_DAILY, DAILY_HEADERS);
+    var date = String(d.date || '').slice(0, 10);
+    if (!date) throw new Error('daily_save: missing date');
+    var saveMode = (d.mode === 'add') ? 'add' : 'replace';
+    var nowIso = new Date().toISOString();
 
-  var last = sheet.getLastRow();
-  var rowIdx = -1; var existing = null;
-  if (last > 1) {
-    var dates = sheet.getRange(2, 1, last - 1, 1).getValues();
-    for (var i = 0; i < dates.length; i++) {
-      var v = dates[i][0];
-      var vStr = (v instanceof Date) ? Utilities.formatDate(v, 'UTC', 'yyyy-MM-dd') : String(v).slice(0, 10);
-      if (vStr === date) {
-        rowIdx = i + 2;
-        existing = sheet.getRange(rowIdx, 1, 1, DAILY_HEADERS.length).getValues()[0];
-        break;
+    var last = sheet.getLastRow();
+    var rowIdx = -1; var existing = null;
+    if (last > 1) {
+      var dates = sheet.getRange(2, 1, last - 1, 1).getValues();
+      for (var i = 0; i < dates.length; i++) {
+        var v = dates[i][0];
+        var vStr = (v instanceof Date) ? Utilities.formatDate(v, 'UTC', 'yyyy-MM-dd') : String(v).slice(0, 10);
+        if (vStr === date) {
+          rowIdx = i + 2;
+          existing = sheet.getRange(rowIdx, 1, 1, DAILY_HEADERS.length).getValues()[0];
+          break;
+        }
       }
     }
-  }
-  var prev = existing ? {
-    dms: parseFloat(existing[1]) || 0, coldCalls: parseFloat(existing[2]) || 0,
-    content: parseFloat(existing[3]) || 0, calls: parseFloat(existing[4]) || 0,
-    closes: parseFloat(existing[5]) || 0, money: parseFloat(existing[6]) || 0,
-    leads: parseFloat(existing[7]) || 0,
-    firstSaved: existing[8] || nowIso, saveCount: parseFloat(existing[10]) || 0
-  } : { dms:0,coldCalls:0,content:0,calls:0,closes:0,money:0,leads:0,firstSaved:nowIso,saveCount:0 };
+    var prev = existing ? {
+      dms: parseFloat(existing[1]) || 0, coldCalls: parseFloat(existing[2]) || 0,
+      content: parseFloat(existing[3]) || 0, calls: parseFloat(existing[4]) || 0,
+      closes: parseFloat(existing[5]) || 0, money: parseFloat(existing[6]) || 0,
+      leads: parseFloat(existing[7]) || 0,
+      firstSaved: existing[8] || nowIso, saveCount: parseFloat(existing[10]) || 0
+    } : { dms:0,coldCalls:0,content:0,calls:0,closes:0,money:0,leads:0,firstSaved:nowIso,saveCount:0 };
 
-  var next;
-  if (saveMode === 'add') {
-    next = {
-      dms: prev.dms + (parseFloat(d.dms) || 0),
-      coldCalls: prev.coldCalls + (parseFloat(d.coldCalls) || 0),
-      content: prev.content + (parseFloat(d.content) || 0),
-      calls: prev.calls + (parseFloat(d.calls) || 0),
-      closes: prev.closes + (parseFloat(d.closes) || 0),
-      money: prev.money + (parseFloat(d.money) || 0),
-      leads: prev.leads + (parseFloat(d.leads) || 0)
+    var next;
+    if (saveMode === 'add') {
+      next = {
+        dms: prev.dms + (parseFloat(d.dms) || 0),
+        coldCalls: prev.coldCalls + (parseFloat(d.coldCalls) || 0),
+        content: prev.content + (parseFloat(d.content) || 0),
+        calls: prev.calls + (parseFloat(d.calls) || 0),
+        closes: prev.closes + (parseFloat(d.closes) || 0),
+        money: prev.money + (parseFloat(d.money) || 0),
+        leads: prev.leads + (parseFloat(d.leads) || 0)
+      };
+    } else {
+      next = {
+        dms: parseFloat(d.dms) || 0, coldCalls: parseFloat(d.coldCalls) || 0,
+        content: parseFloat(d.content) || 0, calls: parseFloat(d.calls) || 0,
+        closes: parseFloat(d.closes) || 0, money: parseFloat(d.money) || 0,
+        leads: parseFloat(d.leads) || 0
+      };
+    }
+    var row = [
+      date, next.dms, next.coldCalls, next.content, next.calls, next.closes, next.money, next.leads,
+      prev.firstSaved, nowIso, prev.saveCount + 1
+    ];
+    if (rowIdx > 0) sheet.getRange(rowIdx, 1, 1, DAILY_HEADERS.length).setValues([row]);
+    else sheet.appendRow(row);
+    return {
+      date: date, mode: saveMode,
+      dms: next.dms, coldCalls: next.coldCalls, content: next.content,
+      calls: next.calls, closes: next.closes, money: next.money, leads: next.leads,
+      firstSavedAt: prev.firstSaved, lastUpdatedAt: nowIso, saveCount: prev.saveCount + 1
     };
-  } else {
-    next = {
-      dms: parseFloat(d.dms) || 0, coldCalls: parseFloat(d.coldCalls) || 0,
-      content: parseFloat(d.content) || 0, calls: parseFloat(d.calls) || 0,
-      closes: parseFloat(d.closes) || 0, money: parseFloat(d.money) || 0,
-      leads: parseFloat(d.leads) || 0
-    };
+  } finally {
+    if (locked) lock.releaseLock();
   }
-  var row = [
-    date, next.dms, next.coldCalls, next.content, next.calls, next.closes, next.money, next.leads,
-    prev.firstSaved, nowIso, prev.saveCount + 1
-  ];
-  if (rowIdx > 0) sheet.getRange(rowIdx, 1, 1, DAILY_HEADERS.length).setValues([row]);
-  else sheet.appendRow(row);
-  return {
-    date: date, mode: saveMode,
-    dms: next.dms, coldCalls: next.coldCalls, content: next.content,
-    calls: next.calls, closes: next.closes, money: next.money, leads: next.leads,
-    firstSavedAt: prev.firstSaved, lastUpdatedAt: nowIso, saveCount: prev.saveCount + 1
-  };
 }
 
 function getDailyLog(e) {
@@ -353,38 +366,46 @@ function getDailyLog(e) {
 
 // ── CAPTURED LEADS (v1.6) ─────────────────────────────
 function saveProspectSnapshot(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = getOrCreateSheet(ss, SHEET_PROSPECTS, PROSPECT_HEADERS);
-  var nowIso = new Date().toISOString();
-  var id = String(d.id || '').trim();
-  if (!id) throw new Error('prospect_save: missing id (uuid required)');
-  var idCol = PROSPECT_HEADERS.indexOf('ID') + 1;
-  var last = sheet.getLastRow();
-  var rowIdx = -1; var existing = null;
-  if (last > 1) {
-    var ids = sheet.getRange(2, idCol, last - 1, 1).getValues();
-    for (var i = 0; i < ids.length; i++) {
-      if (String(ids[i][0]) === id) {
-        rowIdx = i + 2;
-        existing = sheet.getRange(rowIdx, 1, 1, PROSPECT_HEADERS.length).getValues()[0];
-        break;
+  var lock = LockService.getScriptLock();
+  var locked = false;
+  try {
+    lock.waitLock(10000);
+    locked = true;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = getOrCreateSheet(ss, SHEET_PROSPECTS, PROSPECT_HEADERS);
+    var nowIso = new Date().toISOString();
+    var id = String(d.id || '').trim();
+    if (!id) throw new Error('prospect_save: missing id (uuid required)');
+    var idCol = PROSPECT_HEADERS.indexOf('ID') + 1;
+    var last = sheet.getLastRow();
+    var rowIdx = -1; var existing = null;
+    if (last > 1) {
+      var ids = sheet.getRange(2, idCol, last - 1, 1).getValues();
+      for (var i = 0; i < ids.length; i++) {
+        if (String(ids[i][0]) === id) {
+          rowIdx = i + 2;
+          existing = sheet.getRange(rowIdx, 1, 1, PROSPECT_HEADERS.length).getValues()[0];
+          break;
+        }
       }
     }
+    var prev = existing ? {
+      firstSaved: existing[0] || nowIso,
+      saveCount: parseFloat(existing[16]) || 0
+    } : { firstSaved: nowIso, saveCount: 0 };
+    var row = [
+      prev.firstSaved, d.stageName || '', d.realName || '', d.phone || '',
+      d.email || '', d.instagram || '', d.threads || '', d.website || '',
+      d.source || '', d.stage || '', d.hot ? 'YES' : '', d.atl ? 'YES' : '',
+      d.firstTouch || '', d.nextAction || '', d.followUpDate || '', d.notes || '',
+      prev.saveCount + 1, id, nowIso, ''
+    ];
+    if (rowIdx > 0) sheet.getRange(rowIdx, 1, 1, PROSPECT_HEADERS.length).setValues([row]);
+    else sheet.appendRow(row);
+    return { id: id, firstSavedAt: prev.firstSaved, lastUpdatedAt: nowIso, saveCount: prev.saveCount + 1 };
+  } finally {
+    if (locked) lock.releaseLock();
   }
-  var prev = existing ? {
-    firstSaved: existing[0] || nowIso,
-    saveCount: parseFloat(existing[16]) || 0
-  } : { firstSaved: nowIso, saveCount: 0 };
-  var row = [
-    prev.firstSaved, d.stageName || '', d.realName || '', d.phone || '',
-    d.email || '', d.instagram || '', d.threads || '', d.website || '',
-    d.source || '', d.stage || '', d.hot ? 'YES' : '', d.atl ? 'YES' : '',
-    d.firstTouch || '', d.nextAction || '', d.followUpDate || '', d.notes || '',
-    prev.saveCount + 1, id, nowIso, ''
-  ];
-  if (rowIdx > 0) sheet.getRange(rowIdx, 1, 1, PROSPECT_HEADERS.length).setValues([row]);
-  else sheet.appendRow(row);
-  return { id: id, firstSavedAt: prev.firstSaved, lastUpdatedAt: nowIso, saveCount: prev.saveCount + 1 };
 }
 
 function deleteProspectRow(id) {
@@ -444,13 +465,17 @@ function notionQuery(databaseId, payload, cacheKey) {
     if (hit) { logActivity('Cache hit — ' + cacheKey); return { text: hit, code: 200 }; }
   }
   var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
-  var res = UrlFetchApp.fetch(
-    'https://api.notion.com/v1/databases/' + databaseId + '/query',
-    { method: 'post',
-      headers: { Authorization: 'Bearer ' + secret, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
-      payload: JSON.stringify(payload), muteHttpExceptions: true }
-  );
-  var text = res.getContentText(); var code = res.getResponseCode();
+  var opts = { method: 'post',
+    headers: { Authorization: 'Bearer ' + secret, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+    payload: JSON.stringify(payload), muteHttpExceptions: true };
+  var res = UrlFetchApp.fetch('https://api.notion.com/v1/databases/' + databaseId + '/query', opts);
+  var code = res.getResponseCode();
+  if (code >= 500) {
+    Utilities.sleep(2000);
+    res = UrlFetchApp.fetch('https://api.notion.com/v1/databases/' + databaseId + '/query', opts);
+    code = res.getResponseCode();
+  }
+  var text = res.getContentText();
   if (cacheKey && code < 400) { try { if (text.length < 90000) cache.put(cacheKey, text, 600); } catch (e) {} }
   return { text: text, code: code };
 }
@@ -464,7 +489,13 @@ function notionRequest(method, url, payload) {
   };
   if (payload) opts.payload = JSON.stringify(payload);
   var res = UrlFetchApp.fetch(url, opts);
-  return { text: res.getContentText(), code: res.getResponseCode() };
+  var code = res.getResponseCode();
+  if (code >= 500) {
+    Utilities.sleep(2000);
+    res = UrlFetchApp.fetch(url, opts);
+    code = res.getResponseCode();
+  }
+  return { text: res.getContentText(), code: code };
 }
 
 function syncDailyDpcToNotion(row, source) {
@@ -730,64 +761,79 @@ function saveMissionChatLog(d) {
 }
 
 function saveMissionChatSession(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var headers = [
-    'Session ID','Title','Project','Created At','Updated At','Archived At',
-    'Message Count','Last Question','Last Answer','Tags','Context Window',
-    'Messages JSON','Sources','Cycle','Active Tool','Last Sync At','Sync Reason'
-  ];
-  var sheet = getOrCreateSheet(ss, SHEET_MISSION_SESSIONS, headers);
-  var sessionId = String(d.sessionId || d.id || '').trim();
-  if (!sessionId) throw new Error('Missing Mission Command session ID.');
-  var messages = Array.isArray(d.messages) ? d.messages : [];
-  var lastQuestion = '';
-  var lastAnswer = '';
-  for (var i = messages.length - 1; i >= 0; i--) {
-    if (!lastQuestion && messages[i].role === 'user') lastQuestion = messages[i].body || '';
-    if (!lastAnswer && messages[i].role === 'assistant') lastAnswer = messages[i].body || '';
-    if (lastQuestion && lastAnswer) break;
-  }
-  var row = [
-    sessionId,
-    d.title || '',
-    d.project || '',
-    d.createdAt || '',
-    d.updatedAt || '',
-    d.archivedAt || '',
-    messages.length,
-    String(lastQuestion).slice(0, 1000),
-    String(lastAnswer).slice(0, 1000),
-    Array.isArray(d.tags) ? d.tags.join(', ') : (d.tags || ''),
-    String(d.contextWindow || '').slice(0, 4000),
-    String(d.messagesJson || JSON.stringify(messages)).slice(0, 45000),
-    Array.isArray(d.sources) ? d.sources.join(', ') : (d.sources || ''),
-    d.cycle || '',
-    d.activeTool || '',
-    new Date().toISOString(),
-    d.syncReason || ''
-  ];
-  var lastRow = sheet.getLastRow();
-  var targetRow = 0;
-  if (lastRow >= 2) {
-    var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    for (var r = 0; r < ids.length; r++) {
-      if (String(ids[r][0]) === sessionId) {
-        targetRow = r + 2;
-        break;
+  var lock = LockService.getScriptLock();
+  var locked = false;
+  try {
+    lock.waitLock(10000);
+    locked = true;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var headers = [
+      'Session ID','Title','Project','Created At','Updated At','Archived At',
+      'Message Count','Last Question','Last Answer','Tags','Context Window',
+      'Messages JSON','Sources','Cycle','Active Tool','Last Sync At','Sync Reason'
+    ];
+    var sheet = getOrCreateSheet(ss, SHEET_MISSION_SESSIONS, headers);
+    var sessionId = String(d.sessionId || d.id || '').trim();
+    if (!sessionId) throw new Error('Missing Mission Command session ID.');
+    var messages = Array.isArray(d.messages) ? d.messages : [];
+    var messagesForStorage = messages.slice();
+    var messagesJson = JSON.stringify(messagesForStorage);
+    while (messagesJson.length > 40000 && messagesForStorage.length > 1) {
+      messagesForStorage.shift();
+      messagesJson = JSON.stringify(messagesForStorage);
+    }
+    var lastQuestion = '';
+    var lastAnswer = '';
+    for (var i = messages.length - 1; i >= 0; i--) {
+      if (!lastQuestion && messages[i].role === 'user') lastQuestion = messages[i].body || '';
+      if (!lastAnswer && messages[i].role === 'assistant') lastAnswer = messages[i].body || '';
+      if (lastQuestion && lastAnswer) break;
+    }
+    var row = [
+      sessionId,
+      d.title || '',
+      d.project || '',
+      d.createdAt || '',
+      d.updatedAt || '',
+      d.archivedAt || '',
+      messages.length,
+      String(lastQuestion).slice(0, 1000),
+      String(lastAnswer).slice(0, 1000),
+      Array.isArray(d.tags) ? d.tags.join(', ') : (d.tags || ''),
+      String(d.contextWindow || '').slice(0, 4000),
+      messagesJson,
+      Array.isArray(d.sources) ? d.sources.join(', ') : (d.sources || ''),
+      d.cycle || '',
+      d.activeTool || '',
+      new Date().toISOString(),
+      d.syncReason || ''
+    ];
+    var lastRow = sheet.getLastRow();
+    var targetRow = 0;
+    if (lastRow >= 2) {
+      var scanStart = Math.max(2, lastRow - 298);
+      var ids = sheet.getRange(scanStart, 1, lastRow - scanStart + 1, 1).getValues();
+      for (var r = 0; r < ids.length; r++) {
+        if (String(ids[r][0]) === sessionId) {
+          targetRow = r + scanStart;
+          break;
+        }
       }
     }
+    if (targetRow) sheet.getRange(targetRow, 1, 1, headers.length).setValues([row]);
+    else sheet.appendRow(row);
+    formatSheet(sheet);
+    appendMissionChatSyncAudit(ss, d, row, targetRow ? 'update' : 'create');
+    return {
+      sessionId: sessionId,
+      title: row[1],
+      project: row[2],
+      archivedAt: row[5],
+      messageCount: row[6]
+    };
+  } finally {
+    if (locked) lock.releaseLock();
   }
-  if (targetRow) sheet.getRange(targetRow, 1, 1, headers.length).setValues([row]);
-  else sheet.appendRow(row);
-  formatSheet(sheet);
-  appendMissionChatSyncAudit(ss, d, row, targetRow ? 'update' : 'create');
-  return {
-    sessionId: sessionId,
-    title: row[1],
-    project: row[2],
-    archivedAt: row[5],
-    messageCount: row[6]
-  };
 }
 
 function appendMissionChatSyncAudit(ss, d, row, stage) {

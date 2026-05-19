@@ -7577,12 +7577,12 @@ function getMissionCommandContext(contentPieces,calEvents){
    2026 AI coaching research, personalization comes from a structured profile, not
    from accumulated conversation history. Read-only constant. Not rendered in UI. */
 var A1XX_PROFILE={
-  identity:'A1XX (Joshua Owens)',
+  identity:'A1XX',
   role:'Executive Producer',
   location:'Atlanta, GA',
   partner:'Bree',
   business:'Executive Producer and music business entrepreneur building BANGIN Production Deal, Rappreneur OS, BANGIN+, and Support Independent Rapper.',
-  audience:'Atlanta independent rappers first; broader independent artists through organic content and community. Stage name is the primary identifier — not first/legal name.',
+  audience:'Atlanta independent rappers first; broader independent artists through organic content and community. Stage name is the primary identifier across the OS.',
   mission:{name:'Money Mission $100K',target:100000,cycleCount:8,cadence:'~8 weeks per cycle'},
   revenueStreams:['BANGIN Production Deal','Rappreneur OS','BANGIN+ membership','Beat licenses','Studio session commissions','Mix & master services','Production deals','Custom beats'],
   offers:{
@@ -7762,7 +7762,9 @@ function getMissionConversationType(question,ctx,intent,brainState){
   if(/\b(i dont know what to do|i do not know what to do|i'm stuck|im stuck|stuck right now|can you help me|help me figure|help me decide|walk me through it)\b/.test(q))return {type:CONV_FOLLOWUP,route:active&&active.intentRoute||'now',activeRoute:active&&active.intentRoute||''};
   if(/\b(what am i struggling with|struggling with the most|where am i stuck|biggest bottleneck|biggest constraint|what is holding me back|whats holding me back)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'report',activeRoute:active&&active.intentRoute||''};
   if(/^(quick read|quick|short version|tldr|tl dr|brief|summarize|sum it up|quick take)$/.test(q))return {type:CONV_QUICK_READ,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
+  if(/\b(quick read|quick take|short version|tldr|brief summary|sum it up)\b/.test(q))return {type:CONV_QUICK_READ,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
   if(/^(deeper|deeper breakdown|deep breakdown|break it down|more detail|expand|expand on that|go deeper|elaborate|explain more|break that down)$/.test(q))return {type:CONV_DEEPER,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
+  if(/\b(go deeper|more detail|expand on that|break it down|explain more)\b/.test(q))return {type:CONV_DEEPER,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
   if(/^(why|why tho|why though|how come|but why|explain why|why is that|what is the reason|whats the reason|why does that matter)$/.test(q))return {type:CONV_WHY,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
   if(/^(what else|anything else|anything else i should know|what else should i know|anything im missing|anything i am missing|what am i missing|is there more|what else is there)$/.test(q))return {type:CONV_WHAT_ELSE,route:active&&active.intentRoute||intent.route||'',activeRoute:active&&active.intentRoute||''};
   if(/^(tell me more|what next|next|and then what|go on|and|ok and|yeah but|ok so|makes sense|right|hm|what about|ok what about)$/.test(q))return {type:CONV_FOLLOWUP,route:active&&active.intentRoute||brainRoute||intent.route||'',activeRoute:active&&active.intentRoute||''};
@@ -7894,6 +7896,7 @@ function getMissionBrainCyclePhase(ctx){
 function getMissionBrainUserEnergy(question,state){
   var q=String(question||'').trim();
   var words=q?q.split(/\s+/).filter(Boolean).length:0;
+  if(/\b(stuck|struggling|frustrated|overwhelmed|burned out|burnt out|nothing works|not working|losing steam|burned|behind|confused|lost|don't know|do not know)\b/i.test(q))return 'low';
   var stamps=(state&&state.messageTimestamps||[]).slice(-2);
   var fast=false;
   if(stamps.length>=2){
@@ -8003,7 +8006,7 @@ function getMissionBrainState(ctx,question,route){
   base.nextBestMove=getMissionBrainNextBestMove(ctx,base);
   base.blockingFactor=getMissionBrainBlockingFactor(base);
   if(base.frustrationSignal)base.forcedResponseMode='empathy';
-  else if(base.momentumSignal&&base.dpcMomentum==='ahead')base.forcedResponseMode='celebration';
+  else if(base.momentumSignal)base.forcedResponseMode='celebration';
   if(base.userEnergy==='low')base.energyOverride='NEUTRAL';
   return base;
 }
@@ -8034,8 +8037,8 @@ function getMissionVariantEnergy(route,convType,ctx,responseMode){
   var momentum=getMissionDpcMomentum(ctx||{});
   if(tod==='morning'&&getMissionChatHistory().length<2)return 'MORNING';
   if(tod==='evening')return 'EVENING';
-  if(responseMode&&responseMode.mode==='celebration'||momentum==='ahead')return 'HIGH';
-  if(responseMode&&responseMode.mode==='assertive'||momentum==='behind')return 'LOW';
+  if(responseMode&&responseMode.mode==='celebration')return 'HIGH';
+  if((responseMode&&responseMode.mode==='assertive')||momentum==='behind')return 'LOW';
   return 'NEUTRAL';
 }
 
@@ -8272,7 +8275,7 @@ function getMissionProfileAnswer(){
     +'<strong>Mission:</strong> '+escapeHtml(mission.name||'Money Mission')+' · '+fmt(mission.target||100000)+' target · '+escapeHtml(mission.cadence||'cycle-based execution')+'.<br><br>'
     +'<strong>Audience:</strong> '+escapeHtml(p.audience||'Independent artists and rappers.')+'<br><br>'
     +'<strong>Vision:</strong> '+escapeHtml(p.vision||'Financial freedom, travel, team, investments, and stress-free life.')+'<br><br>'
-    +'<span style="color:#8f9aa3">Default identity rule: call you A1XX or Executive Producer. Keep Joshua/Josh tucked away in account details, not the main OS. Guide the path, do not redirect it.</span>'
+    +'<span style="color:#8f9aa3">Default identity rule: call you A1XX or Executive Producer. Guide the path, do not redirect it.</span>'
     +(streams?'<br><br><span style="color:#8f9aa3">Revenue lanes: '+escapeHtml(streams)+'.</span>':'');
 }
 
@@ -8787,7 +8790,11 @@ function getMissionConversationFirstResponse(conv,ctx,question){
   if(shape&&shape.type==='how'&&route)return getMissionStepsRead(route,ctx,question||'');
   if(conv.type===CONV_FOLLOWUP&&/^(what next|next|and then what)$/.test(normalizeMissionQuestion(question||'')))return getMissionNextActionRead(route,ctx);
   if(conv.type===CONV_WHAT_ELSE||conv.type===CONV_FOLLOWUP)return getMissionWhatElseRead(route,ctx);
-  if(conv.type===CONV_UNCLEAR)return 'Do you mean pipeline, money, content, or schedule?';
+  if(conv.type===CONV_UNCLEAR){
+    var isSerious=/\b(struggling|stuck|frustrated|overwhelmed|burned|lost|confused|help me|don't know|do not know|not working)\b/i.test(q);
+    if(isSerious)return getMissionStuckRead('',ctx);
+    return 'Do you mean pipeline, money, content, or schedule?';
+  }
   return '';
 }
 
@@ -8860,7 +8867,10 @@ function getMissionHumanBubble(route,conv,ctx,question){
   if(route==='report'&&/\b(yesterday|what happened|whats happened|what has happened|updates|whats new|new updates)\b/.test(q))return 'For updates, I can summarize what is loaded into the app packet: revenue pace, pipeline state, calendar, content, and production. The deeper yesterday/week recap needs the Sheet or Notion logs connected into this chat brain.';
   if(route==='report'&&/\b(new sales|any new sales|what came in|money coming in|sales today|anything close)\b/.test(q))return 'I do not see a new closed sale beyond the current weekly total in the loaded packet. The clean next check is the Sheet revenue log or the latest DPC save.';
   if(route==='report'&&/\b(performing|performance|how am i doing)\b/.test(q))return 'Performance read: the effort is pointed in the right direction, but the money signal is behind. The next improvement is not more planning; it is more qualified conversations and direct offers.';
-  if(route==='report')return 'You are behind on the weekly goal, but the gap is still workable. The next move needs to create or close a conversation, not add more admin.';
+  if(route==='report'){
+    if(ctx.gap>0)return 'You are behind on the weekly goal, but the gap is still workable. The next move needs to create or close a conversation, not add more admin.';
+    return 'Weekly target is protected. The move now is to stack the next cycle and keep the money path running clean.';
+  }
   if(route==='dpc')return 'The daily campaign needs one clean push. Log the next outreach block, then use the result to decide whether to call, follow up, or close.';
   if(route==='now'&&/\b(lock in|distracted|off track|spinning|overwhelmed|too many options|decision fatigue)\b/.test(q))return pickMissionLibraryLine('lockIn',vars)||escapeHtml(ctx.nowText||'Move one asset and one pipeline step.');
   if(route==='now')return escapeHtml(ctx.nowText||'Move one asset and one pipeline step.')+' That is the focus right now.';
@@ -8981,6 +8991,17 @@ function getMissionFollowUp(route,ctx,question){
 function getMissionPersonalityFallback(ctx,question){
   var q=String(question||'').trim();
   var intent=getMissionCommandIntent(q);
+  var isSerious=/\b(struggling|stuck|frustrated|nothing works|not working|burned out|burnt out|overwhelmed|don't know|do not know|can't|cannot|giving up|lost|confused|scared|worried|behind|failing|failed|broke|broken|help me|i need help|i'm lost|im lost)\b/i.test(q);
+  if(isSerious){
+    var empathyLine=pickMissionLibraryLine('empathy',{nextBestMove:ctx&&ctx.nowText||'the next move',topLead:ctx&&ctx.leadText||'',sessionTopic:'this'})||'Bad days are part of it. The difference is you still show up.';
+    var suggested=getMissionCommandIntent(q);
+    var links=(suggested.suggestions&&suggested.suggestions.length?suggested.suggestions:[{id:'now',label:'Now'},{id:'leads',label:'Leads'},{id:'report',label:'Report'},{id:'help',label:'Help'}]).slice(0,4).map(function(item){
+      var cfg=getMissionIntentConfig(item.id)||{};
+      var first=(cfg.links&&cfg.links[0])||{label:item.label,url:'#'};
+      return Object.assign({label:item.label},first);
+    });
+    return '<strong>Mission Command:</strong> '+escapeHtml(empathyLine)+'<br><br><span style="color:#8f9aa3">What is the actual thing that feels stuck — pipeline, money, content, production, or schedule? Give me one lane and I will help you clear it.</span>'+missionLinksHtml(links);
+  }
   var options=[
     'I read that three times and the OS made the same face producers make when the artist says "just make it sound expensive." Give me a cleaner target and I can actually cook.',
     'That one landed somewhere between a strategy note and a microwave manual. Try pointing me at calendar, leads, content, production, money, sync, or memory.',
