@@ -27,6 +27,7 @@ var SHEET_BACKUP       = 'State Backups';
 var SHEET_DAILY        = 'Daily Log';
 var SHEET_PROSPECTS    = 'Captured Leads';
 var SHEET_RESET_AUDIT  = 'Reset Audit';      // ← NEW in 1.7
+var SHEET_MISSION_CHAT = 'Mission Command Chat Log';
 
 var NOTION_CONTENT_DB    = '1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18: was incorrectly set to the data source ID (...8188...). Notion /v1/databases/{id}/query expects the DATABASE ID (URL slug). Parent database "Master Beat Catalog" lives at notion.so/1a76115281da8199a5dffc423d447f31. */
@@ -130,6 +131,12 @@ function doPost(e) {
       var notionDaily = syncDailyDpcToNotion(row, data);
       logActivity('Daily save — ' + data.date + ' (' + (data.mode || 'replace') + ') — Money: $' + (data.money || 0));
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: row, notionDaily: notionDaily }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (data.type === 'mission_chat_log') {
+      var chatRow = saveMissionChatLog(data);
+      logActivity('Mission Command chat log — ' + (data.date || '') + ' — ' + String(data.question || data.kind || 'prompt').slice(0, 80));
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: chatRow }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'prospect_save') {
@@ -678,6 +685,39 @@ function saveWeekly(d) {
     sessions: d.sessions || 0,
     bigWin: d.noteWin || '',
     biggestLesson: d.noteLesson || ''
+  };
+}
+
+function saveMissionChatLog(d) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var headers = [
+    'Timestamp','Date','Cycle','Active Tool','Kind','Question','Answer',
+    'Sources','Packet Summary','Mode','Turn ID'
+  ];
+  var sheet = getOrCreateSheet(ss, SHEET_MISSION_CHAT, headers);
+  var cycle = d.cycle || {};
+  var cycleLabel = cycle.num ? ('Cycle ' + cycle.num + ' — ' + (cycle.name || '')) : (cycle.name || '');
+  var row = [
+    d.ts || new Date().toISOString(),
+    d.date || '',
+    cycleLabel,
+    d.activeTool || '',
+    d.kind || '',
+    d.question || '',
+    d.answer || '',
+    Array.isArray(d.sources) ? d.sources.join(', ') : (d.sources || ''),
+    d.packetSummary || '',
+    d.mode || 'local',
+    d.id || ''
+  ];
+  sheet.appendRow(row);
+  formatSheet(sheet);
+  return {
+    timestamp: row[0],
+    date: row[1],
+    cycle: row[2],
+    question: row[5],
+    sources: row[7]
   };
 }
 

@@ -637,8 +637,15 @@ input:focus{border-color:#333}
 .mission-command-label{font-size:9px;color:#7ec845;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
 .mission-command-state{font-size:9px;color:#7b858d;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
 .mission-command-state.thinking{color:#d4a017}
-.mission-command-thread{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:14px 15px;color:#d7dde3;font-size:13px;line-height:1.6;margin-bottom:8px;min-height:156px}
+.mission-command-thread{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:14px 15px;color:#d7dde3;font-size:13px;line-height:1.6;margin-bottom:8px;min-height:156px;max-height:260px;overflow-y:auto}
 .mission-command-thread strong{color:#f0f3f5}
+.mission-bubble-row{display:flex;margin-bottom:9px}
+.mission-bubble-row.user{justify-content:flex-end}
+.mission-bubble-row.assistant{justify-content:flex-start}
+.mission-bubble{max-width:88%;border:0.5px solid #263039;border-radius:12px;padding:9px 11px;color:#d7dde3;background:#101418;line-height:1.55}
+.mission-bubble-row.user .mission-bubble{background:#0d1808;border-color:#2a4015;color:#dcefd2}
+.mission-bubble-row.assistant .mission-bubble{background:#0b0d0f;border-color:#2a3036}
+.mission-bubble-meta{font-size:8px;color:#6f7a82;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:4px}
 .mission-thinking{display:flex;align-items:center;gap:8px;color:#d7dde3;font-weight:800;margin-bottom:9px}
 .mission-thinking-dot{width:7px;height:7px;border-radius:50%;background:#d4a017;box-shadow:0 0 12px rgba(212,160,23,.4);animation:missionPulse 1s ease-in-out infinite}
 .mission-thinking-copy{color:#8f9aa3;font-size:12px;line-height:1.55}
@@ -2837,6 +2844,7 @@ var DPC_WEEKLY_LOG_KEY='a1xx_dpc_weekly_daily_logs_v1';
 var DPC_CALL_RESCHEDULE_KEY='a1xx_dpc_call_reschedules_v1';
 var STREAK_KEY='a1xx_streak';
 var MISSION_KEY='a1xx_mission_brief_v1';
+var MISSION_CHAT_HISTORY_KEY='a1xx_mission_command_history_v1';
 
 var CYCLES=[
   {num:1,name:'Foundation',start:'2026-05-04',end:'2026-06-28',target:1500},
@@ -7498,6 +7506,88 @@ function renderMissionSources(sources){
   return '<div class="mission-source-row">'+(sources||['App State']).map(function(s){return '<span class="mission-source-chip">'+escapeHtml(s)+'</span>';}).join('')+'</div>';
 }
 
+function missionBubble(role,body,allowHtml){
+  var who=role==='user'?'A1XX':'Mission Command';
+  var text=allowHtml?body:escapeHtml(String(body||''));
+  return '<div class="mission-bubble-row '+(role==='user'?'user':'assistant')+'"><div class="mission-bubble"><div class="mission-bubble-meta">'+who+'</div>'+text+'</div></div>';
+}
+
+function renderMissionThread(currentQuestion,currentAnswer,sources){
+  var hist=getMissionChatHistory().slice(-4);
+  var html=hist.map(function(turn){
+    var q=turn.question||'';
+    var a=turn.answer||'';
+    return (q?missionBubble('user',q,false):'')+missionBubble('assistant',a,false);
+  }).join('');
+  if(currentQuestion)html+=missionBubble('user',currentQuestion,false);
+  if(currentAnswer)html+=missionBubble('assistant',currentAnswer,true);
+  return html+renderMissionSources(sources);
+}
+
+function getMissionChatHistory(){
+  var items=getStore(MISSION_CHAT_HISTORY_KEY);
+  return Array.isArray(items)?items:[];
+}
+
+function getMissionChatMemorySummary(){
+  var hist=getMissionChatHistory().slice(-5);
+  if(!hist.length)return 'No previous Mission Command questions saved yet.';
+  return hist.map(function(turn,i){
+    return (i+1)+'. '+(turn.question||turn.kind||'prompt')+' -> '+String(turn.answer||'').replace(/\s+/g,' ').slice(0,140);
+  }).join('\n');
+}
+
+function summarizeMissionPacket(packet){
+  if(!packet)return '';
+  return [
+    'Cycle '+((packet.cycle||{}).num||'?')+' '+((packet.cycle||{}).name||''),
+    'Tool: '+((packet.mission||{}).tool||''),
+    'Gap: '+((packet.cycle||{}).gap||0),
+    'DPC: '+JSON.stringify(packet.dpc||{}),
+    'Counts: '+JSON.stringify(packet.counts||{}),
+    'Previous turns: '+getMissionChatHistory().length
+  ].join(' | ');
+}
+
+function saveMissionChatTurn(turn){
+  var hist=getMissionChatHistory();
+  hist.push(turn);
+  if(hist.length>50)hist=hist.slice(hist.length-50);
+  setStore(MISSION_CHAT_HISTORY_KEY,hist);
+  return hist;
+}
+
+function postMissionChatLog(turn){
+  var url=localStorage.getItem(SHEETS_KEY);
+  if(!url||!turn)return;
+  try{
+    fetch(url,{
+      method:'POST',
+      body:JSON.stringify(Object.assign({type:'mission_chat_log'},turn)),
+      mode:'no-cors',
+      redirect:'follow'
+    });
+  }catch(e){console.warn('Mission chat log skipped',e);}
+}
+
+function rememberMissionCommandTurn(kind,question,answer,packet){
+  var turn={
+    id:'mc_'+Date.now(),
+    ts:new Date().toISOString(),
+    date:dateKey(new Date()),
+    kind:kind||'now',
+    question:question||'',
+    answer:String(answer||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(),
+    sources:(packet&&packet.sources)||[],
+    cycle:(packet&&packet.cycle)||{},
+    activeTool:(packet&&packet.mission&&packet.mission.tool)||'',
+    packetSummary:summarizeMissionPacket(packet),
+    mode:'local'
+  };
+  saveMissionChatTurn(turn);
+  postMissionChatLog(turn);
+}
+
 function setMissionCommandLoading(question){
   var thread=document.getElementById('mission-command-thread');
   var state=document.querySelector('.mission-command-state');
@@ -7523,9 +7613,14 @@ function renderMissionCommand(kind,question){
   if(!thread)return;
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var packet=getMissionDataPacket(question||'');
+  packet.chatMemory=getMissionChatHistory().slice(-10);
+  packet.chatMemorySummary=getMissionChatMemorySummary();
   window.__missionDataPacket=packet;
-  thread.innerHTML=getMissionCommandResponse(kind||'now',ctx,question||'')+renderMissionSources(packet.sources);
+  var answer=getMissionCommandResponse(kind||'now',ctx,question||'');
+  thread.innerHTML=renderMissionThread(question||'',answer,packet.sources);
+  thread.scrollTop=thread.scrollHeight;
   clearMissionCommandLoading(packet.sources);
+  if(kind==='ask'||question)rememberMissionCommandTurn(kind||'ask',question||'',answer,packet);
 }
 
 function runMissionPrompt(kind){
