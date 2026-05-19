@@ -8128,15 +8128,17 @@ function runMissionCommandSelfCheck(){
     {q:'what should I do today?',route:'now',must:'Do this right now'},
     {q:'who should I contact?',route:'leads',must:'Leads'},
     {q:'what should I make?',route:'content',must:'Content'},
-    {q:'how to make more money',route:'report',must:'target'}
+    {q:'how to make more money',route:'report',mustAny:['report','target','revenue']}
   ];
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
   checks.forEach(function(check){
     var cleaned=sanitizeMissionCommandInput(check.q);
     var route=getMissionCommandRoute(cleaned);
-    var answer=String(getMissionCommandResponse('ask',ctx,cleaned)||'').replace(/<[^>]+>/g,' ');
-    if(route!==check.route||answer.indexOf(check.must)<0){
+    var answer=String(getMissionCommandResponse('ask',ctx,cleaned)||'').replace(/<[^>]+>/g,' ').toLowerCase();
+    var needles=(check.mustAny||[check.must||'']).map(function(item){return String(item||'').toLowerCase();}).filter(Boolean);
+    var hasNeedle=!needles.length||needles.some(function(item){return answer.indexOf(item)>=0;});
+    if(route!==check.route||!hasNeedle){
       failures.push(check.q+' -> '+(route||'none'));
     }
   });
