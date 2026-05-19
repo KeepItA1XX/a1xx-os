@@ -7485,30 +7485,90 @@ function getMissionCommandContext(contentPieces,calEvents){
   return {cycle:cy,tool:tool,dayType:dayType,rhythm:rhythm,rev:rev,wk:wk,gap:gap,openTasks:openTasks,nextEvent:nextEvent,nowText:nowText,leadText:leadText,contentCount:contentCount};
 }
 
-function getMissionCommandRoute(question){
+var MISSION_COMMAND_INTENTS=[
+  {id:'now',label:'Now',slash:['now','next','move','focus'],tags:['now','next','focus'],phrases:['what should i do','what do i do','right now','next move','focus on','where do i start','start now','do next','priority','most important'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Content',url:'#content-tracker-card'},{label:'Open Production',url:'#production-card'}]},
+  {id:'time',label:'Time',slash:['time','clock','now'],tags:['time'],phrases:['what time','current time','time is it','clock','how late'],links:[]},
+  {id:'day',label:'Day',slash:['day','date','today'],tags:['day','date','today'],phrases:['what day','what date','today date','day is it','date is it'],links:[]},
+  {id:'calendar',label:'Calendar',slash:['calendar','events','meetings','schedule'],tags:['calendar','meeting','meetings','schedule'],phrases:['calendar','meeting','class','call today','scheduled','schedule','agenda','appointment','next event','what is coming up','what do i have'],links:[{label:'Open Manager',url:'#manager-split-wrapper'},{label:'Add Event',url:'https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5'}]},
+  {id:'report',label:'Report',slash:['report','money','revenue','target','gap'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','weekly number','how much','collected','income'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
+  {id:'dpc',label:'DPC',slash:['dpc','campaign','daily'],tags:['dpc','campaign','daily'],phrases:['dpc','daily profit','daily campaign','dm count','dms','cold calls','calls made','booked calls','closes','daily log','today numbers'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
+  {id:'cycle',label:'Cycle',slash:['cycle','roadmap','season'],tags:['cycle','roadmap'],phrases:['cycle','roadmap','days left','deadline','current cycle','ceo roadmap','archive cycle','cycle target'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
+  {id:'leads',label:'Leads',slash:['leads','lead','followup','followups','crm'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
+  {id:'content',label:'Content',slash:['content','post','make','create'],tags:['content','post','create'],phrases:['content','make','post','create','caption','reel','story','short','asset','what should i make','content calendar','idea','hook'],links:[{label:'Open Content',url:'#content-tracker-card'},{label:'Open Calendar',url:null}]},
+  {id:'production',label:'Production',slash:['production','beat','beats','catalog'],tags:['production','beat','beats'],phrases:['production','beat','beats','catalog','daw','music','master beat','upload','soundee','bangin','mix','track'],links:[{label:'Open Production',url:'#production-card'},{label:'Open Catalog',url:null}]},
+  {id:'sync',label:'Sync',slash:['sync','health','system','settings'],tags:['sync','health','system'],phrases:['sync','health','system','broken','error','loading','not working','settings','connection','backup','diagnostic','version','logs','activity log'],links:[{label:'Open System Hub',url:'#system-panel',action:'system'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
+  {id:'memory',label:'Memory',slash:['memory','history','remember','chat'],tags:['memory','history'],phrases:['remember','memory','history','asked','previous question','chat log','conversation','what did i ask'],links:[{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]},
+  {id:'help',label:'Help',slash:['help','commands','command','cheatsheet'],tags:['help','commands'],phrases:['help','commands','cheat sheet','how do i ask','what can you do','show commands','slash commands'],links:[{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]}
+];
+
+function getMissionIntentConfig(id){
+  for(var i=0;i<MISSION_COMMAND_INTENTS.length;i++){
+    if(MISSION_COMMAND_INTENTS[i].id===id)return MISSION_COMMAND_INTENTS[i];
+  }
+  return null;
+}
+
+function getMissionIntentLinks(id){
+  var cfg=getMissionIntentConfig(id);
+  var links=(cfg&&cfg.links||[]).map(function(link){
+    var copy=Object.assign({},link);
+    if(copy.label==='Open CRM'&&!copy.url)copy.url=NOTION_CRM_URL;
+    if(copy.label==='Open Calendar'&&!copy.url)copy.url=NOTION_CONTENT_URL;
+    if(copy.label==='Open Catalog'&&!copy.url)copy.url=NOTION_PRODUCTION_URL;
+    return copy;
+  });
+  return missionLinksHtml(links);
+}
+
+function getMissionCommandIntent(question){
   var raw=String(question||'').trim();
-  var q=raw.toLowerCase();
+  var q=raw.toLowerCase().replace(/[^\w#\/\s-]/g,' ');
   var slash=(q.match(/^\/([a-z]+)/)||[])[1]||'';
   var tags=(q.match(/#[a-z]+/g)||[]).map(function(t){return t.slice(1);});
-  var tagMap={calendar:'calendar',leads:'leads',lead:'leads',content:'content',production:'production',money:'report',report:'report',sync:'sync',health:'sync',memory:'memory',dpc:'dpc',cycle:'cycle'};
-  if(slash)return slash;
-  for(var i=0;i<tags.length;i++){if(tagMap[tags[i]])return tagMap[tags[i]];}
-  if(q.indexOf('time')>=0)return 'time';
-  if(q.indexOf('day')>=0||q.indexOf('date')>=0)return 'day';
-  if(q.indexOf('calendar')>=0||q.indexOf('meeting')>=0||q.indexOf('class')>=0)return 'calendar';
-  if(q.indexOf('report')>=0||q.indexOf('revenue')>=0||q.indexOf('money')>=0||q.indexOf('target')>=0||q.indexOf('gap')>=0)return 'report';
-  if(q.indexOf('dpc')>=0||q.indexOf('dm')>=0||q.indexOf('calls made')>=0)return 'dpc';
-  if(q.indexOf('cycle')>=0)return 'cycle';
-  if(q.indexOf('lead')>=0||q.indexOf('follow')>=0||q.indexOf('who')>=0)return 'leads';
-  if(q.indexOf('content')>=0||q.indexOf('make')>=0||q.indexOf('post')>=0||q.indexOf('create')>=0)return 'content';
-  if(q.indexOf('production')>=0||q.indexOf('beat')>=0)return 'production';
-  if(q.indexOf('sync')>=0||q.indexOf('health')>=0||q.indexOf('broken')>=0||q.indexOf('error')>=0)return 'sync';
-  if(q.indexOf('remember')>=0||q.indexOf('history')>=0||q.indexOf('asked')>=0)return 'memory';
-  return '';
+  var words=q.split(/\s+/).filter(Boolean);
+  var best={route:'',score:0,label:'',suggestions:[]};
+  MISSION_COMMAND_INTENTS.forEach(function(intent){
+    var score=0;
+    if(slash&&intent.slash.indexOf(slash)>=0)score+=10;
+    if(slash&&intent.id===slash)score+=10;
+    tags.forEach(function(tag){if(intent.tags.indexOf(tag)>=0||intent.slash.indexOf(tag)>=0)score+=7;});
+    (intent.phrases||[]).forEach(function(phrase){
+      if(!phrase)return;
+      if(q.indexOf(phrase)>=0)score+=(phrase.indexOf(' ')>=0?4:2);
+    });
+    words.forEach(function(word){
+      if(word.length<3)return;
+      if(intent.slash.indexOf(word)>=0||intent.tags.indexOf(word)>=0)score+=2;
+    });
+    if(score>best.score)best={route:intent.id,score:score,label:intent.label,suggestions:[]};
+  });
+  var ranked=MISSION_COMMAND_INTENTS.map(function(intent){
+    var score=0;
+    (intent.phrases||[]).forEach(function(phrase){if(q.indexOf(phrase)>=0)score+=2;});
+    words.forEach(function(word){
+      if(word.length<3)return;
+      if(intent.id.indexOf(word)===0||intent.label.toLowerCase().indexOf(word)===0)score+=2;
+      if(intent.slash.indexOf(word)>=0||intent.tags.indexOf(word)>=0)score+=2;
+    });
+    return {id:intent.id,label:intent.label,score:score};
+  }).filter(function(item){return item.score>0&&item.id!==best.route;}).sort(function(a,b){return b.score-a.score;}).slice(0,3);
+  best.suggestions=ranked;
+  if(best.score<2)best.route='';
+  return best;
+}
+
+function getMissionCommandRoute(question){
+  return getMissionCommandIntent(question).route;
 }
 
 function getMissionCommandHelp(){
-  return '<strong>Commands I understand:</strong><br>/time · /day · /calendar · /report · /dpc · /cycle · /leads · /content · /production · /sync · /memory<br><br><span style="color:#8f9aa3">You can also use hints like #calendar, #leads, #content, #money, #sync, or #memory inside a normal question.</span>';
+  return '<strong>Commands I understand:</strong><br>/now · /time · /day · /calendar · /report · /dpc · /cycle · /leads · /content · /production · /sync · /memory<br><br><span style="color:#8f9aa3">You can also ask naturally: "what should I do next", "what meetings are next", "who should I follow up with", "what should I make", "how much is left", or "is anything broken".</span>';
+}
+
+function getMissionNowAnswer(ctx){
+  var eventLine=ctx.nextEvent?' Your next calendar item starts at '+ctx.nextEvent.startTime+'.':' No urgent calendar item is loaded in the brief.';
+  var gapLine=ctx.gap>0?'You still have '+fmt(ctx.gap)+' left against this week’s target.':'Weekly target pressure is protected right now.';
+  return '<strong>Do this right now:</strong><br>'+escapeHtml(ctx.nowText)+'<br><br><span style="color:#8f9aa3">'+gapLine+eventLine+'</span>';
 }
 
 function getMissionCalendarAnswer(ctx){
@@ -7628,40 +7688,19 @@ function missionReadableHtml(html){
 
 function getMissionCommandRouteAnswer(route,ctx,question){
   var now=new Date();
-  if(route==='help')return getMissionCommandHelp()+missionLinksHtml([
-    {label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}
-  ]);
+  if(route==='now')return getMissionNowAnswer(ctx)+getMissionIntentLinks('now');
+  if(route==='help')return getMissionCommandHelp()+getMissionIntentLinks('help');
   if(route==='time')return '<strong>Time:</strong> '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   if(route==='day')return '<strong>Day:</strong> '+now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  if(route==='calendar')return getMissionCalendarAnswer(ctx)+missionLinksHtml([
-    {label:'Open Manager',url:'#manager-split-wrapper'},
-    {label:'Add Event',url:'https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5'}
-  ]);
-  if(route==='report')return getMissionReportAnswer(ctx)+missionLinksHtml([
-    {label:'Open Campaign',url:'#dpc-card'},
-    {label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}
-  ]);
-  if(route==='dpc')return getMissionDpcAnswer()+missionLinksHtml([
-    {label:'Open Campaign',url:'#dpc-card'}
-  ]);
-  if(route==='cycle')return getMissionCycleAnswer(ctx);
-  if(route==='leads')return getMissionLeadsAnswer(ctx)+missionLinksHtml([
-    {label:'Open Campaign',url:'#dpc-card'},
-    {label:'Open CRM',url:NOTION_CRM_URL}
-  ]);
-  if(route==='content')return getMissionContentAnswer(ctx)+missionLinksHtml([
-    {label:'Open Content',url:'#content-tracker-card'},
-    {label:'Open Calendar',url:NOTION_CONTENT_URL}
-  ]);
-  if(route==='production')return getMissionProductionAnswer()+missionLinksHtml([
-    {label:'Open Production',url:'#production-card'},
-    {label:'Open Catalog',url:NOTION_PRODUCTION_URL}
-  ]);
-  if(route==='sync')return getMissionSyncAnswer()+missionLinksHtml([
-    {label:'Open System Hub',url:'#system-panel',action:'system'},
-    {label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}
-  ]);
-  if(route==='memory')return getMissionMemoryAnswer();
+  if(route==='calendar')return getMissionCalendarAnswer(ctx)+getMissionIntentLinks('calendar');
+  if(route==='report')return getMissionReportAnswer(ctx)+getMissionIntentLinks('report');
+  if(route==='dpc')return getMissionDpcAnswer()+getMissionIntentLinks('dpc');
+  if(route==='cycle')return getMissionCycleAnswer(ctx)+getMissionIntentLinks('cycle');
+  if(route==='leads')return getMissionLeadsAnswer(ctx)+getMissionIntentLinks('leads');
+  if(route==='content')return getMissionContentAnswer(ctx)+getMissionIntentLinks('content');
+  if(route==='production')return getMissionProductionAnswer()+getMissionIntentLinks('production');
+  if(route==='sync')return getMissionSyncAnswer()+getMissionIntentLinks('sync');
+  if(route==='memory')return getMissionMemoryAnswer()+getMissionIntentLinks('memory');
   return '';
 }
 
@@ -7692,6 +7731,7 @@ function getMissionFollowUp(route,ctx,question){
   if(route==='sync')return '<strong>Next move:</strong> If anything looks off, open System Hub > Health and check the latest Activity Log line.';
   if(route==='memory')return '<strong>Next move:</strong> Ask a follow-up that builds on the last saved question, or use /help to pull a specific area.';
   if(route==='time'||route==='day')return '<strong>Next move:</strong> Use the time check to choose the next block. '+escapeHtml(move);
+  if(route==='now')return '<strong>Next move:</strong> Start the recommended block, then come back and log the result.';
   if(route==='help')return '<strong>Next move:</strong> Try one command now: /calendar, /dpc, /report, or /leads.';
   if(question)return '<strong>Next move:</strong> '+escapeHtml(move);
   return '';
@@ -7699,6 +7739,7 @@ function getMissionFollowUp(route,ctx,question){
 
 function getMissionPersonalityFallback(ctx,question){
   var q=String(question||'').trim();
+  var intent=getMissionCommandIntent(q);
   var options=[
     'I read that three times and the OS made the same face producers make when the artist says "just make it sound expensive." Give me a cleaner target and I can actually cook.',
     'That one landed somewhere between a strategy note and a microwave manual. Try pointing me at calendar, leads, content, production, money, sync, or memory.',
@@ -7713,23 +7754,23 @@ function getMissionPersonalityFallback(ctx,question){
   ];
   var idx=0;
   for(var i=0;i<q.length;i++)idx=(idx+q.charCodeAt(i))%options.length;
-  var tip='<strong>Try this instead:</strong> /calendar, /leads, /content, /production, /report, /dpc, /sync, or /memory.';
+  var suggested=intent.suggestions&&intent.suggestions.length?intent.suggestions.map(function(item){return '/'+item.id;}).join(' · '):'/now · /calendar · /leads · /content · /production · /report · /dpc · /sync · /memory';
+  var tip='<strong>Try this instead:</strong> '+escapeHtml(suggested)+'.';
   var context=(ctx&&ctx.nowText)?'<span style="color:#8f9aa3">Current mission signal: '+escapeHtml(ctx.nowText)+'</span>':'';
-  return '<strong>Mission Command:</strong> '+escapeHtml(options[idx])+'<br><br>'+tip+(context?'<br><br>'+context:'')+missionLinksHtml([
-    {label:'Calendar',url:'#manager-split-wrapper'},
-    {label:'Leads',url:'#dpc-card'},
-    {label:'Content',url:'#content-tracker-card'},
-    {label:'Production',url:'#production-card'},
-    {label:'Help',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}
-  ]);
+  var links=(intent.suggestions&&intent.suggestions.length?intent.suggestions:[{id:'now',label:'Now'},{id:'calendar',label:'Calendar'},{id:'leads',label:'Leads'},{id:'content',label:'Content'},{id:'help',label:'Help'}]).slice(0,5).map(function(item){
+    var cfg=getMissionIntentConfig(item.id)||{};
+    var first=(cfg.links&&cfg.links[0])||{label:item.label,url:'#'};
+    return Object.assign({label:item.label},first);
+  });
+  return '<strong>Mission Command:</strong> '+escapeHtml(options[idx])+'<br><br>'+tip+(context?'<br><br>'+context:'')+missionLinksHtml(links);
 }
 
 function getMissionCommandResponse(kind,ctx,question){
   var q=String(question||'').toLowerCase();
-  var route=getMissionCommandRoute(question||'');
+  var intent=getMissionCommandIntent(question||'');
+  var route=intent.route;
   var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
   if(routed)return routed;
-  var eventLine=ctx.nextEvent?' Your next calendar item starts at '+ctx.nextEvent.startTime+'.':' No urgent calendar item is loaded in the brief.';
   var gapLine=ctx.gap>0?'You still have '+fmt(ctx.gap)+' left against this week’s target.':'Weekly target pressure is protected right now.';
   if(q.indexOf('remember')>=0||q.indexOf('history')>=0||q.indexOf('asked')>=0)return '<strong>Memory:</strong> I can now keep recent Mission Command questions in this browser and send them to the Mission Command Chat Log once Apps Script is redeployed. I will use the recent turns as context for future answers.';
   if(q.indexOf('calendar')>=0||q.indexOf('meeting')>=0||q.indexOf('class')>=0||q.indexOf('call')>=0)return '<strong>Calendar read:</strong> '+(ctx.nextEvent?('Next up is '+escapeHtml(ctx.nextEvent.title||'an event')+' at '+escapeHtml(ctx.nextEvent.startTime||'the scheduled time')+'. Prep the one outcome you need before it starts.'):('I do not see a loaded upcoming event in the current packet. If Calendar is connected, refresh and I will read it again.'));
@@ -7740,13 +7781,14 @@ function getMissionCommandResponse(kind,ctx,question){
   if(kind==='lead')return '<strong>Lead focus:</strong> '+escapeHtml(ctx.leadText)+'. Open the Campaign card or Hit List and handle that next conversation.';
   if(kind==='content')return '<strong>Content angle:</strong> Use today’s proof, one result, or one lesson. '+(ctx.contentCount?ctx.contentCount+' content item'+(ctx.contentCount===1?' is':'s are')+' loaded for today.':'No loaded content item yet, so create one simple proof-of-work post.');
   if(question)return getMissionPersonalityFallback(ctx,question);
-  return '<strong>Do this right now:</strong><br>'+escapeHtml(ctx.nowText)+'<br><br><span style="color:#8f9aa3">'+gapLine+eventLine+'</span>';
+  return getMissionNowAnswer(ctx);
 }
 
 function getMissionDataPacket(question){
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var health=typeof getHealth==='function'?getHealth():{};
   var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var intent=getMissionCommandIntent(question||'');
   var sources=['App State'];
   if(window.__crmLeads&&window.__crmLeads.length)sources.push('Notion CRM');
   if(window.__contentPipelinePieces&&window.__contentPipelinePieces.length)sources.push('Notion Content');
@@ -7756,6 +7798,7 @@ function getMissionDataPacket(question){
   if(health.lastSync||health.services)sources.push('System Health');
   return {
     question:question||'',
+    intent:{route:intent.route||'',score:intent.score||0,label:intent.label||'',suggestions:intent.suggestions||[]},
     date:dateKey(new Date()),
     profile:{name:getAccountName(),role:'Executive Producer'},
     mission:{tool:ctx.tool,dayType:ctx.dayType,rhythm:(ctx.rhythm||{}).name,nowText:ctx.nowText},
