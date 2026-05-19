@@ -640,7 +640,7 @@ input:focus{border-color:#333}
 .mission-command-actions{display:flex;align-items:center;gap:6px;margin-left:auto}
 .mission-icon-btn{width:28px;height:28px;border-radius:8px;border:0.5px solid #263039;background:#080a0c;color:#8f9aa3;font-size:12px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .mission-icon-btn:hover{border-color:#3a5a2a;color:#d7dde3;background:#0d120f}
-.mission-command-thread{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:14px 15px;color:#d7dde3;font-size:13px;line-height:1.6;margin-bottom:8px;min-height:156px;max-height:260px;overflow-y:auto;scroll-behavior:smooth}
+.mission-command-thread{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:14px 15px;color:#d7dde3;font-size:13px;line-height:1.6;margin-bottom:8px;min-height:230px;max-height:390px;overflow-y:auto;scroll-behavior:smooth}
 .mission-command-thread strong{color:#f0f3f5}
 .mission-history-drawer{position:absolute;inset:0 auto 0 0;width:min(285px,88%);background:#07090b;border-right:0.5px solid #263039;box-shadow:18px 0 36px rgba(0,0,0,.34);z-index:6;padding:10px;transform:translateX(-104%);transition:transform .22s ease;display:flex;flex-direction:column;gap:10px}
 .mission-history-drawer.open{transform:translateX(0)}
@@ -661,10 +661,15 @@ input:focus{border-color:#333}
 .mission-chat-line{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
 .mission-chat-title{color:#f0f3f5;font-size:11px;font-weight:900;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mission-chat-time{color:#6f7a82;font-size:10px;font-weight:800;white-space:nowrap}
-.mission-chat-actions{display:flex;align-items:center;gap:4px;opacity:0;pointer-events:none;transition:opacity .16s}
-.mission-chat-item:hover .mission-chat-actions,.mission-chat-item.editing .mission-chat-actions{opacity:1;pointer-events:auto}
-.mission-chat-action{height:20px;min-width:20px;border:0.5px solid #263039;border-radius:6px;background:#080a0c;color:#7b858d;font-size:9px;font-weight:900;cursor:pointer;padding:0 5px}
-.mission-chat-action:hover{border-color:#3a5a2a;color:#d7dde3;background:#0d120f}
+.mission-chat-kebab-wrap{position:relative;display:flex;align-items:center;gap:5px}
+.mission-chat-kebab{width:20px;height:20px;border:0.5px solid #1d242b;border-radius:6px;background:#080a0c;color:#68737c;font-size:12px;font-weight:900;line-height:1;cursor:pointer;opacity:.45;transition:all .16s}
+.mission-chat-item:hover .mission-chat-kebab,.mission-chat-item.menu-open .mission-chat-kebab{opacity:1}
+.mission-chat-kebab:hover{border-color:#3a5a2a;color:#d7dde3;background:#0d120f}
+.mission-chat-menu{position:absolute;right:0;top:24px;width:155px;background:#07090b;border:0.5px solid #263039;border-radius:8px;box-shadow:0 14px 28px rgba(0,0,0,.42);padding:5px;z-index:8;display:none}
+.mission-chat-item.menu-open .mission-chat-menu{display:grid;gap:3px}
+.mission-chat-menu button,.mission-chat-menu select{width:100%;min-height:27px;border:0;background:transparent;color:#a6b0b8;text-align:left;border-radius:6px;font-size:10px;font-weight:800;padding:0 8px;cursor:pointer}
+.mission-chat-menu button:hover,.mission-chat-menu select:hover{background:#0d120f;color:#d7dde3}
+.mission-chat-menu select{border:0.5px solid #1d242b;background:#080a0c;color:#8f9aa3;outline:none}
 .mission-chat-rename{display:none;grid-template-columns:1fr auto auto;gap:5px;margin-top:6px}
 .mission-chat-item.editing .mission-chat-rename{display:grid}
 .mission-chat-rename input{height:27px;background:#080a0c;border:0.5px solid #2a3036;border-radius:7px;color:#f0f3f5;font-size:11px;padding:0 8px;outline:none}
@@ -8281,9 +8286,10 @@ function startMissionNewChat(){
 }
 
 function startMissionRename(id){
-  var item=document.querySelector('[data-mission-chat-id="'+id+'"]');
-  if(!item)return;
-  item.classList.add('editing');
+    var item=document.querySelector('[data-mission-chat-id="'+id+'"]');
+    if(!item)return;
+    item.classList.add('editing');
+    item.classList.remove('menu-open');
   var input=item.querySelector('.mission-chat-rename-input');
   if(input){input.focus();input.select();}
 }
@@ -8304,6 +8310,31 @@ function saveMissionRename(id){
   sessions[idx].title=title;
   sessions[idx].updatedAt=new Date().toISOString();
   saveMissionChatSessions(sessions);
+  renderMissionHistoryPanel();
+}
+
+function toggleMissionChatMenu(id){
+  var item=document.querySelector('[data-mission-chat-id="'+id+'"]');
+  if(!item)return;
+  var isOpen=item.classList.contains('menu-open');
+  document.querySelectorAll('.mission-chat-item.menu-open').forEach(function(el){el.classList.remove('menu-open');});
+  item.classList.toggle('menu-open',!isOpen);
+}
+
+function moveMissionSession(id,project){
+  if(!id||!project)return;
+  var projects=getMissionProjects();
+  if(projects.indexOf(project)<0){
+    projects.push(project);
+    saveMissionProjects(projects);
+  }
+  var sessions=getMissionChatSessions();
+  var idx=sessions.findIndex(function(s){return s.id===id;});
+  if(idx<0)return;
+  sessions[idx].project=project;
+  sessions[idx].updatedAt=new Date().toISOString();
+  saveMissionChatSessions(sessions);
+  if(localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)===id)localStorage.setItem(MISSION_CHAT_ACTIVE_PROJECT_KEY,project);
   renderMissionHistoryPanel();
 }
 
@@ -8345,7 +8376,8 @@ function renderMissionHistoryPanel(){
   list.innerHTML=sessions.map(function(session){
     var tags=(session.tags||[]).join(', ')||'none';
     var meta='Date: '+formatContentDate(session.updatedAt||session.createdAt)+'<br>Project: '+escapeHtml(session.project||'')+'<br>Tags: '+escapeHtml(tags)+'<br>Context: '+escapeHtml(session.contextWindow||'Hidden context window will appear here after the first answer.').slice(0,260);
-    return '<div class="mission-chat-item '+(session.id===activeId?'active':'')+'" data-mission-chat-id="'+session.id+'" onclick="setActiveMissionSession(\''+session.id+'\')"><div class="mission-chat-line"><div class="mission-chat-title" title="'+escapeHtml(session.title||'Mission Command')+'">'+escapeHtml(session.title||'Mission Command')+'</div><div style="display:flex;align-items:center;gap:5px"><div class="mission-chat-time">'+getMissionTimeSince(session.updatedAt||session.createdAt)+'</div><div class="mission-chat-actions" onclick="event.stopPropagation()"><button class="mission-chat-action" onclick="startMissionRename(\''+session.id+'\')" title="Rename">R</button><button class="mission-chat-action" onclick="archiveMissionSession(\''+session.id+'\')" title="Archive">A</button></div></div></div><div class="mission-chat-rename" onclick="event.stopPropagation()"><input class="mission-chat-rename-input" value="'+escapeHtml(session.title||'Mission Command')+'" onkeydown="if(event.key===\'Enter\')saveMissionRename(\''+session.id+'\'); if(event.key===\'Escape\')cancelMissionRename(\''+session.id+'\')"/><button class="save" onclick="saveMissionRename(\''+session.id+'\')">Save</button><button onclick="cancelMissionRename(\''+session.id+'\')">Cancel</button></div><details class="mission-chat-meta-toggle"><summary>Details</summary><div class="mission-chat-meta">'+meta+'</div></details></div>';
+    var projectOptions=projects.map(function(project){return '<option value="'+escapeHtml(project)+'" '+(project===(session.project||activeProject)?'selected':'')+'>'+escapeHtml(project)+'</option>';}).join('');
+    return '<div class="mission-chat-item '+(session.id===activeId?'active':'')+'" data-mission-chat-id="'+session.id+'" onclick="setActiveMissionSession(\''+session.id+'\')"><div class="mission-chat-line"><div class="mission-chat-title" title="'+escapeHtml(session.title||'Mission Command')+'">'+escapeHtml(session.title||'Mission Command')+'</div><div class="mission-chat-kebab-wrap" onclick="event.stopPropagation()"><div class="mission-chat-time">'+getMissionTimeSince(session.updatedAt||session.createdAt)+'</div><button class="mission-chat-kebab" onclick="toggleMissionChatMenu(\''+session.id+'\')" title="Chat options">...</button><div class="mission-chat-menu"><button onclick="startMissionRename(\''+session.id+'\')">Rename</button><button onclick="archiveMissionSession(\''+session.id+'\')">Archive</button><select onchange="moveMissionSession(\''+session.id+'\',this.value)" title="Move to project">'+projectOptions+'</select></div></div></div><div class="mission-chat-rename" onclick="event.stopPropagation()"><input class="mission-chat-rename-input" value="'+escapeHtml(session.title||'Mission Command')+'" onkeydown="if(event.key===\'Enter\')saveMissionRename(\''+session.id+'\'); if(event.key===\'Escape\')cancelMissionRename(\''+session.id+'\')"/><button class="save" onclick="saveMissionRename(\''+session.id+'\')">Save</button><button onclick="cancelMissionRename(\''+session.id+'\')">Cancel</button></div><details class="mission-chat-meta-toggle"><summary>Details</summary><div class="mission-chat-meta">'+meta+'</div></details></div>';
   }).join('');
 }
 
