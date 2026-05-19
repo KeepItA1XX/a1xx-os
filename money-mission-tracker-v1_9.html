@@ -2935,6 +2935,12 @@ var MISSION_CHAT_ACTIVE_SESSION_KEY='a1xx_mission_command_active_session_v1';
 var MISSION_CHAT_ACTIVE_PROJECT_KEY='a1xx_mission_command_active_project_v1';
 var MISSION_CHAT_SYNC_STAMP_KEY='a1xx_mission_command_sync_stamp_v1';
 var MISSION_COMMAND_AUDIT_KEY='a1xx_mission_command_safety_audit_v1';
+var MISSION_MEMORY_GOALS_KEY='a1xx_mc_goals_v1';
+var MISSION_MEMORY_WINS_KEY='a1xx_mc_wins_v1';
+var MISSION_MEMORY_STRUGGLES_KEY='a1xx_mc_struggles_v1';
+var MISSION_MEMORY_PREFS_KEY='a1xx_mc_prefs_v1';
+var MISSION_MEMORY_NOTES_KEY='a1xx_mc_notes_v1';
+var MISSION_MEMORY_ARCHIVE_KEY='a1xx_mc_archive_v1';
 var MISSION_COMMAND_INPUT_LIMIT=600;
 var MISSION_COMMAND_RATE_MS=900;
 
@@ -7640,7 +7646,7 @@ var MISSION_COMMAND_INTENTS=[
   {id:'day',label:'Day',slash:['day','date','today'],tags:['day','date','today'],phrases:['what day','what date','today date','day is it','date is it','what day is it','todays date'],links:[]},
   {id:'calendar',label:'Calendar',slash:['calendar','events','meetings','schedule'],tags:['calendar','meeting','meetings','schedule'],phrases:['calendar','meeting','class','call today','scheduled','schedule','agenda','appointment','next event','what is coming up','what do i have','next meeting','upcoming class','whats on calendar','any meetings','appointments','any classes','rap prenuer','academy','upcoming events','whats scheduled','what do i have today','any appointments','appointments today','scheduled today','today appointments','my schedule','what is today','classes today','next class','any calls today','scheduled calls','what is on','on the books'],links:[{label:'Open Manager',url:'#manager-split-wrapper'},{label:'Add Event',url:'https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5'}]},
   {id:'report',label:'Report',slash:['report','money','revenue','target','gap'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','paid','closed','paid session','closed paid','closed a paid session','sales win','profit win','weekly number','how much','collected','income','weekly numbers','money in','whats the gap','how am i doing','money pace','revenue pace','to target','closer to target','behind target','ahead of target','pacing','make more money','more money','how to make more money','make money','get paid','close more','sell more','book more calls','earnings','cash flow','am i on track','on track','how are we doing','weekly recap','total collected','weekly revenue','did i hit','hit my target','how am i tracking','tracking','where am i financially','am i behind','total money','money this week','revenue check','are we good','financial check','money check'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
-  {id:'dpc',label:'DPC',slash:['dpc','campaign','daily'],tags:['dpc','campaign','daily'],phrases:['dpc','daily profit','daily campaign','dm count','dms','cold calls','calls made','booked calls','closes','daily log','today numbers','daily numbers','today log','todays activity','what i did today','daily score','log today','dpc card','how many calls','how many dms','dms sent','calls made today','what did i log','my daily log','log update','daily activity','activity today','update my log','todays dpc','dpc update','log numbers','did i log','log review','dpc check','daily check'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
+  {id:'dpc',label:'DPC',slash:['dpc','campaign','daily'],tags:['dpc','campaign','daily'],phrases:['dpc','daily profit','daily campaign','dm count','dms','cold calls','calls made','booked calls','booked one','just booked','got a booking','closes','daily log','today numbers','daily numbers','today log','todays activity','what i did today','daily score','log today','dpc card','how many calls','how many dms','dms sent','calls made today','what did i log','my daily log','log update','daily activity','activity today','update my log','todays dpc','dpc update','log numbers','did i log','log review','dpc check','daily check'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'cycle',label:'Cycle',slash:['cycle','roadmap','season'],tags:['cycle','roadmap'],phrases:['cycle','roadmap','days left','deadline','current cycle','ceo roadmap','archive cycle','cycle target','cycle progress','cycle pace','days left in cycle','this cycle','foundation cycle','where are we in the cycle','cycle end','days remaining','when does cycle end','end of cycle','cycle deadline','cycle check','how many days remain','cycle score','cycle status','cycle pacing','cycle health','where in cycle','cycle update','on track for cycle','cycle goal','cycle close'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'leads',label:'Leads',slash:['leads','lead','followup','followups','crm'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm','my pipeline','who to talk to','prospects','prospect','outreach','reach out','contact list','warm list','who i should contact','contact today','who to reach','crm leads','focus on leads','focus on lead','follow up leads','follow up lead','follow up today','who needs follow up','atl leads','call ready','best prospect','top prospect','who should i contact first','who is warmest','most urgent lead','contact next'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
   {id:'content',label:'Content',slash:['content','post','make','create'],tags:['content','post','create'],phrases:['content','make','post','create','caption','reel','story','short','asset','what should i make','content calendar','idea','hook','content idea','what to post','next piece','content move','post idea','content for today','reel idea','short idea','what should i shoot','what should i film','what to film','what to record','social media','social','what to shoot','video idea','clip','reels','tiktok','ig reel','short form','what to make today','next piece of content','piece of content','content piece','instagram','ig post','next post','make today','create today','shoot today','film today','content plan','what to create','content stack'],links:[{label:'Open Content',url:'#content-tracker-card'},{label:'Open Calendar',url:null}]},
@@ -7742,27 +7748,43 @@ function getMissionQuestionShape(question){
   if(!q)return {type:'prompt',label:'Prompt',modifier:''};
   if(/^\/[a-z]+/.test(q))return {type:'command',label:'Command',modifier:'direct'};
   if(/\bwhy\b|\breason\b|\bmatter\b|\bimportant\b/.test(q))return {type:'why',label:'Why',modifier:'context'};
-  if(/\bhow\b|\bsteps\b|\bwalk me\b|\bshow me\b|\bprocess\b|\bmethod\b/.test(q))return {type:'how',label:'How',modifier:'steps'};
-  if(/\bwhen\b|\bwhat time\b|\bdeadline\b|\bdue\b|\bschedule\b|\btonight\b|\btomorrow\b/.test(q))return {type:'when',label:'When',modifier:'timing'};
   if(/\bwho\b|\bwhom\b|\bwhich person\b|\bwhich lead\b/.test(q))return {type:'who',label:'Who',modifier:'person'};
-  if(/\bwhere\b|\bwhich tab\b|\bwhich card\b|\bwhere do i\b/.test(q))return {type:'where',label:'Where',modifier:'place'};
-  if(/\bwhat\b|\bwhich\b/.test(q))return {type:'what',label:'What',modifier:'decision'};
-  return {type:'ask',label:'Ask',modifier:'general'};
+  if(/\bwhen\b|\bwhat time\b|\bdeadline\b|\bdue\b|\bschedule\b|\bhow soon\b|\bshould i do it now\b|\bis now\b|\btonight\b|\btomorrow\b/.test(q))return {type:'when',label:'When',modifier:'timing'};
+  if(/\bwhere\b|\bposition\b|\bprogress\b|\bhow far\b|\bwhere do i stand\b|\bwhere are we\b|\bwhere am i\b|\bwhere in\b/.test(q))return {type:'where',label:'Where',modifier:'position'};
+  if(/\bhow do i\b|\bhow to\b|\bsteps\b|\bwalk me\b|\bshow me\b|\bteach me\b|\bprocess\b|\bmethod\b/.test(q))return {type:'how',label:'How',modifier:'steps'};
+  if(/\bwhat\b|\bwhich\b|\blist\b|\bgive me\b|\bshow me\b|\btell me\b|\bhow many\b/.test(q))return {type:'what',label:'What',modifier:'decision'};
+  if(/\?$/.test(raw))return {type:'ask',label:'Ask',modifier:'open'};
+  return {type:'prompt',label:'Prompt',modifier:'statement'};
 }
 
 function getMissionResponseMode(question,route,ctx){
   var q=normalizeMissionQuestion(question||'');
-  if(!q)return {mode:'direct',label:'Direct',tone:'action'};
-  if(/\b(won|win|closed|paid|booked|got paid|made money|hit target|success|good news|done|finished)\b/.test(q))return {mode:'celebration',label:'Celebration',tone:'momentum'};
-  if(/\b(stuck|overwhelmed|tired|frustrated|confused|lost|hard|stress|stressed|burned out|burnt out|dont know|do not know)\b/.test(q))return {mode:'motivation',label:'Motivation',tone:'steady'};
+  if(!q)return {mode:'coach',label:'Coach',tone:'default'};
+  if(/\b(nothing is working|stuck|ugh|frustrated|this is hard|not working|struggling|dont get it|do not get it|why bother|whats the point|what is the point|keep trying and nothing moves)\b/.test(q))return {mode:'empathy',label:'Empathy',tone:'steady'};
+  if(/\b(won|win|closed|closed it|paid|booked|booked one|got paid|made money|hit target|success|good news|done|finished|lets go|lfg|it worked|got the close)\b/.test(q))return {mode:'celebration',label:'Celebration',tone:'momentum'};
+  if(/\b(slow|tired|drained|not feeling it|cant focus|cannot focus|dragging|losing steam|unmotivated|blah|just not there|overwhelmed|burned out|burnt out)\b/.test(q))return {mode:'motivation',label:'Motivation',tone:'steady'};
+  if(/\b(quick|fast|asap|right now|just tell me|short version|skip the context|bottom line)\b/.test(q))return {mode:'assertive',label:'Assertive',tone:'direct'};
   if(/\b(broken|error|not working|failed|issue|problem|diagnose|diagnostic|why isnt|why is not|fix|bug)\b/.test(q)||route==='sync')return {mode:'diagnostic',label:'Diagnostic',tone:'calm'};
   if(/\b(why|how|walk me|steps|explain|help me)\b/.test(q))return {mode:'coach',label:'Coach',tone:'guided'};
-  if(route==='report'||route==='leads'||route==='now')return {mode:'direct',label:'Direct',tone:'money-first'};
-  return {mode:'direct',label:'Direct',tone:'action'};
+  if(route==='report'||route==='leads'||route==='now')return {mode:'coach',label:'Coach',tone:'money-first'};
+  return {mode:'coach',label:'Coach',tone:'default'};
 }
 
 function getMissionCommandHelp(){
-  return '<strong>Commands I understand:</strong><br>/now · /time · /day · /calendar · /report · /dpc · /cycle · /leads · /content · /production · /sync · /memory<br><br><span style="color:#8f9aa3">You can also ask naturally: "what should I do next", "what meetings are next", "who should I follow up with", "what should I make", "how much is left", or "is anything broken".</span>';
+  return '<strong>MISSION COMMAND - available commands:</strong><br><br>'
+    +'/now - current block and next step<br>'
+    +'/leads - pipeline, heat, and who to contact<br>'
+    +'/dpc - daily profit campaign count and booking info<br>'
+    +'/report - revenue, pace, and money gap<br>'
+    +'/cycle - cycle position and target progress<br>'
+    +'/content - content queue and next asset<br>'
+    +'/production - beat/catalog pipeline<br>'
+    +'/calendar - upcoming schedule<br>'
+    +'/sync - system health and sync status<br>'
+    +'/profile - A1XX identity and mission context<br>'
+    +'/memory - recent chat memory<br>'
+    +'/help - this list<br><br>'
+    +'<span style="color:#8f9aa3">Power routes: #leads #dpc #cycle #content #production. Future write commands stay confirmation-gated.</span>';
 }
 
 /* 2026-05-19 (Claude deep pass): history continuity helper. Shows a brief note when A1XX
@@ -8048,7 +8070,7 @@ function getMissionMultiIntentAnswer(intent,ctx,question){
 }
 
 function getMissionQuestionShapeAddon(shape,route,ctx){
-  if(!shape||!route||shape.type==='command'||shape.type==='what'||shape.type==='ask')return '';
+  if(!shape||!route||shape.type==='command'||shape.type==='what')return '';
   var block=getMissionBlockIntel();
   var journey=getCurrentJourneyMove(ctx);
   var copy='';
@@ -8065,23 +8087,29 @@ function getMissionQuestionShapeAddon(shape,route,ctx){
   }else if(shape.type==='who'){
     copy=route==='leads'?'Who first: start with the hottest overdue follow-up, then the warmest call-ready lead.':'Who owns it: A1XX, Executive Producer. Keep the answer filtered through that role.';
   }else if(shape.type==='where'){
-    copy='Where to look: use the linked card first, then return to Mission Command after the result is logged.';
+    copy=route==='cycle'?'Position read: check the day count, revenue percent, and the next pressure point.':'Where to look: use the linked card first, then return to Mission Command after the result is logged.';
+  }else if(shape.type==='ask'){
+    copy='Want the quick read or the deeper breakdown?';
+  }else if(shape.type==='prompt'){
+    copy='One move: turn that into either a logged result or a cleaner question.';
   }
   if(journey&&shape.type==='how')copy+=' Current journey: Step '+(journey.index+1)+'/'+journey.total+' - '+journey.nextCheck+'.';
   return copy?'<br><br><span style="color:#526944">'+escapeHtml(copy)+'</span>':'';
 }
 
 function getMissionResponseModeAddon(mode,route,ctx){
-  if(!mode||!mode.mode||mode.mode==='direct')return '';
+  if(!mode||!mode.mode||mode.mode==='coach')return '';
   var copy='';
   if(mode.mode==='diagnostic'){
     copy='Diagnostic read: isolate one failure point first. Check the latest status, confirm the source, then change only one thing.';
+  }else if(mode.mode==='empathy'){
+    copy='Heard. This is a data problem, not a you problem. Find the pressure point, then move one thing.';
   }else if(mode.mode==='motivation'){
-    copy='Reset move: shrink the mission. One clean action counts. Pick the smallest revenue-facing step and finish that.';
+    copy='You do not need to be on fire. You just need to start. Pick the smallest revenue-facing step and finish that.';
   }else if(mode.mode==='celebration'){
     copy='Lock the win: log what worked, capture the lesson, then repeat the move before momentum cools off.';
-  }else if(mode.mode==='coach'){
-    copy='Coach read: the answer is useful only if it turns into a next action. Read it, pick one move, then execute.';
+  }else if(mode.mode==='assertive'){
+    copy='Bottom line: do the highest-leverage move now. Everything else waits.';
   }
   return copy?'<br><br><span style="color:#8f9aa3">'+escapeHtml(copy)+'</span>':'';
 }
@@ -8156,6 +8184,9 @@ function getMissionCommandResponse(kind,ctx,question){
   var intent=multi.primary;
   var route=intent.route;
   var responseMode=getMissionResponseMode(question||'',route,ctx);
+  if(!route&&responseMode.mode==='empathy'){
+    return '<strong>Mission Command:</strong> Heard. Let me narrow it down instead of dumping the whole dashboard.<br><br><span style="color:#8f9aa3">What feels stuck right now: leads, content, DPCs, production, or the schedule?</span>';
+  }
   var multiAnswer=getMissionMultiIntentAnswer(multi,ctx,question||'');
   if(multiAnswer)return multiAnswer.replace('<strong>Split read:</strong> I see two lanes in that ask.<br><br>','');
   var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
@@ -8190,14 +8221,25 @@ function runMissionCommandSelfCheck(){
   var checks=[
     {q:'/calendar',route:'calendar',must:'Calendar'},
     {q:'/sync',route:'sync',must:'Sync'},
+    {q:'/leads',route:'leads',must:'Leads',shape:'command'},
+    {q:'/now',route:'now',must:'Do this right now',shape:'command'},
+    {q:'/report',route:'report',must:'Report',shape:'command'},
+    {q:'/dpc',route:'dpc',must:'DPC',shape:'command'},
+    {q:'/help',route:'help',must:'Commands',shape:'command'},
     {q:'who is A1XX',route:'profile',must:'A1XX'},
     {q:'what should I do today?',route:'now',must:'Do this right now'},
     {q:'who should I contact?',route:'leads',must:'Leads'},
     {q:'what should I make?',route:'content',must:'Content'},
+    {q:'where am I in my steps?',route:'now',mustAny:['journey','step'],shape:'where'},
+    {q:'how far into the cycle am I?',route:'cycle',must:'cycle',shape:'where'},
+    {q:'when should I work on production?',route:'production',must:'when',shape:'when'},
     {q:'how to make more money',route:'report',mustAny:['report','target','revenue'],shape:'how'},
     {q:'why should I focus on leads?',route:'leads',must:'why it matters',shape:'why',mode:'coach'},
     {q:'sync is broken',route:'sync',must:'diagnostic read',mode:'diagnostic'},
-    {q:'I closed a paid session',route:'report',must:'lock the win',mode:'celebration'}
+    {q:'I closed a paid session',route:'report',must:'lock the win',mode:'celebration'},
+    {q:'I just booked one',route:'dpc',must:'lock the win',mode:'celebration'},
+    {q:'quick - what is my DPC count?',route:'dpc',mustAny:['dpc','bottom line'],mode:'assertive'},
+    {q:'nothing is working',route:'sync',must:'heard',mode:'empathy'}
   ];
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
@@ -8207,9 +8249,10 @@ function runMissionCommandSelfCheck(){
     var answer=String(getMissionCommandResponse('ask',ctx,cleaned)||'').replace(/<[^>]+>/g,' ').toLowerCase();
     var shape=getMissionQuestionShape(cleaned);
     var mode=getMissionResponseMode(cleaned,route,ctx);
+    var routeOk=Array.isArray(check.route)?check.route.indexOf(route)>=0:(check.route===null?!route:route===check.route);
     var needles=(check.mustAny||[check.must||'']).map(function(item){return String(item||'').toLowerCase();}).filter(Boolean);
     var hasNeedle=!needles.length||needles.some(function(item){return answer.indexOf(item)>=0;});
-    if(route!==check.route||!hasNeedle||(check.shape&&shape.type!==check.shape)||(check.mode&&mode.mode!==check.mode)){
+    if(!routeOk||!hasNeedle||(check.shape&&shape.type!==check.shape)||(check.mode&&mode.mode!==check.mode)){
       failures.push(check.q+' -> '+(route||'none'));
     }
   });
@@ -8258,6 +8301,7 @@ function getMissionDataPacket(question){
     nextEvent:ctx.nextEvent?{title:ctx.nextEvent.title,startTime:ctx.nextEvent.startTime,start:ctx.nextEvent.start}:null,
     urgentLead:ctx.leadText,
     health:{lastSync:health.lastSync||null,services:health.services||{}},
+    longMemorySummary:getMissionLongMemorySummary(),
     sources:sources,
     /* 2026-05-19 (Claude deep pass): confidence field is an internal signal — not rendered
        in the UI. Used by a future LLM endpoint to decide answer-directly vs clarify. */
@@ -8569,6 +8613,7 @@ function getMissionContextWindow(packet,question){
     'Identity: '+(((packet.profile||{}).identity)||'A1XX')+' / '+(((packet.profile||{}).role)||'Executive Producer'),
     'Mission: '+((((packet.profile||{}).mission)||{}).name||'Money Mission')+' target '+((((packet.profile||{}).mission)||{}).target||''),
     summarizeMissionPacket(packet),
+    'Long memory: '+getMissionLongMemorySummary(),
     'Memory: '+(packet.chatMemorySummary||getMissionChatMemorySummary())
   ].filter(Boolean).join('\n');
 }
@@ -8734,6 +8779,70 @@ function getMissionChatMemorySummary(){
   }).join('\n');
 }
 
+function getMissionLongMemorySummary(){
+  var goals=(getStore(MISSION_MEMORY_GOALS_KEY)||[]).slice(-2);
+  var wins=(getStore(MISSION_MEMORY_WINS_KEY)||[]).slice(-2);
+  var struggles=(getStore(MISSION_MEMORY_STRUGGLES_KEY)||[]).slice(-2);
+  var prefs=(getStore(MISSION_MEMORY_PREFS_KEY)||[]).slice(-2);
+  var parts=[];
+  if(goals.length)parts.push('Goals: '+goals.map(function(g){return g.text;}).join(' | '));
+  if(wins.length)parts.push('Wins: '+wins.map(function(w){return w.text;}).join(' | '));
+  if(struggles.length)parts.push('Patterns: '+struggles.map(function(s){return s.text+' x'+(s.count||1);}).join(' | '));
+  if(prefs.length)parts.push('Prefs: '+prefs.map(function(p){return p.text;}).join(' | '));
+  return parts.join('\n')||'No long-term Mission Command memory yet.';
+}
+
+function missionMemorySafeText(text){
+  var raw=String(text||'').replace(/\s+/g,' ').trim();
+  if(!raw)return '';
+  if(/password|api[_ -]?key|token|secret|bearer\s+[a-z0-9]/i.test(raw))return '';
+  if(/\$[0-9,.]+/.test(raw)&&/[A-Z][a-z]+\s+[A-Z][a-z]+/.test(raw))return '';
+  return raw.slice(0,100);
+}
+
+function missionMemoryMetric(text){
+  var q=String(text||'').toLowerCase();
+  if(/dpc|call|booking/.test(q))return 'dpc';
+  if(/revenue|money|target|paid|close/.test(q))return 'revenue';
+  if(/lead|dm|follow/.test(q))return 'leads';
+  if(/content|post|reel|video/.test(q))return 'content';
+  return 'general';
+}
+
+function addMissionMemoryItem(key,item,limit){
+  var list=getStore(key)||[];
+  list.push(item);
+  setStore(key,list.slice(-(limit||40)));
+}
+
+function captureMissionLongMemory(turn,packet){
+  var q=missionMemorySafeText(turn&&turn.question);
+  if(!q||/^(ok|cool|got it|thanks|yep|sure)$/i.test(q)||/^\/[a-z]+$/i.test(q))return;
+  var now=new Date().toISOString();
+  var lower=q.toLowerCase();
+  if(/\b(my goal is|i want to hit|i need to reach|target is|i am going for|i'm going for)\b/.test(lower)){
+    addMissionMemoryItem(MISSION_MEMORY_GOALS_KEY,{ts:now,text:q,metric:missionMemoryMetric(q)},30);
+  }
+  if(/\b(i prefer|just give me|skip the|i want direct|dont explain|don't explain|short version always|short version)\b/.test(lower)){
+    addMissionMemoryItem(MISSION_MEMORY_PREFS_KEY,{ts:now,text:q,metric:'preference'},20);
+  }
+  var mode=packet&&packet.responseMode&&packet.responseMode.mode;
+  if(mode==='celebration'||/\b(won|win|closed|paid|booked|hit target|it worked)\b/.test(lower)){
+    addMissionMemoryItem(MISSION_MEMORY_WINS_KEY,{ts:now,text:q,metric:missionMemoryMetric(q)},60);
+  }
+  if(mode==='empathy'||mode==='motivation'||/\b(stuck|struggling|not working|frustrated|cant focus|cannot focus)\b/.test(lower)){
+    var route=(packet&&packet.intent&&packet.intent.route)||missionMemoryMetric(q);
+    var list=getStore(MISSION_MEMORY_STRUGGLES_KEY)||[];
+    var existing=list.filter(function(item){return item.route===route&&item.text===q;})[0];
+    if(existing){existing.count=(existing.count||1)+1;existing.lastSeen=now;}
+    else list.push({ts:now,lastSeen:now,text:q,route:route,count:1});
+    setStore(MISSION_MEMORY_STRUGGLES_KEY,list.slice(-40));
+  }
+  if(/\b(heads up|i have a call with|meeting tomorrow|trying something new|i am testing|i'm testing)\b/.test(lower)){
+    addMissionMemoryItem(MISSION_MEMORY_NOTES_KEY,{ts:now,text:q,expiresAt:new Date(Date.now()+48*3600000).toISOString()},30);
+  }
+}
+
 function summarizeMissionPacket(packet){
   if(!packet)return '';
   return [
@@ -8831,6 +8940,7 @@ function rememberMissionCommandTurn(kind,question,answer,packet){
     contextWindow:getMissionContextWindow(packet,question),
     mode:'local'
   };
+  captureMissionLongMemory(turn,packet);
   saveMissionChatTurn(turn);
   postMissionChatLog(turn);
 }
