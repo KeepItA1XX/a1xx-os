@@ -7639,7 +7639,7 @@ var MISSION_COMMAND_INTENTS=[
   {id:'time',label:'Time',slash:['time','clock'],tags:['time'],phrases:['what time','current time','time is it','clock','how late','what time is it','the time'],links:[]},
   {id:'day',label:'Day',slash:['day','date','today'],tags:['day','date','today'],phrases:['what day','what date','today date','day is it','date is it','what day is it','todays date'],links:[]},
   {id:'calendar',label:'Calendar',slash:['calendar','events','meetings','schedule'],tags:['calendar','meeting','meetings','schedule'],phrases:['calendar','meeting','class','call today','scheduled','schedule','agenda','appointment','next event','what is coming up','what do i have','next meeting','upcoming class','whats on calendar','any meetings','appointments','any classes','rap prenuer','academy','upcoming events','whats scheduled','what do i have today','any appointments','appointments today','scheduled today','today appointments','my schedule','what is today','classes today','next class','any calls today','scheduled calls','what is on','on the books'],links:[{label:'Open Manager',url:'#manager-split-wrapper'},{label:'Add Event',url:'https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5'}]},
-  {id:'report',label:'Report',slash:['report','money','revenue','target','gap'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','weekly number','how much','collected','income','weekly numbers','money in','whats the gap','how am i doing','money pace','revenue pace','to target','closer to target','behind target','ahead of target','pacing','make more money','more money','how to make more money','make money','get paid','close more','sell more','book more calls','earnings','cash flow','am i on track','on track','how are we doing','weekly recap','total collected','weekly revenue','did i hit','hit my target','how am i tracking','tracking','where am i financially','am i behind','total money','money this week','revenue check','are we good','financial check','money check'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
+  {id:'report',label:'Report',slash:['report','money','revenue','target','gap'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','paid','closed','paid session','closed paid','closed a paid session','sales win','profit win','weekly number','how much','collected','income','weekly numbers','money in','whats the gap','how am i doing','money pace','revenue pace','to target','closer to target','behind target','ahead of target','pacing','make more money','more money','how to make more money','make money','get paid','close more','sell more','book more calls','earnings','cash flow','am i on track','on track','how are we doing','weekly recap','total collected','weekly revenue','did i hit','hit my target','how am i tracking','tracking','where am i financially','am i behind','total money','money this week','revenue check','are we good','financial check','money check'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
   {id:'dpc',label:'DPC',slash:['dpc','campaign','daily'],tags:['dpc','campaign','daily'],phrases:['dpc','daily profit','daily campaign','dm count','dms','cold calls','calls made','booked calls','closes','daily log','today numbers','daily numbers','today log','todays activity','what i did today','daily score','log today','dpc card','how many calls','how many dms','dms sent','calls made today','what did i log','my daily log','log update','daily activity','activity today','update my log','todays dpc','dpc update','log numbers','did i log','log review','dpc check','daily check'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'cycle',label:'Cycle',slash:['cycle','roadmap','season'],tags:['cycle','roadmap'],phrases:['cycle','roadmap','days left','deadline','current cycle','ceo roadmap','archive cycle','cycle target','cycle progress','cycle pace','days left in cycle','this cycle','foundation cycle','where are we in the cycle','cycle end','days remaining','when does cycle end','end of cycle','cycle deadline','cycle check','how many days remain','cycle score','cycle status','cycle pacing','cycle health','where in cycle','cycle update','on track for cycle','cycle goal','cycle close'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'leads',label:'Leads',slash:['leads','lead','followup','followups','crm'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm','my pipeline','who to talk to','prospects','prospect','outreach','reach out','contact list','warm list','who i should contact','contact today','who to reach','crm leads','focus on leads','focus on lead','follow up leads','follow up lead','follow up today','who needs follow up','atl leads','call ready','best prospect','top prospect','who should i contact first','who is warmest','most urgent lead','contact next'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
@@ -7748,6 +7748,17 @@ function getMissionQuestionShape(question){
   if(/\bwhere\b|\bwhich tab\b|\bwhich card\b|\bwhere do i\b/.test(q))return {type:'where',label:'Where',modifier:'place'};
   if(/\bwhat\b|\bwhich\b/.test(q))return {type:'what',label:'What',modifier:'decision'};
   return {type:'ask',label:'Ask',modifier:'general'};
+}
+
+function getMissionResponseMode(question,route,ctx){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return {mode:'direct',label:'Direct',tone:'action'};
+  if(/\b(won|win|closed|paid|booked|got paid|made money|hit target|success|good news|done|finished)\b/.test(q))return {mode:'celebration',label:'Celebration',tone:'momentum'};
+  if(/\b(stuck|overwhelmed|tired|frustrated|confused|lost|hard|stress|stressed|burned out|burnt out|dont know|do not know)\b/.test(q))return {mode:'motivation',label:'Motivation',tone:'steady'};
+  if(/\b(broken|error|not working|failed|issue|problem|diagnose|diagnostic|why isnt|why is not|fix|bug)\b/.test(q)||route==='sync')return {mode:'diagnostic',label:'Diagnostic',tone:'calm'};
+  if(/\b(why|how|walk me|steps|explain|help me)\b/.test(q))return {mode:'coach',label:'Coach',tone:'guided'};
+  if(route==='report'||route==='leads'||route==='now')return {mode:'direct',label:'Direct',tone:'money-first'};
+  return {mode:'direct',label:'Direct',tone:'action'};
 }
 
 function getMissionCommandHelp(){
@@ -8060,6 +8071,21 @@ function getMissionQuestionShapeAddon(shape,route,ctx){
   return copy?'<br><br><span style="color:#526944">'+escapeHtml(copy)+'</span>':'';
 }
 
+function getMissionResponseModeAddon(mode,route,ctx){
+  if(!mode||!mode.mode||mode.mode==='direct')return '';
+  var copy='';
+  if(mode.mode==='diagnostic'){
+    copy='Diagnostic read: isolate one failure point first. Check the latest status, confirm the source, then change only one thing.';
+  }else if(mode.mode==='motivation'){
+    copy='Reset move: shrink the mission. One clean action counts. Pick the smallest revenue-facing step and finish that.';
+  }else if(mode.mode==='celebration'){
+    copy='Lock the win: log what worked, capture the lesson, then repeat the move before momentum cools off.';
+  }else if(mode.mode==='coach'){
+    copy='Coach read: the answer is useful only if it turns into a next action. Read it, pick one move, then execute.';
+  }
+  return copy?'<br><br><span style="color:#8f9aa3">'+escapeHtml(copy)+'</span>':'';
+}
+
 function getCurrentJourneyMove(ctx){
   var dayType=(ctx&&ctx.dayType)||getMissionDayType();
   var steps=MISSION_STEPS&&MISSION_STEPS[dayType];
@@ -8129,10 +8155,11 @@ function getMissionCommandResponse(kind,ctx,question){
   var multi=getMissionMultiIntent(question||'');
   var intent=multi.primary;
   var route=intent.route;
+  var responseMode=getMissionResponseMode(question||'',route,ctx);
   var multiAnswer=getMissionMultiIntentAnswer(multi,ctx,question||'');
   if(multiAnswer)return multiAnswer.replace('<strong>Split read:</strong> I see two lanes in that ask.<br><br>','');
   var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
-  if(routed)return routed+getMissionQuestionShapeAddon(shape,route,ctx);
+  if(routed)return routed+getMissionQuestionShapeAddon(shape,route,ctx)+getMissionResponseModeAddon(responseMode,route,ctx);
   /* 2026-05-19 (Claude deep pass): partial fallback for low-confidence signals (score >0
      but below the threshold). Gives a best-guess partial answer + asks for confirmation
      rather than going straight to personality fallback. */
@@ -8168,7 +8195,9 @@ function runMissionCommandSelfCheck(){
     {q:'who should I contact?',route:'leads',must:'Leads'},
     {q:'what should I make?',route:'content',must:'Content'},
     {q:'how to make more money',route:'report',mustAny:['report','target','revenue'],shape:'how'},
-    {q:'why should I focus on leads?',route:'leads',must:'why it matters',shape:'why'}
+    {q:'why should I focus on leads?',route:'leads',must:'why it matters',shape:'why',mode:'coach'},
+    {q:'sync is broken',route:'sync',must:'diagnostic read',mode:'diagnostic'},
+    {q:'I closed a paid session',route:'report',must:'lock the win',mode:'celebration'}
   ];
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
@@ -8177,9 +8206,10 @@ function runMissionCommandSelfCheck(){
     var route=getMissionCommandRoute(cleaned);
     var answer=String(getMissionCommandResponse('ask',ctx,cleaned)||'').replace(/<[^>]+>/g,' ').toLowerCase();
     var shape=getMissionQuestionShape(cleaned);
+    var mode=getMissionResponseMode(cleaned,route,ctx);
     var needles=(check.mustAny||[check.must||'']).map(function(item){return String(item||'').toLowerCase();}).filter(Boolean);
     var hasNeedle=!needles.length||needles.some(function(item){return answer.indexOf(item)>=0;});
-    if(route!==check.route||!hasNeedle||(check.shape&&shape.type!==check.shape)){
+    if(route!==check.route||!hasNeedle||(check.shape&&shape.type!==check.shape)||(check.mode&&mode.mode!==check.mode)){
       failures.push(check.q+' -> '+(route||'none'));
     }
   });
@@ -8202,6 +8232,7 @@ function getMissionDataPacket(question){
   var multi=getMissionMultiIntent(question||'');
   var intent=multi.primary;
   var questionShape=getMissionQuestionShape(question||'');
+  var responseMode=getMissionResponseMode(question||'',intent.route||'',ctx);
   var block=getMissionBlockIntel();
   var pace=getMissionPaceState(ctx);
   var sources=['App State'];
@@ -8215,6 +8246,7 @@ function getMissionDataPacket(question){
     question:question||'',
     intent:{route:intent.route||'',score:intent.score||0,label:intent.label||'',suggestions:intent.suggestions||[],secondary:multi.secondary||null,routes:multi.routes||[]},
     questionShape:questionShape,
+    responseMode:responseMode,
     date:dateKey(new Date()),
     /* 2026-05-19 (Claude): expanded profile bundle pulls full A1XX_PROFILE so every
        packet carries identity, mission, time blocks, work style, tools, and hard rules. */
@@ -8533,6 +8565,7 @@ function getMissionContextWindow(packet,question){
     'Instruction: Answer A1XX as Executive Producer. Keep it money-first, action-first, concise, and grounded in app data.',
     'Question: '+(question||''),
     'Question shape: '+((((packet.questionShape||{}).label)||'Ask')+' / '+(((packet.questionShape||{}).modifier)||'general')),
+    'Response mode: '+((((packet.responseMode||{}).label)||'Direct')+' / '+(((packet.responseMode||{}).tone)||'action')),
     'Identity: '+(((packet.profile||{}).identity)||'A1XX')+' / '+(((packet.profile||{}).role)||'Executive Producer'),
     'Mission: '+((((packet.profile||{}).mission)||{}).name||'Money Mission')+' target '+((((packet.profile||{}).mission)||{}).target||''),
     summarizeMissionPacket(packet),
