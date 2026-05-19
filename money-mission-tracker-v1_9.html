@@ -7648,7 +7648,7 @@ var MISSION_COMMAND_INTENTS=[
   {id:'report',label:'Report',slash:['report','money','revenue','target','gap'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','paid','closed','paid session','closed paid','closed a paid session','sales win','profit win','weekly number','how much','collected','income','weekly numbers','money in','whats the gap','how am i doing','money pace','revenue pace','to target','closer to target','behind target','ahead of target','pacing','make more money','more money','how to make more money','make money','get paid','close more','sell more','book more calls','earnings','cash flow','am i on track','on track','how are we doing','weekly recap','total collected','weekly revenue','did i hit','hit my target','how am i tracking','tracking','where am i financially','am i behind','total money','money this week','revenue check','are we good','financial check','money check'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
   {id:'dpc',label:'DPC',slash:['dpc','campaign','daily'],tags:['dpc','campaign','daily'],phrases:['dpc','daily profit','daily campaign','dm count','dms','cold calls','calls made','booked calls','booked one','just booked','got a booking','closes','daily log','today numbers','daily numbers','today log','todays activity','what i did today','daily score','log today','dpc card','how many calls','how many dms','dms sent','calls made today','what did i log','my daily log','log update','daily activity','activity today','update my log','todays dpc','dpc update','log numbers','did i log','log review','dpc check','daily check'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'cycle',label:'Cycle',slash:['cycle','roadmap','season'],tags:['cycle','roadmap'],phrases:['cycle','roadmap','days left','deadline','current cycle','ceo roadmap','archive cycle','cycle target','cycle progress','cycle pace','days left in cycle','this cycle','foundation cycle','where are we in the cycle','cycle end','days remaining','when does cycle end','end of cycle','cycle deadline','cycle check','how many days remain','cycle score','cycle status','cycle pacing','cycle health','where in cycle','cycle update','on track for cycle','cycle goal','cycle close'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
-  {id:'leads',label:'Leads',slash:['leads','lead','followup','followups','crm'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm','my pipeline','who to talk to','prospects','prospect','outreach','reach out','contact list','warm list','who i should contact','contact today','who to reach','crm leads','focus on leads','focus on lead','follow up leads','follow up lead','follow up today','who needs follow up','atl leads','call ready','best prospect','top prospect','who should i contact first','who is warmest','most urgent lead','contact next'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
+  {id:'leads',label:'Leads',slash:['leads','lead','pipeline','followup','followups','crm'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm','my pipeline','who to talk to','prospects','prospect','outreach','reach out','contact list','warm list','who i should contact','contact today','who to reach','crm leads','focus on leads','focus on lead','follow up leads','follow up lead','follow up today','who needs follow up','atl leads','call ready','best prospect','top prospect','who should i contact first','who is warmest','most urgent lead','contact next'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
   {id:'content',label:'Content',slash:['content','post','make','create'],tags:['content','post','create'],phrases:['content','make','post','create','caption','reel','story','short','asset','what should i make','content calendar','idea','hook','content idea','what to post','next piece','content move','post idea','content for today','reel idea','short idea','what should i shoot','what should i film','what to film','what to record','social media','social','what to shoot','video idea','clip','reels','tiktok','ig reel','short form','what to make today','next piece of content','piece of content','content piece','instagram','ig post','next post','make today','create today','shoot today','film today','content plan','what to create','content stack'],links:[{label:'Open Content',url:'#content-tracker-card'},{label:'Open Calendar',url:null}]},
   {id:'production',label:'Production',slash:['production','beat','beats','catalog'],tags:['production','beat','beats'],phrases:['production','beat','beats','catalog','daw','music','master beat','upload','soundee','bangin','mix','track','next beat','todays beat','production progress','studio time','beat to finish','beat queue','master beat catalog','studio session','session','bounce','export','finish beat','work on beat','fl studio','logic','protools','ableton','instrumental','sound','music production','music work','rap session','studio block','what beat','which beat','beat work','produce','producing','make a beat','new beat','beat progress','beat update','studio move','studio today'],links:[{label:'Open Production',url:'#production-card'},{label:'Open Catalog',url:null}]},
   {id:'sync',label:'Sync',slash:['sync','health','system','settings'],tags:['sync','health','system'],phrases:['sync','health','system','broken','error','loading','not working','settings','connection','backup','diagnostic','version','logs','activity log','is something wrong','whats broken','sync status','is it working','any errors','status check','health check','is anything off','nothing is working','error message','check the logs','check logs','any issues','troubleshoot','diagnose','something wrong','app broken','sync failed','not syncing','connections','what failed','system check','any problems','problems'],links:[{label:'Open System Hub',url:'#system-panel',action:'system'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
@@ -7679,6 +7679,7 @@ var CONV_COMMAND='command';
 var CONV_CLOSE='close';
 var CONV_NEW_TOPIC='new_topic';
 var CONV_UNCLEAR='unclear';
+var MISSION_VARIANTS_KEY='a1xx_mc_session_variants';
 
 function getMissionConversationType(question,ctx,intent){
   var q=normalizeMissionQuestion(question||'');
@@ -7697,6 +7698,115 @@ function getMissionConversationType(question,ctx,intent){
   if(intent&&intent.route)return {type:CONV_NEW_TOPIC,route:intent.route,activeRoute:active&&active.intentRoute||''};
   if(active&&active.intentRoute)return {type:CONV_FOLLOWUP,route:active.intentRoute,activeRoute:active.intentRoute};
   return {type:CONV_UNCLEAR,route:'',activeRoute:''};
+}
+
+function getMissionVariantStore(){
+  try{
+    var raw=sessionStorage.getItem(MISSION_VARIANTS_KEY);
+    return raw?JSON.parse(raw):{usedOpeners:{},usedClosers:{},lastShape:null,shapeCounts:{}};
+  }catch(e){return {usedOpeners:{},usedClosers:{},lastShape:null,shapeCounts:{}};}
+}
+
+function saveMissionVariantStore(store){
+  try{sessionStorage.setItem(MISSION_VARIANTS_KEY,JSON.stringify(store));}catch(e){}
+}
+
+function getMissionTimeOfDay(){
+  var h=new Date().getHours();
+  if(h>=5&&h<11)return 'morning';
+  if(h>=11&&h<15)return 'midday';
+  if(h>=15&&h<19)return 'afternoon';
+  return 'evening';
+}
+
+function getMissionDpcMomentum(ctx){
+  var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var money=d.money||ctx&&ctx.rev||0;
+  var dms=d.dms||0;
+  if(money>0||dms>=40)return 'ahead';
+  if(dms>0)return 'onTrack';
+  if(ctx&&ctx.gap>0)return 'behind';
+  return 'notStarted';
+}
+
+function getMissionVariantEnergy(route,convType,ctx,responseMode){
+  var tod=getMissionTimeOfDay();
+  var momentum=getMissionDpcMomentum(ctx||{});
+  if(tod==='morning'&&getMissionChatHistory().length<2)return 'MORNING';
+  if(tod==='evening')return 'EVENING';
+  if(responseMode&&responseMode.mode==='celebration'||momentum==='ahead')return 'HIGH';
+  if(responseMode&&responseMode.mode==='assertive'||momentum==='behind')return 'LOW';
+  return 'NEUTRAL';
+}
+
+function getMissionShapePair(route,convType){
+  if(convType===CONV_WHY)return ['MIRROR','PUNCH'];
+  if(convType===CONV_FOLLOWUP)return ['PUNCH','MIRROR'];
+  if(convType===CONV_WHAT_ELSE)return ['TRIPLET','QUESTION_FIRST'];
+  if(convType===CONV_DEEPER)return ['STORY_ARC','DIAGNOSTIC'];
+  if(convType===CONV_QUICK_READ)return ['PUNCH','PUNCH'];
+  if(route==='now')return ['CALL_TO_ACTION_FIRST','PUNCH'];
+  if(route==='report'||route==='cycle')return ['STORY_ARC','DIAGNOSTIC'];
+  if(route==='leads')return ['CONTRAST','TRIPLET'];
+  if(route==='dpc')return ['PUNCH','DIAGNOSTIC'];
+  if(route==='content'||route==='production')return ['TRIPLET','STORY_ARC'];
+  return ['PUNCH','MIRROR'];
+}
+
+function getMissionLengthTarget(convType,route){
+  if(convType===CONV_QUICK_READ||convType===CONV_CLOSE||convType===CONV_UNCLEAR)return 'MICRO';
+  if(convType===CONV_WHY||convType===CONV_FOLLOWUP||convType===CONV_WHAT_ELSE)return 'SHORT';
+  if(convType===CONV_DEEPER||route==='report'||route==='cycle')return 'LONG';
+  return 'MEDIUM';
+}
+
+function pickMissionVariantText(group,pool,store,bucket){
+  store[bucket]=store[bucket]||{};
+  var used=store[bucket][group]||[];
+  if(used.length>=pool.length)used=used.slice(-1);
+  var idx=0;
+  while(used.indexOf(idx)>=0&&idx<pool.length)idx++;
+  if(idx>=pool.length)idx=0;
+  used.push(idx);
+  store[bucket][group]=used;
+  return pool[idx];
+}
+
+function getMissionResponseVariant(route,convType,ctx,responseMode){
+  var store=getMissionVariantStore();
+  var energy=getMissionVariantEnergy(route,convType,ctx,responseMode);
+  var pair=getMissionShapePair(route,convType);
+  var shape=store.lastShape===pair[0]?pair[1]:pair[0];
+  var openerPools={
+    MORNING:['First session. Set the tone.','Day is fresh. Here is the play.','Morning read:','Here is where today starts.'],
+    EVENING:['End of day check:','One more look before you close out.','Day is almost done. Honest summary:'],
+    HIGH:['Good position. Press it.','The numbers are moving. Keep the same energy.','Momentum is real. Protect it.'],
+    LOW:['The gap is real. Here is how to close it.','You are behind but not out. One move changes this.','Behind on the goal. Here is the honest path back.'],
+    NEUTRAL:['Here is where things actually stand.','Real talk on this.','Honest read:','Quick breakdown:','No spin.']
+  };
+  var closerPools={
+    HIGH:['Make the move.','That is the play.','Press it.','Go.'],
+    MORNING:['Make the move.','That is the play.','Go.'],
+    LOW:['Do that first. Everything else waits.','That is the one thing.','Start there. Do not wait.'],
+    NEUTRAL:['Start there.','That is the move.','Simple as that.'],
+    EVENING:['Good session.','Close it out right.','Log it and rest.']
+  };
+  var opener=pickMissionVariantText(energy,openerPools[energy]||openerPools.NEUTRAL,store,'usedOpeners');
+  var closer=pickMissionVariantText(energy,closerPools[energy]||closerPools.NEUTRAL,store,'usedClosers');
+  store.lastShape=shape;
+  store.shapeCounts[shape]=(store.shapeCounts[shape]||0)+1;
+  saveMissionVariantStore(store);
+  return {shape:shape,energyLevel:energy,opener:opener,closer:closer,lengthTarget:getMissionLengthTarget(convType,route)};
+}
+
+function applyMissionResponseVariant(html,variant,opts){
+  opts=opts||{};
+  if(!html||!variant)return html;
+  var parts=[];
+  if(opts.opener!==false&&variant.lengthTarget!=='MICRO')parts.push('<span style="color:#8f9aa3">'+escapeHtml(variant.opener)+'</span>');
+  parts.push(html);
+  if(opts.closer!==false&&variant.lengthTarget!=='MICRO')parts.push('<span style="color:#526944">'+escapeHtml(variant.closer)+'</span>');
+  return parts.join('<br><br>');
 }
 
 function getMissionIntentLinks(id){
@@ -8427,16 +8537,17 @@ function getMissionCommandResponse(kind,ctx,question){
   var conv=getMissionConversationType(question||'',ctx,intent);
   var route=(conv&&conv.route)||intent.route;
   var responseMode=getMissionResponseMode(question||'',route,ctx);
+  var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,responseMode);
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,question||'');
   if(conversationFirst){
     if(route)setMissionCommandActiveTopic(route,question||'');
-    return conversationFirst;
+    return applyMissionResponseVariant(conversationFirst,variant,{opener:true,closer:true});
   }
   if(getMissionCloseSignal(question||''))return getMissionCloseResponse(ctx);
   var continuation=getMissionContinuationSignal(question||'');
   if(continuation){
     var continued=getMissionContinuationResponse(continuation,ctx,question||'');
-    if(continued)return continued+getMissionResponseModeAddon(responseMode,route,ctx);
+    if(continued)return applyMissionResponseVariant(continued+getMissionResponseModeAddon(responseMode,route,ctx),variant,{opener:true,closer:true});
   }
   if(!route&&responseMode.mode==='empathy'){
     return '<strong>Mission Command:</strong> Heard. Let me narrow it down instead of dumping the whole dashboard.<br><br><span style="color:#8f9aa3">What feels stuck right now: leads, content, DPCs, production, or the schedule?</span>';
@@ -8447,7 +8558,9 @@ function getMissionCommandResponse(kind,ctx,question){
   if(routed){
     setMissionCommandActiveTopic(route,question||'');
     var shapeAddon=(route==='leads'&&getMissionPipelineDiagnosticSignal(question||''))?'':getMissionQuestionShapeAddon(shape,route,ctx);
-    return routed+shapeAddon+getMissionResponseModeAddon(responseMode,route,ctx);
+    var routedAnswer=routed+shapeAddon+getMissionResponseModeAddon(responseMode,route,ctx);
+    if(['help','time','day','profile','memory'].indexOf(route)<0)routedAnswer=applyMissionResponseVariant(routedAnswer,variant,{opener:true,closer:true});
+    return routedAnswer;
   }
   /* 2026-05-19 (Claude deep pass): partial fallback for low-confidence signals (score >0
      but below the threshold). Gives a best-guess partial answer + asks for confirmation
