@@ -689,11 +689,16 @@ input:focus{border-color:#333}
 .mission-bubble-row.data-row .mission-bubble{background:#090d10;border-color:#1f2c34;color:#aeb8c0;font-size:11px;line-height:1.55}
 .mission-bubble-row.suggest-row .mission-bubble{background:#080a0c;border-color:#1d242b;color:#9ca7af}
 .mission-bubble-meta{font-size:8px;color:#6f7a82;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:4px}
+.mc-worker-label{display:block;font-size:11px;color:#8f9aa3;margin-bottom:4px;letter-spacing:0;text-transform:none;font-weight:700}
 .mission-bubble p{margin:0 0 10px}
 .mission-bubble p:last-child{margin-bottom:0}
 .mission-bubble br+br{line-height:2.1}
 .mission-bubble a{color:#7ec845;text-decoration:none;font-weight:800}
 .mission-bubble a:hover{text-decoration:underline}
+.mission-worker-status{display:grid;gap:6px;margin-top:8px}
+.mission-worker-line{display:flex;align-items:center;justify-content:space-between;gap:8px;border:0.5px solid #181e24;background:#090b0d;border-radius:8px;padding:7px 8px}
+.mission-worker-line span:first-child{font-size:11px;color:#d7dde3;font-weight:700}
+.mission-worker-line span:last-child{font-size:10px;color:#68727c;text-align:right}
 .mission-link-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .mission-chat-link{display:inline-flex;align-items:center;gap:5px;min-height:25px;border:0.5px solid #2a4015;border-radius:999px;background:#0d1808;color:#7ec845!important;font-size:10px;font-weight:800;padding:0 9px;text-decoration:none!important}
 .mission-chat-link:hover{background:#102006;border-color:#3a5a2a;text-decoration:none!important}
@@ -1541,6 +1546,10 @@ body{background:#090a0b;color:#d8dde1}
         </div>
         <div class="reset-status" id="mission-chat-sync-status"></div>
         <div class="reset-status" id="mission-command-test-status"></div>
+        <details class="settings-ai-box" id="mission-worker-status-details" ontoggle="renderMissionWorkerStatus()">
+          <summary>Worker Status</summary>
+          <div class="mission-worker-status" id="mission-worker-status-list"></div>
+        </details>
       </div>
     </div>
 
@@ -2937,6 +2946,7 @@ var MISSION_CHAT_ACTIVE_SESSION_KEY='a1xx_mission_command_active_session_v1';
 var MISSION_CHAT_ACTIVE_PROJECT_KEY='a1xx_mission_command_active_project_v1';
 var MISSION_CHAT_SYNC_STAMP_KEY='a1xx_mission_command_sync_stamp_v1';
 var MISSION_COMMAND_AUDIT_KEY='a1xx_mission_command_safety_audit_v1';
+var MISSION_WORKER_AUDIT_KEY='a1xx_mc_audit_v1';
 var MISSION_MEMORY_GOALS_KEY='a1xx_mc_goals_v1';
 var MISSION_MEMORY_WINS_KEY='a1xx_mc_wins_v1';
 var MISSION_MEMORY_STRUGGLES_KEY='a1xx_mc_struggles_v1';
@@ -3321,6 +3331,7 @@ function setSettingsTab(tab){
   });
   if(window.__settingsTab==='account')setAccountSubTab(window.__accountSubTab||'profile');
   if(window.__settingsTab==='health')setHealthSubTab(window.__healthSubTab||'status');
+  if(window.__settingsTab==='ai')renderMissionWorkerStatus();
   updateSettingsConnections();
   renderAccountIdentity();
 }
@@ -7668,6 +7679,36 @@ var MISSION_A1XX_RESPONSE_LIBRARY={
   fallback_calendar:['Calendar data is not fully loaded yet. Protect the current block and define one outcome.','I do not have the next event yet. Best move: keep the current block focused.','Schedule context is thin. Use the next hour for the action closest to the mission.']
 };
 
+var MISSION_WORKER_REGISTRY={
+  strategist:{name:'Mission Command Strategist',handle:'strategy',routes:['now','profile','help','unclear','diagnostic'],tools:['getBlockIntel','getStepData','getBrainSession'],phase:1},
+  pipeline:{name:'Pipeline Reviewer',handle:'pipeline',routes:['leads','dpc'],tools:['getLeadsData','getDPCData','getOutreachSteps'],phase:1},
+  content:{name:'Content Coach',handle:'content',routes:['content'],tools:['getContentQueue'],phase:1},
+  production:{name:'Production Manager',handle:'production',routes:['production'],tools:['getProductionData'],phase:1},
+  calendar:{name:'Calendar Focus Guard',handle:'calendar',routes:['calendar','focus','time','day'],tools:['getCalendarData','getBlockIntel'],phase:1},
+  finance:{name:'Finance Goal Tracker',handle:'finance',routes:['report','cycle'],tools:['getRevenueData','getDPCData'],phase:1},
+  sync:{name:'Notion Sync Auditor',handle:'sync',routes:['sync'],tools:['getSyncStatus'],phase:1},
+  archive:{name:'Backup Archive Manager',handle:'archive',routes:['archive','backup'],tools:['getBackupStatus','getSyncStatus'],phase:1},
+  review:{name:'Weekly Review Assistant',handle:'review',routes:['weekly','review'],tools:['getWeeklyReviewData','getChatHistory'],phase:1},
+  memory:{name:'AI Memory Curator',handle:'memory',routes:['memory','history'],tools:['getBrainSession','getChatHistory'],phase:1}
+};
+
+var MISSION_TOOL_REGISTRY={
+  getBlockIntel:{readOnly:true,source:'app_state'},
+  getStepData:{readOnly:true,source:'app_state'},
+  getBrainSession:{readOnly:true,source:'session_storage'},
+  getLeadsData:{readOnly:true,source:'notion_crm'},
+  getDPCData:{readOnly:true,source:'local_and_sheets'},
+  getOutreachSteps:{readOnly:true,source:'app_state'},
+  getContentQueue:{readOnly:true,source:'notion_content'},
+  getProductionData:{readOnly:true,source:'notion_production'},
+  getCalendarData:{readOnly:true,source:'calendar'},
+  getRevenueData:{readOnly:true,source:'google_sheets'},
+  getSyncStatus:{readOnly:true,source:'system_health'},
+  getBackupStatus:{readOnly:true,source:'google_sheets'},
+  getWeeklyReviewData:{readOnly:true,source:'google_sheets'},
+  getChatHistory:{readOnly:true,source:'local_storage'}
+};
+
 /* 2026-05-19 (Claude): smarter intent matching helpers — typo tolerance via tight
    Levenshtein + verb stemming. Keep these tiny + standalone so they're easy to audit. */
 function missionLevenshtein(a,b){
@@ -7878,6 +7919,70 @@ function getMissionFallbackLadder(route,ctx){
   var pool='fallback_'+(route||'now');
   if(!MISSION_A1XX_RESPONSE_LIBRARY[pool])pool='fallback_report';
   return pickMissionLibraryLineAntiRepeat(pool,vars);
+}
+
+function getMissionWorkerForRoute(route){
+  route=String(route||'now');
+  for(var key in MISSION_WORKER_REGISTRY){
+    if(!MISSION_WORKER_REGISTRY.hasOwnProperty(key))continue;
+    var worker=MISSION_WORKER_REGISTRY[key];
+    if((worker.routes||[]).indexOf(route)>=0)return worker;
+  }
+  return MISSION_WORKER_REGISTRY.strategist;
+}
+
+function missionPermissionCheck(toolName,actionType){
+  var tool=MISSION_TOOL_REGISTRY[toolName];
+  if(!tool)return {allowed:false,reason:'Unknown tool'};
+  if(actionType==='write'||tool.readOnly!==true&&actionType!=='read')return {allowed:false,reason:'Write actions activate in Phase 2 after A1XX sign-off.'};
+  return {allowed:true};
+}
+
+function logMissionWorkerAction(worker,toolName,actionType,route){
+  try{
+    var audit=getStore(MISSION_WORKER_AUDIT_KEY)||[];
+    audit.push({ts:new Date().toISOString(),worker:(worker&&worker.name)||'Mission Command Strategist',tool:toolName||'',action:actionType||'read',route:route||'',phase:1});
+    setStore(MISSION_WORKER_AUDIT_KEY,audit.slice(-100));
+  }catch(e){}
+}
+
+function getMissionWorkerLabelHtml(route){
+  var worker=getMissionWorkerForRoute(route);
+  if(!worker||!worker.name)return '';
+  return '<span class="mc-worker-label">'+escapeHtml(worker.name)+'</span>';
+}
+
+function parseMissionAtMention(input){
+  var raw=String(input||'').trim();
+  if(raw.charAt(0)!=='@')return null;
+  var map={
+    pipeline:'leads',finance:'report',content:'content',production:'production',calendar:'calendar',memory:'memory',sync:'sync',archive:'archive',backup:'archive',review:'weekly',strategy:'now',
+    'pipeline reviewer':'leads','finance goal tracker':'report','content coach':'content','production manager':'production','calendar focus guard':'calendar','ai memory curator':'memory','notion sync auditor':'sync','backup archive manager':'archive','weekly review assistant':'weekly','mission command strategist':'now'
+  };
+  var lower=raw.toLowerCase();
+  var handles=Object.keys(map).sort(function(a,b){return b.length-a.length;});
+  var handle='';
+  for(var i=0;i<handles.length;i++){
+    var test='@'+handles[i];
+    if(lower===test||lower.indexOf(test+' ')===0){handle=handles[i];break;}
+  }
+  if(!handle)return null;
+  var question=raw.slice(handle.length+1).trim();
+  return {route:map[handle],question:question,handle:handle};
+}
+
+function renderMissionWorkerStatus(){
+  var box=document.getElementById('mission-worker-status-list');
+  if(!box)return;
+  var audit=getStore(MISSION_WORKER_AUDIT_KEY)||[];
+  var html=Object.keys(MISSION_WORKER_REGISTRY).map(function(key){
+    var worker=MISSION_WORKER_REGISTRY[key];
+    var last=null;
+    for(var i=audit.length-1;i>=0;i--){if(audit[i]&&audit[i].worker===worker.name){last=audit[i];break;}}
+    var meta=last?(getRecencyLabel(last.ts)+' · '+(last.action||'read')+' '+(last.route||'')):'No action yet';
+    return '<div class="mission-worker-line"><span>'+escapeHtml(worker.name)+'</span><span>'+escapeHtml(meta)+'</span></div>';
+  }).join('');
+  box.innerHTML=html||'<div class="settings-row-meta">No workers registered.</div>';
 }
 
 function getMissionPipelineDiagnosticSignal(question){
@@ -8291,6 +8396,8 @@ function getMissionIntentLinks(id){
 
 function getMissionCommandIntent(question){
   var raw=String(question||'').trim();
+  var mention=parseMissionAtMention(raw);
+  if(mention)return {route:mention.route,score:10,label:(getMissionWorkerForRoute(mention.route)||{}).name||'Worker',suggestions:[],forcedByMention:true,cleanQuestion:mention.question,handle:mention.handle};
   var q=normalizeMissionQuestion(raw);
   var diagnostic=getMissionDiagnosticIntent(q);
   if(diagnostic)return diagnostic;
@@ -8779,6 +8886,11 @@ function getMissionCommandRouteAnswer(route,ctx,question){
      the same session hour. Harmless when no history exists. */
   var now=new Date();
   var continuity=getMissionHistoryContinuityLine(route);
+  var worker=getMissionWorkerForRoute(route);
+  if(worker&&worker.tools&&worker.tools.length){
+    var check=missionPermissionCheck(worker.tools[0],'read');
+    if(check.allowed)logMissionWorkerAction(worker,worker.tools[0],'read',route);
+  }
   if(route==='diagnostic')return getMissionDiagnosticResponse(question,ctx)+getMissionIntentLinks(getMissionDiagnosticArea(question)||'now');
   if(route==='leads'&&getMissionPipelineDiagnosticSignal(question||''))return continuity+getMissionPipelineDiagnosisAnswer(ctx)+getMissionContextNudge('leads',ctx)+getMissionIntentLinks('leads');
   if(route==='now')return continuity+getMissionNowAnswer(ctx)+getMissionContextNudge('now',ctx)+getMissionIntentLinks('now');
@@ -8800,6 +8912,8 @@ function getMissionCommandRouteAnswer(route,ctx,question){
   if(route==='resources')return continuity+getMissionResourcesAnswer(question)+getMissionIntentLinks('resources');
   if(route==='sync')return continuity+getMissionSyncAnswer()+getMissionContextNudge('sync',ctx)+getMissionIntentLinks('sync');
   if(route==='memory')return getMissionMemoryAnswer(question)+getMissionIntentLinks('memory');
+  if(route==='archive')return '<strong>Archive:</strong> Backup and archive tools are read-only in Phase 1. Use the existing buttons for manual backup or cycle archive until write actions are confirmation-gated.';
+  if(route==='weekly')return '<strong>Weekly Review:</strong> Weekly review data stays read-only in this worker pass. Use the existing weekly save flow, then ask for a recap.';
   return '';
 }
 
@@ -8896,6 +9010,8 @@ function setMissionCommandActiveTopic(route,question){
 }
 
 function getMissionRenderRoute(question,brainState){
+  var mention=parseMissionAtMention(question||'');
+  if(mention&&mention.route)return mention.route;
   var conv=getMissionConversationType(question||'',null,null,brainState);
   if(conv&&conv.route)return conv.route;
   if(getMissionCloseSignal(question||''))return '';
@@ -8997,6 +9113,25 @@ function applyMissionSessionArc(html,route,ctx,question,brainState,opts){
   if(callback)parts.push('<span style="color:#526944">'+escapeHtml(callback)+'</span>');
   parts.push(html);
   return parts.join('<br><br>');
+}
+
+function applyMissionProseRules(html){
+  var out=String(html||'');
+  if(!out)return out;
+  out=out.replace(/\b(Certainly|Absolutely|Great question|Of course|I'd be happy to)\b[:,.!]?\s*/gi,'');
+  out=out.replace(/<strong>(DPC count|Target|Status|Metric|Signal|Action|Move):<\/strong>\s*/gi,function(_,label){return '<strong>'+label+':</strong> ';});
+  out=out.replace(/<ul>\s*((?:<li>[\s\S]*?<\/li>\s*){1,3})<\/ul>/gi,function(_,items){
+    var plain=items.replace(/<\/li>\s*<li>/gi,'; ').replace(/<\/?li>/gi,'').replace(/\s+/g,' ').trim();
+    return plain?'<p>'+plain+'</p>':'';
+  });
+  out=out.replace(/(<br\s*\/?>\s*){3,}/gi,'<br><br>');
+  var text=out.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  var sentences=text.match(/[^.!?]+[.!?]+/g)||[];
+  if(sentences.length>8&&out.length>900){
+    var keep=sentences.slice(0,4).concat(sentences.slice(-1)).join(' ').trim();
+    if(keep)return escapeHtml(keep);
+  }
+  return out.trim();
 }
 
 function getMissionContinuationResponse(signal,ctx,question){
@@ -9284,13 +9419,14 @@ function getMissionSuggestionBubble(route,conv,followUp,links,question){
 
 function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,brainState){
   var shape=getMissionQuestionShape(question||'');
-  if(shape&&shape.type==='how')return {b1:answer,b2:'',b3:''};
+  function withWorker(html){return html?getMissionWorkerLabelHtml(route)+html:html;}
+  if(shape&&shape.type==='how')return {b1:withWorker(answer),b2:'',b3:''};
   var needsData=missionRouteNeedsDataBubble(route,conv,question||'');
   if(brainState&&brainState.renderB2===false)needsData=false;
-  if(!needsData)return {b1:answer,b2:'',b3:followUp};
+  if(!needsData)return {b1:withWorker(answer),b2:'',b3:followUp};
   var human=getMissionHumanBubble(route,conv,ctx,question||'')||answer;
   return {
-    b1:human,
+    b1:withWorker(human),
     b2:getMissionDataBubble(route,ctx,question||''),
     b3:getMissionSuggestionBubble(route,conv,followUp,links,question||'')
   };
@@ -9372,37 +9508,39 @@ function getMissionPersonalityFallback(ctx,question){
 
 function getMissionCommandResponse(kind,ctx,question,brainState){
   brainState=brainState||getMissionBrainState(ctx,question||'','');
-  var q=String(question||'').toLowerCase();
-  var shape=getMissionQuestionShape(question||'');
-  var multi=getMissionMultiIntent(question||'');
+  var initialIntent=getMissionCommandIntent(question||'');
+  var cleanQuestion=initialIntent.cleanQuestion||question||'';
+  var q=String(cleanQuestion||question||'').toLowerCase();
+  var shape=getMissionQuestionShape(cleanQuestion||'');
+  var multi=initialIntent.forcedByMention?{primary:initialIntent,secondary:null,routes:[initialIntent.route]}:getMissionMultiIntent(question||'');
   var intent=multi.primary;
-  var conv=getMissionConversationType(question||'',ctx,intent,brainState);
+  var conv=getMissionConversationType(cleanQuestion||'',ctx,intent,brainState);
   var route=(conv&&conv.route)||intent.route;
-  var responseMode=getMissionResponseMode(question||'',route,ctx,brainState);
+  var responseMode=getMissionResponseMode(cleanQuestion||'',route,ctx,brainState);
   var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,responseMode);
   function finishMissionAnswer(html){
-    return applyMissionSessionArc(html,route,ctx,question||'',brainState);
+    return applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState));
   }
-  var conversationFirst=getMissionConversationFirstResponse(conv,ctx,question||'');
+  var conversationFirst=getMissionConversationFirstResponse(conv,ctx,cleanQuestion||'');
   if(conversationFirst){
     if(route)setMissionCommandActiveTopic(route,question||'');
     return finishMissionAnswer(applyMissionResponseVariant(conversationFirst,variant,{opener:true,closer:true}));
   }
-  if(getMissionCloseSignal(question||''))return getMissionCloseResponse(ctx);
-  var continuation=getMissionContinuationSignal(question||'');
+  if(getMissionCloseSignal(cleanQuestion||''))return getMissionCloseResponse(ctx);
+  var continuation=getMissionContinuationSignal(cleanQuestion||'');
   if(continuation){
-    var continued=getMissionContinuationResponse(continuation,ctx,question||'');
+    var continued=getMissionContinuationResponse(continuation,ctx,cleanQuestion||'');
     if(continued)return finishMissionAnswer(applyMissionResponseVariant(continued+getMissionResponseModeAddon(responseMode,route,ctx),variant,{opener:true,closer:true}));
   }
   if(!route&&responseMode.mode==='empathy'){
     return finishMissionAnswer('<strong>Mission Command:</strong> Heard. Let me narrow it down instead of dumping the whole dashboard.<br><br><span style="color:#8f9aa3">What feels stuck right now: leads, content, DPCs, production, or the schedule?</span>');
   }
-  var multiAnswer=getMissionMultiIntentAnswer(multi,ctx,question||'');
+  var multiAnswer=getMissionMultiIntentAnswer(multi,ctx,cleanQuestion||'');
   if(multiAnswer)return finishMissionAnswer(multiAnswer.replace('<strong>Split read:</strong> I see two lanes in that ask.<br><br>',''));
-  var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
+  var routed=getMissionCommandRouteAnswer(route,ctx,cleanQuestion||'');
   if(routed){
-    setMissionCommandActiveTopic(route,question||'');
-    var shapeAddon=(route==='leads'&&getMissionPipelineDiagnosticSignal(question||''))?'':getMissionQuestionShapeAddon(shape,route,ctx);
+    setMissionCommandActiveTopic(route,cleanQuestion||question||'');
+    var shapeAddon=(route==='leads'&&getMissionPipelineDiagnosticSignal(cleanQuestion||''))?'':getMissionQuestionShapeAddon(shape,route,ctx);
     var routedAnswer=routed+shapeAddon+getMissionResponseModeAddon(responseMode,route,ctx);
     if(['help','time','day','profile','memory'].indexOf(route)<0)routedAnswer=applyMissionResponseVariant(routedAnswer,variant,{opener:true,closer:true});
     return finishMissionAnswer(routedAnswer);
@@ -9412,7 +9550,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
      rather than going straight to personality fallback. */
   if(!route&&intent.score>0&&intent.label){
     var partialRoute=intent.label.toLowerCase();
-    var partialAnswer=getMissionCommandRouteAnswer(partialRoute,ctx,question||'');
+    var partialAnswer=getMissionCommandRouteAnswer(partialRoute,ctx,cleanQuestion||'');
     if(partialAnswer){
       var altSuggestions=intent.suggestions&&intent.suggestions.length?intent.suggestions.map(function(s){return '/'+s.id;}).join(' · '):'/now · /leads · /calendar';
       return finishMissionAnswer('<span style="color:#526944">Partial read - I think you mean '+escapeHtml(intent.label)+'. Here is what I see:</span><br><br>'+partialAnswer+'<br><br><span style="color:#8f9aa3">Not quite right? Try: '+escapeHtml(altSuggestions)+'</span>');
