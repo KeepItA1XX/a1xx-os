@@ -267,6 +267,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .settings-subtab.active{background:#121712;border:0.5px solid #3a5a2a;color:#7ec845}
 .health-subpane{display:none}
 .health-subpane.active{display:block}
+.account-subpane{display:none}
+.account-subpane.active{display:block}
 .settings-section{background:#0f1215;border:0.5px solid #20272e;border-radius:10px;padding:11px 12px;margin-bottom:10px}
 .settings-section-title{font-size:10px;font-weight:800;color:#8b949e;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
 .settings-list{display:grid;gap:7px}
@@ -1366,7 +1368,7 @@ body{background:#090a0b;color:#d8dde1}
 <div class="settings-backdrop" id="settings-backdrop" onclick="closeSystemPanel()"></div>
 <div class="system-panel" id="system-panel">
   <div class="settings-nav">
-    <div class="settings-brand">System Hub</div>
+    <div class="settings-brand">Settings</div>
     <button class="settings-tab active" data-settings-tab="account" onclick="setSettingsTab('account')">Account</button>
     <button class="settings-tab" data-settings-tab="connections" onclick="setSettingsTab('connections')">Connections</button>
     <button class="settings-tab" data-settings-tab="ai" onclick="setSettingsTab('ai')">AI Controls</button>
@@ -1375,32 +1377,40 @@ body{background:#090a0b;color:#d8dde1}
   <div class="settings-main">
     <div class="system-head">
       <div>
-        <div class="system-title">Settings</div>
+        <div class="system-title">System Hub</div>
         <div class="system-last" id="system-last">Last sync: never</div>
       </div>
       <button class="settings-close" onclick="closeSystemPanel()" title="Close settings">×</button>
     </div>
 
     <div class="settings-pane active" id="settings-pane-account">
-      <div class="settings-section">
-        <div class="settings-section-title">Account / Profile</div>
-        <div class="settings-list">
-          <div class="settings-row"><div><div class="settings-row-name">Signed in as</div><div class="settings-row-meta" id="account-signed-in">A1XX</div></div><span class="settings-badge">Active</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Role</div><div class="settings-row-meta">Executive Producer</div></div><span class="settings-badge">Primary</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Profile name</div><div class="settings-row-meta">Display identity used across the OS.</div></div><span class="settings-badge off">Local</span></div>
+      <div class="settings-subtabs">
+        <button class="settings-subtab active" data-account-subtab="profile" onclick="setAccountSubTab('profile')">Profile</button>
+        <button class="settings-subtab" data-account-subtab="signin" onclick="setAccountSubTab('signin')">Sign-In</button>
+      </div>
+      <div class="account-subpane active" id="account-subpane-profile">
+        <div class="settings-section">
+          <div class="settings-section-title">Account / Profile</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Signed in as</div><div class="settings-row-meta" id="account-signed-in">A1XX</div></div><span class="settings-badge">Active</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Role</div><div class="settings-row-meta">Executive Producer</div></div><span class="settings-badge">Primary</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Profile name</div><div class="settings-row-meta">Display identity used across the OS.</div></div><span class="settings-badge off">Local</span></div>
+          </div>
         </div>
       </div>
-      <div class="settings-section">
-        <div class="settings-section-title">V1 Sign-In</div>
-        <div class="settings-field"><label for="account-username">Username</label><input id="account-username" type="text" value="A1XX"/></div>
-        <div class="settings-field"><label for="account-password">New password</label><input id="account-password" type="password" placeholder="Leave blank to keep current password"/></div>
-        <div class="btn-row">
-          <button class="btn primary" onclick="saveAccountSettings()">Save account</button>
-          <button class="btn" onclick="signOutAccount()">Sign out</button>
+      <div class="account-subpane" id="account-subpane-signin">
+        <div class="settings-section">
+          <div class="settings-section-title">V1 Sign-In</div>
+          <div class="settings-field"><label for="account-username">Username</label><input id="account-username" type="text" value="A1XX"/></div>
+          <div class="settings-field"><label for="account-password">New password</label><input id="account-password" type="password" placeholder="Leave blank to keep current password"/></div>
+          <div class="btn-row">
+            <button class="btn primary" onclick="saveAccountSettings()">Save account</button>
+            <button class="btn" onclick="signOutAccount()">Sign out</button>
+          </div>
+          <div class="reset-status" id="account-status"></div>
         </div>
-        <div class="reset-status" id="account-status"></div>
+        <div class="settings-ai-box">V1 sign-in is stored locally in this browser. It gives the OS a private front door now; real backend auth can replace it later.</div>
       </div>
-      <div class="settings-ai-box">V1 sign-in is stored locally in this browser. It gives the OS a private front door now; real backend auth can replace it later.</div>
     </div>
 
     <div class="settings-pane" id="settings-pane-connections">
@@ -3158,9 +3168,20 @@ function setSettingsTab(tab){
   document.querySelectorAll('.settings-pane').forEach(function(pane){
     pane.classList.toggle('active',pane.id==='settings-pane-'+window.__settingsTab);
   });
+  if(window.__settingsTab==='account')setAccountSubTab(window.__accountSubTab||'profile');
   if(window.__settingsTab==='health')setHealthSubTab(window.__healthSubTab||'status');
   updateSettingsConnections();
   renderAccountIdentity();
+}
+
+function setAccountSubTab(tab){
+  window.__accountSubTab=tab||'profile';
+  document.querySelectorAll('[data-account-subtab]').forEach(function(btn){
+    btn.classList.toggle('active',btn.getAttribute('data-account-subtab')===window.__accountSubTab);
+  });
+  document.querySelectorAll('.account-subpane').forEach(function(pane){
+    pane.classList.toggle('active',pane.id==='account-subpane-'+window.__accountSubTab);
+  });
 }
 
 function setHealthSubTab(tab){
