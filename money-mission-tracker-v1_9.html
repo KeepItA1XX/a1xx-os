@@ -7964,7 +7964,8 @@ function getMissionPipelineDiagnosisAnswer(ctx){
   if(cold>hot+warm)diagnosis.push('too much of the list is cold, so the first move is qualification');
   if(!diagnosis.length)diagnosis.push('the list is loaded; the bottleneck is likely next action clarity');
   var top=getMissionLeadsAnswer(ctx).replace(/^<strong>Leads[^<]*<\/strong><br>/,'');
-  return '<strong>Pipeline diagnosis:</strong><br>'+escapeHtml(diagnosis.join('. '))+'.<br><br><strong>Best next contacts:</strong><br>'+top;
+  var headline=!hot&&!warm?'The pipeline problem is heat, not volume.':'The pipeline needs one clear next action.';
+  return '<strong>Pipeline diagnosis:</strong><br>'+escapeHtml(headline)+'<br><br>'+escapeHtml(diagnosis.join('. '))+'.<br><br><strong>Best next contacts:</strong><br>'+top;
 }
 
 function getMissionContentAnswer(ctx){
@@ -8213,6 +8214,7 @@ function getMissionContinuationResponse(signal,ctx,question){
   if(!base)return '';
   var q=normalizeMissionQuestion(signal||question||'');
   var layer='';
+  var leadWithLayerFirst=route==='leads'&&getMissionPipelineDiagnosticSignal(topicQuestion);
   if(q==='why'){
     layer='Deeper read: this matters because it changes the next action, not because it adds more dashboard noise.';
     if(route==='leads')layer='Deeper read: leads are closest to cash. Every warm follow-up is either a conversation, an offer, or clean information.';
@@ -8229,6 +8231,7 @@ function getMissionContinuationResponse(signal,ctx,question){
   }else{
     layer='Deeper layer: the useful move is hiding inside this lane. Keep the question tied to the next result you can actually log.';
   }
+  if(leadWithLayerFirst)return '<span style="color:#526944">'+escapeHtml(layer)+'</span><br><br>'+base;
   return base+'<br><br><span style="color:#526944">'+escapeHtml(layer)+'</span>';
 }
 
@@ -8248,6 +8251,31 @@ function getMissionConversationEnding(route,shape,mode,ctx,question){
     return '<strong>Carry forward:</strong> '+(journey?escapeHtml('Next step: '+journey.nextCheck+'.'):'That sets up the next block.');
   }
   return getMissionFollowUp(route,ctx,question||'');
+}
+
+function extractMissionLinkRows(html){
+  var rows=[];
+  String(html||'').replace(/<div class="mission-link-row">[\s\S]*?<\/div>/gi,function(match){
+    rows.push(match);
+    return match;
+  });
+  return rows;
+}
+
+function stripMissionLinkRows(html){
+  return String(html||'').replace(/<div class="mission-link-row">[\s\S]*?<\/div>/gi,'').trim();
+}
+
+function mergeMissionSuggestionBubble(followUp,links,route,question){
+  var linkHtml=(links||[]).join('');
+  var prompt='';
+  if(route==='leads'&&getMissionPipelineDiagnosticSignal(question||'')){
+    prompt='<strong>Suggestions:</strong> Open the pipeline tools, or ask for the deeper breakdown.';
+  }else if(linkHtml){
+    prompt='<strong>Suggestions:</strong> Open the related tools when you are ready.';
+  }
+  var parts=[prompt,followUp,linkHtml].filter(Boolean);
+  return parts.join('<br><br>');
 }
 
 function getCurrentJourneyMove(ctx){
@@ -8334,7 +8362,8 @@ function getMissionCommandResponse(kind,ctx,question){
   var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
   if(routed){
     setMissionCommandActiveTopic(route,question||'');
-    return routed+getMissionQuestionShapeAddon(shape,route,ctx)+getMissionResponseModeAddon(responseMode,route,ctx);
+    var shapeAddon=(route==='leads'&&getMissionPipelineDiagnosticSignal(question||''))?'':getMissionQuestionShapeAddon(shape,route,ctx);
+    return routed+shapeAddon+getMissionResponseModeAddon(responseMode,route,ctx);
   }
   /* 2026-05-19 (Claude deep pass): partial fallback for low-confidence signals (score >0
      but below the threshold). Gives a best-guess partial answer + asks for confirmation
@@ -9164,6 +9193,11 @@ function renderMissionCommand(kind,question,forceCurrent){
   var shape=shouldShowCurrent?getMissionQuestionShape(question||''):{};
   var mode=shouldShowCurrent?getMissionResponseMode(question||'',route,ctx):{};
   var followUp=shouldShowCurrent?getMissionConversationEnding(route,shape,mode,ctx,question||''):'';
+  var actionLinks=extractMissionLinkRows(answer);
+  if(actionLinks.length){
+    answer=stripMissionLinkRows(answer);
+    followUp=mergeMissionSuggestionBubble(followUp,actionLinks,route,question||'');
+  }
   packet.followUp=followUp;
   if(!shouldShowCurrent){
     ensureMissionThreadReady('','','');
