@@ -8153,8 +8153,8 @@ function getMissionCloseSignal(question){
 function getMissionContinuationSignal(question){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return '';
-  if(/^(tell me more|go deeper|expand on that|what do you mean|explain that|and then what|what next|next|why|do that again|run that back|say more)$/.test(q))return q;
-  if(/\b(tell me more|go deeper|expand on that|explain that|what do you mean|run that back|say more)\b/.test(q))return 'expand';
+  if(/^(tell me more|go deeper|deeper breakdown|deep breakdown|break it down|quick read|expand on that|what do you mean|explain that|and then what|what next|next|why|do that again|run that back|say more)$/.test(q))return q;
+  if(/\b(tell me more|go deeper|deeper breakdown|deep breakdown|break it down|expand on that|explain that|what do you mean|run that back|say more)\b/.test(q))return 'expand';
   return '';
 }
 
@@ -8208,7 +8208,8 @@ function getMissionContinuationResponse(signal,ctx,question){
   var last=getLastMissionTopicTurn();
   if(!last||!last.intentRoute)return '';
   var route=last.intentRoute;
-  var base=getMissionCommandRouteAnswer(route,ctx,question||last.question||'');
+  var topicQuestion=last.question||question||'';
+  var base=getMissionCommandRouteAnswer(route,ctx,topicQuestion);
   if(!base)return '';
   var q=normalizeMissionQuestion(signal||question||'');
   var layer='';
@@ -8221,6 +8222,8 @@ function getMissionContinuationResponse(signal,ctx,question){
     else if(route==='report'||route==='dpc')layer='Deeper read: the numbers are pressure signals. They tell you where to push next.';
   }else if(q==='what next'||q==='next'||q==='and then what'){
     layer='Next layer: pick the smallest visible move, finish it, then come back with the result so I can adjust the read.';
+  }else if(q==='deeper breakdown'||q==='deep breakdown'||q==='break it down'||q==='quick read'){
+    layer=route==='leads'?'Deeper breakdown: the pipeline problem is not volume. It is heat. Too many contacts are call-ready but still cold, so the move is qualification plus a direct offer.':'Deeper breakdown: separate the signal from the noise, then act on the one item closest to the result.';
   }else if(q==='do that again'||q==='run that back'){
     layer='Same lane, cleaner pass: stay on this route until the next result is logged.';
   }else{
@@ -8239,7 +8242,7 @@ function getMissionConversationEnding(route,shape,mode,ctx,question){
   else if(shape&&shape.type==='why')type='observation';
   else if(shape&&shape.type==='ask')type='question';
   else if(route==='calendar'||route==='cycle')type='bridge';
-  if(type==='question')return '<strong>Question:</strong> Want the quick read or the deeper breakdown?';
+  if(type==='question')return '';
   if(type==='observation')return '<strong>Read:</strong> Pressure is information. Move the one thing that changes the number.';
   if(type==='bridge'){
     return '<strong>Carry forward:</strong> '+(journey?escapeHtml('Next step: '+journey.nextCheck+'.'):'That sets up the next block.');
