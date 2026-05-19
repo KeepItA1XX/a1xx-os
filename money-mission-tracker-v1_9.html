@@ -1536,6 +1536,7 @@ body{background:#090a0b;color:#d8dde1}
         <div class="btn-row">
           <button class="btn" onclick="syncAllMissionChatSessions('manual')">Sync chats now</button>
         </div>
+        <div class="reset-status" id="mission-chat-sync-status"></div>
       </div>
     </div>
 
@@ -8215,9 +8216,16 @@ function missionSessionSyncPayload(session,reason){
   };
 }
 
+function setMissionChatSyncStatus(message,kind){
+  var el=document.getElementById('mission-chat-sync-status');
+  if(!el)return;
+  el.textContent=message||'';
+  el.className='reset-status '+(kind||'');
+}
+
 function syncMissionChatSession(session,reason){
   var url=localStorage.getItem(SHEETS_KEY);
-  if(!url||!session||!session.id)return;
+  if(!url||!session||!session.id)return false;
   try{
     var stamp=getStore(MISSION_CHAT_SYNC_STAMP_KEY)||{};
     var sig=[
@@ -8228,7 +8236,7 @@ function syncMissionChatSession(session,reason){
       (session.messages||[]).length,
       reason||''
     ].join('|');
-    if(stamp[session.id]===sig&&reason!=='manual')return;
+    if(stamp[session.id]===sig&&reason!=='manual')return false;
     stamp[session.id]=sig;
     setStore(MISSION_CHAT_SYNC_STAMP_KEY,stamp);
     fetch(url,{
@@ -8237,13 +8245,29 @@ function syncMissionChatSession(session,reason){
       mode:'no-cors',
       redirect:'follow'
     });
-  }catch(e){console.warn('Mission chat session sync skipped',e);}
+    return true;
+  }catch(e){console.warn('Mission chat session sync skipped',e);return false;}
 }
 
 function syncAllMissionChatSessions(reason){
-  getMissionChatSessions().forEach(function(session){
-    syncMissionChatSession(session,reason||'bulk');
+  var url=localStorage.getItem(SHEETS_KEY);
+  var sessions=getMissionChatSessions();
+  if(!url){
+    setMissionChatSyncStatus('No Apps Script URL is connected. Open Connections > Sheets / Notion setup first.','err');
+    return;
+  }
+  if(!sessions.length){
+    setMissionChatSyncStatus('No Mission Command chats found in this browser yet.','warn');
+    return;
+  }
+  setMissionChatSyncStatus('Syncing '+sessions.length+' chat session'+(sessions.length===1?'':'s')+' to Google Sheets...','');
+  var sent=0;
+  sessions.forEach(function(session){
+    if(syncMissionChatSession(session,reason||'bulk'))sent++;
   });
+  setTimeout(function(){
+    setMissionChatSyncStatus('Sent '+sent+' of '+sessions.length+' chat session'+(sessions.length===1?'':'s')+'. If the Sheet did not change, redeploy Apps Script with the latest v1.7 code, then press Sync chats now again.','ok');
+  },650);
 }
 
 function getMissionActiveSessions(project){
