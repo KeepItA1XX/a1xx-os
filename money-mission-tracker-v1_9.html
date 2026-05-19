@@ -665,7 +665,7 @@ input:focus{border-color:#333}
 .mission-chat-kebab{width:20px;height:20px;border:0.5px solid #1d242b;border-radius:6px;background:#080a0c;color:#68737c;font-size:12px;font-weight:900;line-height:1;cursor:pointer;opacity:.45;transition:all .16s}
 .mission-chat-item:hover .mission-chat-kebab,.mission-chat-item.menu-open .mission-chat-kebab{opacity:1}
 .mission-chat-kebab:hover{border-color:#3a5a2a;color:#d7dde3;background:#0d120f}
-.mission-chat-menu{position:absolute;right:0;top:24px;width:155px;background:#07090b;border:0.5px solid #263039;border-radius:8px;box-shadow:0 14px 28px rgba(0,0,0,.42);padding:5px;z-index:8;display:none}
+.mission-chat-menu{position:fixed;width:155px;background:#07090b;border:0.5px solid #263039;border-radius:8px;box-shadow:0 14px 28px rgba(0,0,0,.42);padding:5px;z-index:9999;display:none}
 .mission-chat-item.menu-open .mission-chat-menu{display:grid;gap:3px}
 .mission-chat-menu button,.mission-chat-menu select{width:100%;min-height:27px;border:0;background:transparent;color:#a6b0b8;text-align:left;border-radius:6px;font-size:10px;font-weight:800;padding:0 8px;cursor:pointer}
 .mission-chat-menu button:hover,.mission-chat-menu select:hover{background:#0d120f;color:#d7dde3}
@@ -4702,7 +4702,12 @@ function getLeadRealName(lead){
 
 function getLeadDisplayName(lead){
   lead=lead||{};
-  return getLeadStageName(lead)||cleanLeadText(lead.name||lead.Name||lead.title)||getLeadRealName(lead)||'Unnamed lead';
+  var name=getLeadStageName(lead)||cleanLeadText(lead.name||lead.Name||lead.title)||getLeadRealName(lead);
+  if(name&&name.toLowerCase()!=='unnamed lead')return name;
+  if(lead.instagram)return '@'+cleanLeadText(lead.instagram).replace(/^@/,'');
+  if(lead.source||lead.funnelSource)return cleanLeadText(lead.source||lead.funnelSource)+' lead';
+  if(lead.conversionEvent)return cleanLeadText(lead.conversionEvent)+' lead';
+  return 'Unnamed lead';
 }
 
 function getLeadSecondaryName(lead){
@@ -7619,11 +7624,11 @@ function normalizeMissionQuestion(raw){
 }
 
 var MISSION_COMMAND_INTENTS=[
-  {id:'now',label:'Now',slash:['now','next','move','focus'],tags:['now','next','focus'],phrases:['what should i do','what do i do','right now','next move','focus on','where do i start','start now','do next','priority','most important','where am i','what now','where to focus','next step','where should i start','what is most important','top priority'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Content',url:'#content-tracker-card'},{label:'Open Production',url:'#production-card'}]},
+  {id:'now',label:'Now',slash:['now','next','move','focus'],tags:['now','next','focus'],phrases:['what should i do','what do i do','right now','next move','focus on','where do i start','start now','do next','priority','most important','where am i','what now','where to focus','next step','where should i start','what is most important','top priority','what to do today','what do i do today','focus for today','what the focus','today focus','todays focus','what should i focus','what should i focus on','focus today','what is the focus'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Content',url:'#content-tracker-card'},{label:'Open Production',url:'#production-card'}]},
   {id:'time',label:'Time',slash:['time','clock'],tags:['time'],phrases:['what time','current time','time is it','clock','how late','what time is it','the time'],links:[]},
   {id:'day',label:'Day',slash:['day','date','today'],tags:['day','date','today'],phrases:['what day','what date','today date','day is it','date is it','what day is it','todays date'],links:[]},
   {id:'calendar',label:'Calendar',slash:['calendar','events','meetings','schedule'],tags:['calendar','meeting','meetings','schedule'],phrases:['calendar','meeting','class','call today','scheduled','schedule','agenda','appointment','next event','what is coming up','what do i have','next meeting','upcoming class','whats on calendar','any meetings','appointments','any classes','rap prenuer','academy','upcoming events'],links:[{label:'Open Manager',url:'#manager-split-wrapper'},{label:'Add Event',url:'https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5'}]},
-  {id:'report',label:'Report',slash:['report','money','revenue','target','gap'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','weekly number','how much','collected','income','weekly numbers','money in','whats the gap','how am i doing','money pace','revenue pace','to target','closer to target','behind target','ahead of target','pacing'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
+  {id:'report',label:'Report',slash:['report','money','revenue','target','gap'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','weekly number','how much','collected','income','weekly numbers','money in','whats the gap','how am i doing','money pace','revenue pace','to target','closer to target','behind target','ahead of target','pacing','make more money','more money','how to make more money','make money','get paid','close more','sell more','book more calls'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
   {id:'dpc',label:'DPC',slash:['dpc','campaign','daily'],tags:['dpc','campaign','daily'],phrases:['dpc','daily profit','daily campaign','dm count','dms','cold calls','calls made','booked calls','closes','daily log','today numbers','daily numbers','today log','todays activity','what i did today','daily score','log today','dpc card'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'cycle',label:'Cycle',slash:['cycle','roadmap','season'],tags:['cycle','roadmap'],phrases:['cycle','roadmap','days left','deadline','current cycle','ceo roadmap','archive cycle','cycle target','cycle progress','cycle pace','days left in cycle','this cycle','foundation cycle','where are we in the cycle'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'leads',label:'Leads',slash:['leads','lead','followup','followups','crm'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
@@ -7696,8 +7701,11 @@ function getMissionCommandIntent(question){
 function getMissionMultiIntent(question){
   var primary=getMissionCommandIntent(question);
   if(!primary.route)return {primary:primary,secondary:null,routes:[]};
+  var q=normalizeMissionQuestion(question||'');
+  var explicitMulti=/\b(and|plus|also|with|and then)\b/.test(q)||(q.match(/#[a-z]+/g)||[]).length>1||(q.match(/\/[a-z]+/g)||[]).length>1;
+  if(!explicitMulti)return {primary:primary,secondary:null,routes:[primary.route]};
   var second=(primary.suggestions||[]).filter(function(item){
-    return item&&item.id&&item.score>=2&&['help','time','day'].indexOf(item.id)<0;
+    return item&&item.id&&item.score>=2&&['help','time','day','memory'].indexOf(item.id)<0;
   })[0]||null;
   var closeEnough=!!(second&&primary.score&&second.score>=Math.max(2,primary.score*.72));
   return {primary:primary,secondary:closeEnough?second:null,routes:closeEnough?[primary.route,second.id]:[primary.route]};
@@ -7782,6 +7790,13 @@ function getMissionCalendarAnswer(ctx){
 function getMissionReportAnswer(ctx){
   var margin=ctx.wk?Math.round((ctx.rev/ctx.wk)*100):0;
   return '<strong>Report:</strong> '+fmt(ctx.rev)+' collected against '+fmt(ctx.wk)+' weekly target ('+margin+'%). '+(ctx.gap>0?fmt(ctx.gap)+' left to close this week.':'Weekly target is covered.');
+}
+
+function getMissionMoneyActionAnswer(ctx){
+  var lead=ctx.leadText||getMostUrgentLeadLine();
+  var margin=ctx.wk?Math.round((ctx.rev/ctx.wk)*100):0;
+  var gap=ctx.gap>0?fmt(ctx.gap)+' left this week':'weekly target covered';
+  return '<strong>Money move:</strong><br>1. Contact the warmest lead first: '+escapeHtml(lead)+'.<br>2. Make one direct offer tied to studio time, mix/master, beat sale, or Rappreneur OS.<br>3. Log the outcome before switching cards.<br><br><span style="color:#8f9aa3">'+fmt(ctx.rev)+' collected · '+margin+'% of weekly target · '+gap+'.</span>';
 }
 
 function getMissionDpcAnswer(){
@@ -7902,6 +7917,7 @@ function getMissionCommandRouteAnswer(route,ctx,question){
   if(route==='day')return '<strong>Day:</strong> '+now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   if(route==='profile')return getMissionProfileAnswer()+getMissionIntentLinks('profile');
   if(route==='calendar')return getMissionCalendarAnswer(ctx)+getMissionContextNudge('calendar',ctx)+getMissionIntentLinks('calendar');
+  if(route==='report'&&/\b(make more money|more money|make money|get paid|close more|sell more|book more calls)\b/i.test(String(question||'')))return getMissionMoneyActionAnswer(ctx)+getMissionIntentLinks('leads')+getMissionIntentLinks('report');
   if(route==='report')return getMissionReportAnswer(ctx)+getMissionContextNudge('report',ctx)+getMissionIntentLinks('report');
   if(route==='dpc')return getMissionDpcAnswer()+getMissionContextNudge('dpc',ctx)+getMissionIntentLinks('dpc');
   if(route==='cycle')return getMissionCycleAnswer(ctx)+getMissionIntentLinks('cycle');
@@ -7990,7 +8006,7 @@ function getMissionCommandResponse(kind,ctx,question){
   var intent=multi.primary;
   var route=intent.route;
   var multiAnswer=getMissionMultiIntentAnswer(multi,ctx,question||'');
-  if(multiAnswer)return multiAnswer;
+  if(multiAnswer)return multiAnswer.replace('<strong>Split read:</strong> I see two lanes in that ask.<br><br>','');
   var routed=getMissionCommandRouteAnswer(route,ctx,question||'');
   if(routed)return routed;
   var gapLine=ctx.gap>0?'You still have '+fmt(ctx.gap)+' left against this week’s target.':'Weekly target pressure is protected right now.';
@@ -8319,6 +8335,23 @@ function toggleMissionChatMenu(id){
   var isOpen=item.classList.contains('menu-open');
   document.querySelectorAll('.mission-chat-item.menu-open').forEach(function(el){el.classList.remove('menu-open');});
   item.classList.toggle('menu-open',!isOpen);
+  if(!isOpen)positionMissionChatMenu(item);
+}
+
+function positionMissionChatMenu(item){
+  var menu=item&&item.querySelector('.mission-chat-menu');
+  var btn=item&&item.querySelector('.mission-chat-kebab');
+  if(!menu||!btn)return;
+  var rect=btn.getBoundingClientRect();
+  var drawer=document.getElementById('mission-history-drawer');
+  var drawerRect=drawer?drawer.getBoundingClientRect():{left:0,right:window.innerWidth||360,top:0,bottom:window.innerHeight||720};
+  var menuW=155,menuH=112;
+  var left=Math.min(Math.max(drawerRect.left+8,rect.right-menuW),drawerRect.right-menuW-8);
+  var below=rect.bottom+6;
+  var above=rect.top-menuH-6;
+  var top=(below+menuH<drawerRect.bottom-8)?below:Math.max(drawerRect.top+8,above);
+  menu.style.left=Math.round(left)+'px';
+  menu.style.top=Math.round(top)+'px';
 }
 
 function moveMissionSession(id,project){
