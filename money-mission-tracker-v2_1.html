@@ -12939,7 +12939,7 @@ function getMissionOutputPoolV1(route,conversationType,q){
   var pools=MISSION_OUTPUT_RESPONSE_POOLS_V1||{};
   if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q))return pools.conversationTypePools.wrong_lane_correction||[];
   if(conversationType===CONV_WHY||/^(why|why again|run it back|explain more|make it make sense)$/.test(q))return pools.conversationTypePools.why_loop||[];
-  if(conversationType===CONV_FOLLOWUP&&/^(more|tell me more|say more|go on|continue)$/.test(q))return pools.conversationTypePools.more_depth||[];
+  if(/^(more|more again|tell me more|tell me more again|say more|go on|continue)$/.test(q))return pools.conversationTypePools.more_depth||[];
   var profile=getMissionInputProfile(q,q);
   var smartCategory=profile&&profile.best&&profile.best.category||'';
   if(smartCategory==='open_energy_work_start')return pools.conversationTypePools.open_energy||[];
@@ -12976,7 +12976,7 @@ function updateMissionOutputLoopStateV1(route,q){
   if(/^(why|why again|run it back|explain more|make it make sense)$/.test(q)){
     state.whyLoopDepth=Math.min(5,(state.whyLoopDepth||0)+1);
     state.moreLoopDepth=0;
-  }else if(/^(more|tell me more|say more|go on|continue)$/.test(q)){
+  }else if(/^(more|more again|tell me more|tell me more again|say more|go on|continue)$/.test(q)){
     state.moreLoopDepth=Math.min(4,(state.moreLoopDepth||0)+1);
   }else if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q)){
     state.correctionAttemptCount=(state.correctionAttemptCount||0)+1;
@@ -13000,7 +13000,7 @@ function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
   var shouldHandle=false;
   if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q))shouldHandle=true;
   if(conversationType===CONV_WHY||/^(why|why again|run it back|explain more|make it make sense)$/.test(q))shouldHandle=true;
-  if(conversationType===CONV_FOLLOWUP&&/^(more|tell me more|say more|go on|continue)$/.test(q))shouldHandle=true;
+  if(/^(more|more again|tell me more|tell me more again|say more|go on|continue)$/.test(q))shouldHandle=true;
   var profile=getMissionInputProfile(question||'',q);
   var smartCategory=profile&&profile.best&&profile.best.category||'';
   if(['open_energy_work_start','frustration_overwhelm','celebration_win'].indexOf(smartCategory)>=0)shouldHandle=true;
@@ -13741,6 +13741,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var shaped=applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
+  var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,cleanQuestion||question||'',conv,brainState);
+  if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false});
   var openEndedV2=getMissionOpenEndedWorkStartResponseV2(turnV2,ctx);
   if(openEndedV2)return finishMissionAnswer(openEndedV2,{sessionArc:false,closer:false,presence:false});
   var backlogSpecial=getMissionBacklogSpecialResponse(route,ctx,cleanQuestion||'',conv,brainState);
