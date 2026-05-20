@@ -1795,7 +1795,7 @@ body{background:#090a0b;color:#d8dde1}
 </div>
 
 <!-- MISSION BRIEF -->
-<div class="mission-brief" id="mission-brief">
+<div class="mission-brief mission-hidden" id="mission-brief">
   <div class="mission-top">
     <div>
       <div class="mission-label">Mission Brief</div>
@@ -13589,6 +13589,11 @@ function wireMissionDelegates(){
 }
 
 function updateMissionToolState(tool,locked){
+  document.querySelectorAll('[data-day-tool]').forEach(function(btn){
+    var day=btn.getAttribute('data-day-tool');
+    var active=(tool==='brief'&&day==='brief')||(tool==='production'&&day==='beat')||(tool==='campaign'&&day==='outreach')||(tool==='content'&&day==='content')||((tool==='manager'||tool==='calendar'||tool==='tasks')&&day==='manager');
+    btn.classList.toggle('active',!!active);
+  });
   ['campaign','content','production'].forEach(function(t){
     var b=document.getElementById('mission-tool-'+t);
     if(b)b.classList.toggle('active',t===tool);
@@ -13606,7 +13611,7 @@ function updateMissionToolState(tool,locked){
 }
 
 function openMissionTool(tool,shouldScroll){
-  var ids={campaign:'dpc-card',content:'content-tracker-card',production:'production-card',calendar:'manager-split-wrapper',tasks:'manager-split-wrapper',manager:'manager-split-wrapper'};
+  var ids={brief:'mission-brief',campaign:'dpc-card',content:'content-tracker-card',production:'production-card',calendar:'manager-split-wrapper',tasks:'manager-split-wrapper',manager:'manager-split-wrapper'};
   var activeId=ids[tool]||ids.campaign;
   Array.from(new Set(Object.keys(ids).map(function(k){return ids[k];}))).forEach(function(id){
     var el=document.getElementById(id);
@@ -13665,11 +13670,7 @@ function openMissionCommandCard(){
 
 function selectMissionDayTool(type){
   if(type==='brief'){
-    document.querySelectorAll('[data-day-tool]').forEach(function(btn){
-      btn.classList.toggle('active',btn.getAttribute('data-day-tool')==='brief');
-    });
-    var brief=document.getElementById('mission-brief');
-    if(brief)brief.scrollIntoView({behavior:'smooth',block:'start'});
+    openMissionTool('brief',true);
     return;
   }
   var tool=getMissionPrimaryTool(type);
@@ -13682,7 +13683,7 @@ function applyMissionFocus(){
   var mission=getMissionStore();
   if(mission.locked)openMissionTool(mission.tool||getMissionPrimaryTool(getMissionDayType()),false);
   else{
-    ['dpc-card','content-tracker-card','production-card','manager-split-wrapper'].forEach(function(id){
+    ['mission-brief','dpc-card','content-tracker-card','production-card','manager-split-wrapper'].forEach(function(id){
       var el=document.getElementById(id);
       if(el){
         el.classList.add('mission-hidden');
