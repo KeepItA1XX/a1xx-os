@@ -13558,13 +13558,27 @@ function renderMissionCommand(kind,question,forceCurrent){
   }
 }
 
+function getMissionShortcutPrompt(kind){
+  var map={
+    now:'what should i do right now?',
+    lead:'who should i follow up with?',
+    leads:'who should i follow up with?',
+    pipeline:'who should i follow up with?',
+    content:'what should i make today?',
+    make:'what should i make today?',
+    help:'how does mission command work?'
+  };
+  return map[kind]||kind||'what should i do right now?';
+}
+
 function runMissionPrompt(kind){
   if(!missionCommandCanSend())return;
   window.__missionCommandLastPrompt=kind||'now';
+  var shortcutQuestion=getMissionShortcutPrompt(kind||'now');
   var input=document.getElementById('mission-command-input');
   if(input)input.value='';
   setMissionCommandLoading('',false);
-  setTimeout(function(){renderMissionCommand(kind||'now','',true);},1300);
+  setTimeout(function(){renderMissionCommand(kind||'now',shortcutQuestion,true);},1300);
 }
 
 function askMissionCommand(){
