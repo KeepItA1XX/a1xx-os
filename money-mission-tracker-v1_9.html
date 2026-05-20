@@ -9597,6 +9597,10 @@ function missionPromptIsExplicitCommand(question){
   return !!q&&/^[\/#@]/.test(q);
 }
 
+function missionPromptIsWorkerMention(question){
+  return /^@\w+/i.test(String(question||'').trim());
+}
+
 function missionQuestionIsSimpleNowAsk(route,question){
   if(route!=='now')return false;
   var q=normalizeMissionQuestion(question||'');
@@ -9840,7 +9844,7 @@ function mcConfirmAction(actionId,encodedData){
 function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,brainState){
   var shape=getMissionQuestionShape(question||'');
   var quiet=missionShouldKeepAnswerQuiet(route,conv,question||'');
-  function withWorker(html){return html?(quiet?'':getMissionWorkerLabelHtml(route))+html:html;}
+  function withWorker(html){return html?(missionPromptIsWorkerMention(question)?getMissionWorkerLabelHtml(route):'')+html:html;}
   var allowSuggestions=missionQuestionAllowsSuggestionBubble(route,conv,question||'',links||[]);
   var allowActions=missionQuestionAllowsActionButtons(route,question||'');
   if(shape&&shape.type==='how')return {b1:withWorker(answer),b2:'',b3:allowActions?getMissionActionButtons(route,ctx,question||''):''};
