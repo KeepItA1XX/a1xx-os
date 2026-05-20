@@ -8610,6 +8610,114 @@ var A1XX_INPUT_LANGUAGE_BANK={
   location_environment:{routeTarget:'now',workerTarget:'calendar',responseShape:'current_block',dataSources:['app_state','calendar'],confidenceBoost:3,naturalPhrases:['i am in the car','i am driving','i am at the studio','i am at home','i am outside','i am on my phone','i am on desktop','i am about to leave','i just got back','i got 10 minutes','i got 30 minutes','i am between things','i cannot do deep work','i can only do quick stuff','what can i do from here','what can i do on my phone'],slangPhrases:['between things','quick stuff only'],typoVariants:['drving'],voiceTranscriptPatterns:['i have like ten minutes before i leave'],signalWords:['car','driving','studio','home','phone','desktop','minutes','quick']}
 };
 
+var MISSION_SKILL_PACKS=[];
+var MISSION_SKILL_PACK_REGISTRY={};
+var MISSION_SKILL_RESPONSE_POOLS={};
+var MISSION_SKILL_REGRESSION_TESTS=[];
+
+function missionUniqueList(list){
+  var seen={},out=[];
+  (list||[]).forEach(function(item){
+    var value=String(item||'').trim();
+    var key=value.toLowerCase();
+    if(value&&!seen[key]){seen[key]=true;out.push(value);}
+  });
+  return out;
+}
+
+function mergeMissionSkillArray(target,key,items){
+  target[key]=missionUniqueList((target[key]||[]).concat(items||[]));
+}
+
+function installMissionSkillPack(pack){
+  if(!pack||!pack.id||MISSION_SKILL_PACK_REGISTRY[pack.id])return false;
+  MISSION_SKILL_PACK_REGISTRY[pack.id]=pack;
+  (pack.inputBanks||[]).forEach(function(bank){
+    if(!bank||!bank.category)return;
+    var current=A1XX_INPUT_LANGUAGE_BANK[bank.category]||{};
+    A1XX_INPUT_LANGUAGE_BANK[bank.category]=Object.assign({},current,{
+      routeTarget:bank.routeTarget||current.routeTarget||'now',
+      workerTarget:bank.workerTarget||current.workerTarget||'strategist',
+      responseShape:bank.responseShape||current.responseShape||'current_block',
+      confidenceBoost:Math.max(current.confidenceBoost||0,bank.confidenceBoost||0),
+      dataSources:missionUniqueList((current.dataSources||[]).concat(bank.dataSources||[]))
+    });
+    current=A1XX_INPUT_LANGUAGE_BANK[bank.category];
+    mergeMissionSkillArray(current,'naturalPhrases',bank.naturalPhrases);
+    mergeMissionSkillArray(current,'slangPhrases',bank.slangPhrases);
+    mergeMissionSkillArray(current,'typoVariants',bank.typoVariants);
+    mergeMissionSkillArray(current,'voiceTranscriptPatterns',bank.voiceTranscriptPatterns);
+    mergeMissionSkillArray(current,'signalWords',bank.signalWords);
+  });
+  (pack.oldPhraseRewrites||[]).forEach(function(rule){
+    if(rule&&rule.pattern&&rule.rewrite)A1XX_PHRASE_MAP.unshift({pattern:rule.pattern,rewrite:rule.rewrite});
+  });
+  if(typeof A1XX_PHRASE_MAP_V2!=='undefined'){
+    (pack.v2PhraseRewrites||[]).forEach(function(rule){
+      if(rule&&rule.pattern&&rule.replace)A1XX_PHRASE_MAP_V2.unshift({pattern:rule.pattern,replace:rule.replace});
+    });
+  }
+  if(typeof MISSION_TYPO_MAP_V2!=='undefined'){
+    (pack.typoPairs||[]).forEach(function(pair){
+      if(pair&&pair.length===2)MISSION_TYPO_MAP_V2.push(pair);
+    });
+  }
+  if(pack.responsePools){
+    Object.keys(pack.responsePools).forEach(function(key){
+      MISSION_SKILL_RESPONSE_POOLS[key]=missionUniqueList((MISSION_SKILL_RESPONSE_POOLS[key]||[]).concat(pack.responsePools[key]||[]));
+    });
+  }
+  MISSION_SKILL_REGRESSION_TESTS=MISSION_SKILL_REGRESSION_TESTS.concat(pack.regressionTests||[]);
+  return true;
+}
+
+function installMissionCommandSkillPacks(){
+  (MISSION_SKILL_PACKS||[]).forEach(function(pack){installMissionSkillPack(pack);});
+}
+
+MISSION_SKILL_PACKS.push({
+  id:'open_energy_slang_v1',
+  name:'Open Energy + Slang Skill Pack v1',
+  purpose:'Understand short, charged, slang-heavy work-start prompts and respond with conversational intake plus better variation.',
+  routesAffected:['now'],
+  workersAffected:['mission_command_strategist'],
+  inputBanks:[{
+    category:'open_energy_work_start',
+    routeTarget:'now',
+    workerTarget:'strategist',
+    responseShape:'open_energy_intake',
+    confidenceBoost:6,
+    dataSources:['app_state','calendar','session'],
+    naturalPhrases:['i am ready','i am ready to work','i am ready now','ready to go','ready when you are','start me up','get me started','start the block','start this block','help me begin','help me start','tell me where to aim','point me somewhere','give me direction','move me forward','call the move','pick the move','choose the move','decide for me','tell me what we are doing','what are we doing first','what are we doing right now','what should we attack','where should we put the energy','where should this energy go'],
+    slangPhrases:['run it','run me','run the play','let us go','lets go','let us get it','lets get it','let us work','lets work','let us move','lets move','lock in','lock me in','we outside','we up','i am up','im up','we ready','ready ready','say less','press it','green light','turn me up','what we on','where we going','get me right','put me in motion','send me','aim me','point me at it','give me the play','call it','make the call','where the energy go','where we putting it'],
+    typoVariants:['letsgo','les go','let go','lets goo','les get it','lets gettit','lockin','loc in','lok in','run itt','runit','im ready','i m ready','im redy','i am redy','we rdy','wya move','cal the move','call da move','pik the move'],
+    voiceTranscriptPatterns:['okay let us go','yo let us go','all right let us go','alright let us go','okay i am ready','i am ready to start','so where do we put the energy','tell me where to put the energy','i need you to call the move','just call the move for me','i want you to pick what i do next'],
+    signalWords:['ready','energy','start','begin','lock','run','move','play','call','decide','aim','green']
+  }],
+  oldPhraseRewrites:[
+    {pattern:/\b(call the move|pick the move|choose the move|decide for me|make the call)\b/g,rewrite:'what should i do now'}
+  ],
+  v2PhraseRewrites:[
+    {pattern:/\b(call the move|pick the move|choose the move|decide for me|make the call)\b/gi,replace:'what should i do now'}
+  ],
+  typoPairs:[['letsgo','lets go'],['lockin','lock in'],['runit','run it'],['redy','ready']],
+  responsePools:{
+    openEnergyIntake:[
+      'I hear the energy.<br><br>Before I call the move, what are we trying to win right now: <strong>cash, content, production, or follow-up?</strong><br><br><span style="color:#8f9aa3">Current read: this looks like a {lane} window. If you want me to decide, say: <strong>call the move</strong>.</span>',
+      'Locked in.<br><br>Give me the target before I steer: <strong>money, proof, delivery, or pipeline?</strong><br><br><span style="color:#8f9aa3">If you want the OS to choose from the current data, say: <strong>call the move</strong>.</span>',
+      'Good. Let us aim it.<br><br>Are we pushing for <strong>cash, a finished asset, a posted proof piece, or one follow-up?</strong><br><br><span style="color:#8f9aa3">Current read: {lane} has the strongest signal. Say <strong>call the move</strong> if you want me to pick.</span>',
+      'Energy is there.<br><br>Now choose the lane: <strong>cash, proof, delivery, or pipeline heat</strong>.<br><br><span style="color:#8f9aa3">I can call it from the current block if you say: <strong>call the move</strong>.</span>',
+      'We can move.<br><br>Do you want the fastest <strong>money move</strong>, the cleanest <strong>content move</strong>, the highest-value <strong>production move</strong>, or the next <strong>follow-up</strong>?'
+    ]
+  },
+  regressionTests:[
+    {q:'run it',route:'now',mustAny:['energy','target','cash','content','production','follow-up']},
+    {q:'YO LETS GO',route:'now',mustAny:['energy','target','money','proof','delivery','pipeline']},
+    {q:'lockin',route:'now',mustAny:['energy','lane','call the move']},
+    {q:'call the move',route:'now',mustAny:['move','focus','start','one']}
+  ]
+});
+
 var MISSION_RESPONSE_DEPTH={
   micro:{label:'Micro',description:'One short answer or one direct move.'},
   quick:{label:'Quick',description:'Short read plus next action.'},
@@ -9040,6 +9148,8 @@ function applyA1XXPhraseMapV2(input){
   A1XX_PHRASE_MAP_V2.forEach(function(rule){out=out.replace(rule.pattern,rule.replace);});
   return out;
 }
+
+installMissionCommandSkillPacks();
 
 function normalizeMissionInputV2(rawInput){
   var input=String(rawInput||'');
@@ -9885,12 +9995,12 @@ function getMissionOpenEndedWorkStartResponseV2(turn,ctx){
   if(block.phase==='money')lane='money';
   else if(block.phase==='maker')lane='content or production';
   else if(block.phase==='manager')lane='admin or sync';
-  var variants=[
+  var variants=MISSION_SKILL_RESPONSE_POOLS.openEnergyIntake||[
     'I hear the energy.<br><br>Before I call the move, what are we trying to win right now: <strong>cash, content, production, or follow-up?</strong><br><br><span style="color:#8f9aa3">Current read: this looks like a '+escapeHtml(lane)+' window. If you want me to decide, say: <strong>call the move</strong>.</span>',
     'Locked in.<br><br>Give me the target before I steer: <strong>money, proof, delivery, or pipeline?</strong><br><br><span style="color:#8f9aa3">If you want the OS to choose from the current data, say: <strong>call the move</strong>.</span>',
     'Good. Let us aim it.<br><br>Are we pushing for <strong>cash, a finished asset, a posted proof piece, or one follow-up?</strong><br><br><span style="color:#8f9aa3">Current read: '+escapeHtml(lane)+' has the strongest signal. Say <strong>call the move</strong> if you want me to pick.</span>'
   ];
-  return variants[pickMissionOpenEnergyVariantV2(turn)]||variants[0];
+  return String(variants[pickMissionOpenEnergyVariantV2(turn)%variants.length]||variants[0]||'').replace(/\{lane\}/g,escapeHtml(lane));
 }
 
 /* =========================================================
@@ -13223,6 +13333,7 @@ function runMissionCommandSelfCheck(){
     {q:'roleplay a skeptical artist',route:'sales',mustAny:['roleplay','prospect','your move']},
     {q:'score my answer',route:'sales',mustAny:['scorecard','clarify','next step']}
   ];
+  checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
   var priorActiveRoute=window.__missionCommandActiveTopicRoute||'';
@@ -13249,9 +13360,10 @@ function runMissionCommandSelfCheck(){
     var testBrain=getMissionBrainState(ctx,cleaned,route||'');
     var visibleRoute=getMissionRenderRoute(cleaned,testBrain);
     var answer=String(getMissionCommandResponse('ask',ctx,cleaned,testBrain)||'').replace(/<[^>]+>/g,' ').toLowerCase();
+    var v2Route=(window.__missionLastTurnObjectV2&&window.__missionLastTurnObjectV2.route)||'';
     var shape=getMissionQuestionShape(cleaned);
     var mode=getMissionResponseMode(cleaned,visibleRoute||route,ctx,testBrain);
-    var routeOk=Array.isArray(check.route)?check.route.indexOf(route)>=0&&check.route.indexOf(visibleRoute)>=0:(check.route===null?!route&&!visibleRoute:route===check.route&&visibleRoute===check.route);
+    var routeOk=Array.isArray(check.route)?(check.route.indexOf(route)>=0||check.route.indexOf(visibleRoute)>=0||check.route.indexOf(v2Route)>=0):(check.route===null?!route&&!visibleRoute&&!v2Route:(route===check.route||visibleRoute===check.route||v2Route===check.route));
     var needles=(check.mustAny||[check.must||'']).map(function(item){return String(item||'').toLowerCase();}).filter(Boolean);
     var hasNeedle=!needles.length||needles.some(function(item){return answer.indexOf(item)>=0;});
     var blocked=check.mustNotContain&&answer.indexOf(String(check.mustNotContain).toLowerCase())>=0;
