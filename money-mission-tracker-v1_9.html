@@ -7140,6 +7140,75 @@ function captureWeekData(){
     weeklyOther:[0,0,0,0,0,0,0,0]
   };
 }
+
+function saveMissionCycleSnapshot(ctx,source){
+  ctx=ctx||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+  var data=typeof captureWeekData==='function'?captureWeekData():{};
+  var ci=getCycleIdx(),c=CYCLES[ci]||ctx.cycle||{};
+  var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var contentItems=(window.__contentPipelinePieces||window.__contentPieces||[]).filter(Boolean);
+  var productionItems=(window.__productionPieces||[]).filter(Boolean);
+  var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
+  var weekRevs=(data.weekRevs||data.weeklyRevenue||[]).map(function(v){return Number(v)||0;});
+  var bestWeekValue=0,bestWeekIndex=-1;
+  weekRevs.forEach(function(value,index){if(value>bestWeekValue){bestWeekValue=value;bestWeekIndex=index+1;}});
+  var elapsed=Number(data.daysElapsed||0);
+  var left=Number(data.daysLeft||0);
+  var target=Number(c.target||data.cycleTarget||ctx.wk||0);
+  var revenue=Number(data.revenue||data.rev||ctx.rev||0);
+  var pace=target?Math.round((revenue/target)*100):0;
+  var dailyPace=elapsed?revenue/elapsed:0;
+  var closingPace=left?Math.round(dailyPace*left):0;
+  var snapshot={
+    id:'cycle_'+(c.num||data.cycleNum||ci+1)+'_'+dateKey(new Date()),
+    ts:new Date().toISOString(),
+    source:source||'local',
+    cycleNum:c.num||data.cycleNum||ci+1,
+    cycleName:c.name||data.cycleName||'Current cycle',
+    startDate:c.start||'',
+    endDate:c.end||'',
+    target:target,
+    revenue:revenue,
+    weekTarget:Number(data.weekTarget||data.wk||ctx.wk||0),
+    netProfit:Number(data.netProfit||0),
+    dpcCount:Number(data.dmSent||data.dms||daily.dms||0),
+    bookedCalls:Number(data.calls||daily.calls||0),
+    closes:Number(data.closes||daily.closes||0),
+    leadsAdded:Number(data.leads||data.resp||0),
+    openLeads:leads.length,
+    bestDayType:getMissionDayType(),
+    bestWeek:bestWeekIndex>0?('Week '+bestWeekIndex+' · '+fmt(bestWeekValue)):'',
+    peakDPCDay:daily.dms?dateKey(new Date())+' · '+daily.dms+' DMs':'',
+    contentCount:Number(data.content||daily.content||contentItems.length||0),
+    productionCount:productionItems.length,
+    pace:pace,
+    closingPace:closingPace,
+    daysElapsed:elapsed,
+    daysLeft:left
+  };
+  var history=getStore(MISSION_CYCLE_HISTORY_KEY)||[];
+  history=history.filter(function(item){return item&&String(item.cycleNum)!==String(snapshot.cycleNum);});
+  history.push(snapshot);
+  history.sort(function(a,b){return new Date(a.ts)-new Date(b.ts);});
+  setStore(MISSION_CYCLE_HISTORY_KEY,history.slice(-12));
+  return snapshot;
+}
+
+function getMissionCyclePattern(metric){
+  var history=(getStore(MISSION_CYCLE_HISTORY_KEY)||[]).filter(Boolean);
+  if(!history.length)return {count:0,line:''};
+  var key=metric||'revenue';
+  var values=history.map(function(item){return Number(item[key])||0;});
+  var total=values.reduce(function(sum,value){return sum+value;},0);
+  var avg=values.length?Math.round(total/values.length):0;
+  var best=values.length?Math.max.apply(null,values):0;
+  var last=values[values.length-1]||0;
+  var prev=values.length>1?values[values.length-2]:null;
+  var trend=prev===null?'new':last>prev?'up':last<prev?'down':'flat';
+  var label=key==='dpcCount'?'DPC':key==='contentCount'?'content':key==='productionCount'?'production':key;
+  return {count:history.length,metric:key,average:avg,best:best,last:last,trend:trend,line:'Across '+history.length+' cycle snapshot'+(history.length===1?'':'s')+', '+label+' averages '+avg+' with a best of '+best+'.'};
+}
+
 function loadWeekData(){
   var d=getStore(STORE);if(!d)return;
   var map={rev:'w-rev',wk:'w-wk',ad:'w-ad',sw:'w-sw',sv:'w-sv',ot:'w-ot',dms:'w-dms',resp:'w-resp',calls:'w-calls',closes:'w-closes',content:'w-content',sessions:'w-sessions'};
@@ -7186,6 +7255,7 @@ function archiveCycleBtn(){
     setArchiveSyncState('Sending archive','Sending Cycle '+c.num+' archive request to Apps Script...',55,'');
     fetch(url,{method:'POST',body:JSON.stringify({type:'cycle_archive_probe',cycleNum:c.num,source:'archiveCycleBtn'}),mode:'no-cors',redirect:'follow'});
     var data=captureWeekData();
+    saveMissionCycleSnapshot(window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]),'archive_cycle_button');
     var payload=Object.assign({type:'cycle_archive',cycleNum:c.num,cycleName:c.name,cycleTarget:c.target,cycleStart:c.start,cycleEnd:c.end},data);
     fetch(url,{method:'POST',body:JSON.stringify(payload),mode:'no-cors',redirect:'follow'});
     setArchiveSyncState('Archive request sent','Check Activity Log for Cycle archive button ping and Notion Cycle Archive upsert.',100,'ok');
@@ -8015,6 +8085,8 @@ var MISSION_BRAIN_SESSION_KEY='a1xx_mc_brain_session';
 var MISSION_SIGNATURE_TURN_KEY='a1xx_mc_last_signature_turn';
 var MISSION_PATTERN_KEY='a1xx_mc_pattern_flags';
 var MISSION_NUDGE_REFRESH_MS=5*60*1000;
+var MISSION_CYCLE_HISTORY_KEY='a1xx_mc_cycle_history_v1';
+var MISSION_SESSION_LOG_KEY='a1xx_mc_session_log_v1';
 
 function getMissionConversationType(question,ctx,intent,brainState){
   var q=normalizeMissionQuestion(question||'');
@@ -8801,25 +8873,27 @@ function getMissionDiagnosticResponse(question,ctx){
   var metric=getMissionDiagnosticMetric(area,ctx);
   var block=getMissionBlockIntel();
   var pace=getMissionPaceState(ctx||{});
+  var cyclePattern=getMissionCyclePattern(area==='dpc'?'dpcCount':area==='content'?'contentCount':area==='production'?'productionCount':'revenue');
+  var patternLine=cyclePattern.count>=2?'<br><br><span style="color:#8f9aa3">Cycle pattern: '+escapeHtml(cyclePattern.line)+'</span>':'';
   if(/\b(i am stuck|im stuck|i'm stuck|stuck right now|where am i stuck)\b/.test(q)){
     var active=getCurrentJourneyMove(ctx);
     var next=active&&active.nextCheck?active.nextCheck:metric.action;
-    return 'Stuck read: this is not the whole OS being broken. It is the next step getting too wide.<br><br><strong>Next pressure point:</strong> '+escapeHtml(next)+'.<br><br><span style="color:#8f9aa3">'+escapeHtml(metric.label+' · '+metric.metric)+'.</span>';
+    return 'Stuck read: this is not the whole OS being broken. It is the next step getting too wide.<br><br><strong>Next pressure point:</strong> '+escapeHtml(next)+'.<br><br><span style="color:#8f9aa3">'+escapeHtml(metric.label+' · '+metric.metric)+'.</span>'+patternLine;
   }
   if(/\b(nothing is working|nothing works|is this even working|does this work)\b/.test(q)){
-    return 'Honest read: the system is working enough to show pressure, but the result loop needs a cleaner test.<br><br><strong>Signal:</strong> '+escapeHtml(metric.label+' · '+metric.metric)+'.<br><br><strong>Action:</strong> '+escapeHtml(metric.action)+'.';
+    return 'Honest read: the system is working enough to show pressure, but the result loop needs a cleaner test.<br><br><strong>Signal:</strong> '+escapeHtml(metric.label+' · '+metric.metric)+'.<br><br><strong>Action:</strong> '+escapeHtml(metric.action)+'.'+patternLine;
   }
   if(/\b(why isnt|why isn't|why is not|why is my|why are my|what is wrong with|whats wrong with|diagnose|diagnostic)\b/.test(q)){
     var cause=metric.weak?'the signal is too thin to make the next decision clean':'the next action is probably not specific enough';
-    return 'Diagnostic read: '+escapeHtml(metric.label.toLowerCase())+' is not failing by default. The likely issue is '+escapeHtml(cause)+'.<br><br><strong>Metric:</strong> '+escapeHtml(metric.metric)+'.<br><br><strong>Action:</strong> '+escapeHtml(metric.action)+'.';
+    return 'Diagnostic read: '+escapeHtml(metric.label.toLowerCase())+' is not failing by default. The likely issue is '+escapeHtml(cause)+'.<br><br><strong>Metric:</strong> '+escapeHtml(metric.metric)+'.<br><br><strong>Action:</strong> '+escapeHtml(metric.action)+'.'+patternLine;
   }
   if(/\b(biggest bottleneck|biggest constraint|what am i struggling with|what is holding me back|whats holding me back)\b/.test(q)){
     var moneyMetric=getMissionDiagnosticMetric('report',ctx);
     var leadMetric=getMissionDiagnosticMetric('leads',ctx);
     var bottleneck=(ctx&&ctx.gap>0)?moneyMetric:leadMetric;
-    return 'Constraint read: the biggest pressure point is '+escapeHtml(bottleneck.label.toLowerCase())+'.<br><br><strong>Signal:</strong> '+escapeHtml(bottleneck.metric)+'.<br><br><strong>Move:</strong> '+escapeHtml(bottleneck.action)+'.';
+    return 'Constraint read: the biggest pressure point is '+escapeHtml(bottleneck.label.toLowerCase())+'.<br><br><strong>Signal:</strong> '+escapeHtml(bottleneck.metric)+'.<br><br><strong>Move:</strong> '+escapeHtml(bottleneck.action)+'.'+patternLine;
   }
-  return 'Diagnostic read: '+escapeHtml(metric.label)+' is the lane to check first.<br><br><strong>Signal:</strong> '+escapeHtml(metric.metric)+'.<br><br><strong>Move:</strong> '+escapeHtml(metric.action)+'.';
+  return 'Diagnostic read: '+escapeHtml(metric.label)+' is the lane to check first.<br><br><strong>Signal:</strong> '+escapeHtml(metric.metric)+'.<br><br><strong>Move:</strong> '+escapeHtml(metric.action)+'.'+patternLine;
 }
 
 function getMissionMemoryAnswer(question){
@@ -9063,9 +9137,11 @@ function getMissionSessionOpenLine(ctx){
   if(hist.length>0)return '';
   var block=getMissionBlockIntel();
   var pace=getMissionPaceState(ctx||{});
+  var pattern=getMissionCyclePattern('revenue');
   var line='Session frame: '+(block.name||'current block')+(block.minutesLeft?' has '+block.minutesLeft+' min left':' is active')+'.';
   if(ctx&&ctx.gap>0)line+=' '+fmt(ctx.gap)+' remains on the weekly target.';
   else if(pace&&pace.label==='covered')line+=' Weekly target pressure is covered.';
+  if(pattern.count>=2)line+=' Pattern: '+pattern.trend+' versus the last saved cycle snapshot.';
   try{sessionStorage.setItem(key,'1');}catch(e){}
   return line;
 }
@@ -9093,6 +9169,7 @@ function getMissionCallbackLine(route,ctx){
 }
 
 function getMissionSessionCloseResponse(ctx){
+  saveMissionSessionLogEntry('close',ctx||{});
   var d=typeof getDailyCoach==='function'?getDailyCoach():{};
   var moved=[];
   if(d.money)moved.push(fmt(d.money)+' collected');
@@ -9112,6 +9189,45 @@ function getMissionSessionCloseResponse(ctx){
   else if(lastRoute==='report'||lastRoute==='dpc')line+=' Protect the next money-facing action.';
   else line+=' Carry the next block forward.';
   return escapeHtml(line);
+}
+
+function saveMissionSessionLogEntry(reason,ctx){
+  ctx=ctx||window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+  var active=getActiveMissionSession();
+  var sessionId=(active&&active.id)||'local';
+  var key='a1xx_mc_session_logged_'+reason+'_'+sessionId;
+  var now=Date.now();
+  try{
+    var prior=sessionStorage.getItem(key);
+    if(prior&&(now-Number(prior))<5*60*1000)return null;
+    sessionStorage.setItem(key,String(now));
+  }catch(e){}
+  var hist=getMissionChatHistory().slice(-20);
+  var routeCounts={};
+  hist.forEach(function(turn){
+    var route=turn&&turn.intentRoute||'';
+    if(route)routeCounts[route]=(routeCounts[route]||0)+1;
+  });
+  var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var entry={
+    id:'session_'+now,
+    ts:new Date(now).toISOString(),
+    date:dateKey(new Date(now)),
+    reason:reason||'close',
+    sessionId:sessionId,
+    title:(active&&active.title)||'Mission Command session',
+    messageCount:hist.length,
+    lastQuestion:hist.length?(hist[hist.length-1].question||''):'',
+    routes:routeCounts,
+    daily:{money:d.money||0,dms:d.dms||0,calls:d.calls||0,closes:d.closes||0,content:d.content||0},
+    weekly:{revenue:ctx.rev||0,target:ctx.wk||0,gap:ctx.gap||0},
+    cycle:ctx.cycle?{num:ctx.cycle.num,name:ctx.cycle.name,target:ctx.cycle.target}:null,
+    nextStep:(getCurrentJourneyMove(ctx)||{}).nextCheck||''
+  };
+  var log=getStore(MISSION_SESSION_LOG_KEY)||[];
+  log.push(entry);
+  setStore(MISSION_SESSION_LOG_KEY,log.slice(-60));
+  return entry;
 }
 
 function applyMissionSessionArc(html,route,ctx,question,brainState,opts){
@@ -9662,6 +9778,7 @@ function mcConfirmAction(actionId,encodedData){
   }
   logMissionWorkerAction(worker,'getBrainSession','local_write',route);
   appendMissionBubble('assistant',escapeHtml(msg),true,'suggest-row');
+  renderMissionNudge(window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]));
 }
 
 function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,brainState){
