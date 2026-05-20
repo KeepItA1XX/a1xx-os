@@ -8738,6 +8738,7 @@ var MISSION_TOOL_REGISTRY={
    MISSION TURN OBJECT — v2
 ========================================================= */
 var MISSION_DEBUG_MODE=false;
+var MISSION_ROUTER_V2_PRIMARY=true;
 var MISSION_TURN_CHECKPOINTS_KEY='a1xx_mc_turn_checkpoints_v1';
 var MISSION_BRAIN_SESSION_V2_KEY='a1xx_mc_brain_session_v2';
 var MISSION_PRESENCE_LOG_KEY='a1xx_mc_presence_log';
@@ -9094,7 +9095,7 @@ function scoreMissionRoutesV2(q,signals,turn){
   function add(route,score,reason,intentType){
     if(route)routes.push({route:route,score:score,reason:reason||'',intentType:intentType||''});
   }
-  if(turn&&turn.options&&turn.options.legacyRoute)add(turn.options.legacyRoute,0.88,'legacy_visible_route','legacy');
+  if(turn&&turn.options&&turn.options.legacyRoute)add(turn.options.legacyRoute,MISSION_ROUTER_V2_PRIMARY?0.42:0.88,MISSION_ROUTER_V2_PRIMARY?'legacy_fallback_route':'legacy_visible_route','legacy');
   var slash=String(q||'').match(/^\/([a-z0-9_]+)/);
   if(slash)add(normalizeMissionSlashRouteV2(slash[1]),1,'slash_command','command');
   var mention=String(q||'').match(/^@([a-z0-9_]+)/);
@@ -9104,6 +9105,7 @@ function scoreMissionRoutesV2(q,signals,turn){
   }
   var singleMap={leads:'leads',pipeline:'leads',money:'report',revenue:'report',dpc:'dpc',content:'content',production:'production',calendar:'calendar',week:'weekly',review:'weekly',sync:'sync',resources:'resources',rolodex:'resources',memory:'memory',settings:'help',sales:'sales',closer:'sales',objection:'sales',discovery:'sales',roleplay:'sales'};
   if(singleMap[q])add(singleMap[q],0.92,'single_word_topic','data_request');
+  if(/\b(what should i do now|what should i do|what do i do|where do i stand|where we at|current status|current focus|focus|next move|the move|lock in|start|priority|reset me)\b/.test(q))add('now',0.84,'now_focus_phrase','focus_request');
   if(/\b(closer|sales coach|sales call|discovery call|call prep|callprep|live call|livecall|objection|roleplay|role play|what should i say|write a dm|cold dm|warm follow up|follow-up script|needs to think|too expensive|no budget|send more info|send info|discount|price is crazy|talk to manager|decision maker|not ready|maybe next month|book a call|move them to a call|score my answer)\b/.test(q))add('sales',0.9,'sales_coach_phrase','sales_coaching');
   if(/\b(lead|leads|pipeline|hit list|follow up|follow ups|follow-up|follow-ups|who should i contact|who should i call|who hot|who warm|crm|honeybook|invoice)\b/.test(q))add('leads',0.85,'pipeline_phrase','data_request');
   if(/\b(money|revenue|bag|cash|sales|closed|paid|goal|gap|pace|profit|expense|margin)\b/.test(q))add('report',0.82,'money_phrase','data_request');
@@ -9825,6 +9827,58 @@ function missionQuestionAllowsSuggestionBubbleV2(route,conv,question,links,turn)
 
 function adaptMissionBubblePacketToLegacyResponse(packet){
   return {answer:packet&&packet.b1&&packet.b1.answer||'',workerId:packet&&packet.workerId||'',workerLabel:packet&&packet.workerLabel||'',route:packet&&packet.route||'',inputEnergy:packet&&packet.inputEnergy||'',responseMode:packet&&packet.responseMode||'',responseDepth:packet&&packet.responseDepth||'',responseShape:packet&&packet.responseShape||'',dataBubble:packet&&packet.b2&&packet.b2.shouldRender?packet.b2:null,actionBubble:packet&&packet.b3&&packet.b3.shouldRender?packet.b3:null,warnings:packet&&packet.warnings||[],trace:packet&&packet.trace||[]};
+}
+
+function getMissionLegacyConversationFromTurnV2(turn,currentConv){
+  if(!turn)return currentConv||{type:CONV_DATA_REQUEST,route:'now',activeRoute:''};
+  var route=turn.route||'';
+  var type=CONV_DATA_REQUEST;
+  if(turn.routePlan&&turn.routePlan.clarify){type=CONV_UNCLEAR;route='';}
+  else if(turn.conversationType==='CONV_ACTION_COMPLETE')type=CONV_FOLLOWUP;
+  else if(turn.conversationType==='CONV_CORRECTION')type=CONV_FOLLOWUP;
+  else if(turn.conversationType==='CONV_WHY')type=CONV_WHY;
+  else if(turn.conversationType==='CONV_WALKTHROUGH'||turn.conversationType==='CONV_TEACHING'||turn.conversationType==='CONV_PLAN'||turn.conversationType==='CONV_IDEATION'||turn.conversationType==='CONV_APP_NAVIGATION'||turn.conversationType==='CONV_DIAGNOSTIC')type=CONV_DATA_REQUEST;
+  else if(turn.inputSignals&&turn.inputSignals.isSlashCommand)type=CONV_COMMAND;
+  return {type:type,route:route,activeRoute:(currentConv&&currentConv.activeRoute)||''};
+}
+
+function getMissionIntentFromTurnV2(turn,currentIntent){
+  if(!turn)return currentIntent||{route:'',score:0,label:'',suggestions:[]};
+  var cfg=getMissionIntentConfig(turn.route)||{};
+  return Object.assign({},currentIntent||{},{
+    route:turn.route||'',
+    score:Math.round(((turn.routePlan&&turn.routePlan.confidence)||0)*100),
+    label:cfg.label||getMissionRouteLabelV2(turn.route),
+    suggestions:(currentIntent&&currentIntent.suggestions)||[],
+    cleanQuestion:(currentIntent&&currentIntent.cleanQuestion)||turn.rawInput
+  });
+}
+
+function missionV2TurnShouldOwnVisibleRoute(turn){
+  if(!MISSION_ROUTER_V2_PRIMARY||!turn||!turn.routePlan)return false;
+  if(turn.errors&&turn.errors.length)return false;
+  if(turn.routePlan.clarify)return true;
+  return !!turn.route;
+}
+
+function missionIsOpenEndedWorkStartV2(turn){
+  if(!turn)return false;
+  var raw=String(turn.rawInput||'').toLowerCase().replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim();
+  if(/^(let s go|lets go|let s run it|lets run it|let s get it|lets get it|let s work|lets work|let s move|lets move|run it|lock in|go|ready|i m ready|im ready|we ready)$/.test(raw))return true;
+  if(turn.inputEnergy==='charged'&&turn.route==='now'&&turn.routePlan&&turn.routePlan.confidence<0.65)return true;
+  return false;
+}
+
+function getMissionOpenEndedWorkStartResponseV2(turn,ctx){
+  if(!missionIsOpenEndedWorkStartV2(turn))return '';
+  var block=getMissionBlockIntel();
+  var lane='focus';
+  if(block.phase==='money')lane='money';
+  else if(block.phase==='maker')lane='content or production';
+  else if(block.phase==='manager')lane='admin or sync';
+  return '<strong>Mission Command:</strong> I hear the energy.<br><br>'
+    +'Before I call the move, what are we trying to win right now: <strong>cash, content, production, or follow-up?</strong><br><br>'
+    +'<span style="color:#8f9aa3">Current read: this looks like a '+escapeHtml(lane)+' window. If you want me to decide, say: <strong>call the move</strong>. I will use the current block and the latest data.</span>';
 }
 
 /* =========================================================
@@ -13020,10 +13074,20 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var conv=getMissionConversationType(cleanQuestion||'',ctx,intent,brainState);
   var route=(conv&&conv.route)||intent.route;
   if(intent&&intent.route&&missionQuestionHasExplicitDataAsk(intent.route,cleanQuestion||question||''))route=intent.route;
+  var turnV2=null;
   try{
     var turnV2Packet=runMissionTurn(kind||'ask',cleanQuestion||question||'',{ctx:ctx,legacyRoute:route,legacyIntent:intent,legacyConversation:conv,passive:true,allowLegacy:false});
     window.__missionLastTurnV2=turnV2Packet;
+    turnV2=window.__missionLastTurnObjectV2||null;
   }catch(e){}
+  if(missionV2TurnShouldOwnVisibleRoute(turnV2)){
+    route=(turnV2.routePlan&&turnV2.routePlan.clarify)?'':turnV2.route;
+    intent=getMissionIntentFromTurnV2(turnV2,intent);
+    conv=getMissionLegacyConversationFromTurnV2(turnV2,conv);
+    multi={primary:intent,secondary:null,routes:route?[route]:[]};
+    brainState=turnV2.brainState||brainState;
+    shape=getMissionQuestionShape(cleanQuestion||'');
+  }
   var responseMode=getMissionResponseMode(cleanQuestion||'',route,ctx,brainState);
   var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,responseMode);
   var quietAnswer=missionShouldKeepAnswerQuiet(route,conv,cleanQuestion||'');
@@ -13032,6 +13096,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var shaped=applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
+  var openEndedV2=getMissionOpenEndedWorkStartResponseV2(turnV2,ctx);
+  if(openEndedV2)return finishMissionAnswer(openEndedV2,{sessionArc:false,closer:false});
   var backlogSpecial=getMissionBacklogSpecialResponse(route,ctx,cleanQuestion||'',conv,brainState);
   if(backlogSpecial)return finishMissionAnswer(backlogSpecial,{sessionArc:false});
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,cleanQuestion||'');
@@ -13119,8 +13185,8 @@ function runMissionCommandSelfCheck(){
     {q:'where we at',route:'now',mustAny:['move','focus','start','one']},
     {q:'the bag',route:'report',mustAny:['money','revenue','gap','offer','collected','target','weekly goal'],mustNotContain:'i can read that two ways'},
     {q:'run the bag',route:'report',mustAny:['money','revenue','gap','offer','collected','target','weekly goal'],mustNotContain:'i can read that two ways'},
-    {q:"let's go",route:'now',mustAny:['move','focus','start','one'],mustNotContain:'i can read that two ways'},
-    {q:"YO LET'S GO!!",route:'now',mustAny:['move','focus','start','one'],mustNotContain:'i can read that two ways'},
+    {q:"let's go",route:'now',mustAny:['energy','cash','content','production','follow-up','call the move'],mustNotContain:'i can read that two ways'},
+    {q:"YO LET'S GO!!",route:'now',mustAny:['energy','cash','content','production','follow-up','call the move'],mustNotContain:'i can read that two ways'},
     {q:'walk me through everything happening right now',route:'now',mustAny:['move','focus','start','one'],mustNotContain:'tap pipeline'},
     {q:'who do i hit',route:'leads',mustAny:['lead','qualify','pipeline','offer']},
     {q:'what cam in',route:'report',mustAny:['money','revenue','gap','offer','collected','target','weekly goal']},
