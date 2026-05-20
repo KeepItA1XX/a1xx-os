@@ -4230,6 +4230,7 @@ function buildWeekStrip(calEvents,notionPieces){
     var hasCal=calEvents&&calEvents.some(function(e){var ed=new Date(e.start);ed.setHours(0,0,0,0);return ed.getTime()===d.getTime()&&!e.title.toLowerCase().includes('fedex')&&!e.title.toLowerCase().includes('work');});
     var isSunday=d.getDay()===0;
     var div=document.createElement('div');div.className='week-day'+(isToday?' selected':'');
+    div.setAttribute('data-week-date',ds);
     div.innerHTML='<div class="day-name">'+DAYS[i]+'</div>'
       +'<div class="day-num'+(isToday?' today':'')+'">'+d.getDate()+'</div>'
       +'<div class="day-dot'+(isSunday?' review':hasContent?' content':hasCal?' cal':'')+'"></div>';
@@ -4249,14 +4250,21 @@ function getWeekNumber(d){
 }
 
 function selectWeekDay(day,calEvents,notionPieces,showBrief){
-  document.querySelectorAll('.week-day').forEach(function(el){el.classList.remove('selected');});
-  var idx=(day.getDay()+6)%7;
-  var el=document.querySelectorAll('.week-day')[idx];if(el)el.classList.add('selected');
   var ds=dateKey(day);
+  var brief=document.getElementById('week-brief');if(!brief)return;
+  var current=document.querySelector('.week-day.selected');
+  var clickedOpen=!!(showBrief&&current&&current.getAttribute('data-week-date')===ds&&brief.style.display==='block');
+  if(clickedOpen){
+    current.classList.remove('selected');
+    brief.style.display='none';
+    return;
+  }
+  document.querySelectorAll('.week-day').forEach(function(el){el.classList.remove('selected');});
+  var el=document.querySelector('.week-day[data-week-date="'+ds+'"]');
+  if(el)el.classList.add('selected');
   var dayContent=(notionPieces||[]).filter(function(p){return p.date===ds;});
   var dayCal=(calEvents||[]).filter(function(e){var ed=new Date(e.start);return !isNaN(ed.getTime())&&dateKey(ed)===ds;});
   var rhythm=getDayRhythm(day.getDay());
-  var brief=document.getElementById('week-brief');if(!brief)return;
   brief.style.display=showBrief?'block':'none';
 
   // 2026-05-12 — derive past/today/future state and pull saved DPC numbers from local store
