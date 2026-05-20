@@ -8667,9 +8667,11 @@ function planMissionResponse(turn){
 
 function getMissionBubblePlanV2(turn,depth,shape){
   var dataLevel=turn.dataConfidence&&turn.dataConfidence.level||'medium';
+  var explicitDataAsk=false;
+  try{explicitDataAsk=!!(turn.inputSignals&&turn.inputSignals.isSlashCommand)||!!(typeof missionQuestionHasExplicitDataAsk==='function'&&missionQuestionHasExplicitDataAsk(turn.route,turn.rawInput));}catch(e){}
   var renderB2=true,renderB3=true;
   if(depth==='micro'){renderB2=false;renderB3=false;}
-  if(dataLevel==='low'&&!/sync|diagnostic|app_navigation/.test(shape))renderB2=false;
+  if(dataLevel==='low'&&!explicitDataAsk&&!/sync|diagnostic|app_navigation/.test(shape))renderB2=false;
   if(shape==='education_answer'||shape==='plan_builder')renderB2=false;
   return {renderB1:true,renderB2:renderB2,renderB3:renderB3,shape:shape,depth:depth};
 }
@@ -8696,6 +8698,8 @@ function getMissionRouteLabelV2(route){
 }
 
 function buildMissionResponseContract(turn){
+  var dataBubble=buildMissionB2DataBubbleV2(turn);
+  var actionBubble=buildMissionB3ActionBubbleV2(turn);
   return {
     workerId:turn.workerId,
     workerLabel:getMissionWorkerLabelV2(turn.workerId),
@@ -8705,12 +8709,56 @@ function buildMissionResponseContract(turn){
     responseDepth:turn.responseDepth,
     responseShape:turn.responseShape,
     b1:{answer:'',workerLabel:getMissionWorkerLabelV2(turn.workerId),confidence:turn.routePlan&&turn.routePlan.confidence||0,responseShape:turn.responseShape},
-    b2:{shouldRender:false},
-    b3:{shouldRender:false},
+    b2:dataBubble,
+    b3:actionBubble,
     trace:turn.decisionTrace,
     warnings:turn.warnings,
     timestamp:turn.timestamp
   };
+}
+
+function buildMissionB2DataBubbleV2(turn){
+  var plan=turn.responsePlan&&turn.responsePlan.bubblePlan||{};
+  if(!plan.renderB2)return {shouldRender:false};
+  var data=[];
+  var status=turn.contextStatus||{};
+  Object.keys(status).forEach(function(k){
+    var s=status[k]||{};
+    data.push({label:s.label||k,value:s.loaded?(s.recordCount+' records'):'not loaded',meta:(s.confidence||'medium')+(s.ageMinutes!==null&&s.ageMinutes!==undefined?' · '+s.ageMinutes+'m old':'')});
+  });
+  return {shouldRender:true,title:'Data Read',items:data,freshness:turn.dataConfidence&&turn.dataConfidence.level||'medium'};
+}
+
+function buildMissionB3ActionBubbleV2(turn){
+  var plan=turn.responsePlan&&turn.responsePlan.bubblePlan||{};
+  if(!plan.renderB3)return {shouldRender:false};
+  var action=turn.responsePlan&&turn.responsePlan.actionPlan||null;
+  if(!action)return {shouldRender:false};
+  return {shouldRender:true,label:action.label,actionType:action.type,target:action.target,requiresConfirmation:!!action.requiresConfirmation};
+}
+
+function getMissionVisibleTurnV2(question,route){
+  var turn=window.__missionLastTurnObjectV2||null;
+  if(!turn)return null;
+  var q=normalizeMissionInputV2(question||'');
+  if(turn.normalizedInput&&q&&turn.normalizedInput!==q)return null;
+  if(route&&turn.route&&route!==turn.route&&!(route==='diagnostic'&&turn.route==='sync'))return null;
+  return turn;
+}
+
+function missionRenderAllowedByTurnV2(turn,bubble){
+  if(!turn||!turn.responsePlan||!turn.responsePlan.bubblePlan)return true;
+  if(bubble==='b2')return turn.responsePlan.bubblePlan.renderB2!==false;
+  if(bubble==='b3')return turn.responsePlan.bubblePlan.renderB3!==false;
+  return true;
+}
+
+function missionQuestionAllowsSuggestionBubbleV2(route,conv,question,links,turn){
+  if(!missionRenderAllowedByTurnV2(turn,'b3'))return false;
+  var depth=turn&&turn.responseDepth||'';
+  if(depth==='micro')return false;
+  if(turn&&turn.inputSignals&&(turn.inputSignals.isWhy||turn.inputSignals.isCompletion||turn.inputSignals.isFrustration))return false;
+  return missionQuestionAllowsSuggestionBubble(route,conv,question,links);
 }
 
 function adaptMissionBubblePacketToLegacyResponse(packet){
@@ -11527,19 +11575,23 @@ function mcConfirmAction(actionId,encodedData){
 }
 
 function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,brainState){
+  var turnV2=getMissionVisibleTurnV2(question||'',route);
   var shape=getMissionQuestionShape(question||'');
   var quiet=missionShouldKeepAnswerQuiet(route,conv,question||'');
   var depth=getMissionResponseDepth(question||'',conv&&conv.type,brainState||{});
+  if(turnV2&&turnV2.responseDepth)depth=turnV2.responseDepth;
   var guidedProfile=getMissionGuidanceProfile(question||'',route,conv&&conv.type,brainState||{});
   function withWorker(html){return html?(missionPromptIsWorkerMention(question)?getMissionWorkerLabelHtml(route):'')+html:html;}
-  var allowSuggestions=missionQuestionAllowsSuggestionBubble(route,conv,question||'',links||[]);
+  var allowSuggestions=missionQuestionAllowsSuggestionBubbleV2(route,conv,question||'',links||[],turnV2);
   var allowActions=missionQuestionAllowsActionButtons(route,question||'');
+  if(!missionRenderAllowedByTurnV2(turnV2,'b3'))allowActions=false;
   if((depth==='guided'||depth==='deep'||depth==='roadmap')&&guidedProfile&&guidedProfile.shape){
     return {b1:withWorker(answer),b2:'',b3:''};
   }
   if(shape&&shape.type==='how')return {b1:withWorker(answer),b2:'',b3:allowActions?getMissionActionButtons(route,ctx,question||''):''};
   var needsData=missionRouteNeedsDataBubble(route,conv,question||'');
   if(brainState&&brainState.renderB2===false)needsData=false;
+  if(!missionRenderAllowedByTurnV2(turnV2,'b2'))needsData=false;
   if(!needsData)return {b1:withWorker(answer),b2:'',b3:[allowSuggestions?followUp:'',allowActions?getMissionActionButtons(route,ctx,question||''):''].filter(Boolean).join('<br><br>')};
   var human=getMissionHumanBubble(route,conv,ctx,question||'')||answer;
   return {
