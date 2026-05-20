@@ -9294,7 +9294,12 @@ var MISSION_SALES_DEEP_OUTPUT_PACK_V1={
     {q:'i am on the phone',route:'sales',subtype:'live_call'},
     {q:'roleplay a skeptical artist',route:'sales',subtype:'roleplay_start'},
     {q:'score my answer',route:'sales',subtype:'scorecard'},
-    {q:'write a Rappreneur OS dm',route:'sales',subtype:'offer_specific_dm'}
+    {q:'write a Rappreneur OS dm',route:'sales',subtype:'offer_specific_dm'},
+    {q:'write an ATL studio dm',route:'sales',subtype:'offer_specific_dm'},
+    {q:'write an ATL studio follow up',route:'sales',subtype:'offer_specific_dm'},
+    {q:'he said he cant afford it',route:'sales',subtype:'cant_afford'},
+    {q:'he asked for a payment plan',route:'sales',subtype:'payment_plan'},
+    {q:'they want to start smaller',route:'sales',subtype:'start_smaller'}
   ]
 };
 
@@ -11368,9 +11373,14 @@ var MISSION_SALES_OBJECTION_MAP={
   diy:{match:/\b(do it myself|youtube is free|already has|already have|another producer)\b/,type:'preference concern',stage:'E',say:'That may be true. What made you still take a look at this if you already have another option?',tone:'confused curiosity'}
 };
 
+function getMissionSalesPhraseBridgeV1(q){
+  q=normalizeMissionQuestion(q||'');
+  return /\b(closer|sales coach|what are sales|sales call|discovery call|call prep|prep me|perp me|prepare me|live call|on the phone|on phone|in a call|on a call|call right now|what should i say|what do i say|what should i text|what do i text|text back|dm back|help me reply|write.*(dm|text|reply|response|follow up|follow-up)|cold dm|warm follow|warm follow-up|atl studio|studio follow|studio dm|rappreneur.*dm|break even.*dm|bangin.*dm|mix.*master.*dm|beat license|objection|roleplay|role play|score my answer|scorecard|think about it|need to think|too expensive|price|costs too much|cant afford|can't afford|no budget|check budget|payment plan|discount|not ready|bad timing|maybe later|circle back|they said.*next week|he said.*next week|she said.*next week|send more info|send info|more information|talk to partner|talk to manager|decision maker|sign off|prove it works|proof first|guarantee|scam|what makes.*different|already tried|start smaller|just want beats|only need beats|they said.*no time|he said.*no time|she said.*no time|already has producer|already got a producer|youtube is free|ghosted|left me on read|bump)\b/.test(q);
+}
+
 function getMissionSalesSignal(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(closer|sales coach|what are sales|sales call|discovery call|call prep|prep me|perp me|live call|on the phone|in a call|on a call|what should i say|what do i say|write a dm|cold dm|warm follow up|warm follow-up|atl studio follow|studio follow|objection|roleplay|score my answer|think about it|too expensive|no budget|send more info|send info|discount|not ready|maybe next month|decision maker|prove it works|youtube is free)\b/.test(q)||/^\/(sales|closer|callprep|livecall|discovery|objection|dm|roleplay)\b/.test(q)||/^@(closer|sales)\b/.test(q);
+  return getMissionSalesPhraseBridgeV1(q)||/^\/(sales|closer|callprep|livecall|discovery|objection|dm|roleplay)\b/.test(q)||/^@(closer|sales)\b/.test(q);
 }
 
 function getMissionSalesMode(question){
@@ -13399,7 +13409,7 @@ function getMissionSalesSubtypeV1_1(q){
 
 function getMissionOutputRouteOverrideV1_1(route,q){
   q=String(q||'').toLowerCase();
-  if(/\b(what should i say|help me reply|write a warm|warm follow|follow-up|follow up|atl studio follow|studio follow|on the phone|live call|in a call|on a call|too expensive|price|costs too much|need to think|ghosted|bump|book.*call|discount|no budget|maybe later)\b/.test(q))return 'sales';
+  if(typeof getMissionSalesPhraseBridgeV1==='function'&&getMissionSalesPhraseBridgeV1(q))return 'sales';
   if(/\b(data stale|source|where is this coming from|webhook|web hook|token|bridge|is this current|sync check|did this save|sheets|notion)\b/.test(q))return 'sync';
   if(/\b(that does not sound like me|doesn't sound like me|less hype|more direct|voice|style|remember this|save this style|dont say|don't say)\b/.test(q))return 'memory';
   if(route==='pipeline')return 'leads';
@@ -13649,7 +13659,7 @@ function shouldShowMissionDataBubbleOutputV1(turn){
   var type=turn.conversationType||'';
   var q=String(turn.normalizedInput||'').toLowerCase();
   if(type==='live_call')return false;
-  if(route==='sales'&&/\b(on the phone|live call|what should i say|waht should i say|help me reply|too expensive|need to think|send more info|not ready|ghosted|bump|roleplay|role play)\b/.test(q))return false;
+  if(route==='sales'&&typeof getMissionSalesPhraseBridgeV1==='function'&&getMissionSalesPhraseBridgeV1(q))return false;
   if(shape==='script'&&!/\b(data|why|show|report|numbers|gap|who|source|coming from)\b/.test(q))return false;
   if(['money','report','leads','pipeline','dpc','sync','diagnostic','weekly'].indexOf(route)>=0)return true;
   if(/\b(show|data|numbers|gap|who|where is this coming from|what data|why|source|current)\b/.test(q))return true;
@@ -13658,11 +13668,12 @@ function shouldShowMissionDataBubbleOutputV1(turn){
 
 function shouldShowMissionActionBubbleOutputV1(turn){
   if(!turn)return false;
+  var route=turn.route||'';
   var shape=turn.responseShape||'';
   var type=turn.conversationType||'';
   var q=String(turn.normalizedInput||'').toLowerCase();
   if(type==='live_call')return false;
-  if(route==='sales'&&/\b(on the phone|live call|what should i say|waht should i say|help me reply|too expensive|need to think|send more info|not ready|ghosted|bump|roleplay|role play)\b/.test(q))return false;
+  if(route==='sales'&&typeof getMissionSalesPhraseBridgeV1==='function'&&getMissionSalesPhraseBridgeV1(q))return false;
   if(shape==='script'||shape==='correction_recovery'||shape==='correction_prompt')return false;
   if(['confirmation_required','ranked_list','guided_steps','diagnostic_steps','app_navigation_guide'].indexOf(shape)>=0)return true;
   if(/\b(open|log|save|move|who|where|what now|next|sync|follow up)\b/.test(q))return true;
