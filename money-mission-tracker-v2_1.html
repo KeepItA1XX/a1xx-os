@@ -1903,6 +1903,16 @@ body:before{
             <div class="settings-row"><div><div class="settings-row-name">Webhook token</div><div class="settings-row-meta">Optional write protection for Apps Script POST requests.</div></div><span class="settings-badge" id="settings-webhook-badge">Optional</span></div>
             <div class="settings-row"><div><div class="settings-row-name">OPS Sync Databases</div><div class="settings-row-meta">Daily DPC Log · Weekly Review Log · Cycle Archives</div></div><span class="settings-badge">Write</span></div>
           </div>
+          <div class="settings-field" style="margin-top:10px">
+            <label for="bridge-webhook-token">Webhook Token</label>
+            <input id="bridge-webhook-token" type="password" placeholder="same value as A1XX_WEBHOOK_TOKEN"/>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" onclick="saveBridgeWebhookToken()">Save token</button>
+            <button class="btn" onclick="toggleBridgeWebhookToken()">Show / hide</button>
+          </div>
+          <div class="auth-note">Use the same exact value in Apps Script Script Properties as A1XX_WEBHOOK_TOKEN.</div>
+          <div class="reset-status" id="bridge-webhook-status"></div>
         </div>
       </div>
       <div class="connections-subpane" id="connections-subpane-notion">
@@ -3936,6 +3946,7 @@ function setConnectionsSubTab(tab){
   document.querySelectorAll('.connections-subpane').forEach(function(pane){
     pane.classList.toggle('active',pane.id==='connections-subpane-'+window.__connectionsSubTab);
   });
+  if(window.__connectionsSubTab==='bridge')syncBridgeWebhookInput();
 }
 
 function setAISubTab(tab){
@@ -3961,6 +3972,30 @@ function updateSettingsConnections(){
     webhookBadge.textContent=hasToken?'Ready':'Optional';
     webhookBadge.className='settings-badge '+(hasToken?'':'warn');
   }
+  syncBridgeWebhookInput();
+}
+
+function syncBridgeWebhookInput(){
+  var input=document.getElementById('bridge-webhook-token');
+  if(input&&!input.value)input.value=getWebhookToken();
+}
+
+function saveBridgeWebhookToken(){
+  var input=document.getElementById('bridge-webhook-token');
+  var status=document.getElementById('bridge-webhook-status');
+  var token=input?input.value.trim():'';
+  if(token)localStorage.setItem(WEBHOOK_TOKEN_KEY,token);
+  else localStorage.removeItem(WEBHOOK_TOKEN_KEY);
+  updateSettingsConnections();
+  if(status){
+    status.className='reset-status ok';
+    status.textContent=token?'Webhook token saved locally. Add the same value to Apps Script as A1XX_WEBHOOK_TOKEN.':'Webhook token cleared locally.';
+  }
+}
+
+function toggleBridgeWebhookToken(){
+  var input=document.getElementById('bridge-webhook-token');
+  if(input)input.type=input.type==='password'?'text':'password';
 }
 
 function toggleCoachDetails(){
