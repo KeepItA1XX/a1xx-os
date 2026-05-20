@@ -491,6 +491,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .setup-field label{font-size:11px;color:#555;display:block;margin-bottom:4px}
 .setup-field input{height:36px;font-size:12px;padding:0 12px;border:0.5px solid #1e1e1e;border-radius:8px;background:#111;color:#e0e0e0;outline:none;width:100%;font-family:monospace;transition:border-color .2s}
 .setup-field input:focus{border-color:#333}
+.setup-field-row{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
+.setup-field-row.triple{grid-template-columns:1fr auto auto}
+.setup-copy-btn{height:36px;padding:0 10px;border:0.5px solid #263039;border-radius:8px;background:#0b0f12;color:#8f9aa3;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap}
+.setup-copy-btn:hover{border-color:#3a5a2a;color:#d7dde3}
 
 /* BUTTONS */
 .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
@@ -1940,6 +1944,42 @@ body:before{
             <button class="btn" onclick="toggleSetup('sheets')">Sheets / Notion setup</button>
             <button class="btn" onclick="toggleSetup('todoist')">Todoist setup</button>
           </div>
+          <div class="setup-panel" id="setup-sheets">
+            <div class="setup-panel-title">Connect Google Sheets + Calendar</div>
+            <div class="setup-note">Paste your Apps Script Web App URL below. This powers automatic Sheets backup, Google Calendar reading, and Notion content loading.</div>
+            <div class="setup-field">
+              <label>Apps Script Web App URL</label>
+              <div class="setup-field-row">
+                <input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/.../exec"/>
+                <button class="setup-copy-btn" type="button" onclick="copySetupField('sheets-url','sheets-status')">Copy</button>
+              </div>
+            </div>
+            <div class="setup-field">
+              <label>Webhook Token</label>
+              <div class="setup-field-row triple">
+                <input type="password" id="webhook-token" placeholder="same value as A1XX_WEBHOOK_TOKEN"/>
+                <button class="setup-copy-btn" type="button" onclick="toggleSetupFieldVisibility('webhook-token')">Show</button>
+                <button class="setup-copy-btn" type="button" onclick="copySetupField('webhook-token','sheets-status')">Copy</button>
+              </div>
+            </div>
+            <div class="auth-note">Only set this after the same token exists in Apps Script Script Properties. Leave blank until then.</div>
+            <div class="btn-row"><button class="btn blue" onclick="saveSheets()">Save ↗</button><button class="btn" onclick="testSheets()">Test connection</button></div>
+            <div class="status" id="sheets-status"></div>
+          </div>
+          <div class="setup-panel" id="setup-todoist">
+            <div class="setup-panel-title">Connect Todoist</div>
+            <div class="setup-note">One-time setup. Token saved in browser only — never shared anywhere.<br>Todoist → Settings → Integrations → Developer → copy API token.</div>
+            <div class="setup-field">
+              <label>API Token</label>
+              <div class="setup-field-row triple">
+                <input type="password" id="todoist-token" placeholder="paste token here"/>
+                <button class="setup-copy-btn" type="button" onclick="toggleSetupFieldVisibility('todoist-token')">Show</button>
+                <button class="setup-copy-btn" type="button" onclick="copySetupField('todoist-token','todoist-status')">Copy</button>
+              </div>
+            </div>
+            <div class="btn-row"><button class="btn primary" onclick="saveTodoist()">Save ↗</button></div>
+            <div class="status" id="todoist-status"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2129,26 +2169,6 @@ body:before{
 
 <!-- ═══════════════════════════════════════════ TODAY TAB ══ -->
 <div id="pane-today">
-
-<!-- TODOIST SETUP -->
-<div class="setup-panel" id="setup-todoist">
-  <div class="setup-panel-title">Connect Todoist</div>
-  <div class="setup-note">One-time setup. Token saved in browser only — never shared anywhere.<br>Todoist → Settings → Integrations → Developer → copy API token.</div>
-  <div class="setup-field"><label>API Token</label><input type="password" id="todoist-token" placeholder="paste token here"/></div>
-  <div class="btn-row"><button class="btn primary" onclick="saveTodoist()">Save ↗</button></div>
-  <div class="status" id="todoist-status"></div>
-</div>
-
-<!-- SHEETS SETUP -->
-<div class="setup-panel" id="setup-sheets">
-  <div class="setup-panel-title">Connect Google Sheets + Calendar</div>
-  <div class="setup-note">Paste your Apps Script Web App URL below. This powers automatic Sheets backup, Google Calendar reading, and Notion content loading.</div>
-  <div class="setup-field"><label>Apps Script Web App URL</label><input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/.../exec"/></div>
-  <div class="setup-field"><label>Webhook Token</label><input type="password" id="webhook-token" placeholder="same value as A1XX_WEBHOOK_TOKEN"/></div>
-  <div class="auth-note">Only set this after the same token exists in Apps Script Script Properties. Leave blank until then.</div>
-  <div class="btn-row"><button class="btn blue" onclick="saveSheets()">Save ↗</button><button class="btn" onclick="testSheets()">Test connection</button></div>
-  <div class="status" id="sheets-status"></div>
-</div>
 
 <!-- DAY TYPE BANNER -->
 <div class="daytype-banner" id="daytype-banner">
@@ -3882,6 +3902,32 @@ function toggleSetup(id){
 function toggleCollapse(id){
   var el=document.getElementById(id);
   if(el)el.classList.toggle('collapsed');
+}
+
+function setSetupStatus(id,msg,ok){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.style.color=ok?'#639922':'#d4a017';
+  el.textContent=msg||'';
+}
+
+function toggleSetupFieldVisibility(inputId){
+  var input=document.getElementById(inputId);
+  if(input)input.type=input.type==='password'?'text':'password';
+}
+
+function copySetupField(inputId,statusId){
+  var input=document.getElementById(inputId);
+  var value=input?(input.value||'').trim():'';
+  if(!value){setSetupStatus(statusId,'Nothing to copy yet.',false);return;}
+  function done(){setSetupStatus(statusId,'Copied.',true);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(value).then(done).catch(function(){
+      try{input.focus();input.select();document.execCommand('copy');done();}catch(e){setSetupStatus(statusId,'Copy failed. Select it manually.',false);}
+    });
+  }else{
+    try{input.focus();input.select();document.execCommand('copy');done();}catch(e){setSetupStatus(statusId,'Copy failed. Select it manually.',false);}
+  }
 }
 
 function toggleSystemPanel(){
