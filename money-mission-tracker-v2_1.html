@@ -8847,6 +8847,118 @@ MISSION_SKILL_PACKS.push({
   ]
 });
 
+var MISSION_OUTPUT_RESPONSE_POOLS_V1={
+  routePools:{
+    now:[
+      {id:'now_direct_1',text:'The move is simple: {{move}}. Do that before anything else.'},
+      {id:'now_direct_2',text:'Money-first move: {{move}}. Everything else is second.'},
+      {id:'now_direct_3',text:'You are in execution mode. One move: {{move}}.'},
+      {id:'now_direct_4',text:'Do this first: {{move}}. Then check the result before adding more.'}
+    ],
+    sales:[
+      {id:'sales_script_1',text:'Say this: "{{script}}"<br><br>Then stop talking.'},
+      {id:'sales_script_2',text:'Do not pitch yet. Ask: "{{question}}"'},
+      {id:'sales_script_3',text:'Keep it calm. Send: "{{message}}"'},
+      {id:'sales_script_4',text:'This needs a question, not a paragraph. Ask: "{{question}}"'}
+    ],
+    leads:[
+      {id:'leads_rank_1',text:'Start with {{lead}}.<br><br>Reason: {{reason}}.<br><br>Next touch: "{{message}}"'},
+      {id:'leads_diag_1',text:'Pipeline read: {{read}}.<br><br>Bottleneck: {{bottleneck}}.<br><br>Fix: {{fix}}.'},
+      {id:'leads_focus_1',text:'Warm leads first. Cold outreach comes after the money already in motion.'}
+    ],
+    report:[
+      {id:'report_money_1',text:'Money read: {{read}}.<br><br>The move is {{move}}.'},
+      {id:'report_gap_1',text:'Gap: {{gap}}.<br><br>Closest path: {{path}}.'},
+      {id:'report_cash_1',text:'If the goal is cash, prioritize {{priority}} before {{secondary}}.'}
+    ],
+    dpc:[
+      {id:'dpc_move_1',text:'DPC move: {{move}}.<br><br>Log it after you finish.'},
+      {id:'dpc_focus_1',text:'Today’s campaign should focus on {{campaignFocus}}.'},
+      {id:'dpc_log_1',text:'Log check: {{summary}}<br><br>Want to save that?'}
+    ],
+    content:[
+      {id:'content_hook_1',text:'Content angle: {{angle}}.<br><br>Hook: "{{hook}}"'},
+      {id:'content_reel_1',text:'This should be a reel, not a long post.<br><br>Use this hook: "{{hook}}"'},
+      {id:'content_proof_1',text:'The proof angle is stronger than the advice angle here.'}
+    ],
+    production:[
+      {id:'production_priority_1',text:'Production move: finish {{asset}} first.<br><br>It unlocks {{nextStep}}.'},
+      {id:'production_client_1',text:'Client delivery comes before new ideas. Handle {{delivery}}.'},
+      {id:'production_asset_1',text:'Finish the thing that can be delivered, posted, or sold first.'}
+    ],
+    sync:[
+      {id:'sync_partial_1',text:'The read is partial, so I am not going to fake the numbers.'},
+      {id:'sync_source_1',text:'Source read: {{source}}.<br><br>Confidence: {{confidence}}.<br><br>Missing: {{missing}}.'},
+      {id:'sync_safe_1',text:'This looks like stale data. Safest move: {{safeMove}}.'}
+    ],
+    memory:[
+      {id:'memory_rule_1',text:'That sounds like a rule worth saving:<br><br>{{memory}}<br><br>Save it?'},
+      {id:'memory_voice_1',text:'Got it. Voice adjustment: {{voiceRule}}.'},
+      {id:'memory_confirm_1',text:'I can use that this session, but saving it long-term needs confirmation.'}
+    ]
+  },
+  conversationTypePools:{
+    wrong_lane_correction:[
+      {id:'wrong_lane_1',text:'Got it. Wrong lane.<br><br>What did you mean instead: <strong>Pipeline, Money, Sales, Content, Production, or Sync?</strong>'},
+      {id:'wrong_lane_2',text:'Clean reset.<br><br>I will not keep pushing that route. Pick the lane and I will rerun it.'}
+    ],
+    why_loop:[
+      {id:'why_reason',text:'Why: {{reason}}<br><br>The deeper reason is {{deeperReason}}.'},
+      {id:'why_root',text:'The surface issue is {{surface}}.<br><br>The real issue is {{constraint}}.'},
+      {id:'why_decision',text:'At the decision level, this means {{decision}}.'}
+    ],
+    more_depth:[
+      {id:'more_expand',text:'Deeper layer: {{deeperLayer}}.'},
+      {id:'more_framework',text:'If we zoom out, the pattern is {{pattern}}.'},
+      {id:'more_next',text:'The move is still {{move}}, but now the reason is clearer.'}
+    ],
+    open_energy:[
+      {id:'energy_1',text:'Bet. The move is {{move}}.'},
+      {id:'energy_2',text:'Lock in on one thing: {{move}}.'},
+      {id:'energy_3',text:'Do not spread the energy out. Put it into {{move}}.'}
+    ],
+    low_energy_overwhelmed:[
+      {id:'low_1',text:'We are not doing everything. Just do {{move}}.'},
+      {id:'low_2',text:'Cut the noise. Do {{move}} first.'},
+      {id:'low_3',text:'No pressure to solve the whole system. Close this loop: {{move}}.'}
+    ],
+    celebration_win:[
+      {id:'win_1',text:'Good. Log it, learn from it, and keep the next move simple.'},
+      {id:'win_2',text:'That counts. Capture the proof while it is fresh.'},
+      {id:'win_3',text:'That is a real signal. What created it?'}
+    ],
+    unclear_fallback:[
+      {id:'unclear_1',text:'I can take that a few ways. Are we talking <strong>sales, pipeline, money, content, or production?</strong>'},
+      {id:'unclear_2',text:'I am not going to guess wrong. Pick the lane: <strong>sales, leads, money, content, or sync</strong>.'}
+    ]
+  }
+};
+
+MISSION_SKILL_PACKS.push({
+  id:'mc_skill_output_response_pack_v1',
+  name:'Mission Command Output Response Pack v1',
+  version:'1.0',
+  status:'active',
+  purpose:'Improve B1 answer quality, correction recovery, why/more depth, response variation, and B2/B3 restraint after Mission Command understands the route.',
+  routesAffected:['now','sales','leads','pipeline','dpc','money','report','content','production','calendar','review','weekly','memory','sync','diagnostic','resources','help'],
+  workersAffected:['mission_command_strategist','sales_coach','pipeline_reviewer','finance_goal_tracker','content_coach','production_manager','calendar_focus_guard','weekly_review_assistant','ai_memory_curator','notion_sync_auditor'],
+  responsePools:{
+    outputResponsePackV1:['active']
+  },
+  regressionTests:[
+    {q:'nah not that',route:'now',mustAny:['wrong lane','pipeline','money','sales','content','production']},
+    {q:'why',route:'now',mustAny:['why','reason','deeper','decision','move']},
+    {q:'why again',route:'now',mustAny:['surface','real issue','constraint','decision','move']},
+    {q:'more',route:'now',mustAny:['deeper','pattern','move','reason']},
+    {q:'lock in',route:'now',mustAny:['move','lock','one']},
+    {q:'i am tired',route:'now',mustAny:['not doing everything','cut the noise','close this loop','move']},
+    {q:'that worked',route:'now',mustAny:['log','proof','signal','created']},
+    {q:'what should i say',route:'sales',mustAny:['say','ask','send','question']},
+    {q:'data stale',route:'sync',mustAny:['partial','stale','sync','source','confidence']},
+    {q:'remember this',route:'memory',mustAny:['save','rule','confirmation','memory']}
+  ]
+});
+
 var MISSION_RESPONSE_DEPTH={
   micro:{label:'Micro',description:'One short answer or one direct move.'},
   quick:{label:'Quick',description:'Short read plus next action.'},
@@ -10070,6 +10182,8 @@ function getMissionBubblePlanV2(turn,depth,shape){
   if(turn.skillPackResolution&&turn.skillPackResolution.renderActionBubble===false)renderB3=false;
   if(!explicitDataAsk&&typeof shouldRenderDataBubbleSkillPackV1==='function'&&!shouldRenderDataBubbleSkillPackV1(turn))renderB2=false;
   if(typeof shouldRenderActionBubbleSkillPackV1==='function'&&!shouldRenderActionBubbleSkillPackV1(turn))renderB3=false;
+  if(!explicitDataAsk&&typeof shouldShowMissionDataBubbleOutputV1==='function'&&!shouldShowMissionDataBubbleOutputV1(turn))renderB2=false;
+  if(typeof shouldShowMissionActionBubbleOutputV1==='function'&&!shouldShowMissionActionBubbleOutputV1(turn))renderB3=false;
   return {renderB1:true,renderB2:renderB2,renderB3:renderB3,shape:shape,depth:depth};
 }
 
@@ -12753,6 +12867,177 @@ function getMissionWhatElseRead(route,ctx){
   return 'Yes. Do not open another system yet. Finish the smallest money-facing move, then come back with what happened.';
 }
 
+var MISSION_OUTPUT_STATE_V1_KEY='a1xx_mc_output_state_v1';
+
+function getMissionOutputStateV1(){
+  try{return JSON.parse(sessionStorage.getItem(MISSION_OUTPUT_STATE_V1_KEY)||'{}')||{};}catch(e){return {};}
+}
+
+function setMissionOutputStateV1(state){
+  try{sessionStorage.setItem(MISSION_OUTPUT_STATE_V1_KEY,JSON.stringify(state||{}));}catch(e){}
+}
+
+function fillMissionTemplateV1(template,context){
+  var ctx=context||{};
+  return String(template||'').replace(/\{\{([a-zA-Z0-9_]+)\}\}/g,function(match,key){
+    var value=ctx.hasOwnProperty(key)?ctx[key]:'';
+    return value===undefined||value===null||value===''?'':escapeHtml(String(value));
+  }).replace(/\s+<br><br>\s+$/,'');
+}
+
+function getMissionOutputContextV1(route,ctx,question,brainState){
+  ctx=ctx||{};
+  brainState=brainState||{};
+  var vars=getMissionVarsExpanded(ctx,brainState);
+  var q=normalizeMissionQuestion(question||'');
+  var lead=ctx.leadText||vars.topLead||'the warmest visible lead';
+  var move=brainState.nextBestMove||ctx.nowText||vars.nextBestMove||'finish the next money-facing move';
+  var script='Help me understand what part feels unclear right now: the result, the timing, or the money?';
+  if(/\bghost|bump\b/.test(q))script='Still interested in solving this, or should I close the loop for now?';
+  if(/\bexpensive|price|budget\b/.test(q))script='Is the number impossible right now, or are you not fully sure the result is worth that number yet?';
+  return Object.assign({},vars,{
+    move:move,
+    script:script,
+    question:script,
+    message:script,
+    closeQuestion:'If this solves the problem, do you want to move forward today?',
+    qualifier:'Before I send more info, what are you trying to fix first?',
+    line:script,
+    lead:lead,
+    reason:'closest visible signal',
+    read:route==='report'||route==='money'?'weekly target and cash path':route==='leads'?'heat beats volume':'current signal is usable',
+    bottleneck:'the next status change is unclear',
+    fix:'qualify one person, make the offer, then log the result',
+    gap:fmt(Math.max(0,Number(ctx.gap||0))),
+    path:'warm follow-up, direct offer, logged result',
+    priority:'the closest buyer',
+    secondary:'new setup',
+    campaignFocus:'follow-ups that can create calls',
+    summary:'activity needs confirmation before it becomes a saved result',
+    angle:'proof from today',
+    hook:/\bhook\b/.test(q)?'Stop treating talent like the whole business':'The work is the proof',
+    cta:'DM me the word SYSTEM and I will send the next step',
+    asset:vars.productionTitle||'the closest active asset',
+    nextStep:'a usable delivery, post, or offer',
+    delivery:vars.productionTitle||'the closest client or catalog item',
+    source:'local app state plus connected sources',
+    confidence:'partial until the latest sync is checked',
+    missing:'anything not loaded in the current packet',
+    safeMove:'use the last clean read and avoid silent writes',
+    memory:'Keep Mission Command direct, A1XX-specific, and action-first.',
+    voiceRule:'less generic, more direct, more operator voice',
+    deeperReason:'a logged result gives the OS better signal than another answer',
+    surface:'the answer feels unclear',
+    constraint:'the next action is not locked yet',
+    decision:'pick one lane, take the next action, then log the result',
+    deeperLayer:'this is about cleaner sequencing, not more information',
+    pattern:'the question keeps returning because the action loop is still open'
+  });
+}
+
+function getMissionOutputPoolV1(route,conversationType,q){
+  var pools=MISSION_OUTPUT_RESPONSE_POOLS_V1||{};
+  if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q))return pools.conversationTypePools.wrong_lane_correction||[];
+  if(conversationType===CONV_WHY||/^(why|why again|run it back|explain more|make it make sense)$/.test(q))return pools.conversationTypePools.why_loop||[];
+  if(conversationType===CONV_FOLLOWUP&&/^(more|tell me more|say more|go on|continue)$/.test(q))return pools.conversationTypePools.more_depth||[];
+  var profile=getMissionInputProfile(q,q);
+  var smartCategory=profile&&profile.best&&profile.best.category||'';
+  if(smartCategory==='open_energy_work_start')return pools.conversationTypePools.open_energy||[];
+  if(smartCategory==='frustration_overwhelm')return pools.conversationTypePools.low_energy_overwhelmed||[];
+  if(smartCategory==='celebration_win')return pools.conversationTypePools.celebration_win||[];
+  if(conversationType===CONV_UNCLEAR)return pools.conversationTypePools.unclear_fallback||[];
+  return (pools.routePools&&pools.routePools[route])||[];
+}
+
+function pickMissionOutputTemplateV1(route,conversationType,q,brainState){
+  var pool=getMissionOutputPoolV1(route,conversationType,q,brainState);
+  if(!pool||!pool.length)return null;
+  var state=getMissionOutputStateV1();
+  state.usedTemplates=state.usedTemplates||[];
+  var filtered=pool.filter(function(t){return state.usedTemplates.indexOf(t.id)<0;});
+  if(!filtered.length)filtered=pool.slice();
+  var idx=Math.abs((String(route||'')+String(conversationType||'')+String(q||'')).split('').reduce(function(n,ch){return n+ch.charCodeAt(0);},0))%filtered.length;
+  var template=filtered[idx];
+  state.usedTemplates.push(template.id);
+  state.usedTemplates=state.usedTemplates.slice(-30);
+  setMissionOutputStateV1(state);
+  return template;
+}
+
+function updateMissionOutputLoopStateV1(route,q){
+  var state=getMissionOutputStateV1();
+  var topic=route||'now';
+  if(state.topic!==topic){
+    state.topic=topic;
+    state.whyLoopDepth=0;
+    state.moreLoopDepth=0;
+    state.correctionAttemptCount=0;
+  }
+  if(/^(why|why again|run it back|explain more|make it make sense)$/.test(q)){
+    state.whyLoopDepth=Math.min(5,(state.whyLoopDepth||0)+1);
+    state.moreLoopDepth=0;
+  }else if(/^(more|tell me more|say more|go on|continue)$/.test(q)){
+    state.moreLoopDepth=Math.min(4,(state.moreLoopDepth||0)+1);
+  }else if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q)){
+    state.correctionAttemptCount=(state.correctionAttemptCount||0)+1;
+  }else{
+    state.whyLoopDepth=0;
+    state.moreLoopDepth=0;
+    state.correctionAttemptCount=0;
+  }
+  setMissionOutputStateV1(state);
+  return state;
+}
+
+function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return '';
+  var state=updateMissionOutputLoopStateV1(route,q);
+  if(state.correctionAttemptCount>=2&&/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q)){
+    return 'Wrong lane again.<br><br>Which one: <strong>Pipeline, Money, Sales, Content, Production, or Sync?</strong>';
+  }
+  var conversationType=conv&&conv.type||'';
+  var shouldHandle=false;
+  if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q))shouldHandle=true;
+  if(conversationType===CONV_WHY||/^(why|why again|run it back|explain more|make it make sense)$/.test(q))shouldHandle=true;
+  if(conversationType===CONV_FOLLOWUP&&/^(more|tell me more|say more|go on|continue)$/.test(q))shouldHandle=true;
+  var profile=getMissionInputProfile(question||'',q);
+  var smartCategory=profile&&profile.best&&profile.best.category||'';
+  if(['open_energy_work_start','frustration_overwhelm','celebration_win'].indexOf(smartCategory)>=0)shouldHandle=true;
+  if(route==='sales'&&/\b(what should i say|help me reply|he ghosted|too expensive|needs to think|write|bump)\b/.test(q))shouldHandle=true;
+  if(route==='sync'&&/\b(data stale|source|where is this coming from|webhook|token|bridge)\b/.test(q))shouldHandle=true;
+  if(route==='memory'&&/\b(remember|sound like me|less hype|more direct|voice|style)\b/.test(q))shouldHandle=true;
+  if(!shouldHandle)return '';
+  var template=pickMissionOutputTemplateV1(route,conversationType,q,brainState);
+  if(!template)return '';
+  return fillMissionTemplateV1(template.text,getMissionOutputContextV1(route,ctx,question,brainState));
+}
+
+function shouldShowMissionDataBubbleOutputV1(turn){
+  if(!turn)return false;
+  var route=turn.route||'';
+  var shape=turn.responseShape||'';
+  var type=turn.conversationType||'';
+  var q=String(turn.normalizedInput||'').toLowerCase();
+  if(type==='live_call')return false;
+  if(shape==='script'&&!/\b(data|why|show|report|numbers|gap|who|source|coming from)\b/.test(q))return false;
+  if(['money','report','leads','pipeline','dpc','sync','diagnostic','weekly'].indexOf(route)>=0)return true;
+  if(/\b(show|data|numbers|gap|who|where is this coming from|what data|why|source|current)\b/.test(q))return true;
+  return false;
+}
+
+function shouldShowMissionActionBubbleOutputV1(turn){
+  if(!turn)return false;
+  var shape=turn.responseShape||'';
+  var type=turn.conversationType||'';
+  var q=String(turn.normalizedInput||'').toLowerCase();
+  if(type==='live_call')return false;
+  if(shape==='script'||shape==='correction_recovery'||shape==='correction_prompt')return false;
+  if(['confirmation_required','ranked_list','guided_steps','diagnostic_steps','app_navigation_guide'].indexOf(shape)>=0)return true;
+  if(/\b(open|log|save|move|who|where|what now|next|sync|follow up)\b/.test(q))return true;
+  return false;
+}
+
 function getMissionNextActionRead(route,ctx){
   route=route||'now';
   var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||{};
@@ -12800,6 +13085,8 @@ function getMissionConversationFirstResponse(conv,ctx,question){
   var profile=getMissionInputProfile(question||'',q);
   var smartCategory=profile&&profile.best&&profile.best.category||'';
   if(!conv)return '';
+  var outputPack=getMissionOutputPackResponseV1(route,ctx,question||'',conv,brain);
+  if(outputPack)return outputPack;
   if(missionQuestionIsSimpleNowAsk(route,question||''))return getMissionHumanBubble(route,conv,ctx,question||'');
   if(conv.type===CONV_CLOSE)return getMissionCloseResponse(ctx);
   if(getMissionResponseDepth(question||'',conv.type,brain)==='micro')return getMissionQuickRead(route||'now',ctx).replace(/\.\./g,'.');
