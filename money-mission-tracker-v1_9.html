@@ -1848,8 +1848,28 @@ body{background:#090a0b;color:#d8dde1}
   <div class="status" id="sheets-status"></div>
 </div>
 
+<!-- DAY TYPE BANNER -->
+<div class="daytype-banner" id="daytype-banner">
+  <div class="dt-left">
+    <div class="dt-icon" id="dt-icon">📅</div>
+    <div class="dt-info">
+      <div class="dt-type" id="dt-type">Detecting day type...</div>
+      <div class="dt-reason" id="dt-reason">Reading your calendar and activity...</div>
+    </div>
+  </div>
+  <div class="dt-right">
+    <div class="dt-auto-badge" id="dt-auto-badge">Auto</div>
+    <a class="dt-override-btn" href="#mission-command-card" data-day-tool="command" onclick="selectMissionDayTool('command')">⌘ Command</a>
+    <a class="dt-override-btn" href="#mission-brief" data-day-tool="brief" onclick="selectMissionDayTool('brief')">🧭 Brief</a>
+    <a class="dt-override-btn" href="#production-card" data-day-tool="beat" onclick="selectMissionDayTool('beat')">🎵 Beat</a>
+    <a class="dt-override-btn" href="#dpc-card" data-day-tool="outreach" onclick="selectMissionDayTool('outreach')">💬 Outreach</a>
+    <a class="dt-override-btn" href="#content-tracker-card" data-day-tool="content" onclick="selectMissionDayTool('content')">📱 Content</a>
+    <a class="dt-override-btn" href="#manager-split-wrapper" data-day-tool="manager" onclick="selectMissionDayTool('manager')">📋 Manager</a>
+  </div>
+</div>
+
 <!-- MISSION COMMAND -->
-<div class="mission-command standalone" id="mission-command-card">
+<div class="mission-command standalone mission-hidden" id="mission-command-card">
   <div class="mission-command-top">
     <div class="mission-command-label">Mission Command</div>
     <div class="mission-command-actions">
@@ -1880,25 +1900,6 @@ body{background:#090a0b;color:#d8dde1}
   <div class="mission-command-input">
     <input id="mission-command-input" type="text" maxlength="600" placeholder="Ask the OS..." onkeydown="if(event.key==='Enter')askMissionCommand()"/>
     <button id="mission-command-ask-btn" onclick="askMissionCommand()">Ask</button>
-  </div>
-</div>
-
-<!-- DAY TYPE BANNER -->
-<div class="daytype-banner" id="daytype-banner">
-  <div class="dt-left">
-    <div class="dt-icon" id="dt-icon">📅</div>
-    <div class="dt-info">
-      <div class="dt-type" id="dt-type">Detecting day type...</div>
-      <div class="dt-reason" id="dt-reason">Reading your calendar and activity...</div>
-    </div>
-  </div>
-  <div class="dt-right">
-    <div class="dt-auto-badge" id="dt-auto-badge">Auto</div>
-    <a class="dt-override-btn" href="#mission-brief" data-day-tool="brief" onclick="selectMissionDayTool('brief')">🧭 Brief</a>
-    <a class="dt-override-btn" href="#production-card" data-day-tool="beat" onclick="selectMissionDayTool('beat')">🎵 Beat</a>
-    <a class="dt-override-btn" href="#dpc-card" data-day-tool="outreach" onclick="selectMissionDayTool('outreach')">💬 Outreach</a>
-    <a class="dt-override-btn" href="#content-tracker-card" data-day-tool="content" onclick="selectMissionDayTool('content')">📱 Content</a>
-    <a class="dt-override-btn" href="#manager-split-wrapper" data-day-tool="manager" onclick="selectMissionDayTool('manager')">📋 Manager</a>
   </div>
 </div>
 
@@ -13585,7 +13586,7 @@ function renderMissionBrief(contentPieces,calEvents){
   var weekOfCycle=Math.max(1,Math.floor((today-pd(cy.start))/6048e5)+1);
   var tool=mission.tool||getMissionPrimaryTool(dayType);
   var dayNames={outreach:'money day',content:'content day',beat:'production day',manager:'manager day'};
-  var toolLabels={brief:'Mission Brief',campaign:'Daily Profit Campaign',content:'Content Tracker',production:'Production',beat:'Production',outreach:'Daily Profit Campaign',manager:'Manager'};
+  var toolLabels={command:'Mission Command',brief:'Mission Brief',campaign:'Daily Profit Campaign',content:'Content Tracker',production:'Production',beat:'Production',outreach:'Daily Profit Campaign',manager:'Manager'};
   var nowLabel=today.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   var todayLabel=today.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
   var yesterday=getYesterdayMissionSummary();
@@ -13650,7 +13651,7 @@ function wireMissionDelegates(){
 function updateMissionToolState(tool,locked){
   document.querySelectorAll('[data-day-tool]').forEach(function(btn){
     var day=btn.getAttribute('data-day-tool');
-    var active=(tool==='brief'&&day==='brief')||(tool==='production'&&day==='beat')||(tool==='campaign'&&day==='outreach')||(tool==='content'&&day==='content')||((tool==='manager'||tool==='calendar'||tool==='tasks')&&day==='manager');
+    var active=(tool==='command'&&day==='command')||(tool==='brief'&&day==='brief')||(tool==='production'&&day==='beat')||(tool==='campaign'&&day==='outreach')||(tool==='content'&&day==='content')||((tool==='manager'||tool==='calendar'||tool==='tasks')&&day==='manager');
     btn.classList.toggle('active',!!active);
   });
   ['campaign','content','production'].forEach(function(t){
@@ -13669,8 +13670,9 @@ function updateMissionToolState(tool,locked){
   }
 }
 
-function openMissionTool(tool,shouldScroll){
-  var ids={brief:'mission-brief',campaign:'dpc-card',content:'content-tracker-card',production:'production-card',calendar:'manager-split-wrapper',tasks:'manager-split-wrapper',manager:'manager-split-wrapper'};
+function openMissionTool(tool,shouldScroll,options){
+  options=options||{};
+  var ids={command:'mission-command-card',brief:'mission-brief',campaign:'dpc-card',content:'content-tracker-card',production:'production-card',calendar:'manager-split-wrapper',tasks:'manager-split-wrapper',manager:'manager-split-wrapper'};
   var activeId=ids[tool]||ids.campaign;
   Array.from(new Set(Object.keys(ids).map(function(k){return ids[k];}))).forEach(function(id){
     var el=document.getElementById(id);
@@ -13684,7 +13686,7 @@ function openMissionTool(tool,shouldScroll){
   try{
     var mission=getMissionStore();
     mission.tool=tool;
-    mission.locked=true;
+    mission.locked=options.locked===false?false:true;
     saveMissionStore(mission);
   }catch(saveErr){
     console.warn('A1XX mission state save skipped',saveErr);
@@ -13696,7 +13698,7 @@ function openMissionTool(tool,shouldScroll){
     }
     if(tool==='content'&&typeof setContentView==='function')setContentView('today');
     if(tool==='production'&&typeof setProductionView==='function')setProductionView('today');
-    updateMissionToolState(tool,true);
+    updateMissionToolState(tool,options.locked===false?false:true);
     renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
     // ARCHIVED 2026-05-10 — resource drawers removed from manager card per A1XX
     // if(tool==='calendar'||tool==='manager')renderContextResources('calendar','today');
@@ -13719,8 +13721,7 @@ function lockMission(){
 }
 
 function openMissionCommandCard(){
-  var el=document.getElementById('mission-command-card');
-  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  openMissionTool('command',true);
   setTimeout(function(){
     var input=document.getElementById('mission-command-input');
     if(input)input.focus();
@@ -13728,6 +13729,10 @@ function openMissionCommandCard(){
 }
 
 function selectMissionDayTool(type){
+  if(type==='command'){
+    openMissionTool('command',true);
+    return;
+  }
   if(type==='brief'){
     openMissionTool('brief',true);
     return;
@@ -13742,15 +13747,7 @@ function applyMissionFocus(){
   var mission=getMissionStore();
   if(mission.locked)openMissionTool(mission.tool||getMissionPrimaryTool(getMissionDayType()),false);
   else{
-    ['mission-brief','dpc-card','content-tracker-card','production-card','manager-split-wrapper'].forEach(function(id){
-      var el=document.getElementById(id);
-      if(el){
-        el.classList.add('mission-hidden');
-        el.style.display='none';
-        el.hidden=false;
-      }
-    });
-    updateMissionToolState(mission.tool||getMissionPrimaryTool(getMissionDayType()),false);
+    openMissionTool(mission.tool||'command',false,{locked:false});
   }
 }
 
