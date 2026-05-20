@@ -13203,11 +13203,22 @@ function getMissionSalesSubtypeV1_1(q){
   return '';
 }
 
+function getMissionOutputRouteOverrideV1_1(route,q){
+  q=String(q||'').toLowerCase();
+  if(/\b(what should i say|help me reply|write a warm|warm follow|follow-up|follow up|too expensive|price|costs too much|need to think|ghosted|bump|book.*call|discount|no budget|maybe later)\b/.test(q))return 'sales';
+  if(/\b(data stale|source|where is this coming from|webhook|web hook|token|bridge|is this current|sync check|did this save|sheets|notion)\b/.test(q))return 'sync';
+  if(/\b(that does not sound like me|doesn't sound like me|less hype|more direct|voice|style|remember this|save this style|dont say|don't say)\b/.test(q))return 'memory';
+  if(route==='pipeline')return 'leads';
+  if(route==='money')return 'report';
+  if(route==='diagnostic')return 'sync';
+  return route||'now';
+}
+
 function getMissionOutputPackResponseV1_1(route,ctx,question,conv,brainState,state,q){
   var pools=MISSION_OUTPUT_RESPONSE_POOLS_V1_1||{};
   q=q||normalizeMissionQuestion(question||'');
   var routeAlias={pipeline:'leads',money:'report',diagnostic:'sync'};
-  var r=routeAlias[route]||route||'now';
+  var r=getMissionOutputRouteOverrideV1_1(routeAlias[route]||route||'now',q);
   var context=getMissionOutputContextV1_1(r,ctx,question,brainState);
   var pool=null;
   if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(q))pool=pools.correctionRecoveryPools&&pools.correctionRecoveryPools.salesNotPipeline;
@@ -13298,12 +13309,13 @@ function updateMissionOutputLoopStateV1(route,q){
 function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return '';
-  var state=updateMissionOutputLoopStateV1(route,q);
+  var outputRoute=typeof getMissionOutputRouteOverrideV1_1==='function'?getMissionOutputRouteOverrideV1_1(route,q):route;
+  var state=updateMissionOutputLoopStateV1(outputRoute,q);
   if(state.correctionAttemptCount>=2&&/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q)){
     return 'Wrong lane again.<br><br>Which one: <strong>Pipeline, Money, Sales, Content, Production, or Sync?</strong>';
   }
   var conversationType=conv&&conv.type||'';
-  var v11Response=typeof getMissionOutputPackResponseV1_1==='function'?getMissionOutputPackResponseV1_1(route,ctx,question,conv,brainState,state,q):'';
+  var v11Response=typeof getMissionOutputPackResponseV1_1==='function'?getMissionOutputPackResponseV1_1(outputRoute,ctx,question,conv,brainState,state,q):'';
   if(v11Response)return v11Response;
   var shouldHandle=false;
   if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q))shouldHandle=true;
