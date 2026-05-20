@@ -653,6 +653,20 @@ input:focus{border-color:#333}
 .mission-nudge-strip:hover{background:#0d1808;border-color:#2a4015;color:#dff5d5}
 .mission-command-thread{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:14px 15px;color:#d7dde3;font-size:13px;line-height:1.6;margin-bottom:8px;min-height:230px;max-height:390px;overflow-y:auto;scroll-behavior:smooth}
 .mission-command-thread strong{color:#f0f3f5}
+.mission-session-home{display:grid;gap:12px;min-height:200px;align-content:start}
+.mission-home-kicker{font-size:9px;color:#7ec845;text-transform:uppercase;letter-spacing:.12em;font-weight:900}
+.mission-home-title{font-size:18px;color:#f0f3f5;font-weight:900;line-height:1.25}
+.mission-home-copy{color:#aeb8c0;font-size:12px;line-height:1.55;max-width:58ch}
+.mission-home-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mission-home-card{border:0.5px solid #24303a;border-radius:10px;background:#0a0d10;padding:10px;text-align:left;color:#d7dde3;cursor:pointer;transition:all .18s}
+.mission-home-card:hover{border-color:#3a5a2a;background:#0d120f;color:#f0f3f5}
+.mission-home-card-title{font-size:11px;font-weight:900;margin-bottom:4px}
+.mission-home-card-copy{font-size:10px;color:#7f8a92;line-height:1.35}
+.mission-home-actions{display:flex;gap:7px;flex-wrap:wrap}
+.mission-home-actions button{min-height:30px;border:0.5px solid #263039;border-radius:999px;background:#080a0c;color:#8f9aa3;font-size:10px;font-weight:900;cursor:pointer;padding:0 10px}
+.mission-home-actions button.primary{border-color:#2a4015;background:#0d1808;color:#7ec845}
+.mission-home-actions button:hover{border-color:#3a5a2a;color:#d7dde3}
+@media(max-width:720px){.mission-home-grid{grid-template-columns:1fr}}
 .mission-history-drawer{position:absolute;inset:0 auto 0 0;width:min(285px,88%);background:#07090b;border-right:0.5px solid #263039;box-shadow:18px 0 36px rgba(0,0,0,.34);z-index:6;padding:10px;transform:translateX(-104%);transition:transform .22s ease;display:flex;flex-direction:column;gap:10px}
 .mission-history-drawer.open{transform:translateX(0)}
 .mission-history-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -3024,6 +3038,11 @@ var MISSION_CHAT_PROJECTS_KEY='a1xx_mission_command_projects_v1';
 var MISSION_CHAT_ACTIVE_SESSION_KEY='a1xx_mission_command_active_session_v1';
 var MISSION_CHAT_ACTIVE_PROJECT_KEY='a1xx_mission_command_active_project_v1';
 var MISSION_CHAT_SYNC_STAMP_KEY='a1xx_mission_command_sync_stamp_v1';
+var MISSION_CHAT_ACTIVE_ALIAS_KEY='a1xx_mc_active_chat';
+var MISSION_CHAT_HISTORY_ALIAS_KEY='a1xx_mc_chat_history';
+var MISSION_CHAT_ARCHIVE_KEY='a1xx_mc_chat_archive';
+var MISSION_CHAT_ACTIVE_LIMIT=30;
+var MISSION_CHAT_ARCHIVE_LIMIT=100;
 var MISSION_COMMAND_AUDIT_KEY='a1xx_mission_command_safety_audit_v1';
 var MISSION_WORKER_AUDIT_KEY='a1xx_mc_audit_v1';
 var MISSION_MEMORY_GOALS_KEY='a1xx_mc_goals_v1';
@@ -12669,7 +12688,24 @@ function renderMissionThread(currentQuestion,currentAnswer,sources,currentFollow
   if(currentQuestion)html+=missionBubble('user',currentQuestion,false);
   if(currentAnswer)html+=missionBubble('assistant',currentAnswer,true);
   if(currentFollowUp)html+=missionBubble('assistant',currentFollowUp,true);
-  return html||'<div class="mission-history-empty">New chat ready. Ask Mission Command what to focus on.</div>';
+  return html||buildMissionSessionHomeHtml();
+}
+
+function buildMissionSessionHomeHtml(){
+  var session=getActiveMissionSession();
+  var activeCount=getMissionActiveSessions().length;
+  var archivedCount=getMissionArchivedSessions().length;
+  var title=session&&session.title&&session.title!=='New Chat'?'Continue '+escapeHtml(session.title):'Mission Command';
+  return '<div class="mission-session-home">'+
+    '<div><div class="mission-home-kicker">Session Home</div><div class="mission-home-title">'+title+'</div><div class="mission-home-copy">Start clean, continue the last thread, or open chat history. Mission Command will wait for your question before it adds data bubbles or buttons.</div></div>'+
+    '<div class="mission-home-grid">'+
+      '<button class="mission-home-card" onclick="runMissionPrompt(\'now\')"><div class="mission-home-card-title">Get the move</div><div class="mission-home-card-copy">One direct answer for the current block.</div></button>'+
+      '<button class="mission-home-card" onclick="runMissionPrompt(\'lead\')"><div class="mission-home-card-title">Check pipeline</div><div class="mission-home-card-copy">Find who is closest to money.</div></button>'+
+      '<button class="mission-home-card" onclick="runMissionPrompt(\'content\')"><div class="mission-home-card-title">Make something</div><div class="mission-home-card-copy">Turn today’s work into proof.</div></button>'+
+    '</div>'+
+    '<div class="mission-home-actions"><button class="primary" onclick="startMissionNewChat()">New chat</button><button onclick="renderMissionSessionThread(getActiveMissionSession())">Continue active chat</button><button onclick="toggleMissionHistory(true)">Open history</button><button onclick="runMissionPrompt(\'help\')">Command guide</button></div>'+
+    '<div class="mission-home-copy">'+activeCount+' active chat'+(activeCount===1?'':'s')+' · '+archivedCount+' archived locally</div>'+
+  '</div>';
 }
 
 function scrollMissionThread(thread){
@@ -12749,6 +12785,10 @@ function setActiveMissionProject(name){
 
 function getMissionChatSessions(){
   var sessions=getStore(MISSION_CHAT_SESSIONS_KEY);
+  if(!Array.isArray(sessions)){
+    var aliasSessions=getStore(MISSION_CHAT_HISTORY_ALIAS_KEY);
+    if(Array.isArray(aliasSessions)&&aliasSessions.length)sessions=aliasSessions;
+  }
   if(Array.isArray(sessions))return sessions;
   var old=getMissionChatHistory();
   if(!old.length)return [];
@@ -12773,7 +12813,40 @@ function getMissionChatSessions(){
 }
 
 function saveMissionChatSessions(sessions){
-  setStore(MISSION_CHAT_SESSIONS_KEY,(sessions||[]).slice(0,60));
+  sessions=Array.isArray(sessions)?sessions:[];
+  var archived=getMissionArchivedSessions();
+  var active=sessions.filter(function(s){return !s.archivedAt;});
+  var alreadyArchived=sessions.filter(function(s){return !!s.archivedAt;});
+  archived=alreadyArchived.concat(archived);
+  if(active.length>MISSION_CHAT_ACTIVE_LIMIT){
+    var overflow=active.slice(MISSION_CHAT_ACTIVE_LIMIT).map(function(s){
+      s.archivedAt=s.archivedAt||new Date().toISOString();
+      s.updatedAt=s.updatedAt||s.archivedAt;
+      return s;
+    });
+    active=active.slice(0,MISSION_CHAT_ACTIVE_LIMIT);
+    archived=overflow.concat(archived);
+  }
+  archived=dedupeMissionSessions(archived).slice(0,MISSION_CHAT_ARCHIVE_LIMIT);
+  setStore(MISSION_CHAT_SESSIONS_KEY,active);
+  setStore(MISSION_CHAT_HISTORY_ALIAS_KEY,active);
+  setStore(MISSION_CHAT_ARCHIVE_KEY,archived);
+  var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';
+  if(activeId)localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,activeId);
+}
+
+function dedupeMissionSessions(sessions){
+  var seen={};
+  return (sessions||[]).filter(function(s){
+    if(!s||!s.id||seen[s.id])return false;
+    seen[s.id]=true;
+    return true;
+  });
+}
+
+function getMissionArchivedSessions(){
+  var archived=getStore(MISSION_CHAT_ARCHIVE_KEY);
+  return Array.isArray(archived)?archived:[];
 }
 
 function missionSessionSyncPayload(session,reason){
@@ -12890,11 +12963,12 @@ function getMissionTimeSince(value){
 function getActiveMissionSession(){
   var allSessions=getMissionChatSessions();
   var sessions=allSessions.filter(function(s){return !s.archivedAt;});
-  var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';
+  var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'';
   var active=sessions.filter(function(s){return s.id===activeId;})[0];
   if(active)return active;
   if(sessions.length){
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,sessions[0].id);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,sessions[0].id);
     return sessions[0];
   }
   var now=new Date().toISOString();
@@ -12902,6 +12976,7 @@ function getActiveMissionSession(){
   allSessions.unshift(active);
   saveMissionChatSessions(allSessions);
   localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,active.id);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,active.id);
   return active;
 }
 
@@ -12910,6 +12985,7 @@ function setActiveMissionSession(id){
   var session=sessions.filter(function(s){return s.id===id&&!s.archivedAt;})[0];
   if(!session)return;
   localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,session.id);
   localStorage.setItem(MISSION_CHAT_ACTIVE_PROJECT_KEY,session.project||getActiveMissionProject());
   renderMissionSessionThread(session);
   renderMissionHistoryPanel();
@@ -12938,7 +13014,7 @@ function renderMissionSessionThread(session){
   thread.innerHTML=messages.length?messages.map(function(msg){
     var role=msg.role||'assistant';
     return missionBubble(role,msg.body||'',role==='assistant');
-  }).join(''):'<div class="mission-history-empty">New chat ready. Ask Mission Command what to focus on.</div>';
+  }).join(''):buildMissionSessionHomeHtml();
   thread.dataset.ready='1';
   scrollMissionThread(thread);
 }
@@ -12981,6 +13057,7 @@ function startMissionNewChat(){
   saveMissionChatSessions(sessions);
   syncMissionChatSession(session,'new');
   localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,session.id);
   renderMissionSessionThread(session);
   renderMissionHistoryPanel();
 }
@@ -13046,16 +13123,19 @@ function archiveMissionSession(id){
   if(idx<0)return;
   sessions[idx].archivedAt=new Date().toISOString();
   sessions[idx].updatedAt=sessions[idx].archivedAt;
+  var archivedSession=sessions[idx];
   saveMissionChatSessions(sessions);
-  syncMissionChatSession(sessions[idx],'archive');
+  syncMissionChatSession(archivedSession,'archive');
   if(localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)===id){
     var next=getMissionActiveSessions(getActiveMissionProject())[0];
     if(next){
       localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,next.id);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,next.id);
       renderMissionSessionThread(next);
     }else{
-      startMissionNewChat();
-      return;
+      localStorage.removeItem(MISSION_CHAT_ACTIVE_SESSION_KEY);
+      localStorage.removeItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);
+      renderMissionSessionThread(null);
     }
   }
   renderMissionHistoryPanel();
@@ -13244,6 +13324,7 @@ function saveMissionChatSessionTurn(turn){
   saveMissionChatSessions(sessions);
   syncMissionChatSession(session,'turn');
   localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,session.id);
   renderMissionHistoryPanel();
 }
 
@@ -13373,8 +13454,7 @@ function renderMissionCommand(kind,question,forceCurrent){
     clearMissionCommandLoading(packet.sources);
     return;
   }
-  var hist=getMissionChatHistory();
-  var shouldShowCurrent=!!(forceCurrent||question||!hist.length);
+  var shouldShowCurrent=!!(forceCurrent||question);
   var answer=shouldShowCurrent?getMissionCommandResponse(kind||'now',ctx,question||'',brainState):'';
   var conv=shouldShowCurrent?getMissionConversationType(question||'',ctx,(packet&&packet.intent)||null,brainState):null;
   var route=getMissionRenderRoute(question||'',brainState);
@@ -13393,7 +13473,9 @@ function renderMissionCommand(kind,question,forceCurrent){
   followUp=bubblePacket.b3||'';
   packet.followUp=followUp;
   if(!shouldShowCurrent){
-    ensureMissionThreadReady('','','');
+    thread.innerHTML=buildMissionSessionHomeHtml();
+    thread.dataset.ready='1';
+    scrollMissionThread(thread);
     clearMissionCommandLoading(packet.sources);
     return;
   }
