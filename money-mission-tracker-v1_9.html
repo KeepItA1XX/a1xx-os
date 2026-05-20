@@ -2033,7 +2033,7 @@ body{background:#090a0b;color:#d8dde1}
     </div>
   </details>
   <div class="mission-brief-actions bottom">
-    <a class="mission-brief-link" href="#mission-command-card" onclick="openMissionCommandCard()">Open Mission Command →</a>
+    <a class="mission-brief-link" href="#" onclick="openMissionCommandCard();return false;">Open Mission Command →</a>
   </div>
   <button class="mission-lock" id="mission-lock-btn" onclick="lockMission()" hidden>Lock Mission</button>
 </div>
@@ -13937,7 +13937,13 @@ function openMissionTool(tool,shouldScroll,options){
   options=options||{};
   var ids={command:'mission-command-card',brief:'mission-brief',campaign:'dpc-card',content:'content-tracker-card',production:'production-card',calendar:'manager-split-wrapper',tasks:'manager-split-wrapper',manager:'manager-split-wrapper'};
   var activeId=ids[tool]||ids.campaign;
-  Array.from(new Set(Object.keys(ids).map(function(k){return ids[k];}))).forEach(function(id){
+  var cardIds=Array.from(new Set(Object.keys(ids).map(function(k){return ids[k];})));
+  try{
+    if(location.hash&&cardIds.indexOf(location.hash.slice(1))>=0){
+      history.replaceState(null,'',location.pathname+location.search);
+    }
+  }catch(hashErr){}
+  cardIds.forEach(function(id){
     var el=document.getElementById(id);
     if(el){
       var active=id===activeId;
