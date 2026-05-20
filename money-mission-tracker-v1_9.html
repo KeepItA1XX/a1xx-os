@@ -13525,20 +13525,16 @@ function updateMissionToolState(tool,locked){
 
 function openMissionTool(tool,shouldScroll){
   var ids={campaign:'dpc-card',content:'content-tracker-card',production:'production-card',calendar:'manager-split-wrapper',tasks:'manager-split-wrapper',manager:'manager-split-wrapper'};
-  Object.keys(ids).forEach(function(k){
-    var el=document.getElementById(ids[k]);
+  var activeId=ids[tool]||ids.campaign;
+  Array.from(new Set(Object.keys(ids).map(function(k){return ids[k];}))).forEach(function(id){
+    var el=document.getElementById(id);
     if(el){
-      var active=k===tool;
+      var active=id===activeId;
       el.classList.toggle('mission-hidden',!active);
-      el.style.display=active?'block':'none';
+      el.style.display=active?(id==='manager-split-wrapper'?'flex':'block'):'none';
       el.hidden=false;
     }
   });
-  // manager wrapper needs flex not block
-  if(tool==='manager'||tool==='calendar'||tool==='tasks'){
-    var wrap=document.getElementById('manager-split-wrapper');
-    if(wrap)wrap.style.display='flex';
-  }
   try{
     var mission=getMissionStore();
     mission.tool=tool;
@@ -13564,7 +13560,7 @@ function openMissionTool(tool,shouldScroll){
     updateMissionToolState(tool,true);
   }
   if(shouldScroll){
-    var target=document.getElementById(ids[tool]);
+    var target=document.getElementById(activeId);
     if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
   }
 }
@@ -13662,6 +13658,9 @@ function setupCardCollapse(id,headerSelector){
     btn.setAttribute('aria-label',collapsed?'Expand card':'Collapse card');
     setCardCollapseState(id,collapsed);
   };
+  if(getComputedStyle(header).display.indexOf('flex')<0)header.style.display='flex';
+  if(!header.style.alignItems)header.style.alignItems='flex-start';
+  if(!header.style.justifyContent)header.style.justifyContent='space-between';
   header.appendChild(btn);
   Array.prototype.forEach.call(card.children,function(child){
     if(child!==header&&!child.classList.contains('card-collapse-body'))child.classList.add('card-collapse-body');
