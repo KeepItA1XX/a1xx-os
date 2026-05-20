@@ -858,28 +858,10 @@ function appendMissionChatSyncAudit(ss, d, row, stage) {
 }
 
 function getMissionChatSyncAuditSheet(ss, headers) {
-  var exact = ss.getSheetByName(SHEET_MISSION_SYNC_AUDIT);
-  if (exact) {
-    ensureSheetHeaders(exact, headers);
-    return exact;
-  }
-
-  var sheets = ss.getSheets();
-  for (var i = 0; i < sheets.length; i++) {
-    var sheet = sheets[i];
-    var name = sheet.getName();
-    if (name.indexOf(SHEET_MISSION_SYNC_AUDIT + '_conflict') === 0 || name.indexOf(SHEET_MISSION_SYNC_AUDIT) === 0) {
-      try {
-        sheet.setName(SHEET_MISSION_SYNC_AUDIT);
-      } catch (err) {
-        // If Google Sheets blocks the rename, still reuse the existing audit tab.
-      }
-      ensureSheetHeaders(sheet, headers);
-      return sheet;
-    }
-  }
-
-  return getOrCreateSheet(ss, SHEET_MISSION_SYNC_AUDIT, headers);
+  return getOrCreateSheet(ss, SHEET_MISSION_SYNC_AUDIT, headers, {
+    matchPrefix: true,
+    renameMatched: true
+  });
 }
 
 function ensureSheetHeaders(sheet, headers) {
@@ -1228,13 +1210,39 @@ function getLiveEvents(e) {
 }
 
 // ── HELPERS ──────────────────────────────────────────────────
-function getOrCreateSheet(ss, name, headers) {
+function findSheetByNameOrPrefix(ss, name, options) {
+  options = options || {};
   var sheet = ss.getSheetByName(name);
+  if (sheet) return sheet;
+  if (!options.matchPrefix) return null;
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    var candidate = sheets[i];
+    var candidateName = candidate.getName();
+    if (candidateName.indexOf(name + '_conflict') === 0 || candidateName.indexOf(name) === 0) {
+      if (options.renameMatched) {
+        try {
+          candidate.setName(name);
+          logActivity('Sheet name cleanup — reused ' + candidateName + ' as ' + name);
+        } catch (err) {
+          logActivity('Sheet name cleanup — reused ' + candidateName + ' without rename: ' + err.message);
+        }
+      }
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function getOrCreateSheet(ss, name, headers, options) {
+  var sheet = findSheetByNameOrPrefix(ss, name, options);
   if (!sheet) {
     sheet = ss.insertSheet(name);
     sheet.appendRow(headers);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#1a2910').setFontColor('#7ec845');
     sheet.setFrozenRows(1);
+  } else if (options && options.matchPrefix && headers) {
+    ensureSheetHeaders(sheet, headers);
   }
   return sheet;
 }

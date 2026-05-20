@@ -1543,7 +1543,7 @@ body{background:#090a0b;color:#d8dde1}
         <div class="settings-list">
           <div class="settings-row"><div><div class="settings-row-name">AI Chat</div><div class="settings-row-meta">Planned drawer interface for questions, summaries, and diagnostics.</div></div><span class="settings-badge off">Off</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Chat history</div><div class="settings-row-meta">Local sessions with clean titles, hidden metadata, and project folders.</div></div><span class="settings-badge">Local</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Google chat sync</div><div class="settings-row-meta">Saves chat sessions/projects to Google Sheets. Session rows update in place; each manual sync adds a fresh audit line.</div></div><span class="settings-badge warn">Ready</span></div>
+          <div class="settings-row"><div><div class="settings-row-name">Google chat sync</div><div class="settings-row-meta">Saves chat sessions/projects to Google Sheets. Sessions update existing rows by ID; Sync Audit appends one line per sync.</div></div><span class="settings-badge warn">Ready</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Context window</div><div class="settings-row-meta">Hidden instruction packet: identity, mission, current stats, sources, and recent memory.</div></div><span class="settings-badge">Ready</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Allowed sources</div><div class="settings-row-meta">App state, Notion, Google Sheets, Calendar. Add CRM/production scopes later.</div></div><span class="settings-badge warn">Planned</span></div>
           <div class="settings-row"><div><div class="settings-row-name">Write permissions</div><div class="settings-row-meta">Off by default. Any future AI write must ask first and leave an audit trail.</div></div><span class="settings-badge off">Locked</span></div>
@@ -10267,7 +10267,7 @@ function syncAllMissionChatSessions(reason){
     if(syncMissionChatSession(session,reason||'bulk'))sent++;
   });
   setTimeout(function(){
-    setMissionChatSyncStatus('Sent '+sent+' of '+sessions.length+' chat session'+(sessions.length===1?'':'s')+'. Session rows update in place; check Mission Command Sessions and the new Mission Command Sync Audit tab for a fresh timestamp.','ok');
+    setMissionChatSyncStatus('Sent '+sent+' of '+sessions.length+' chat session'+(sessions.length===1?'':'s')+'. Check Mission Command Sessions for updated rows and Mission Command Sync Audit for one new audit line.','ok');
   },650);
 }
 
