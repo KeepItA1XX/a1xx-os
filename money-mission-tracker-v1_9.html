@@ -636,6 +636,42 @@ input:focus{border-color:#333}
 .mission-simple{display:grid;gap:7px;margin:0;padding:0 10px 10px}
 .mission-simple-line{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:10px 12px;color:#f0f3f5;font-size:13px;font-weight:800;line-height:1.35}
 .mission-simple-line.urgent{border-color:#3a2800;color:#f0d08a;background:#100c02}
+.mission-brief-deck{background:#080b0d;border:0.5px solid #242d34;border-radius:12px;margin-bottom:10px;overflow:hidden}
+.mission-brief-deck-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-bottom:0.5px solid #20272d;background:#0b0e10}
+.mission-brief-deck-label{font-size:9px;color:#8f9aa3;text-transform:uppercase;letter-spacing:.1em;font-weight:900}
+.mission-brief-deck-title{font-size:11px;color:#f0f3f5;font-weight:900;text-align:center;flex:1}
+.mission-brief-nav{width:28px;height:28px;border-radius:8px;border:0.5px solid #28313a;background:#0c0f12;color:#d7dde3;font-size:15px;font-weight:900;cursor:pointer}
+.mission-brief-nav:hover{border-color:#41672b;background:#111612;color:#fff}
+.mission-brief-slide{display:none;min-height:210px;padding:14px;animation:missionFade .2s ease}
+.mission-brief-slide.active{display:grid;gap:12px;align-content:center}
+.mb-slide-kicker{font-size:9px;color:#7ec845;text-transform:uppercase;letter-spacing:.12em;font-weight:900;text-align:center}
+.mb-slide-head{font-size:18px;color:#f0f3f5;font-weight:900;line-height:1.2;text-align:center}
+.mb-slide-copy{font-size:12px;color:#aeb8c0;line-height:1.5;text-align:center;max-width:58ch;margin:0 auto}
+.mb-chart-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.mb-stat{background:#0d1012;border:0.5px solid #252d34;border-radius:10px;padding:9px;text-align:center}
+.mb-stat-value{font-size:17px;color:#f0f3f5;font-weight:900;line-height:1}
+.mb-stat-label{font-size:9px;color:#7f8a92;text-transform:uppercase;letter-spacing:.06em;font-weight:800;margin-top:5px}
+.mb-ring-wrap{display:flex;align-items:center;justify-content:center}
+.mb-ring{--p:0;width:122px;height:122px;border-radius:50%;background:conic-gradient(#7ec845 calc(var(--p)*1%),#1b242b 0);display:grid;place-items:center;position:relative}
+.mb-ring:after{content:'';position:absolute;inset:12px;border-radius:50%;background:#080b0d;border:0.5px solid #252d34}
+.mb-ring-inner{position:relative;z-index:1;text-align:center}
+.mb-ring-value{font-size:20px;color:#f0f3f5;font-weight:900;line-height:1}
+.mb-ring-label{font-size:9px;color:#8f9aa3;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-top:4px}
+.mb-bar-set{display:grid;gap:8px}
+.mb-bar{display:grid;grid-template-columns:70px 1fr 34px;align-items:center;gap:8px;font-size:10px;color:#9aa3aa;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.mb-bar-track{height:9px;background:#151a1f;border:0.5px solid #28313a;border-radius:999px;overflow:hidden}
+.mb-bar-fill{height:100%;width:0;background:#7ec845;border-radius:999px}
+.mb-bar-fill.blue{background:#5b9cf6}.mb-bar-fill.amber{background:#d4a017}.mb-bar-fill.purple{background:#9b6df5}.mb-bar-fill.red{background:#e05555}
+.mb-next-card{background:#0d120f;border:0.5px solid #2a4015;border-radius:12px;padding:13px;text-align:center;color:#dff5d5;font-size:14px;font-weight:900;line-height:1.4}
+.mission-brief-dots{display:flex;justify-content:center;gap:7px;padding:0 10px 11px}
+.mission-brief-dot{width:8px;height:8px;border-radius:999px;border:0;background:#30363d;cursor:pointer}
+.mission-brief-dot.active{width:24px;background:#7ec845}
+@media(max-width:560px){
+  .mission-brief-slide{min-height:250px;padding:12px}
+  .mb-chart-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mb-bar{grid-template-columns:58px 1fr 28px}
+  .mb-stat-value{font-size:15px}
+}
 .mission-brief-actions{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
 .mission-brief-link{display:inline-flex;align-items:center;justify-content:center;min-height:30px;border:0.5px solid #2a4015;border-radius:999px;background:#0d1808;color:#7ec845!important;font-size:10px;font-weight:900;text-decoration:none!important;padding:0 12px}
 .mission-brief-link:hover{background:#102006;border-color:#3a5a2a;color:#dff5d5!important}
@@ -1915,6 +1951,67 @@ body{background:#090a0b;color:#d8dde1}
   <div class="mission-copy" id="mission-copy">Reading your cycle target, weekly inputs, calendar, tasks, content, and production rhythm.</div>
   <div class="mission-brief-actions">
     <a class="mission-brief-link" href="#mission-command-card" onclick="openMissionCommandCard()">Open Mission Command →</a>
+  </div>
+  <div class="mission-brief-deck" id="mission-brief-deck">
+    <div class="mission-brief-deck-top">
+      <button class="mission-brief-nav" onclick="moveMissionBriefSlide(-1)" title="Previous brief slide">‹</button>
+      <div>
+        <div class="mission-brief-deck-label">Business Condition</div>
+        <div class="mission-brief-deck-title" id="mission-brief-slide-title">Today</div>
+      </div>
+      <button class="mission-brief-nav" onclick="moveMissionBriefSlide(1)" title="Next brief slide">›</button>
+    </div>
+    <div class="mission-brief-slide active" data-mission-brief-slide="today">
+      <div class="mb-slide-kicker">Today</div>
+      <div class="mb-slide-head" id="mb-today-head">Reading current focus...</div>
+      <div class="mb-slide-copy" id="mb-today-copy">Loading the block, journey step, and next event.</div>
+      <div class="mb-chart-row">
+        <div class="mb-stat"><div class="mb-stat-value" id="mb-today-block">--</div><div class="mb-stat-label">Block</div></div>
+        <div class="mb-stat"><div class="mb-stat-value" id="mb-today-gap">$0</div><div class="mb-stat-label">Gap</div></div>
+        <div class="mb-stat"><div class="mb-stat-value" id="mb-today-tasks">0</div><div class="mb-stat-label">Tasks</div></div>
+        <div class="mb-stat"><div class="mb-stat-value" id="mb-today-next">--</div><div class="mb-stat-label">Next</div></div>
+      </div>
+    </div>
+    <div class="mission-brief-slide" data-mission-brief-slide="money">
+      <div class="mb-slide-kicker">Money</div>
+      <div class="mb-ring-wrap">
+        <div class="mb-ring" id="mb-money-ring"><div class="mb-ring-inner"><div class="mb-ring-value" id="mb-money-pct">0%</div><div class="mb-ring-label">Weekly</div></div></div>
+      </div>
+      <div class="mb-slide-head" id="mb-money-head">$0 of $0</div>
+      <div class="mb-slide-copy" id="mb-money-copy">Revenue read loading.</div>
+    </div>
+    <div class="mission-brief-slide" data-mission-brief-slide="pipeline">
+      <div class="mb-slide-kicker">Pipeline</div>
+      <div class="mb-slide-head" id="mb-pipeline-head">No leads loaded yet</div>
+      <div class="mb-bar-set">
+        <div class="mb-bar"><span>Hot</span><div class="mb-bar-track"><div class="mb-bar-fill red" id="mb-pipe-hot"></div></div><strong id="mb-pipe-hot-num">0</strong></div>
+        <div class="mb-bar"><span>Warm</span><div class="mb-bar-track"><div class="mb-bar-fill amber" id="mb-pipe-warm"></div></div><strong id="mb-pipe-warm-num">0</strong></div>
+        <div class="mb-bar"><span>Cold</span><div class="mb-bar-track"><div class="mb-bar-fill blue" id="mb-pipe-cold"></div></div><strong id="mb-pipe-cold-num">0</strong></div>
+      </div>
+      <div class="mb-slide-copy" id="mb-pipeline-copy">Lead heat read loading.</div>
+    </div>
+    <div class="mission-brief-slide" data-mission-brief-slide="dpc">
+      <div class="mb-slide-kicker">DPC</div>
+      <div class="mb-slide-head" id="mb-dpc-head">Daily motion</div>
+      <div class="mb-bar-set">
+        <div class="mb-bar"><span>DMs</span><div class="mb-bar-track"><div class="mb-bar-fill" id="mb-dpc-dms"></div></div><strong id="mb-dpc-dms-num">0</strong></div>
+        <div class="mb-bar"><span>Calls</span><div class="mb-bar-track"><div class="mb-bar-fill blue" id="mb-dpc-calls"></div></div><strong id="mb-dpc-calls-num">0</strong></div>
+        <div class="mb-bar"><span>Booked</span><div class="mb-bar-track"><div class="mb-bar-fill amber" id="mb-dpc-booked"></div></div><strong id="mb-dpc-booked-num">0</strong></div>
+        <div class="mb-bar"><span>Closes</span><div class="mb-bar-track"><div class="mb-bar-fill purple" id="mb-dpc-closes"></div></div><strong id="mb-dpc-closes-num">0</strong></div>
+      </div>
+      <div class="mb-slide-copy" id="mb-dpc-copy">Daily activity read loading.</div>
+    </div>
+    <div class="mission-brief-slide" data-mission-brief-slide="next">
+      <div class="mb-slide-kicker">Next Move</div>
+      <div class="mb-next-card" id="mb-next-move">Loading the cleanest next move...</div>
+      <div class="mb-chart-row">
+        <div class="mb-stat"><div class="mb-stat-value" id="mb-next-content">0</div><div class="mb-stat-label">Content</div></div>
+        <div class="mb-stat"><div class="mb-stat-value" id="mb-next-production">0</div><div class="mb-stat-label">Production</div></div>
+        <div class="mb-stat"><div class="mb-stat-value" id="mb-next-leads">0</div><div class="mb-stat-label">Leads</div></div>
+        <div class="mb-stat"><div class="mb-stat-value" id="mb-next-health">OK</div><div class="mb-stat-label">Health</div></div>
+      </div>
+    </div>
+    <div class="mission-brief-dots" id="mission-brief-dots"></div>
   </div>
   <details class="mission-intel" id="mission-intel">
     <summary>Mission Intel</summary>
@@ -13592,6 +13689,115 @@ function askMissionCommand(){
   setTimeout(function(){renderMissionCommand('ask',q,true);},1500);
 }
 
+var missionBriefDeckIdx=0;
+var MISSION_BRIEF_SLIDES=[
+  {id:'today',label:'Today'},
+  {id:'money',label:'Money'},
+  {id:'pipeline',label:'Pipeline'},
+  {id:'dpc',label:'DPC'},
+  {id:'next',label:'Next Move'}
+];
+
+function setMbText(id,text){
+  var el=document.getElementById(id);
+  if(el)el.textContent=text;
+}
+
+function setMbBar(id,numId,value,max){
+  var n=Math.max(0,parseFloat(value)||0);
+  var m=Math.max(1,parseFloat(max)||n||1);
+  var el=document.getElementById(id);
+  if(el)el.style.width=Math.min(100,Math.round(n/m*100))+'%';
+  setMbText(numId,n);
+}
+
+function renderMissionBriefDots(){
+  var wrap=document.getElementById('mission-brief-dots');
+  if(!wrap)return;
+  wrap.innerHTML=MISSION_BRIEF_SLIDES.map(function(slide,i){
+    return '<button class="mission-brief-dot'+(i===missionBriefDeckIdx?' active':'')+'" onclick="setMissionBriefSlide('+i+')" title="'+escapeHtml(slide.label)+'"></button>';
+  }).join('');
+}
+
+function setMissionBriefSlide(idx){
+  var total=MISSION_BRIEF_SLIDES.length;
+  missionBriefDeckIdx=((idx||0)+total)%total;
+  document.querySelectorAll('[data-mission-brief-slide]').forEach(function(slide){
+    slide.classList.toggle('active',slide.getAttribute('data-mission-brief-slide')===MISSION_BRIEF_SLIDES[missionBriefDeckIdx].id);
+  });
+  setMbText('mission-brief-slide-title',MISSION_BRIEF_SLIDES[missionBriefDeckIdx].label);
+  renderMissionBriefDots();
+}
+
+function moveMissionBriefSlide(step){
+  setMissionBriefSlide(missionBriefDeckIdx+(step||1));
+}
+
+function getMissionBriefLeadHeat(){
+  var leads=(window.__crmLeads||[]).filter(function(lead){
+    return !(typeof isClosedCRMLead==='function'&&isClosedCRMLead(lead));
+  });
+  var heat={hot:0,warm:0,cold:0,total:leads.length};
+  leads.forEach(function(lead){
+    var text=[lead.heat,lead.temperature,lead.status,lead.stage,lead.urgency,lead.name].map(function(v){
+      return String(v||'').toLowerCase();
+    }).join(' ');
+    if(/\b(hot|ready|booked|invoice|urgent)\b/.test(text))heat.hot++;
+    else if(/\b(warm|reply|respond|call-ready|call ready|follow)\b/.test(text))heat.warm++;
+    else heat.cold++;
+  });
+  return heat;
+}
+
+function renderMissionBriefDeck(info){
+  info=info||{};
+  var rev=info.rev||0,wk=info.wk||400,gap=Math.max(0,wk-rev);
+  var pct=wk>0?Math.min(100,Math.round(rev/wk*100)):0;
+  var daily={};
+  try{daily=typeof getDailyCoach==='function'?getDailyCoach():{};}catch(e){daily={};}
+  var dms=daily.dms||0,calls=daily.coldCalls||0,booked=daily.calls||0,closes=daily.closes||0;
+  var heat=getMissionBriefLeadHeat();
+  var contentCount=(window.__contentPipelinePieces||info.contentPieces||[]).length;
+  var productionCount=(window.__productionPieces||[]).length;
+  var block=((document.getElementById('dpc-mode')||{}).textContent||'Now').replace(/\s+/g,' ').trim();
+  var nextEvent=info.nextEvent||null;
+  var nextLabel=nextEvent?(nextEvent.startTime||'Soon'):'None';
+  var nextMove=(info.rhythm&&info.rhythm.action)||((document.getElementById('dpc-now-main')||{}).textContent)||'Open Command and pick the next move.';
+  setMbText('mb-today-head',block||'Current block');
+  setMbText('mb-today-copy',(info.rhythm&&info.rhythm.focus)||'Use this slide deck as the quick business read.');
+  setMbText('mb-today-block',(block||'Now').split(' ')[0]);
+  setMbText('mb-today-gap',gap>0?fmt(gap):'Covered');
+  setMbText('mb-today-tasks',(info.openTasks||[]).length||0);
+  setMbText('mb-today-next',nextLabel);
+  var ring=document.getElementById('mb-money-ring');
+  if(ring)ring.style.setProperty('--p',pct);
+  setMbText('mb-money-pct',pct+'%');
+  setMbText('mb-money-head',fmt(rev)+' of '+fmt(wk));
+  setMbText('mb-money-copy',gap>0?fmt(gap)+' left this week. Keep action pointed at conversations, delivery, or closes.':'Weekly target covered. Protect delivery and next-cycle setup.');
+  setMbText('mb-pipeline-head',heat.total+' open lead'+(heat.total===1?'':'s'));
+  var heatMax=Math.max(heat.hot,heat.warm,heat.cold,1);
+  setMbBar('mb-pipe-hot','mb-pipe-hot-num',heat.hot,heatMax);
+  setMbBar('mb-pipe-warm','mb-pipe-warm-num',heat.warm,heatMax);
+  setMbBar('mb-pipe-cold','mb-pipe-cold-num',heat.cold,heatMax);
+  setMbText('mb-pipeline-copy',heat.hot||heat.warm?'Work the warmest signal first.':'Pipeline has volume, but heat is light. Qualify one call-ready lead.');
+  var dpcMax=Math.max(dms,calls,booked,closes,1);
+  setMbBar('mb-dpc-dms','mb-dpc-dms-num',dms,dpcMax);
+  setMbBar('mb-dpc-calls','mb-dpc-calls-num',calls,dpcMax);
+  setMbBar('mb-dpc-booked','mb-dpc-booked-num',booked,dpcMax);
+  setMbBar('mb-dpc-closes','mb-dpc-closes-num',closes,dpcMax);
+  setMbText('mb-dpc-head',(dms+calls+booked+closes)>0?'Daily motion logged':'No DPC motion logged yet');
+  setMbText('mb-dpc-copy',(dms+calls+booked+closes)>0?'Use the strongest response to choose the next follow-up.':'Log one measurable outreach or sales action.');
+  setMbText('mb-next-move',nextMove);
+  setMbText('mb-next-content',contentCount);
+  setMbText('mb-next-production',productionCount);
+  setMbText('mb-next-leads',heat.total);
+  setMbText('mb-next-health','OK');
+  setMissionBriefSlide(missionBriefDeckIdx);
+}
+
+window.moveMissionBriefSlide=moveMissionBriefSlide;
+window.setMissionBriefSlide=setMissionBriefSlide;
+
 function renderMissionBrief(contentPieces,calEvents){
   var title=document.getElementById('mission-title');
   var badge=document.getElementById('mission-badge');
@@ -13623,6 +13829,17 @@ function renderMissionBrief(contentPieces,calEvents){
   if(gapLine)gapLine.textContent=(gap>0?fmt(gap)+' gap this week':fmt(rev)+' collected · weekly target protected')+' · '+openTasks.length+' open task'+(openTasks.length===1?'':'s')+(nextEvent?' · next: '+nextEvent.startTime:'');
   if(leadLine)leadLine.textContent=getMostUrgentLeadLine();
   if(focusLine)focusLine.textContent='Card: '+(toolLabels[tool]||tool||'Mission')+' · Cycle week '+weekOfCycle+' · '+(nextEvent?'Next event: '+nextEvent.title:'No upcoming event loaded');
+  renderMissionBriefDeck({
+    rev:rev,
+    wk:wk,
+    gap:gap,
+    rhythm:rhythm,
+    tool:tool,
+    nextEvent:nextEvent,
+    openTasks:openTasks,
+    contentPieces:contentPieces||[],
+    calEvents:calEvents||[]
+  });
   window.__missionCommandContext=getMissionCommandContext(contentPieces||[],calEvents||[]);
   renderMissionCommand(window.__missionCommandLastPrompt||'now','');
   updateMissionToolSignals(contentPieces||[],calEvents||[]);
