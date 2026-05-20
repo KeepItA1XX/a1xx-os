@@ -8984,7 +8984,7 @@ function missionWordMatches(word,vocab){
 function normalizeMissionQuestion(raw){
   var q=String(raw||'').toLowerCase().replace(/[^\w#\/\s-]/g,' ');
   q=q.replace(/\bpipe line\b/g,'pipeline').replace(/\bfollw up\b/g,'follow up').replace(/\bfolow up\b/g,'follow up').replace(/\bclick funnels\b/g,'clickfunnels').replace(/\bapps script\b/g,'appsscript').replace(/\bbangin plus\b/g,'bangin+');
-  var fixes={shuld:'should',shoud:'should',folow:'follow',follo:'follow',followup:'follow up',folowup:'follow up',calender:'calendar',calandar:'calendar',scheduele:'schedule',shedule:'schedule',meting:'meeting',meetng:'meeting',conent:'content',contnet:'content',contnt:'content',prodction:'production',prodution:'production',producton:'production',revnue:'revenue',revenu:'revenue',revinue:'revenue',expence:'expense',expences:'expenses',invocie:'invoice',invioce:'invoice',synch:'sync',helth:'health',anythng:'anything',brokn:'broken',memry:'memory',pipline:'pipeline',twich:'twitch',twitchs:'twitch',rapprenuer:'rappreneur',honeybook:'honeybook',notion:'notion',bangin:'bangin',overwelmed:'overwhelmed',confussed:'confused',frustraded:'frustrated',paied:'paid',payd:'paid',finised:'finished',completd:'completed',stratagy:'strategy',drving:'driving'};
+  var fixes={shuld:'should',shoud:'should',folow:'follow',follo:'follow',followup:'follow up',folowup:'follow up',calender:'calendar',calandar:'calendar',scheduele:'schedule',shedule:'schedule',meting:'meeting',meetng:'meeting',conent:'content',contnet:'content',contnt:'content',prodction:'production',prodution:'production',producton:'production',revnue:'revenue',revenu:'revenue',revinue:'revenue',expence:'expense',expences:'expenses',invocie:'invoice',invioce:'invoice',synch:'sync',helth:'health',anythng:'anything',brokn:'broken',memry:'memory',pipline:'pipeline',twich:'twitch',twitchs:'twitch',rapprenuer:'rappreneur',honeybook:'honeybook',notion:'notion',bangin:'bangin',overwelmed:'overwhelmed',confussed:'confused',frustraded:'frustrated',paied:'paid',payd:'paid',finised:'finished',completd:'completed',stratagy:'strategy',drving:'driving',perp:'prep'};
   q=q.split(/\s+/).map(function(word){return fixes[word]||word;}).join(' ').trim();
   q=q.replace(/\bappsscript\b/g,'apps script').replace(/\bclickfunnels\b/g,'clickfunnels');
   return applyA1XXPhraseMap(q);
@@ -9371,8 +9371,8 @@ var MISSION_SALES_CLOSER_STAGES={
 };
 
 var MISSION_SALES_OBJECTION_MAP={
-  think:{match:/\b(think about it|need to think|think it over|not sure)\b/,type:'stall',stage:'E',say:'Totally fair. When you say you need to think about it, what part are you still unsure about - the money, the timing, or whether this actually solves it?',tone:'calm, curious, slow down at the end'},
-  expensive:{match:/\b(too expensive|price is crazy|cost too much|cant afford|can't afford|no budget|check budget)\b/,type:'money concern',stage:'E',say:'I hear you. Is it that the number is impossible right now, or that you are not fully sure the result is worth that number yet?',tone:'neutral curiosity, no discount energy'},
+  think:{match:/\b(think about it|need to think|think it over|not sure)\b/,type:'stall',stage:'E',say:'Totally fair - when you say you need to think about it, what part are you still unsure about: the money, the timing, or whether this actually solves it?',tone:'calm, curious, slow down at the end'},
+  expensive:{match:/\b(too expensive|price is crazy|cost too much|cant afford|can't afford|no budget|check budget)\b/,type:'money concern',stage:'E',say:'I hear you - is it that the number is impossible right now, or that you are not fully sure the result is worth that number yet?',tone:'neutral curiosity, no discount energy'},
   timing:{match:/\b(not the right time|maybe next month|not ready|too busy|later)\b/,type:'timing concern',stage:'E',say:'What would need to change for the timing to make sense?',tone:'soft, patient, let them answer'},
   info:{match:/\b(send more info|send info|send details|send it over|send me)\b/,type:'information stall',stage:'E',say:'I can send it. Before I do, what are you trying to confirm from the info?',tone:'curious, do not pitch yet'},
   decision:{match:/\b(manager|partner|boyfriend|girlfriend|team|decision maker|talk to)\b/,type:'decision support',stage:'E',say:'Makes sense. What do they need to hear for this to feel like a smart move?',tone:'collaborative'},
@@ -9382,14 +9382,14 @@ var MISSION_SALES_OBJECTION_MAP={
 
 function getMissionSalesSignal(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(closer|sales coach|sales call|discovery call|call prep|prep me|live call|what should i say|what do i say|write a dm|cold dm|warm follow up|objection|roleplay|score my answer|think about it|too expensive|no budget|send more info|send info|discount|not ready|maybe next month|decision maker|prove it works|youtube is free)\b/.test(q)||/^\/(sales|closer|callprep|livecall|discovery|objection|dm|roleplay)\b/.test(q)||/^@(closer|sales)\b/.test(q);
+  return /\b(closer|sales coach|what are sales|sales call|discovery call|call prep|prep me|live call|what should i say|what do i say|write a dm|cold dm|warm follow up|warm follow-up|objection|roleplay|score my answer|think about it|too expensive|no budget|send more info|send info|discount|not ready|maybe next month|decision maker|prove it works|youtube is free)\b/.test(q)||/^\/(sales|closer|callprep|livecall|discovery|objection|dm|roleplay)\b/.test(q)||/^@(closer|sales)\b/.test(q);
 }
 
 function getMissionSalesMode(question){
   var q=normalizeMissionQuestion(question||'');
   if(/^\/livecall\b/.test(q)||/\b(on the phone|right now|live call|what should i say|what do i say|he said|she said|they said)\b/.test(q))return 'live_call';
   if(/^\/callprep\b/.test(q)||/\b(prep me|call prep|before a call|in 10 minutes|discovery call)\b/.test(q))return 'call_prep';
-  if(/^\/dm\b/.test(q)||/\b(write a dm|cold dm|warm follow up|respond to someone|move them to a call|follow-up message)\b/.test(q))return 'dm_reply';
+  if(/^\/dm\b/.test(q)||/\b(write a dm|cold dm|warm follow up|warm follow-up|respond to someone|move them to a call|follow-up message)\b/.test(q))return 'dm_reply';
   if(/^\/roleplay\b/.test(q)||/\b(roleplay|role play|test me|be a|make it harder)\b/.test(q))return 'roleplay';
   if(/\b(score my answer|scorecard|grade my call|review my call)\b/.test(q))return 'scorecard';
   if(/\b(objection|too expensive|think about it|no budget|not ready|send more info|discount|decision maker|prove it works)\b/.test(q))return 'objection_diffuser';
@@ -9439,7 +9439,7 @@ function getMissionSalesDiscoveryQuestion(stage){
 
 function getMissionSalesDMResponse(question){
   var q=normalizeMissionQuestion(question||'');
-  var goal=/\b(follow up|warm)\b/.test(q)?'warm follow-up':/\b(cold)\b/.test(q)?'cold opener':/\b(call)\b/.test(q)?'move to call':'qualify';
+  var goal=/\b(follow up|follow-up|warm)\b/.test(q)?'warm follow-up':/\b(cold)\b/.test(q)?'cold opener':/\b(call)\b/.test(q)?'move to call':'qualify';
   var send='What are you working on right now, and are you trying to just drop it or actually build a money path around it?';
   if(goal==='cold opener')send='I saw you working. Quick question - are you mainly trying to get more people to hear the music, or turn the attention into actual fans/customers?';
   if(goal==='warm follow-up')send='Still worth mapping this out, or did you decide to leave it alone for now?';
@@ -12814,6 +12814,7 @@ function clearMissionCommandLoading(sources){
 function renderMissionCommand(kind,question,forceCurrent){
   var thread=document.getElementById('mission-command-thread');
   if(!thread)return;
+  try{
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   renderMissionNudge(ctx);
   scheduleMissionNudgeRefresh();
@@ -12859,6 +12860,12 @@ function renderMissionCommand(kind,question,forceCurrent){
   if(followUp)appendMissionBubble('assistant',followUp,true,'suggest-row');
   clearMissionCommandLoading(packet.sources);
   if(answer&&(question||forceCurrent)&&(kind==='ask'||question))rememberMissionCommandTurn(kind||'ask',question||'',answer,packet);
+  }catch(err){
+    console.error('Mission Command render failed',err);
+    try{removeMissionThinkingBubble(thread);}catch(e){}
+    if(question)appendMissionBubble('assistant','Mission Command hit a render error, but the app is still safe.<br><br>Try that prompt again, or run /sync if the data looks stale.',true,'data-row');
+    clearMissionCommandLoading([]);
+  }
 }
 
 function runMissionPrompt(kind){
