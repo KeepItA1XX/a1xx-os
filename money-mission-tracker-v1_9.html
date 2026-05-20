@@ -8385,6 +8385,8 @@ function getMissionCorrectionResponse(route,ctx,question){
 
 function getMissionResultExtraction(question){
   var q=normalizeMissionQuestion(question||'');
+  var numberWords={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50};
+  q=q.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty)\b/g,function(m){return String(numberWords[m]||m);});
   var out=[];
   var dm=(q.match(/(\d+)\s*(dms?|messages?)/)||[])[1];
   var replies=(q.match(/(\d+)\s*(replies|reply|responses?)/)||[])[1];
@@ -8473,6 +8475,15 @@ function getMissionBacklogSpecialResponse(route,ctx,question,conv,brainState){
     ||getMissionWhatChangedResponse(route,ctx,question)
     ||getMissionDataConfidenceResponse(route,ctx,question)
     ||getMissionClarificationResponse(route,ctx,question,conv);
+}
+
+function getMissionBacklogPriorityIntent(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(/\b(stale|missing data|no data|not loaded|why no|current data|data current|is this current|is this live|clean read)\b/.test(q))return {route:'sync',score:40,label:'Sync',suggestions:[],cleanQuestion:question};
+  if(/\b(what changed|whats different|what moved|what happened since|since last time|since yesterday|since last week|since last sync|what did codex update|what did notion change)\b/.test(q))return {route:'memory',score:40,label:'Memory',suggestions:[],cleanQuestion:question};
+  if(/\b(what should i say|script|template|playbook|resource|guide|pull up|send me|find the)\b/.test(q))return {route:'resources',score:40,label:'Resources',suggestions:[],cleanQuestion:question};
+  if(getMissionResultExtraction(question||'').length)return {route:'dpc',score:40,label:'DPC',suggestions:[],cleanQuestion:question};
+  return null;
 }
 
 function getMissionGuidedResponse(route,ctx,question,conv,brainState){
@@ -9227,6 +9238,8 @@ function getMissionCommandIntent(question){
   var raw=String(question||'').trim();
   var mention=parseMissionAtMention(raw);
   if(mention)return {route:mention.route,score:10,label:(getMissionWorkerForRoute(mention.route)||{}).name||'Worker',suggestions:[],forcedByMention:true,cleanQuestion:mention.question,handle:mention.handle};
+  var backlogIntent=getMissionBacklogPriorityIntent(raw);
+  if(backlogIntent)return backlogIntent;
   var q=normalizeMissionQuestion(raw);
   if(/\b(what should i do today|what do i do today|what should i do next|whats the move today|what is the move today|where we at)\b/.test(q))return {route:'now',score:30,label:'Now',suggestions:[],cleanQuestion:raw};
   var diagnostic=getMissionDiagnosticIntent(q);
