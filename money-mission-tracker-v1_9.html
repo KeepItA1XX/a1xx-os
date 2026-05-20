@@ -8016,17 +8016,17 @@ var MISSION_OPERATING_LANGUAGE={
 };
 
 var MISSION_WORKER_REGISTRY={
-  strategist:{name:'Mission Command Strategist',handle:'strategy',routes:['now','profile','help','unclear','diagnostic'],tools:['getBlockIntel','getStepData','getBrainSession'],phase:1},
-  pipeline:{name:'Pipeline Reviewer',handle:'pipeline',routes:['leads','dpc'],tools:['getLeadsData','getDPCData','getOutreachSteps'],phase:1},
-  content:{name:'Content Coach',handle:'content',routes:['content'],tools:['getContentQueue'],phase:1},
-  production:{name:'Production Manager',handle:'production',routes:['production'],tools:['getProductionData'],phase:1},
-  calendar:{name:'Calendar Focus Guard',handle:'calendar',routes:['calendar','focus','time','day'],tools:['getCalendarData','getBlockIntel'],phase:1},
-  finance:{name:'Finance Goal Tracker',handle:'finance',routes:['report','cycle'],tools:['getRevenueData','getDPCData'],phase:1},
-  sync:{name:'Notion Sync Auditor',handle:'sync',routes:['sync'],tools:['getSyncStatus'],phase:1},
-  archive:{name:'Backup Archive Manager',handle:'archive',routes:['archive','backup'],tools:['getBackupStatus','getSyncStatus'],phase:1},
-  review:{name:'Weekly Review Assistant',handle:'review',routes:['weekly','review'],tools:['getWeeklyReviewData','getChatHistory'],phase:1},
-  memory:{name:'AI Memory Curator',handle:'memory',routes:['memory','history'],tools:['getBrainSession','getChatHistory'],phase:1},
-  sales:{name:'Closer Coach',handle:'closer',routes:['sales','closer','call','dm','objection','discovery','practice','roleplay','followup','closing','callprep','livecall'],tools:['getCRMLeadContext','getLeadsData','getDPCData','getChatHistory','getSalesFrameworkLibrary','getObjectionMap','getDMVariantBank','getCallScorecard'],phase:1}
+  strategist:{name:'Mission Command Strategist',handle:'strategy',routes:['now','profile','help','unclear','diagnostic'],tools:['getBlockIntel','getStepData','getBrainSession'],requiredSlices:['identity'],phase:1},
+  pipeline:{name:'Pipeline Reviewer',handle:'pipeline',routes:['leads','dpc'],tools:['getLeadsData','getDPCData','getOutreachSteps'],requiredSlices:['pipeline','revenue'],phase:1},
+  content:{name:'Content Coach',handle:'content',routes:['content'],tools:['getContentQueue'],requiredSlices:['content','calendar'],phase:1},
+  production:{name:'Production Manager',handle:'production',routes:['production'],tools:['getProductionData'],requiredSlices:['production','content'],phase:1},
+  calendar:{name:'Calendar Focus Guard',handle:'calendar',routes:['calendar','focus','time','day'],tools:['getCalendarData','getBlockIntel'],requiredSlices:['calendar','session'],phase:1},
+  finance:{name:'Finance Goal Tracker',handle:'finance',routes:['report','cycle'],tools:['getRevenueData','getDPCData'],requiredSlices:['revenue','pipeline'],phase:1},
+  sync:{name:'Notion Sync Auditor',handle:'sync',routes:['sync'],tools:['getSyncStatus'],requiredSlices:['sync','session'],phase:1},
+  archive:{name:'Backup Archive Manager',handle:'archive',routes:['archive','backup'],tools:['getBackupStatus','getSyncStatus'],requiredSlices:['sync','session'],phase:1},
+  review:{name:'Weekly Review Assistant',handle:'review',routes:['weekly','review'],tools:['getWeeklyReviewData','getChatHistory'],requiredSlices:['revenue','pipeline','content','memory'],phase:1},
+  memory:{name:'AI Memory Curator',handle:'memory',routes:['memory','history'],tools:['getBrainSession','getChatHistory'],requiredSlices:['memory','session'],phase:1},
+  sales:{name:'Closer Coach',handle:'closer',routes:['sales','closer','call','dm','objection','discovery','practice','roleplay','followup','closing','callprep','livecall'],tools:['getCRMLeadContext','getLeadsData','getDPCData','getChatHistory','getSalesFrameworkLibrary','getObjectionMap','getDMVariantBank','getCallScorecard'],requiredSlices:['pipeline','revenue','session'],phase:1}
 };
 
 var MISSION_TOOL_REGISTRY={
@@ -8073,6 +8073,7 @@ function createMissionTurn(rawInput,kind,options){
     conversationType:'',
     brainState:null,
     contextPacket:null,
+    contextSlices:null,
     dataNeeds:[],
     dataConfidence:null,
     syncStatus:null,
@@ -8343,6 +8344,165 @@ var MISSION_ROUTE_DATA_MAP={
   diagnostic:['appState','syncQueue']
 };
 
+/* =========================================================
+   MISSION CONTEXT SLICE REGISTRY
+========================================================= */
+var MISSION_CONTEXT_REGISTRY={
+  now:['session','pipeline','revenue','memory'],
+  report:['revenue','pipeline','content','session'],
+  money:['revenue','pipeline','session'],
+  dpc:['pipeline','revenue','session'],
+  cycle:['revenue','pipeline','session'],
+  leads:['pipeline','session'],
+  sales:['pipeline','revenue','session'],
+  content:['content','calendar','session'],
+  live:['content','calendar','production','session'],
+  community:['content','pipeline','session'],
+  production:['production','content','session'],
+  calendar:['calendar','session'],
+  time:['calendar','session'],
+  day:['calendar','pipeline','session'],
+  weekly:['revenue','pipeline','content','session','memory'],
+  review:['revenue','pipeline','content','session','memory'],
+  sync:['sync','session'],
+  diagnostic:['sync','session','pipeline','revenue'],
+  profile:['identity'],
+  resources:['identity','session'],
+  memory:['memory','session'],
+  help:['identity','session']
+};
+var MISSION_CONTEXT_DEFAULT_SLICES=['session','identity'];
+
+var MISSION_WORKER_REQUIRED_SLICES_V2={
+  mission_command_strategist:['identity'],
+  pipeline_reviewer:['pipeline','revenue'],
+  content_coach:['content','calendar'],
+  production_manager:['production','content'],
+  calendar_focus_guard:['calendar','session'],
+  finance_goal_tracker:['revenue','pipeline'],
+  notion_sync_auditor:['sync','session'],
+  backup_archive_manager:['sync','session'],
+  weekly_review_assistant:['revenue','pipeline','content','memory'],
+  ai_memory_curator:['memory','session'],
+  sales_coach:['pipeline','revenue','session']
+};
+
+function missionContextSafeArray(value,limit){
+  return Array.isArray(value)?value.slice(0,limit||5):[];
+}
+
+function missionContextLeadName(lead){
+  try{return getLeadDisplayName(lead)||lead.name||lead.title||'Lead';}catch(e){return lead&&lead.name||'Lead';}
+}
+
+var MISSION_CONTEXT_LOADERS={
+  session:function(){
+    try{
+      var brain=typeof getMissionBrainSession==='function'?getMissionBrainSession():{};
+      var brainV2=typeof getMissionBrainSessionV2==='function'?getMissionBrainSessionV2():{};
+      var hist=typeof getMissionChatHistory==='function'?getMissionChatHistory():[];
+      return {turnCount:brain.turnCount||brainV2.turnCount||hist.length||0,arcPhase:brain.sessionArc||'opening',lastIntent:brain.lastRoute||brainV2.lastRoute||null,topicsThisSession:missionContextSafeArray(brain.topicHistory||brainV2.topicHistory||[],8),lastActionSuggested:brain.lastActionSuggested||brainV2.lastActionSuggested||null,recentQuestions:missionContextSafeArray(hist.map(function(t){return t&&t.question||'';}).filter(Boolean).reverse(),3)};
+    }catch(e){return {turnCount:0,arcPhase:'opening',lastIntent:null,topicsThisSession:[]};}
+  },
+  pipeline:function(){
+    try{
+      var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
+      var hot=leads.filter(function(l){return !!l.hot;}).length;
+      var warm=leads.filter(function(l){return !!l.warm;}).length;
+      var callReady=leads.filter(function(l){return !!l.phone;}).length;
+      return {activeLeads:leads.length,hotLeads:hot,warmLeads:warm,callReady:callReady,topLeads:leads.slice(0,3).map(function(l){return {name:missionContextLeadName(l),status:l.status||l.stage||'active',hot:!!l.hot,warm:!!l.warm,callReady:!!l.phone};})};
+    }catch(e){return {activeLeads:0,hotLeads:0,warmLeads:0,callReady:0,topLeads:[]};}
+  },
+  revenue:function(){
+    try{
+      var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+      var cycle=ctx.cycle||{};
+      var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+      return {weeklyTarget:ctx.wk||0,weeklyRevenue:ctx.rev||0,revenueGap:ctx.gap||0,cycleGoal:cycle.target||0,cycleName:cycle.name||'',dpcMoney:d.money||0,dpcCloses:d.closes||0,dpcCalls:d.calls||0};
+    }catch(e){return {weeklyTarget:0,weeklyRevenue:0,revenueGap:0,cycleGoal:0};}
+  },
+  content:function(){
+    try{
+      var pieces=(window.__contentPipelinePieces||window.__contentPieces||[]);
+      return {loadedCount:pieces.length,nextPost:pieces[0]&&{title:pieces[0].title||pieces[0].name||pieces[0].topic||'Content item',status:pieces[0].status||pieces[0].stage||''}||null,topItems:pieces.slice(0,3).map(function(p){return {title:p.title||p.name||p.topic||'Content item',status:p.status||p.stage||'',platform:p.platform||'',format:p.format||''};})};
+    }catch(e){return {loadedCount:0,nextPost:null,topItems:[]};}
+  },
+  calendar:function(){
+    try{
+      var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+      var block=typeof getMissionBlockIntel==='function'?getMissionBlockIntel():{};
+      return {nextEvent:ctx.nextEvent||null,blockName:block.name||'',blockPhase:block.phase||'',minutesLeft:block.minutesLeft||0,todayItems:missionContextSafeArray(window.__calEvents||[],5)};
+    }catch(e){return {nextEvent:null,todayItems:[],minutesLeft:0};}
+  },
+  production:function(){
+    try{
+      var items=window.__productionPieces||[];
+      return {activeProjects:items.slice(0,5).map(function(p){return {title:p.title||p.name||p.beat||'Production item',status:p.status||p.stage||'active'};}),activeCount:items.length,nextDeliverable:items[0]&&{title:items[0].title||items[0].name||items[0].beat||'Production item',status:items[0].status||items[0].stage||'active'}||null};
+    }catch(e){return {activeProjects:[],activeCount:0,nextDeliverable:null};}
+  },
+  identity:function(){
+    try{
+      var cached=sessionStorage.getItem('a1xx_identity_slice');
+      if(cached)return JSON.parse(cached);
+      var slice={name:'A1XX',role:'Executive Producer',os:'Money Mission OS',business:(typeof A1XX_PROFILE!=='undefined'&&A1XX_PROFILE.business)||'',offers:(typeof A1XX_PROFILE!=='undefined'&&A1XX_PROFILE.offers)||[]};
+      sessionStorage.setItem('a1xx_identity_slice',JSON.stringify(slice));
+      return slice;
+    }catch(e){return {name:'A1XX',role:'Executive Producer',os:'Money Mission OS'};}
+  },
+  memory:function(){
+    try{
+      var logs=typeof getStore==='function'?(getStore(MISSION_SESSION_LOG_KEY)||[]):[];
+      var hist=typeof getMissionChatHistory==='function'?getMissionChatHistory():[];
+      var recent=Array.isArray(logs)?logs.slice(-5):[];
+      return {recentSessions:recent.map(function(s){return {title:s.title||'',reason:s.reason||'',nextStep:s.nextStep||'',routes:s.routes||{}};}),sessionCount:Array.isArray(logs)?logs.length:0,recentTurns:missionContextSafeArray(hist.slice(-5),5).map(function(t){return {question:t.question||'',route:t.intentRoute||''};})};
+    }catch(e){return {recentSessions:[],sessionCount:0,recentTurns:[]};}
+  },
+  sync:function(){
+    try{
+      var h=typeof getHealth==='function'?getHealth():{};
+      var q=typeof getStore==='function'?(getStore('a1xx_notion_sync_queue_v1')||[]):[];
+      return {status:h.status||'unknown',services:h.services||{},pendingItems:Array.isArray(q)?q.filter(function(x){return x&&x.status==='pending';}).length:0,failedItems:Array.isArray(q)?q.filter(function(x){return x&&x.status==='failed';}).length:0};
+    }catch(e){return {status:'unknown',services:{},pendingItems:0,failedItems:0};}
+  },
+  pattern:function(){
+    try{
+      var brain=typeof getMissionBrainSession==='function'?getMissionBrainSession():{};
+      return {repeatedTopics:brain.topicHistory||[],turnsWithoutAction:brain.turnsWithoutAction||0,sessionIntent:brain.sessionIntent||'open'};
+    }catch(e){return {repeatedTopics:[],turnsWithoutAction:0,sessionIntent:'open'};}
+  }
+};
+
+function resolveMissionContextSlices(route){
+  var normalized=getMissionSlashAlias(route||'')||route||'';
+  var needed=(MISSION_CONTEXT_REGISTRY[normalized]||MISSION_CONTEXT_DEFAULT_SLICES).slice();
+  var ctx={_route:normalized||'unknown',_slices:needed.slice(),_resolvedAt:Date.now()};
+  needed.forEach(function(sliceName){
+    if(!MISSION_CONTEXT_LOADERS[sliceName])return;
+    try{ctx[sliceName]=MISSION_CONTEXT_LOADERS[sliceName]();}
+    catch(e){ctx[sliceName]={};}
+  });
+  return ctx;
+}
+
+function mergeMissionContextSlice(ctx,sliceName){
+  if(!ctx||!sliceName||ctx[sliceName]||!MISSION_CONTEXT_LOADERS[sliceName])return ctx;
+  try{ctx[sliceName]=MISSION_CONTEXT_LOADERS[sliceName]();}
+  catch(e){ctx[sliceName]={};}
+  ctx._slices=ctx._slices||[];
+  if(ctx._slices.indexOf(sliceName)<0)ctx._slices.push(sliceName);
+  return ctx;
+}
+
+function mergeWorkerSlices(ctx,worker){
+  ctx=ctx||resolveMissionContextSlices('');
+  var required=[];
+  if(worker&&worker.requiredSlices)required=required.concat(worker.requiredSlices);
+  if(worker&&worker.primaryWorker)required=required.concat(MISSION_WORKER_REQUIRED_SLICES_V2[worker.primaryWorker]||[]);
+  if(worker&&worker.supportingWorkers)worker.supportingWorkers.forEach(function(w){required=required.concat(MISSION_WORKER_REQUIRED_SLICES_V2[w]||[]);});
+  required.forEach(function(sliceName){mergeMissionContextSlice(ctx,sliceName);});
+  return ctx;
+}
+
 var MISSION_CONTEXT_SOURCES={
   appState:{sourceOfTruth:'local',label:'App State'},
   localStorage:{sourceOfTruth:'local',label:'Local Storage'},
@@ -8483,7 +8643,8 @@ var MISSION_WORKER_CAPABILITIES={
 };
 
 function getMissionWorkerForRouteV2(route){
-  var map={now:'mission_command_strategist',leads:'pipeline_reviewer',dpc:'pipeline_reviewer',content:'content_coach',production:'production_manager',calendar:'calendar_focus_guard',report:'finance_goal_tracker',money:'finance_goal_tracker',cycle:'finance_goal_tracker',sync:'notion_sync_auditor',weekly:'weekly_review_assistant',review:'weekly_review_assistant',memory:'ai_memory_curator',resources:'mission_command_strategist',help:'mission_command_strategist',community:'content_coach',live:'content_coach',sales:'sales_coach',diagnostic:'notion_sync_auditor'};
+  var map={now:'mission_command_strategist',profile:'mission_command_strategist',leads:'pipeline_reviewer',dpc:'pipeline_reviewer',content:'content_coach',production:'production_manager',calendar:'calendar_focus_guard',report:'finance_goal_tracker',money:'finance_goal_tracker',cycle:'finance_goal_tracker',sync:'notion_sync_auditor',weekly:'weekly_review_assistant',review:'weekly_review_assistant',memory:'ai_memory_curator',resources:'mission_command_strategist',help:'mission_command_strategist',community:'content_coach',live:'content_coach',sales:'sales_coach',diagnostic:'notion_sync_auditor'};
+  if(map[route])return map[route];
   if(typeof getMissionWorkerForRoute==='function'){
     try{
       var legacy=getMissionWorkerForRoute(route);
@@ -8503,7 +8664,7 @@ function selectMissionWorkers(turn){
   var q=turn.normalizedInput||'';
   var primary=getMissionWorkerForRouteV2(route);
   var supporting=[];
-  if(/\b(should i|which one|content or follow up|post or call|produce or outreach)\b/.test(q)){
+  if(/\b(which one|content or follow up|post or call|produce or outreach)\b/.test(q)||/\bshould i\b.+\bor\b/.test(q)){
     primary='mission_command_strategist';
     if(/\b(follow up|lead|pipeline|call)\b/.test(q))supporting.push('pipeline_reviewer');
     if(/\b(content|post|clip|stream)\b/.test(q))supporting.push('content_coach');
@@ -8538,6 +8699,7 @@ function getMissionBrainStateV2(turn){
   var routePlan=turn.routePlan||{};
   var dataConfidence=turn.dataConfidence||{level:'medium'};
   var syncStatus=turn.syncStatus||{risk:'none'};
+  var slices=turn.contextSlices||{};
   return Object.assign({},base,{
     inputIntent:routePlan.intent&&routePlan.intent.name||'',
     normalizedInput:turn.normalizedInput,
@@ -8551,6 +8713,8 @@ function getMissionBrainStateV2(turn){
     contextScope:getMissionContextScopeV2(turn),
     contextBudget:getMissionContextBudgetV2(turn),
     dataNeeds:turn.dataNeeds||[],
+    contextSlices:slices._slices||[],
+    contextSliceSummary:summarizeMissionContextSlices(slices),
     staleSources:dataConfidence.staleSources||[],
     freshSources:dataConfidence.freshSources||[],
     missingSources:dataConfidence.missingSources||[],
@@ -8799,7 +8963,7 @@ function updateMissionBrainSessionV2(turn){
 function saveMissionTurnCheckpoint(turn){
   try{
     var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
     list.unshift(checkpoint);
     list=list.slice(0,100);
     if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
@@ -8809,12 +8973,24 @@ function saveMissionTurnCheckpoint(turn){
 
 function summarizeMissionBrainStateV2(bs){
   if(!bs)return {};
-  return {selectedRoute:bs.selectedRoute,selectedWorkerId:bs.selectedWorkerId,sessionArc:bs.sessionArc,sessionTopic:bs.sessionTopic,sessionIntent:bs.sessionIntent,userEnergy:bs.userEnergy,dpcMomentum:bs.dpcMomentum,revenueGap:bs.revenueGap,nextBestMove:bs.nextBestMove,dataNeeds:bs.dataNeeds,syncRisk:bs.syncRisk,responseDepth:bs.responseDepth,responseShape:bs.responseShape};
+  return {selectedRoute:bs.selectedRoute,selectedWorkerId:bs.selectedWorkerId,sessionArc:bs.sessionArc,sessionTopic:bs.sessionTopic,sessionIntent:bs.sessionIntent,userEnergy:bs.userEnergy,dpcMomentum:bs.dpcMomentum,revenueGap:bs.revenueGap,nextBestMove:bs.nextBestMove,dataNeeds:bs.dataNeeds,contextSlices:bs.contextSlices||[],syncRisk:bs.syncRisk,responseDepth:bs.responseDepth,responseShape:bs.responseShape};
+}
+
+function summarizeMissionContextSlices(slices){
+  if(!slices)return {};
+  var out={route:slices._route||'',keys:slices._slices||[]};
+  (slices._slices||[]).forEach(function(key){
+    var value=slices[key];
+    if(Array.isArray(value))out[key]=value.length;
+    else if(value&&typeof value==='object')out[key]=Object.keys(value).length;
+    else out[key]=value?1:0;
+  });
+  return out;
 }
 
 function summarizeMissionContextPacket(packet){
   if(!packet)return {};
-  return {route:packet.routeContext&&packet.routeContext.route,worker:packet.workerContext&&packet.workerContext.primaryWorker,dataKeys:packet.dataSnapshot?Object.keys(packet.dataSnapshot):[],syncRisk:packet.syncStatus&&packet.syncStatus.risk};
+  return {route:packet.routeContext&&packet.routeContext.route,worker:packet.workerContext&&packet.workerContext.primaryWorker,dataKeys:packet.dataSnapshot?Object.keys(packet.dataSnapshot):[],sliceKeys:packet.contextSlices&&packet.contextSlices._slices||[],syncRisk:packet.syncStatus&&packet.syncStatus.risk};
 }
 
 function summarizeMissionBubblePacket(packet){
@@ -8827,7 +9003,7 @@ function buildMissionFallbackBubblePacket(turn,err){
 }
 
 function compileMissionContext(turn){
-  return {identity:getMissionIdentityContextV2(),brainState:turn.brainState,routeContext:getMissionRouteContextV2(turn.route),workerContext:getMissionWorkerContextV2(turn.workerPlan),dataSnapshot:getMissionDataSnapshotV2(turn.dataNeeds),recentSession:getRelevantMissionSessionTurnsV2(turn),memory:getRelevantMissionMemoryV2(turn),syncStatus:turn.syncStatus,actionHistory:getRecentMissionActionsV2(turn)};
+  return {identity:getMissionIdentityContextV2(),brainState:turn.brainState,contextSlices:turn.contextSlices||{},routeContext:getMissionRouteContextV2(turn.route),workerContext:getMissionWorkerContextV2(turn.workerPlan),dataSnapshot:getMissionDataSnapshotV2(turn.dataNeeds),recentSession:getRelevantMissionSessionTurnsV2(turn),memory:getRelevantMissionMemoryV2(turn),syncStatus:turn.syncStatus,actionHistory:getRecentMissionActionsV2(turn)};
 }
 
 function getMissionIdentityContextV2(){
@@ -8876,6 +9052,8 @@ function runMissionTurn(kind,rawInput,options){
     turn.intent=turn.routePlan&&turn.routePlan.intent||null;
     turn.conversationType=turn.routePlan&&turn.routePlan.conversationType||'';
     addMissionTrace(turn,'route_plan_selected',turn.routePlan);
+    turn.contextSlices=resolveMissionContextSlices(turn.route);
+    addMissionTrace(turn,'context_slices_resolved',summarizeMissionContextSlices(turn.contextSlices));
     turn.dataNeeds=resolveMissionDataNeeds(turn);
     addMissionTrace(turn,'data_needs_resolved',turn.dataNeeds);
     turn.contextStatus=getMissionContextStatus(turn.dataNeeds);
@@ -8885,6 +9063,8 @@ function runMissionTurn(kind,rawInput,options){
     turn.workerPlan=selectMissionWorkers(turn);
     turn.workerId=turn.workerPlan&&turn.workerPlan.primaryWorker||'';
     addMissionTrace(turn,'worker_plan_selected',turn.workerPlan);
+    turn.contextSlices=mergeWorkerSlices(turn.contextSlices,turn.workerPlan);
+    addMissionTrace(turn,'worker_slices_merged',summarizeMissionContextSlices(turn.contextSlices));
     turn.brainState=getMissionBrainStateV2(turn);
     addMissionTrace(turn,'brain_state_v2_built',summarizeMissionBrainStateV2(turn.brainState));
     turn.contextPacket=compileMissionContext(turn);
@@ -8913,14 +9093,17 @@ function runMissionTurn(kind,rawInput,options){
 
 function runMissionTurnV2SelfCheck(){
   var cases=[
-    {q:'what is the move',route:'now'},
-    {q:'who should i hit',route:'leads',needs:'crm'},
+    {q:'what is the move',route:'now',slices:['session','pipeline','revenue','memory']},
+    {q:'who should i hit',route:'leads',needs:'crm',slices:['pipeline','session','revenue']},
     {q:'should i post or follow up',worker:'mission_command_strategist'},
     {q:'where do i check sync',route:'sync',depth:'guided',shape:'app_navigation_guide'},
     {q:'done',type:'CONV_ACTION_COMPLETE'},
     {q:'show me',clarify:true},
     {q:'walk me through follow ups',route:'leads',depth:'guided'},
-    {q:'make a plan for the week',depth:'roadmap',shape:'plan_builder'}
+    {q:'make a plan for the week',depth:'roadmap',shape:'plan_builder'},
+    {q:'who is A1XX',route:'profile',slices:['identity'],onlySlices:['identity']},
+    {q:'what should i post',route:'content',slices:['content','calendar','session']},
+    {q:'prep me for a call',route:'sales',slices:['pipeline','revenue','session']}
   ];
   var failures=[];
   var priorSession=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
@@ -8936,6 +9119,12 @@ function runMissionTurnV2SelfCheck(){
     if(item.shape&&turn.responseShape!==item.shape)failures.push(item.q+' shape '+(turn.responseShape||'none'));
     if(item.type&&turn.conversationType!==item.type)failures.push(item.q+' type '+(turn.conversationType||'none'));
     if(item.clarify&&!(turn.routePlan&&turn.routePlan.clarify))failures.push(item.q+' clarify false');
+    if(item.slices)item.slices.forEach(function(sliceName){if(!turn.contextSlices||!turn.contextSlices[sliceName])failures.push(item.q+' missing slice '+sliceName);});
+    if(item.onlySlices){
+      var actual=turn.contextSlices&&turn.contextSlices._slices||[];
+      var extra=actual.filter(function(sliceName){return item.onlySlices.indexOf(sliceName)<0;});
+      if(extra.length)failures.push(item.q+' extra slices '+extra.join(','));
+    }
   });
   if(priorSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorSession);
   if(typeof setStore==='function'&&Array.isArray(priorCheckpoints))setStore(MISSION_TURN_CHECKPOINTS_KEY,priorCheckpoints);
