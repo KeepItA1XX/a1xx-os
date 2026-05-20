@@ -8057,6 +8057,7 @@ var MISSION_TOOL_REGISTRY={
 var MISSION_DEBUG_MODE=false;
 var MISSION_TURN_CHECKPOINTS_KEY='a1xx_mc_turn_checkpoints_v1';
 var MISSION_BRAIN_SESSION_V2_KEY='a1xx_mc_brain_session_v2';
+var MISSION_PRESENCE_LOG_KEY='a1xx_mc_presence_log';
 
 function createMissionTurn(rawInput,kind,options){
   var now=new Date();
@@ -8067,6 +8068,12 @@ function createMissionTurn(rawInput,kind,options){
     rawInput:String(rawInput||''),
     normalizedInput:'',
     inputSignals:{},
+    inputEnergy:'',
+    turnCount:0,
+    winDetected:false,
+    isStuck:false,
+    isRepeatTopic:false,
+    hasData:false,
     intent:null,
     route:'',
     workerId:'',
@@ -8105,6 +8112,184 @@ function addMissionWarning(turn,message,data){
   if(!turn)return;
   if(!turn.warnings)turn.warnings=[];
   turn.warnings.push({timestamp:new Date().toISOString(),message:String(message||''),data:data||null});
+}
+
+/* =========================================================
+   MISSION CONVERSATIONAL PRESENCE LAYER
+========================================================= */
+var MISSION_PRESENCE_PHRASES={
+  acknowledgment:{
+    punchy:['Say less.','Straight to it.','Got it.','On it.'],
+    direct:['Good question.','Right call to check.','Let me look at it.','On it.'],
+    casual:['Got you.','Alright.','I am with you.','Let me check.'],
+    'checking-in':['Good time to check.','Let me look.','Here is where things are.'],
+    detailed:['A lot in that. Let me sort it.','Okay, I got the full picture.','I got you.','That is a real one.'],
+    charged:['I hear that.','Real talk.','Okay, let us get clear.','That is worth addressing.'],
+    stuck:['I hear that.','Real talk.','Let us get this smaller.','We can work with that.'],
+    win:['That is the one.','Build on that.','Yes.','That hit.'],
+    returning:['Back on this.','Picking it back up.','Still on this. Let us dig in.','Alright, where did we leave it?']
+  },
+  closer:{
+    leads:['Want to go through one lead at a time?','Which lead do you want to move first?','Who is closest to a real decision?'],
+    report:['Want to map the fastest path to close that gap?','Where does the money come from first?','What is the closest cash move?'],
+    money:['Want to map the fastest path to close that gap?','Where does the money come from first?','What is the closest cash move?'],
+    dpc:['Want to log the activity before moving on?','What changed after that move?'],
+    content:['Want to block the next piece now?','What post needs to go out first?','What proof can you show today?'],
+    production:['What deliverable needs to move next?','What can you finish today?'],
+    calendar:['What needs prep before that hits?','What do you need ready for that?'],
+    sync:['Anything you need to log before you close this check?'],
+    memory:['What do you want to carry into the next session?'],
+    sales:['Want to practice the next line?','What did they say back?','Want to roleplay the next objection?'],
+    win:['What is the next one after this?','Who else can you move this week?','Keep that energy. What is next?'],
+    stuck:['What is the smallest move you can make on this today?','What is the one thing you can control right now?','What would make this feel less stuck?'],
+    'no-data':['Once that is logged, I will have a real read for you.','Drop that in when you get a chance and I will have more for you.'],
+    general:['What do you want to do with that?','Anything else before you move?','What is the next move from here?','You need anything else right now?']
+  },
+  fallback:{
+    low_confidence:['I do not have the full picture on that right now. Here is what I do see:','That is not fully in my view yet. Here is what I can tell you:','I have a partial read on that. Here is what I see:'],
+    unknown_route:['That is outside what I can see from here, but I am listening. Talk me through it and we will find the angle.','I do not have a lane for that yet. Break it down and we will figure it out.','That is not mapped for me right now. What is the real question behind it?'],
+    no_data:['The data for that is not in view yet. Once it is logged, I will give you a real read.','I am missing the numbers on that one. Log it and I will have something for you.','I can see the shape of it, but not the detail. That needs to be in the app first.'],
+    partial:['I have part of this.','Here is what I can see on that.','Partial read:']
+  }
+};
+
+var MISSION_ENERGY_RESPONSE_MAP={
+  punchy:{depth:'tight',b1Sentences:2,b2Detail:'minimal',pills:1},
+  direct:{depth:'direct',b1Sentences:3,b2Detail:'focused',pills:2},
+  casual:{depth:'normal',b1Sentences:3,b2Detail:'standard',pills:2},
+  'checking-in':{depth:'grounded',b1Sentences:3,b2Detail:'standard',pills:2},
+  detailed:{depth:'full',b1Sentences:4,b2Detail:'full',pills:3},
+  charged:{depth:'grounded',b1Sentences:3,b2Detail:'focused',pills:2}
+};
+
+function getMissionInputEnergy(raw){
+  var cleaned=String(raw||'').trim();
+  var words=cleaned.split(/\s+/).filter(Boolean);
+  var wordCount=words.length;
+  var hasQuestion=/\?/.test(cleaned);
+  var hasExclaim=/!/.test(cleaned);
+  var isAllLower=cleaned&&cleaned===cleaned.toLowerCase();
+  if(hasExclaim)return 'charged';
+  if(wordCount<=3&&!hasQuestion)return 'punchy';
+  if(wordCount<=5&&hasQuestion)return 'direct';
+  if(wordCount>12)return 'detailed';
+  if(wordCount<=12&&hasQuestion)return 'checking-in';
+  if(wordCount<=12&&isAllLower)return 'casual';
+  return 'casual';
+}
+
+function getMissionPresenceLog(){
+  try{return JSON.parse(sessionStorage.getItem(MISSION_PRESENCE_LOG_KEY)||'{}')||{};}catch(e){return {};}
+}
+
+function setMissionPresenceLog(log){
+  try{sessionStorage.setItem(MISSION_PRESENCE_LOG_KEY,JSON.stringify(log||{}));}catch(e){}
+}
+
+function resetMissionPresenceLog(){
+  try{sessionStorage.removeItem(MISSION_PRESENCE_LOG_KEY);}catch(e){}
+}
+
+function pickMissionPresencePhrase(pool,used){
+  pool=Array.isArray(pool)?pool:[];
+  used=Array.isArray(used)?used:[];
+  if(!pool.length)return '';
+  var available=pool.filter(function(p){return used.indexOf(p)<0;});
+  if(!available.length)available=pool;
+  return available[Math.floor(Math.random()*available.length)]||'';
+}
+
+function missionPresencePlainText(html){
+  return String(html||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function missionPresenceHasData(turn){
+  if(!turn)return false;
+  var slices=turn.contextSlices||{};
+  return Object.keys(slices).filter(function(k){return k.charAt(0)!=='_';}).length>0;
+}
+
+function getMissionPresenceTurn(question,route){
+  var turn=getMissionVisibleTurnV2(question||'',route)||window.__missionLastTurnObjectV2||null;
+  if(!turn||route&&turn.route&&route!==turn.route&&!(route==='diagnostic'&&turn.route==='sync'))return null;
+  return turn;
+}
+
+function getMissionAcknowledgment(turn,log){
+  if(!turn)return null;
+  log=log||{};
+  var turnCount=turn.turnCount||1;
+  if((turnCount-(log.lastAckTurn||-99))<3)return null;
+  if(['help','profile','resources'].indexOf(turn.route)>=0)return null;
+  var pool=null;
+  if(turn.winDetected)pool=MISSION_PRESENCE_PHRASES.acknowledgment.win;
+  else if(turn.isRepeatTopic)pool=MISSION_PRESENCE_PHRASES.acknowledgment.returning;
+  else if(turn.isStuck)pool=MISSION_PRESENCE_PHRASES.acknowledgment.stuck;
+  else if(turn.inputEnergy==='detailed'||turn.inputEnergy==='charged')pool=MISSION_PRESENCE_PHRASES.acknowledgment[turn.inputEnergy];
+  else if(turn.inputEnergy==='punchy'||turn.inputEnergy==='direct')pool=MISSION_PRESENCE_PHRASES.acknowledgment[turn.inputEnergy];
+  else if(turnCount%5===0)pool=MISSION_PRESENCE_PHRASES.acknowledgment.casual;
+  if(!pool)return null;
+  return pickMissionPresencePhrase(pool,log.usedAcks||[]);
+}
+
+function getMissionTurnCloser(turn,log){
+  if(!turn||turn.inputEnergy==='punchy')return null;
+  log=log||{};
+  var turnCount=turn.turnCount||1;
+  if(['help','profile'].indexOf(turn.route)>=0)return null;
+  if((turnCount-(log.lastCloserTurn||-99))<2)return null;
+  var pool=null;
+  if(turn.winDetected)pool=MISSION_PRESENCE_PHRASES.closer.win;
+  else if(turn.isStuck)pool=MISSION_PRESENCE_PHRASES.closer.stuck;
+  else if(turn.hasData===false)pool=MISSION_PRESENCE_PHRASES.closer['no-data'];
+  else pool=MISSION_PRESENCE_PHRASES.closer[turn.route]||MISSION_PRESENCE_PHRASES.closer.general;
+  return pickMissionPresencePhrase(pool,log.usedClosers||[]);
+}
+
+function getMissionGracefulFallback(turn){
+  try{
+    var confidence=(turn&&turn.routePlan&&turn.routePlan.confidence)||0;
+    var hasData=missionPresenceHasData(turn);
+    var pool;
+    if(confidence<0.3&&!hasData)pool=MISSION_PRESENCE_PHRASES.fallback.unknown_route;
+    else if(confidence>=0.3&&!hasData)pool=MISSION_PRESENCE_PHRASES.fallback.no_data;
+    else if(confidence>=0.3&&hasData)pool=MISSION_PRESENCE_PHRASES.fallback.low_confidence;
+    else pool=MISSION_PRESENCE_PHRASES.fallback.low_confidence;
+    return pickMissionPresencePhrase(pool,[]);
+  }catch(e){return '';}
+}
+
+function applyMissionPresenceLayer(html,route,question,opts){
+  opts=opts||{};
+  if(!html||opts.presence===false||window.__missionCommandSelfCheckActive)return html;
+  var turn=getMissionPresenceTurn(question||'',route);
+  if(!turn)return html;
+  var log=getMissionPresenceLog();
+  if(log.appliedTurnId===turn.id)return html;
+  var plain=missionPresencePlainText(html);
+  var ack=null,closer=null;
+  if(plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
+  if(plain&&plain.length>35&&opts.closer!==false)closer=getMissionTurnCloser(turn,log);
+  var out=String(html||'');
+  if(ack){
+    out=escapeHtml(ack)+'<br><br>'+out;
+    log.lastAckTurn=turn.turnCount||1;
+    log.usedAcks=log.usedAcks||[];
+    log.usedAcks.push(ack);
+    log.usedAcks=log.usedAcks.slice(-30);
+  }
+  if(closer){
+    out=out+'<br><br><span style="color:#8f9aa3">'+escapeHtml(closer)+'</span>';
+    log.lastCloserTurn=turn.turnCount||1;
+    log.usedClosers=log.usedClosers||[];
+    log.usedClosers.push(closer);
+    log.usedClosers=log.usedClosers.slice(-30);
+  }
+  if(ack||closer){
+    log.appliedTurnId=turn.id;
+    setMissionPresenceLog(log);
+  }
+  return out;
 }
 
 /* =========================================================
@@ -8708,6 +8893,7 @@ function getMissionBrainStateV2(turn){
     possibleRoutes:routePlan.possibleRoutes||[],
     selectedRoute:routePlan.selectedRoute||turn.route||'',
     selectedWorkerId:turn.workerId||'',
+    inputEnergy:turn.inputEnergy||'',
     responseDepth:turn.responseDepth||'',
     responseShape:turn.responseShape||'',
     contextScope:getMissionContextScopeV2(turn),
@@ -8835,7 +9021,7 @@ function planMissionResponse(turn){
   else if(turn.inputSignals&&turn.inputSignals.isCelebration)responseMode='celebration';
   else if(turn.inputSignals&&turn.inputSignals.asksForDiagnostic)responseMode='diagnostic';
   else if(responseDepth==='micro')responseMode='assertive';
-  return {responseMode:responseMode,responseDepth:responseDepth,responseShape:responseShape,bubblePlan:getMissionBubblePlanV2(turn,responseDepth,responseShape),actionPlan:getMissionActionPlanV2(turn)};
+  return {responseMode:responseMode,responseDepth:responseDepth,responseShape:responseShape,energyGuidance:MISSION_ENERGY_RESPONSE_MAP[turn.inputEnergy]||MISSION_ENERGY_RESPONSE_MAP.casual,bubblePlan:getMissionBubblePlanV2(turn,responseDepth,responseShape),actionPlan:getMissionActionPlanV2(turn)};
 }
 
 function getMissionBubblePlanV2(turn,depth,shape){
@@ -8879,6 +9065,7 @@ function buildMissionResponseContract(turn){
     workerLabel:getMissionWorkerLabelV2(turn.workerId),
     route:turn.route,
     conversationType:turn.conversationType,
+    inputEnergy:turn.inputEnergy,
     responseMode:turn.responseMode,
     responseDepth:turn.responseDepth,
     responseShape:turn.responseShape,
@@ -8936,7 +9123,7 @@ function missionQuestionAllowsSuggestionBubbleV2(route,conv,question,links,turn)
 }
 
 function adaptMissionBubblePacketToLegacyResponse(packet){
-  return {answer:packet&&packet.b1&&packet.b1.answer||'',workerId:packet&&packet.workerId||'',workerLabel:packet&&packet.workerLabel||'',route:packet&&packet.route||'',responseMode:packet&&packet.responseMode||'',responseDepth:packet&&packet.responseDepth||'',responseShape:packet&&packet.responseShape||'',dataBubble:packet&&packet.b2&&packet.b2.shouldRender?packet.b2:null,actionBubble:packet&&packet.b3&&packet.b3.shouldRender?packet.b3:null,warnings:packet&&packet.warnings||[],trace:packet&&packet.trace||[]};
+  return {answer:packet&&packet.b1&&packet.b1.answer||'',workerId:packet&&packet.workerId||'',workerLabel:packet&&packet.workerLabel||'',route:packet&&packet.route||'',inputEnergy:packet&&packet.inputEnergy||'',responseMode:packet&&packet.responseMode||'',responseDepth:packet&&packet.responseDepth||'',responseShape:packet&&packet.responseShape||'',dataBubble:packet&&packet.b2&&packet.b2.shouldRender?packet.b2:null,actionBubble:packet&&packet.b3&&packet.b3.shouldRender?packet.b3:null,warnings:packet&&packet.warnings||[],trace:packet&&packet.trace||[]};
 }
 
 /* =========================================================
@@ -8963,7 +9150,7 @@ function updateMissionBrainSessionV2(turn){
 function saveMissionTurnCheckpoint(turn){
   try{
     var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
     list.unshift(checkpoint);
     list=list.slice(0,100);
     if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
@@ -8973,7 +9160,7 @@ function saveMissionTurnCheckpoint(turn){
 
 function summarizeMissionBrainStateV2(bs){
   if(!bs)return {};
-  return {selectedRoute:bs.selectedRoute,selectedWorkerId:bs.selectedWorkerId,sessionArc:bs.sessionArc,sessionTopic:bs.sessionTopic,sessionIntent:bs.sessionIntent,userEnergy:bs.userEnergy,dpcMomentum:bs.dpcMomentum,revenueGap:bs.revenueGap,nextBestMove:bs.nextBestMove,dataNeeds:bs.dataNeeds,contextSlices:bs.contextSlices||[],syncRisk:bs.syncRisk,responseDepth:bs.responseDepth,responseShape:bs.responseShape};
+  return {selectedRoute:bs.selectedRoute,selectedWorkerId:bs.selectedWorkerId,inputEnergy:bs.inputEnergy,sessionArc:bs.sessionArc,sessionTopic:bs.sessionTopic,sessionIntent:bs.sessionIntent,userEnergy:bs.userEnergy,dpcMomentum:bs.dpcMomentum,revenueGap:bs.revenueGap,nextBestMove:bs.nextBestMove,dataNeeds:bs.dataNeeds,contextSlices:bs.contextSlices||[],syncRisk:bs.syncRisk,responseDepth:bs.responseDepth,responseShape:bs.responseShape};
 }
 
 function summarizeMissionContextSlices(slices){
@@ -8995,7 +9182,7 @@ function summarizeMissionContextPacket(packet){
 
 function summarizeMissionBubblePacket(packet){
   if(!packet)return {};
-  return {workerId:packet.workerId,route:packet.route,responseDepth:packet.responseDepth,responseShape:packet.responseShape,hasB2:packet.b2&&packet.b2.shouldRender,hasB3:packet.b3&&packet.b3.shouldRender};
+  return {workerId:packet.workerId,route:packet.route,inputEnergy:packet.inputEnergy,responseDepth:packet.responseDepth,responseShape:packet.responseShape,hasB2:packet.b2&&packet.b2.shouldRender,hasB3:packet.b3&&packet.b3.shouldRender};
 }
 
 function buildMissionFallbackBubblePacket(turn,err){
@@ -9045,6 +9232,9 @@ function runMissionTurn(kind,rawInput,options){
     addMissionTrace(turn,'turn_created');
     turn.normalizedInput=normalizeMissionInputV2(turn.rawInput);
     addMissionTrace(turn,'input_normalized',{rawInput:turn.rawInput,normalizedInput:turn.normalizedInput});
+    turn.inputEnergy=getMissionInputEnergy(turn.rawInput);
+    turn.turnCount=(getMissionBrainSessionV2().turnCount||0)+1;
+    addMissionTrace(turn,'input_energy_read',{inputEnergy:turn.inputEnergy,turnCount:turn.turnCount});
     turn.inputSignals=analyzeMissionInputV2(turn.normalizedInput,turn);
     addMissionTrace(turn,'input_analyzed',turn.inputSignals);
     turn.routePlan=getMissionRoutePlan(turn);
@@ -9054,6 +9244,7 @@ function runMissionTurn(kind,rawInput,options){
     addMissionTrace(turn,'route_plan_selected',turn.routePlan);
     turn.contextSlices=resolveMissionContextSlices(turn.route);
     addMissionTrace(turn,'context_slices_resolved',summarizeMissionContextSlices(turn.contextSlices));
+    turn.hasData=missionPresenceHasData(turn);
     turn.dataNeeds=resolveMissionDataNeeds(turn);
     addMissionTrace(turn,'data_needs_resolved',turn.dataNeeds);
     turn.contextStatus=getMissionContextStatus(turn.dataNeeds);
@@ -9065,6 +9256,10 @@ function runMissionTurn(kind,rawInput,options){
     addMissionTrace(turn,'worker_plan_selected',turn.workerPlan);
     turn.contextSlices=mergeWorkerSlices(turn.contextSlices,turn.workerPlan);
     addMissionTrace(turn,'worker_slices_merged',summarizeMissionContextSlices(turn.contextSlices));
+    turn.hasData=missionPresenceHasData(turn);
+    turn.winDetected=!!(turn.inputSignals&&turn.inputSignals.isCelebration);
+    turn.isStuck=!!(turn.inputSignals&&turn.inputSignals.isFrustration);
+    turn.isRepeatTopic=!!(getMissionBrainSessionV2().lastRoute&&getMissionBrainSessionV2().lastRoute===turn.route&&turn.turnCount>1);
     turn.brainState=getMissionBrainStateV2(turn);
     addMissionTrace(turn,'brain_state_v2_built',summarizeMissionBrainStateV2(turn.brainState));
     turn.contextPacket=compileMissionContext(turn);
@@ -9129,6 +9324,33 @@ function runMissionTurnV2SelfCheck(){
   if(priorSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorSession);
   if(typeof setStore==='function'&&Array.isArray(priorCheckpoints))setStore(MISSION_TURN_CHECKPOINTS_KEY,priorCheckpoints);
   return {passed:!failures.length,failures:failures,total:cases.length};
+}
+
+function runMissionPresenceSelfCheck(){
+  var failures=[];
+  var priorPresence=sessionStorage.getItem(MISSION_PRESENCE_LOG_KEY);
+  var priorBrain=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+  resetMissionPresenceLog();
+  sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);
+  if(getMissionInputEnergy('go')!=='punchy')failures.push('go energy');
+  if(getMissionInputEnergy('where we at?')!=='direct')failures.push('where we at energy');
+  if(getMissionInputEnergy('I need you to help me figure out what I should do with this pipeline because I am not sure what is moving')!=='detailed')failures.push('detailed energy');
+  var turn1=createMissionTurn('go','ask',{});
+  turn1.route='now';turn1.inputEnergy='punchy';turn1.turnCount=1;turn1.contextSlices={session:{},_slices:['session']};turn1.hasData=true;
+  var ack1=getMissionAcknowledgment(turn1,{});
+  if(!ack1)failures.push('ack missing on punchy first turn');
+  var ack2=getMissionAcknowledgment(Object.assign({},turn1,{turnCount:2}),{lastAckTurn:1,usedAcks:[ack1]});
+  if(ack2)failures.push('ack gap not enforced');
+  var closePunchy=getMissionTurnCloser(turn1,{});
+  if(closePunchy)failures.push('punchy closer fired');
+  var profileTurn=Object.assign({},turn1,{route:'profile',inputEnergy:'direct',turnCount:4});
+  if(getMissionTurnCloser(profileTurn,{}))failures.push('profile closer fired');
+  if(getMissionAcknowledgment(profileTurn,{}))failures.push('profile ack fired');
+  var fallback=getMissionGracefulFallback({routePlan:{confidence:0.1},contextSlices:{_slices:[]}});
+  if(!fallback)failures.push('fallback missing');
+  if(priorPresence===null)sessionStorage.removeItem(MISSION_PRESENCE_LOG_KEY);else sessionStorage.setItem(MISSION_PRESENCE_LOG_KEY,priorPresence);
+  if(priorBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorBrain);
+  return {passed:!failures.length,failures:failures,total:8};
 }
 
 /* 2026-05-19 (Claude): smarter intent matching helpers — typo tolerance via tight
@@ -10054,6 +10276,7 @@ function getMissionConversationType(question,ctx,intent,brainState){
   if(/^\/[a-z]+/.test(q))return {type:CONV_COMMAND,route:intent.route||getMissionSlashAlias(q.replace(/^\/([a-z]+).*/,'$1')),activeRoute:active&&active.intentRoute||''};
   if(getMissionCloseSignal(q))return {type:CONV_CLOSE,route:'',activeRoute:active&&active.intentRoute||''};
   if((intent&&intent.route==='sales')||getMissionSalesSignal(question||''))return {type:CONV_DATA_REQUEST,route:'sales',activeRoute:active&&active.intentRoute||''};
+  if(intent&&intent.route==='leads'&&intent.score>=20)return {type:CONV_DATA_REQUEST,route:'leads',activeRoute:active&&active.intentRoute||''};
   if(depth==='guided'||depth==='deep'||depth==='roadmap')return {type:CONV_DATA_REQUEST,route:intent.route||smartRoute||active&&active.intentRoute||'now',activeRoute:active&&active.intentRoute||''};
   if(/\b(what should i do today|what do i do today|what should i do next|whats the move today|what is the move today|where we at)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'now',activeRoute:active&&active.intentRoute||''};
   if(/\b(why isnt|why is not|why is my|why are my|what is wrong with|whats wrong with|not working|broken|problem|issue|diagnose|diagnostic)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'diagnostic',activeRoute:active&&active.intentRoute||''};
@@ -10077,7 +10300,7 @@ function getMissionConversationType(question,ctx,intent,brainState){
   if(/\b(goal for today|today goal|focused on|focus on|what should i do next|what should i do today|what should i be focused on)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'now',activeRoute:active&&active.intentRoute||''};
   if(intent&&intent.route&&intent.score>=6)return {type:CONV_DATA_REQUEST,route:intent.route,activeRoute:active&&active.intentRoute||''};
   if(intent&&intent.route)return {type:CONV_NEW_TOPIC,route:intent.route,activeRoute:active&&active.intentRoute||''};
-  if(active&&active.intentRoute)return {type:CONV_FOLLOWUP,route:active.intentRoute,activeRoute:active.intentRoute};
+  if(active&&active.intentRoute&&/^(why|why tho|why though|how|how come|tell me more|what else|anything else|what next|next|show me|show it|run it back|go deeper|deeper|break it down|quick read|quick|more|continue|that one|this one|yes|no|bet|done)$/i.test(q))return {type:CONV_FOLLOWUP,route:active.intentRoute,activeRoute:active.intentRoute};
   if(brainRoute)return {type:CONV_FOLLOWUP,route:brainRoute,activeRoute:brainRoute};
   return {type:CONV_UNCLEAR,route:'',activeRoute:''};
 }
@@ -10455,6 +10678,7 @@ function getMissionCommandIntent(question){
   if(getMissionSalesSignal(raw))return {route:'sales',score:30,label:'Closer Coach',suggestions:[],cleanQuestion:raw};
   var diagnostic=getMissionDiagnosticIntent(q);
   if(diagnostic)return diagnostic;
+  if(/\bwho (should i|do i|can i|we) (hit|call|touch|dm|contact|follow up with|reach out to)\b/.test(q))return {route:'leads',score:30,label:'Leads',suggestions:[],cleanQuestion:raw};
   if(/\bwhy\b/.test(q)&&/\b(lead|leads|pipeline|crm|follow)\b/.test(q))return {route:'leads',score:30,label:'Leads',suggestions:[],cleanQuestion:raw};
   if(/\b(closed|paid|got paid|payment|paid session|sale|sold)\b/.test(q))return {route:'report',score:30,label:'Report',suggestions:[],cleanQuestion:raw};
   if(/\b(booked|booked one|booked call|call booked)\b/.test(q))return {route:'dpc',score:30,label:'DPC',suggestions:[],cleanQuestion:raw};
@@ -11140,6 +11364,7 @@ function getMissionRenderRoute(question,brainState){
   if(mention&&mention.route)return mention.route;
   var directIntent=getMissionCommandIntent(question||'');
   if(directIntent&&directIntent.route==='sales')return 'sales';
+  if(directIntent&&directIntent.route&&missionQuestionHasExplicitDataAsk(directIntent.route,question||''))return directIntent.route;
   if(getMissionSalesSignal(question||''))return 'sales';
   var conv=getMissionConversationType(question||'',null,null,brainState);
   if(conv&&conv.route)return conv.route;
@@ -11454,7 +11679,7 @@ function getMissionConversationFirstResponse(conv,ctx,question){
   if(missionQuestionIsSimpleNowAsk(route,question||''))return getMissionHumanBubble(route,conv,ctx,question||'');
   if(conv.type===CONV_CLOSE)return getMissionCloseResponse(ctx);
   if(getMissionResponseDepth(question||'',conv.type,brain)==='micro')return getMissionQuickRead(route||'now',ctx).replace(/\.\./g,'.');
-  if(smartCategory==='confirmation_complete'||smartCategory==='celebration_win')return getMissionCompletionInputResponse(route,ctx,question||'',smartCategory==='celebration_win');
+  if((smartCategory==='confirmation_complete'||smartCategory==='celebration_win')&&!(route==='leads'&&/\bwho\b/.test(q)))return getMissionCompletionInputResponse(route,ctx,question||'',smartCategory==='celebration_win');
   if(smartCategory==='frustration_overwhelm')return getMissionStuckRead(route,ctx);
   if(conv.type===CONV_QUICK_READ)return getMissionQuickRead(route,ctx);
   if(conv.type===CONV_WHY&&/^(tell me more|go on|say more)$/.test(q))return getMissionThreadMoreResponse(route,ctx)||getMissionWhatElseRead(route,ctx);
@@ -11977,16 +12202,16 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   var allowActions=missionQuestionAllowsActionButtons(route,question||'');
   if(!missionRenderAllowedByTurnV2(turnV2,'b3'))allowActions=false;
   if((depth==='guided'||depth==='deep'||depth==='roadmap')&&guidedProfile&&guidedProfile.shape){
-    return {b1:withWorker(answer),b2:'',b3:''};
+    return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false})),b2:'',b3:''};
   }
-  if(shape&&shape.type==='how')return {b1:withWorker(answer),b2:'',b3:allowActions?getMissionActionButtons(route,ctx,question||''):''};
+  if(shape&&shape.type==='how')return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false})),b2:'',b3:allowActions?getMissionActionButtons(route,ctx,question||''):''};
   var needsData=missionRouteNeedsDataBubble(route,conv,question||'');
   if(brainState&&brainState.renderB2===false)needsData=false;
   if(!missionRenderAllowedByTurnV2(turnV2,'b2'))needsData=false;
-  if(!needsData)return {b1:withWorker(answer),b2:'',b3:[allowSuggestions?followUp:'',allowActions?getMissionActionButtons(route,ctx,question||''):''].filter(Boolean).join('<br><br>')};
+  if(!needsData)return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{})),b2:'',b3:[allowSuggestions?followUp:'',allowActions?getMissionActionButtons(route,ctx,question||''):''].filter(Boolean).join('<br><br>')};
   var human=getMissionHumanBubble(route,conv,ctx,question||'')||answer;
   return {
-    b1:withWorker(human),
+    b1:withWorker(applyMissionPresenceLayer(human,route,question||'',{})),
     b2:getMissionDataBubble(route,ctx,question||''),
     b3:[allowSuggestions?getMissionSuggestionBubble(route,conv,followUp,links,question||''):'',allowActions?getMissionActionButtons(route,ctx,question||''):''].filter(Boolean).join('<br><br>')
   };
@@ -12030,6 +12255,8 @@ function getMissionFollowUp(route,ctx,question){
 function getMissionPersonalityFallback(ctx,question){
   var q=String(question||'').trim();
   var intent=getMissionCommandIntent(q);
+  var turn=getMissionPresenceTurn(q,intent&&intent.route||'')||window.__missionLastTurnObjectV2||null;
+  var graceful=getMissionGracefulFallback(turn);
   var isSerious=/\b(struggling|stuck|frustrated|nothing works|not working|burned out|burnt out|overwhelmed|don't know|do not know|can't|cannot|giving up|lost|confused|scared|worried|behind|failing|failed|broke|broken|help me|i need help|i'm lost|im lost)\b/i.test(q);
   if(isSerious){
     var empathyLine=pickMissionLibraryLine('empathy',{nextBestMove:ctx&&ctx.nowText||'the next move',topLead:ctx&&ctx.leadText||'',sessionTopic:'this'})||'Bad days are part of it. The difference is you still show up.';
@@ -12039,7 +12266,10 @@ function getMissionPersonalityFallback(ctx,question){
       var first=(cfg.links&&cfg.links[0])||{label:item.label,url:'#'};
       return Object.assign({label:item.label},first);
     });
-    return '<strong>Mission Command:</strong> '+escapeHtml(empathyLine)+'<br><br><span style="color:#8f9aa3">What is the actual thing that feels stuck — pipeline, money, content, production, or schedule? Give me one lane and I will help you clear it.</span>'+missionLinksHtml(links);
+    return applyMissionPresenceLayer('<strong>Mission Command:</strong> '+escapeHtml(empathyLine)+'<br><br><span style="color:#8f9aa3">What is the actual thing that feels stuck: pipeline, money, content, production, or schedule? Give me one lane and I will help you clear it.</span>'+missionLinksHtml(links),intent&&intent.route||'',q,{closer:false});
+  }
+  if(graceful&&turn&&turn.routePlan&&turn.routePlan.confidence<0.35){
+    return applyMissionPresenceLayer('<strong>Mission Command:</strong> '+escapeHtml(graceful)+'<br><br><span style="color:#8f9aa3">Pick the closest lane: leads, money, content, production, sync, or calendar.</span>',turn.route||'',q,{closer:false});
   }
   var options=[
     'I read that three times and the OS made the same face producers make when the artist says "just make it sound expensive." Give me a cleaner target and I can actually cook.',
@@ -12064,7 +12294,7 @@ function getMissionPersonalityFallback(ctx,question){
     var first=(cfg.links&&cfg.links[0])||{label:item.label,url:'#'};
     return Object.assign({label:item.label},first);
   });
-  return '<strong>Mission Command:</strong> '+escapeHtml(options[idx])+'<br><br>'+tip+recovery+(context?'<br><br>'+context:'')+missionLinksHtml(links);
+  return applyMissionPresenceLayer('<strong>Mission Command:</strong> '+escapeHtml(options[idx])+'<br><br>'+tip+recovery+(context?'<br><br>'+context:'')+missionLinksHtml(links),intent&&intent.route||'',q,{closer:false});
 }
 
 function getMissionCommandResponse(kind,ctx,question,brainState){
@@ -12077,6 +12307,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var intent=multi.primary;
   var conv=getMissionConversationType(cleanQuestion||'',ctx,intent,brainState);
   var route=(conv&&conv.route)||intent.route;
+  if(intent&&intent.route&&missionQuestionHasExplicitDataAsk(intent.route,cleanQuestion||question||''))route=intent.route;
   try{
     var turnV2Packet=runMissionTurn(kind||'ask',cleanQuestion||question||'',{ctx:ctx,legacyRoute:route,legacyIntent:intent,legacyConversation:conv,passive:true,allowLegacy:false});
     window.__missionLastTurnV2=turnV2Packet;
@@ -12086,7 +12317,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var quietAnswer=missionShouldKeepAnswerQuiet(route,conv,cleanQuestion||'');
   function finishMissionAnswer(html,opts){
     opts=opts||{};
-    return applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
+    var shaped=applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
+    return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   var backlogSpecial=getMissionBacklogSpecialResponse(route,ctx,cleanQuestion||'',conv,brainState);
   if(backlogSpecial)return finishMissionAnswer(backlogSpecial,{sessionArc:false});
@@ -12205,6 +12437,7 @@ function runMissionCommandSelfCheck(){
   var priorPhrases=sessionStorage.getItem('a1xx_mc_phrase_rotation_v1');
   var priorWhy=sessionStorage.getItem(MISSION_WHY_DEPTH_KEY);
   var priorBrain=sessionStorage.getItem(MISSION_BRAIN_SESSION_KEY);
+  var priorPresence=sessionStorage.getItem(MISSION_PRESENCE_LOG_KEY);
   window.__missionCommandSelfCheckActive=true;
   checks.forEach(function(check){
     try{
@@ -12215,6 +12448,7 @@ function runMissionCommandSelfCheck(){
     sessionStorage.removeItem('a1xx_mc_phrase_rotation_v1');
     sessionStorage.removeItem(MISSION_WHY_DEPTH_KEY);
     sessionStorage.removeItem(MISSION_BRAIN_SESSION_KEY);
+    resetMissionPresenceLog();
     var cleaned=sanitizeMissionCommandInput(check.q);
     var route=getMissionCommandRoute(cleaned);
     var testBrain=getMissionBrainState(ctx,cleaned,route||'');
@@ -12239,6 +12473,7 @@ function runMissionCommandSelfCheck(){
   if(priorPhrases===null)sessionStorage.removeItem('a1xx_mc_phrase_rotation_v1');else sessionStorage.setItem('a1xx_mc_phrase_rotation_v1',priorPhrases);
   if(priorWhy===null)sessionStorage.removeItem(MISSION_WHY_DEPTH_KEY);else sessionStorage.setItem(MISSION_WHY_DEPTH_KEY,priorWhy);
   if(priorBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_KEY,priorBrain);
+  if(priorPresence===null)sessionStorage.removeItem(MISSION_PRESENCE_LOG_KEY);else sessionStorage.setItem(MISSION_PRESENCE_LOG_KEY,priorPresence);
   window.__missionCommandSelfCheckActive=false;
   if(el){
     if(failures.length){
