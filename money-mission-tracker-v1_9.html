@@ -8045,6 +8045,843 @@ var MISSION_TOOL_REGISTRY={
   getChatHistory:{readOnly:true,source:'local_storage'}
 };
 
+/* =========================================================
+   MISSION TURN OBJECT — v2
+========================================================= */
+var MISSION_DEBUG_MODE=false;
+var MISSION_TURN_CHECKPOINTS_KEY='a1xx_mc_turn_checkpoints_v1';
+var MISSION_BRAIN_SESSION_V2_KEY='a1xx_mc_brain_session_v2';
+
+function createMissionTurn(rawInput,kind,options){
+  var now=new Date();
+  return {
+    id:'mc_turn_'+now.getTime()+'_'+Math.random().toString(36).slice(2,8),
+    timestamp:now.toISOString(),
+    kind:kind||'ask',
+    rawInput:String(rawInput||''),
+    normalizedInput:'',
+    inputSignals:{},
+    intent:null,
+    route:'',
+    workerId:'',
+    conversationType:'',
+    brainState:null,
+    contextPacket:null,
+    dataNeeds:[],
+    dataConfidence:null,
+    syncStatus:null,
+    responseMode:'',
+    responseDepth:'',
+    responseShape:'',
+    selectedTools:[],
+    suggestedAction:null,
+    actionRequired:false,
+    memoryCandidate:null,
+    routePlan:null,
+    workerPlan:null,
+    responsePlan:null,
+    bubblePacket:null,
+    decisionTrace:[],
+    warnings:[],
+    errors:[],
+    options:options||{}
+  };
+}
+
+function addMissionTrace(turn,message,data){
+  if(!turn)return;
+  if(!turn.decisionTrace)turn.decisionTrace=[];
+  turn.decisionTrace.push({timestamp:new Date().toISOString(),message:String(message||''),data:data||null});
+}
+
+function addMissionWarning(turn,message,data){
+  if(!turn)return;
+  if(!turn.warnings)turn.warnings=[];
+  turn.warnings.push({timestamp:new Date().toISOString(),message:String(message||''),data:data||null});
+}
+
+/* =========================================================
+   MISSION ROUTER V2
+========================================================= */
+var MISSION_TYPO_MAP_V2=[
+  ['revnue','revenue'],['revenu','revenue'],['revinue','revenue'],['pipline','pipeline'],['pipe line','pipeline'],
+  ['follw up','follow up'],['folow up','follow up'],['folowup','follow up'],['followup','follow up'],
+  ['calender','calendar'],['calandar','calendar'],['prodution','production'],['producton','production'],
+  ['conent','content'],['contnet','content'],['expence','expense'],['expences','expenses'],
+  ['invocie','invoice'],['invioce','invoice'],['twich','twitch'],['bangin plus','BANGIN+'],['bangin+','BANGIN+'],
+  ['rapprenuer','Rappreneur'],['honeybook','HoneyBook'],['click funnels','ClickFunnels'],['apps script','Apps Script']
+];
+
+function applyMissionTypoMap(input){
+  var out=String(input||'');
+  MISSION_TYPO_MAP_V2.forEach(function(pair){
+    var wrong=pair[0],right=pair[1];
+    var re=new RegExp('\\b'+wrong.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi');
+    out=out.replace(re,right);
+  });
+  return out;
+}
+
+var A1XX_PHRASE_MAP_V2=[
+  {pattern:/\b(yo|aye|ayo|aight|ok so|alright|bet|look|so boom)\b/gi,replace:''},
+  {pattern:/\bwhat('?s| is) the (move|play|word|vibe|situation)\b/gi,replace:'what should i do now'},
+  {pattern:/\bwhat we (doing|on|working on|working with|got)\b/gi,replace:'what should i do now'},
+  {pattern:/\bwhere (we|am i|are we) at\b/gi,replace:'where do i stand'},
+  {pattern:/\b(lock (in|me in)|help me lock in|lock it in)\b/gi,replace:'what should i focus on now'},
+  {pattern:/\b(i'?m lost|i'?m scattered|i'?m spinning|i'?m off)\b/gi,replace:'help me refocus'},
+  {pattern:/\b(bag check|bag talk|where'?s the bag|what'?s the bag looking like)\b/gi,replace:'revenue report'},
+  {pattern:/\bwhat came in\b/gi,replace:'what revenue came in'},
+  {pattern:/\bwhat('?s| is) the (damage|gap|number)\b/gi,replace:'what is my revenue gap report'},
+  {pattern:/\bhow we looking money wise\b/gi,replace:'revenue report'},
+  {pattern:/\b(hit list|who('?s| is) on the list)\b/gi,replace:'show my leads'},
+  {pattern:/\bwho (i|do i|should i|we) (hit|call|touch|follow up with)\b/gi,replace:'who should i contact leads'},
+  {pattern:/\bwho hot\b/gi,replace:'show hot leads'},
+  {pattern:/\bwho cold\b/gi,replace:'show cold leads'},
+  {pattern:/\bwho ready\b/gi,replace:'show call ready leads'},
+  {pattern:/\bwhat (do i|should i) post\b/gi,replace:'content recommendation'},
+  {pattern:/\bwhat content (we got|is ready|is in the queue)\b/gi,replace:'content status'},
+  {pattern:/\bclip (this|that|it)\b/gi,replace:'create content clip idea'},
+  {pattern:/\bwhat beat (need|needs) work\b/gi,replace:'production status'},
+  {pattern:/\bwhat project (need|needs) work\b/gi,replace:'production status'},
+  {pattern:/\bwhat needs finishing\b/gi,replace:'production task status'},
+  {pattern:/\brun it back\b/gi,replace:'explain more'},
+  {pattern:/\bbreak it down\b/gi,replace:'explain simply'},
+  {pattern:/\bwhat this mean\b/gi,replace:'explain this'},
+  {pattern:/\bwhat needs logging\b/gi,replace:'show what should be logged'},
+  {pattern:/\blog this\b/gi,replace:'log current action'}
+];
+
+function applyA1XXPhraseMapV2(input){
+  var out=String(input||'');
+  A1XX_PHRASE_MAP_V2.forEach(function(rule){out=out.replace(rule.pattern,rule.replace);});
+  return out;
+}
+
+function normalizeMissionInputV2(rawInput){
+  var input=String(rawInput||'');
+  if(typeof normalizeMissionQuestion==='function'){
+    try{input=normalizeMissionQuestion(input);}catch(e){}
+  }
+  input=applyMissionTypoMap(input);
+  input=applyA1XXPhraseMapV2(input);
+  return String(input||'').toLowerCase().replace(/\s+/g,' ').trim();
+}
+
+function analyzeMissionInputV2(normalizedInput,turn){
+  var q=String(normalizedInput||'').toLowerCase();
+  var words=q.split(/\s+/).filter(Boolean);
+  return {
+    wordCount:words.length,
+    isSlashCommand:/^\/\w+/.test(q),
+    isWorkerMention:/^@\w+/.test(q),
+    isShort:words.length<=3,
+    isQuestion:/\?/.test(turn&&turn.rawInput||'')||/^(what|why|how|who|where|when|should|can|do|does|is|are)\b/.test(q),
+    isWhy:/^(why|why that|why tho|but why|explain why|go deeper|run it back|explain more)/.test(q),
+    isCompletion:/\b(done|sent it|handled it|logged it|posted|called|booked|closed|uploaded|finished|knocked it out)\b/.test(q),
+    isCorrection:/\b(no i mean|not that|wrong one|other one|i meant|try again|cleaner read)\b/.test(q),
+    isFrustration:/\b(stuck|lost|overwhelmed|too much|not working|isn'?t working|frustrated|come on|seriously|spinning|off track)\b/.test(q),
+    isCelebration:/\b(we got one|closed one|got paid|booked a call|got a yes|invoice paid|sold a beat|hit the goal|we up)\b/.test(q),
+    asksForWalkthrough:/\b(walk me through|step by step|where do i click|show me how|guide me|tell me exactly what to do)\b/.test(q),
+    asksForTeaching:/\b(teach me|explain|break down|what does this mean|how does this work|framework|principle)\b/.test(q),
+    asksForPlan:/\b(plan|roadmap|strategy|map this out|game plan|workflow|process|phase one|phase two)\b/.test(q),
+    asksForIdeas:/\b(ideas|brainstorm|angles|help me think|what could this become|give me options)\b/.test(q),
+    asksForDiagnostic:/\b(debug|diagnose|fix this|what'?s broken|where is this breaking|root issue)\b/.test(q),
+    asksForAppNavigation:/\b(where do i|how do i get|what tab|what card|what button|open system hub|find hit list|where is)\b/.test(q)
+  };
+}
+
+function normalizeMissionSlashRouteV2(slash){
+  var s=String(slash||'').toLowerCase();
+  var map={n:'now',now:'now',next:'now',l:'leads',lead:'leads',leads:'leads',pipeline:'leads',m:'report',money:'report',report:'report',dpc:'dpc',c:'content',content:'content',p:'production',production:'production',calendar:'calendar',cal:'calendar',w:'weekly',week:'weekly',weekly:'weekly',s:'sync',sync:'sync',health:'sync',memory:'memory',help:'help',resources:'resources',rolodex:'resources'};
+  return map[s]||s||'now';
+}
+
+function getRouteForWorkerMentionV2(worker){
+  var w=String(worker||'').toLowerCase().replace(/^@/,'');
+  var map={strategy:'now',strategist:'now',pipeline:'leads',leads:'leads',content:'content',production:'production',calendar:'calendar',finance:'report',money:'report',sync:'sync',archive:'sync',review:'weekly',weekly:'weekly',memory:'memory'};
+  return map[w]||'';
+}
+
+function scoreMissionRoutesV2(q,signals,turn){
+  var routes=[];
+  function add(route,score,reason,intentType){
+    if(route)routes.push({route:route,score:score,reason:reason||'',intentType:intentType||''});
+  }
+  if(turn&&turn.options&&turn.options.legacyRoute)add(turn.options.legacyRoute,0.88,'legacy_visible_route','legacy');
+  var slash=String(q||'').match(/^\/([a-z0-9_]+)/);
+  if(slash)add(normalizeMissionSlashRouteV2(slash[1]),1,'slash_command','command');
+  var mention=String(q||'').match(/^@([a-z0-9_]+)/);
+  if(mention){
+    var mentionRoute=getRouteForWorkerMentionV2(mention[1]);
+    if(mentionRoute)add(mentionRoute,0.95,'worker_mention','worker_direct');
+  }
+  var singleMap={leads:'leads',pipeline:'leads',money:'report',revenue:'report',dpc:'dpc',content:'content',production:'production',calendar:'calendar',week:'weekly',review:'weekly',sync:'sync',resources:'resources',rolodex:'resources',memory:'memory',settings:'help'};
+  if(singleMap[q])add(singleMap[q],0.92,'single_word_topic','data_request');
+  if(/\b(lead|leads|pipeline|hit list|follow up|follow ups|follow-up|follow-ups|who should i contact|who should i call|who hot|who warm|crm|honeybook|invoice)\b/.test(q))add('leads',0.85,'pipeline_phrase','data_request');
+  if(/\b(money|revenue|bag|cash|sales|closed|paid|goal|gap|pace|profit|expense|margin)\b/.test(q))add('report',0.82,'money_phrase','data_request');
+  if(/\b(dpc|daily progress|daily profit|dm|dms|calls booked|closes|activity|scoreboard|log dpc)\b/.test(q))add('dpc',0.82,'dpc_phrase','data_request');
+  if(/\b(content|post|clip|short|youtube|instagram|threads|caption|hook|cta|spark|proof post)\b/.test(q))add('content',0.8,'content_phrase','data_request');
+  if(/\b(production|beat|beats|mix|master|client project|bangin|catalog|upload|export|song)\b/.test(q))add('production',0.8,'production_phrase','data_request');
+  if(/\b(calendar|schedule|time|block|window|event|free|today|before close|before pickup)\b/.test(q))add('calendar',0.76,'calendar_phrase','data_request');
+  if(/\b(sync|notion|sheets|apps script|backup|system|health|connection|save|restore)\b/.test(q))add('sync',0.84,'sync_phrase','diagnostic');
+  if(/\b(resource|rolodex|guide|script|template|playbook|find|search|link)\b/.test(q))add('resources',0.78,'resource_phrase','resource_request');
+  if(/\b(memory|remember|save this|keep this in mind|preference|business rule)\b/.test(q))add('memory',0.82,'memory_phrase','memory_request');
+  if(/\b(week|weekly|review|worked|dragged|repeat|cut|next week|lesson|bottleneck)\b/.test(q))add('weekly',0.76,'weekly_phrase','review_request');
+  if(signals&&(signals.asksForWalkthrough||signals.asksForTeaching||signals.asksForPlan||signals.asksForIdeas))add('now',0.55,'guidance_general','guidance');
+  if(!routes.length&&typeof getMissionCommandIntent==='function'){
+    try{
+      var legacy=getMissionCommandIntent(q);
+      if(legacy&&legacy.route)add(legacy.route,0.55,'legacy_intent',legacy.type||'');
+      else if(legacy&&legacy.intentRoute)add(legacy.intentRoute,0.55,'legacy_intent',legacy.intentType||'');
+    }catch(e){}
+  }
+  if(!routes.length)add('now',0.25,'fallback','open');
+  routes.sort(function(a,b){return b.score-a.score;});
+  var seen={},merged=[];
+  routes.forEach(function(r){
+    if(!seen[r.route]){seen[r.route]=true;merged.push(r);}
+  });
+  return merged;
+}
+
+function getMissionRouteConfidenceBand(score){
+  if(score>=0.85)return 'direct';
+  if(score>=0.6)return 'soft';
+  if(score>=0.35)return 'partial_confirm';
+  return 'clarify';
+}
+
+function tryMissionContextCarryRoute(turn){
+  var q=turn&&turn.normalizedInput||'';
+  var signals=turn&&turn.inputSignals||{};
+  var carryPhrases=/^(why|how|what about that|explain more|go deeper|okay but|and then what|what next|that one|this one|show me|do that|yes|no|bet|alright|ok cool|continue)$/i;
+  if(!carryPhrases.test(q)&&!signals.isWhy)return null;
+  var session=getMissionBrainSessionV2();
+  var lastRoute=session.lastRoute||session.sessionTopic||'';
+  if(!lastRoute)return null;
+  return {route:lastRoute,score:0.68,reason:'context_carry',intentType:signals.isWhy?'why_deeper':'followup'};
+}
+
+function getMissionConversationTypeV2(q,signals,route,turn){
+  if(signals&&signals.isCompletion)return 'CONV_ACTION_COMPLETE';
+  if(signals&&signals.isCorrection)return 'CONV_CORRECTION';
+  if(signals&&signals.isWhy)return 'CONV_WHY';
+  if(signals&&signals.asksForWalkthrough)return 'CONV_WALKTHROUGH';
+  if(signals&&signals.asksForTeaching)return 'CONV_TEACHING';
+  if(signals&&signals.asksForPlan)return 'CONV_PLAN';
+  if(signals&&signals.asksForIdeas)return 'CONV_IDEATION';
+  if(signals&&signals.asksForDiagnostic)return 'CONV_DIAGNOSTIC';
+  if(signals&&signals.asksForAppNavigation)return 'CONV_APP_NAVIGATION';
+  if(typeof getMissionConversationType==='function'){
+    try{
+      var legacy=getMissionConversationType(q,(turn&&turn.options&&turn.options.ctx)||null,(turn&&turn.options&&turn.options.legacyIntent)||null,(turn&&turn.brainState)||null);
+      if(legacy&&legacy.type)return legacy.type;
+      if(typeof legacy==='string')return legacy;
+    }catch(e){}
+  }
+  return 'CONV_DATA_REQUEST';
+}
+
+function getMissionRoutePlan(turn){
+  var q=turn.normalizedInput||'';
+  var signals=turn.inputSignals||{};
+  var possibleRoutes=scoreMissionRoutesV2(q,signals,turn);
+  var best=possibleRoutes[0]||{route:'now',score:0.25,reason:'fallback'};
+  var confidence=best.score;
+  var contextCarry=false;
+  var clarify=false;
+  if(confidence<0.35){
+    var carried=tryMissionContextCarryRoute(turn);
+    if(carried){
+      best=carried;
+      confidence=Math.max(confidence,0.6);
+      contextCarry=true;
+    }else{
+      clarify=true;
+    }
+  }
+  var conversationType=getMissionConversationTypeV2(q,signals,best.route,turn);
+  return {
+    selectedRoute:best.route,
+    confidence:confidence,
+    confidenceBand:getMissionRouteConfidenceBand(confidence),
+    possibleRoutes:possibleRoutes.slice(0,5),
+    contextCarry:contextCarry,
+    clarify:clarify,
+    routeReason:best.reason||'',
+    intent:{name:best.intent||best.route,type:best.intentType||'route_request'},
+    conversationType:conversationType
+  };
+}
+
+/* =========================================================
+   MISSION CONTEXT SOURCES
+========================================================= */
+var MISSION_ROUTE_DATA_MAP={
+  now:['appState','calendar','dpc','missionSteps'],
+  leads:['crm','dpc','followups'],
+  dpc:['dpc','crm','report'],
+  content:['content','spark','calendar','missionGoal'],
+  production:['production','calendar','content'],
+  report:['report','dpc','crm','expenses'],
+  calendar:['calendar','appState'],
+  sync:['syncQueue','notion','sheets','appsScript'],
+  memory:['missionChat','memoryCandidates'],
+  weekly:['weeklyReview','dpc','report'],
+  resources:['rolodex','notion'],
+  help:['appState'],
+  community:['content','crm','missionGoal'],
+  live:['content','calendar','production'],
+  diagnostic:['appState','syncQueue']
+};
+
+var MISSION_CONTEXT_SOURCES={
+  appState:{sourceOfTruth:'local',label:'App State'},
+  localStorage:{sourceOfTruth:'local',label:'Local Storage'},
+  missionChat:{sourceOfTruth:'local_then_sheets_then_notion_future',label:'Mission Chat'},
+  dpc:{sourceOfTruth:'local_then_sheets_then_notion',label:'DPC'},
+  crm:{sourceOfTruth:'notion',label:'CRM Leads'},
+  content:{sourceOfTruth:'notion',label:'Content Pipeline'},
+  production:{sourceOfTruth:'notion',label:'Production Catalog'},
+  calendar:{sourceOfTruth:'google_calendar',label:'Calendar'},
+  report:{sourceOfTruth:'computed_from_local_sheets_notion',label:'Report'},
+  notion:{sourceOfTruth:'notion',label:'Notion'},
+  sheets:{sourceOfTruth:'sheets_backup',label:'Google Sheets'},
+  appsScript:{sourceOfTruth:'apps_script_bridge',label:'Apps Script'},
+  syncQueue:{sourceOfTruth:'local',label:'Sync Queue'},
+  workerActions:{sourceOfTruth:'local_then_notion_future',label:'Worker Actions'},
+  weeklyReview:{sourceOfTruth:'sheets_then_notion',label:'Weekly Review'},
+  expenses:{sourceOfTruth:'local_sheets',label:'Expenses'},
+  rolodex:{sourceOfTruth:'notion_local',label:'Rolodex'},
+  spark:{sourceOfTruth:'local_notion_future',label:'Spark Ideas'},
+  followups:{sourceOfTruth:'crm_local',label:'Follow-Ups'},
+  missionSteps:{sourceOfTruth:'app_state',label:'Mission Steps'},
+  missionGoal:{sourceOfTruth:'app_state_report',label:'Mission Goal'},
+  memoryCandidates:{sourceOfTruth:'local',label:'Memory Candidates'}
+};
+
+var MISSION_SOURCE_OWNERSHIP={
+  crm_leads:'notion',
+  content_pipeline:'notion',
+  production_catalog:'notion',
+  daily_dpc:'local_then_sheets_then_notion',
+  weekly_review:'sheets_then_notion',
+  cycle_archive:'sheets_then_notion',
+  chat_sessions:'local_then_sheets_then_notion_future',
+  worker_actions:'local_then_notion_future',
+  calendar:'google_calendar',
+  app_settings:'local_storage'
+};
+
+/* =========================================================
+   MISSION DATA NEEDS RESOLVER
+========================================================= */
+function resolveMissionDataNeeds(turn){
+  var route=turn.route||'now';
+  var base=MISSION_ROUTE_DATA_MAP[route]||MISSION_ROUTE_DATA_MAP.now||[];
+  var needs=base.slice();
+  var shape=turn.responseShape||(turn.responsePlan&&turn.responsePlan.responseShape)||'';
+  if(shape==='money_pressure'&&needs.indexOf('report')<0)needs.push('report');
+  if(shape==='pipeline_heat'&&needs.indexOf('crm')<0)needs.push('crm');
+  if(shape==='content_proof'&&needs.indexOf('content')<0)needs.push('content');
+  if(shape==='production_delivery'&&needs.indexOf('production')<0)needs.push('production');
+  if(shape==='sync_diagnostic'&&needs.indexOf('syncQueue')<0)needs.push('syncQueue');
+  if(shape==='app_navigation_guide'&&needs.indexOf('appState')<0)needs.push('appState');
+  return Array.from(new Set(needs));
+}
+
+function getMissionContextStatus(dataNeeds){
+  var status={};
+  (dataNeeds||[]).forEach(function(sourceKey){status[sourceKey]=getMissionSourceStatus(sourceKey);});
+  return status;
+}
+
+function getMissionSourceStatus(sourceKey){
+  var base=MISSION_CONTEXT_SOURCES[sourceKey]||{label:sourceKey,sourceOfTruth:'unknown'};
+  var loaded=false,recordCount=0,errors=[],lastUpdatedAt='',ageMinutes=null,confidence='medium';
+  try{
+    if(sourceKey==='crm'){loaded=Array.isArray(window.__crmLeads);recordCount=loaded?window.__crmLeads.length:0;lastUpdatedAt=(typeof getStore==='function'&&getStore('a1xx_crm_last_sync_at'))||'';}
+    if(sourceKey==='content'){loaded=Array.isArray(window.__contentPieces)||Array.isArray(window.__contentPipelinePieces);recordCount=(window.__contentPieces||[]).length+(window.__contentPipelinePieces||[]).length;lastUpdatedAt=(typeof getStore==='function'&&getStore('a1xx_content_last_sync_at'))||'';}
+    if(sourceKey==='production'){loaded=Array.isArray(window.__productionPieces);recordCount=loaded?window.__productionPieces.length:0;lastUpdatedAt=(typeof getStore==='function'&&getStore('a1xx_production_last_sync_at'))||'';}
+    if(sourceKey==='calendar'){loaded=Array.isArray(window.__calEvents);recordCount=loaded?window.__calEvents.length:0;lastUpdatedAt=(typeof getStore==='function'&&getStore('a1xx_calendar_last_sync_at'))||'';}
+    if(sourceKey==='dpc'){loaded=true;recordCount=1;lastUpdatedAt=(typeof getStore==='function'&&getStore('a1xx_dpc_last_save_at'))||'';}
+    if(sourceKey==='report'){loaded=typeof captureWeekData==='function';recordCount=loaded?1:0;lastUpdatedAt=(typeof getStore==='function'&&getStore('a1xx_weekly_last_save_at'))||'';}
+    if(sourceKey==='syncQueue'){var q=(typeof getStore==='function'&&(getStore('a1xx_notion_sync_queue_v1')||[]))||[];loaded=true;recordCount=Array.isArray(q)?q.length:0;lastUpdatedAt=(typeof getStore==='function'&&getStore('a1xx_last_sync_check_at'))||'';}
+    if(sourceKey==='appState'||sourceKey==='localStorage'||sourceKey==='missionSteps'||sourceKey==='missionGoal'){loaded=true;recordCount=1;lastUpdatedAt=new Date().toISOString();}
+    if(sourceKey==='notion'||sourceKey==='sheets'||sourceKey==='appsScript'||sourceKey==='rolodex'||sourceKey==='spark'||sourceKey==='followups'||sourceKey==='weeklyReview'||sourceKey==='expenses'||sourceKey==='missionChat'||sourceKey==='memoryCandidates'){loaded=true;recordCount=0;lastUpdatedAt=(typeof getStore==='function'&&getStore('a1xx_last_sync_check_at'))||'';}
+  }catch(e){errors.push(e.message||String(e));}
+  ageMinutes=getMissionAgeMinutes(lastUpdatedAt);
+  if(!loaded)confidence='low';
+  else if(ageMinutes===null)confidence='medium';
+  else if(ageMinutes<=120)confidence='high';
+  else if(ageMinutes<=1440)confidence='medium';
+  else confidence='low';
+  return {key:sourceKey,label:base.label,sourceOfTruth:base.sourceOfTruth,loaded:loaded,fresh:confidence==='high',lastUpdatedAt:lastUpdatedAt,ageMinutes:ageMinutes,confidence:confidence,recordCount:recordCount,errors:errors};
+}
+
+function getMissionAgeMinutes(iso){
+  if(!iso)return null;
+  var t=new Date(iso).getTime();
+  if(!t||isNaN(t))return null;
+  return Math.max(0,Math.round((Date.now()-t)/60000));
+}
+
+function getMissionDataConfidenceV2(turn){
+  var statuses=turn.contextStatus||{};
+  var keys=Object.keys(statuses);
+  if(!keys.length)return {level:'medium',reason:'no_specific_data_needs',freshSources:[],staleSources:[],missingSources:[]};
+  var fresh=[],stale=[],missing=[];
+  keys.forEach(function(k){
+    var s=statuses[k];
+    if(!s.loaded)missing.push(k);
+    else if(s.confidence==='low')stale.push(k);
+    else fresh.push(k);
+  });
+  var level='high';
+  if(missing.length||stale.length>=Math.ceil(keys.length/2))level='low';
+  else if(stale.length)level='medium';
+  return {level:level,reason:missing.length?'missing_sources':stale.length?'stale_sources':'fresh_enough',freshSources:fresh,staleSources:stale,missingSources:missing};
+}
+
+function getMissionSyncStatusV2(turn){
+  var q=[];
+  try{q=typeof getStore==='function'?(getStore('a1xx_notion_sync_queue_v1')||[]):[];}catch(e){}
+  var pending=Array.isArray(q)?q.filter(function(x){return x.status==='pending';}).length:0;
+  var failed=Array.isArray(q)?q.filter(function(x){return x.status==='failed';}).length:0;
+  var conflict=Array.isArray(q)?q.filter(function(x){return x.status==='conflict'||x.status==='needs_review';}).length:0;
+  var risk='none';
+  if(failed||conflict)risk='high';
+  else if(pending>=5)risk='medium';
+  else if(pending>0)risk='low';
+  if(turn.dataConfidence&&turn.dataConfidence.level==='low')risk=risk==='none'?'medium':risk;
+  return {risk:risk,pending:pending,failed:failed,conflict:conflict};
+}
+
+/* =========================================================
+   MISSION WORKER CAPABILITY ROUTER
+========================================================= */
+var MISSION_WORKER_CAPABILITIES={
+  mission_command_strategist:['orientation','planning','teaching','decision_support','prioritization','context_summary','app_navigation'],
+  pipeline_reviewer:['lead_triage','followup','sales_call','invoice_check','pipeline_heat','crm_read'],
+  content_coach:['content_idea','post_plan','community_engagement','live_stream','proof_post','cta_plan'],
+  production_manager:['beat_catalog','client_delivery','bangin_drop','asset_finish','music_project'],
+  calendar_focus_guard:['current_block','time_window','focus_guard','schedule_read'],
+  finance_goal_tracker:['revenue_gap','goal_pace','money_math','expense_read','kpi_interpretation'],
+  notion_sync_auditor:['notion_health','sheets_backup','sync_queue','diagnostics','system_health'],
+  backup_archive_manager:['backup','restore','archive','cycle_archive'],
+  weekly_review_assistant:['weekly_review','pattern_review','lesson_capture','next_week_plan'],
+  ai_memory_curator:['memory_candidate','voice_preference','business_rule','session_memory']
+};
+
+function getMissionWorkerForRouteV2(route){
+  var map={now:'mission_command_strategist',leads:'pipeline_reviewer',dpc:'pipeline_reviewer',content:'content_coach',production:'production_manager',calendar:'calendar_focus_guard',report:'finance_goal_tracker',money:'finance_goal_tracker',cycle:'finance_goal_tracker',sync:'notion_sync_auditor',weekly:'weekly_review_assistant',review:'weekly_review_assistant',memory:'ai_memory_curator',resources:'mission_command_strategist',help:'mission_command_strategist',community:'content_coach',live:'content_coach',diagnostic:'notion_sync_auditor'};
+  if(typeof getMissionWorkerForRoute==='function'){
+    try{
+      var legacy=getMissionWorkerForRoute(route);
+      if(legacy){
+        var legacyMap={strategist:'mission_command_strategist',pipeline:'pipeline_reviewer',content:'content_coach',production:'production_manager',calendar:'calendar_focus_guard',finance:'finance_goal_tracker',sync:'notion_sync_auditor',archive:'backup_archive_manager',review:'weekly_review_assistant',memory:'ai_memory_curator'};
+        var legacyKey=typeof legacy==='string'?legacy:(legacy.handle||legacy.id||legacy.name||'');
+        legacyKey=String(legacyKey||'').toLowerCase().replace(/\s+/g,'_');
+        return legacyMap[legacyKey]||map[route]||'mission_command_strategist';
+      }
+    }catch(e){}
+  }
+  return map[route]||'mission_command_strategist';
+}
+
+function selectMissionWorkers(turn){
+  var route=turn.route||'now';
+  var q=turn.normalizedInput||'';
+  var primary=getMissionWorkerForRouteV2(route);
+  var supporting=[];
+  if(/\b(should i|which one|content or follow up|post or call|produce or outreach)\b/.test(q)){
+    primary='mission_command_strategist';
+    if(/\b(follow up|lead|pipeline|call)\b/.test(q))supporting.push('pipeline_reviewer');
+    if(/\b(content|post|clip|stream)\b/.test(q))supporting.push('content_coach');
+    if(/\b(money|revenue|cash|goal)\b/.test(q))supporting.push('finance_goal_tracker');
+    if(/\b(production|beat|client)\b/.test(q))supporting.push('production_manager');
+  }
+  if(turn.inputSignals&&turn.inputSignals.asksForAppNavigation&&route!=='sync')primary='mission_command_strategist';
+  if(turn.inputSignals&&turn.inputSignals.asksForDiagnostic&&route==='sync')primary='notion_sync_auditor';
+  supporting=Array.from(new Set(supporting.filter(function(w){return w!==primary;})));
+  return {primaryWorker:primary,supportingWorkers:supporting,workerReason:supporting.length?'multi_worker_decision':'route_worker'};
+}
+
+/* =========================================================
+   MISSION RESPONSE PLAN V2
+========================================================= */
+function getMissionBrainSessionV2(){
+  try{return JSON.parse(sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY)||'{}')||{};}catch(e){return {};}
+}
+
+function setMissionBrainSessionV2(session){
+  try{sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify(session||{}));}catch(e){}
+}
+
+function getMissionBrainStateV2(turn){
+  var base={};
+  try{
+    if(typeof getMissionBrainState==='function'){
+      var ctx=(turn.options&&turn.options.ctx)||window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+      base=getMissionBrainState(ctx,turn.normalizedInput,turn.route||'')||{};
+    }
+  }catch(e){addMissionWarning(turn,'legacy_brain_state_failed',{error:e.message||String(e)});}
+  var routePlan=turn.routePlan||{};
+  var dataConfidence=turn.dataConfidence||{level:'medium'};
+  var syncStatus=turn.syncStatus||{risk:'none'};
+  return Object.assign({},base,{
+    inputIntent:routePlan.intent&&routePlan.intent.name||'',
+    normalizedInput:turn.normalizedInput,
+    inputConfidence:routePlan.confidence||0,
+    ambiguityLevel:getMissionAmbiguityLevel(routePlan),
+    possibleRoutes:routePlan.possibleRoutes||[],
+    selectedRoute:routePlan.selectedRoute||turn.route||'',
+    selectedWorkerId:turn.workerId||'',
+    responseDepth:turn.responseDepth||'',
+    responseShape:turn.responseShape||'',
+    contextScope:getMissionContextScopeV2(turn),
+    contextBudget:getMissionContextBudgetV2(turn),
+    dataNeeds:turn.dataNeeds||[],
+    staleSources:dataConfidence.staleSources||[],
+    freshSources:dataConfidence.freshSources||[],
+    missingSources:dataConfidence.missingSources||[],
+    actionState:getMissionActionStateV2(turn),
+    whyDepth:getMissionWhyDepthV2(turn),
+    correctionSignal:!!(turn.inputSignals&&turn.inputSignals.isCorrection),
+    stylePreference:getMissionStylePreferenceV2(),
+    memorySignal:getMissionMemorySignalV2(turn),
+    syncRisk:syncStatus.risk||'none'
+  });
+}
+
+function getMissionAmbiguityLevel(routePlan){
+  var score=routePlan&&routePlan.confidence||0;
+  if(score>=0.85)return 'none';
+  if(score>=0.6)return 'low';
+  if(score>=0.35)return 'medium';
+  return 'high';
+}
+
+function getMissionContextScopeV2(turn){
+  var q=turn.normalizedInput||'';
+  if(/\b(company|business|overall|everything)\b/.test(q))return 'company';
+  if(/\b(cycle|money mission)\b/.test(q))return 'cycle';
+  if(/\b(project|campaign|client)\b/.test(q))return 'project';
+  if(turn.routePlan&&turn.routePlan.contextCarry)return 'session';
+  return 'turn';
+}
+
+function getMissionContextBudgetV2(turn){
+  var depth=turn.responseDepth||'';
+  if(depth==='roadmap'||depth==='deep')return 'deep';
+  if(depth==='guided'||depth==='standard')return 'normal';
+  return 'light';
+}
+
+function getMissionActionStateV2(turn){
+  var session=getMissionBrainSessionV2();
+  return {lastSuggestedAction:session.lastActionSuggested||'',lastActionStatus:(turn.inputSignals&&turn.inputSignals.isCompletion)?'completed':session.lastActionStatus||'none',pendingLogPrompt:session.pendingLogPrompt||null};
+}
+
+function getMissionWhyDepthV2(turn){
+  var session=getMissionBrainSessionV2();
+  if(!(turn.inputSignals&&turn.inputSignals.isWhy))return session.whyDepth||0;
+  var currentTopic=turn.route||session.sessionTopic||'';
+  var lastWhyTopic=session.whyTopic||'';
+  if(currentTopic!==lastWhyTopic)return 1;
+  return Math.min(3,(session.whyDepth||0)+1);
+}
+
+function getMissionStylePreferenceV2(){
+  try{return sessionStorage.getItem('a1xx_mc_style_preference_session')||'';}catch(e){return '';}
+}
+
+function setMissionStylePreferenceV2(pref){
+  try{sessionStorage.setItem('a1xx_mc_style_preference_session',pref||'');}catch(e){}
+}
+
+function getMissionMemorySignalV2(turn){
+  var q=turn.normalizedInput||'';
+  if(/\b(remember this|save this|keep this in mind|business rule|this is how i want it|save this style)\b/.test(q)){
+    return {shouldSave:true,category:inferMissionMemoryCategoryV2(q),confidence:0.85};
+  }
+  return {shouldSave:false,category:'',confidence:0};
+}
+
+function inferMissionMemoryCategoryV2(q){
+  if(/\b(style|voice|say it|tone)\b/.test(q))return 'voice_preference';
+  if(/\b(rule|always|never)\b/.test(q))return 'business_rule';
+  if(/\b(client|lead)\b/.test(q))return 'client_note';
+  if(/\b(offer|price|package|bangin|rappreneur)\b/.test(q))return 'offer_decision';
+  return 'general_memory_candidate';
+}
+
+function getMissionResponseDepthV2(turn){
+  if(typeof getMissionResponseDepth==='function'){
+    try{return getMissionResponseDepth(turn.normalizedInput,turn.conversationType,turn.brainState);}catch(e){}
+  }
+  var q=turn.normalizedInput||'',s=turn.inputSignals||{};
+  if(/\b(just tell me|one thing|quick|action only|short answer)\b/.test(q))return 'micro';
+  if(s.asksForWalkthrough||s.asksForAppNavigation)return 'guided';
+  if(s.asksForTeaching||s.isWhy)return 'deep';
+  if(s.asksForPlan)return 'roadmap';
+  if(s.asksForIdeas)return 'guided';
+  if(turn.brainState&&turn.brainState.userEnergy==='low')return 'quick';
+  return 'standard';
+}
+
+function getMissionResponseShapeV2(turn){
+  var route=turn.route||'now',s=turn.inputSignals||{},depth=turn.responseDepth||'';
+  if(s.asksForWalkthrough)return 'app_walkthrough';
+  if(s.asksForAppNavigation)return 'app_navigation_guide';
+  if(s.asksForTeaching||s.isWhy)return 'education_answer';
+  if(s.asksForIdeas)return 'ideation_answer';
+  if(s.asksForPlan)return 'plan_builder';
+  if(s.asksForDiagnostic)return 'diagnostic_steps';
+  if(s.isCompletion)return 'confirmation_complete';
+  if(s.isCorrection)return 'correction_recovery';
+  if(route==='leads')return 'pipeline_heat';
+  if(route==='report'||route==='money'||route==='cycle')return 'money_pressure';
+  if(route==='content')return 'content_proof';
+  if(route==='production')return 'production_delivery';
+  if(route==='calendar')return 'calendar_window';
+  if(route==='sync')return 'sync_diagnostic';
+  if(route==='weekly')return 'weekly_review';
+  if(depth==='micro')return 'next_action_only';
+  return 'quick_read';
+}
+
+function planMissionResponse(turn){
+  var responseDepth=getMissionResponseDepthV2(turn);
+  turn.responseDepth=responseDepth;
+  var responseShape=getMissionResponseShapeV2(turn);
+  turn.responseShape=responseShape;
+  var responseMode='coach';
+  if(turn.brainState&&turn.brainState.forcedResponseMode)responseMode=turn.brainState.forcedResponseMode;
+  else if(turn.inputSignals&&turn.inputSignals.isFrustration)responseMode='empathy';
+  else if(turn.inputSignals&&turn.inputSignals.isCelebration)responseMode='celebration';
+  else if(turn.inputSignals&&turn.inputSignals.asksForDiagnostic)responseMode='diagnostic';
+  else if(responseDepth==='micro')responseMode='assertive';
+  return {responseMode:responseMode,responseDepth:responseDepth,responseShape:responseShape,bubblePlan:getMissionBubblePlanV2(turn,responseDepth,responseShape),actionPlan:getMissionActionPlanV2(turn)};
+}
+
+function getMissionBubblePlanV2(turn,depth,shape){
+  var dataLevel=turn.dataConfidence&&turn.dataConfidence.level||'medium';
+  var renderB2=true,renderB3=true;
+  if(depth==='micro'){renderB2=false;renderB3=false;}
+  if(dataLevel==='low'&&!/sync|diagnostic|app_navigation/.test(shape))renderB2=false;
+  if(shape==='education_answer'||shape==='plan_builder')renderB2=false;
+  return {renderB1:true,renderB2:renderB2,renderB3:renderB3,shape:shape,depth:depth};
+}
+
+function getMissionActionPlanV2(turn){
+  var shape=turn.responseShape||'',route=turn.route||'',action=null;
+  if(shape==='pipeline_heat'||route==='leads')action={label:'Open Hit List',type:'open_card',target:'hit_list',requiresConfirmation:false};
+  if(route==='dpc')action={label:'Log DPC',type:'log_dpc',target:'dpc',requiresConfirmation:true};
+  if(route==='content')action={label:'Open Content Tracker',type:'open_card',target:'content_tracker',requiresConfirmation:false};
+  if(route==='production')action={label:'Open Production',type:'open_card',target:'production',requiresConfirmation:false};
+  if(route==='sync')action={label:'Run Sync Check',type:'sync_check',target:'system_hub',requiresConfirmation:false};
+  if(!action&&turn.brainState&&turn.brainState.nextBestMove)action={label:'Do Next Move',type:'next_best_move',target:turn.brainState.nextBestMove,requiresConfirmation:false};
+  return action;
+}
+
+function getMissionWorkerLabelV2(workerId){
+  var labels={mission_command_strategist:'Mission Command Strategist',pipeline_reviewer:'Pipeline Reviewer',content_coach:'Content Coach',production_manager:'Production Manager',calendar_focus_guard:'Calendar / Focus Guard',finance_goal_tracker:'Finance / Goal Tracker',notion_sync_auditor:'Notion Sync Auditor',backup_archive_manager:'Backup / Archive Manager',weekly_review_assistant:'Weekly Review Assistant',ai_memory_curator:'AI Memory Curator'};
+  return labels[workerId]||'Mission Command';
+}
+
+function getMissionRouteLabelV2(route){
+  var labels={now:'Now / Focus',leads:'Pipeline / Leads',dpc:'Daily Profit Campaign',content:'Content',production:'Production',report:'Report / Money',money:'Money',calendar:'Calendar',sync:'Sync / System',memory:'Memory',weekly:'Weekly Review',resources:'Resources / Rolodex',help:'Help / App Guide'};
+  return labels[route]||route||'Mission';
+}
+
+function buildMissionResponseContract(turn){
+  return {
+    workerId:turn.workerId,
+    workerLabel:getMissionWorkerLabelV2(turn.workerId),
+    route:turn.route,
+    conversationType:turn.conversationType,
+    responseMode:turn.responseMode,
+    responseDepth:turn.responseDepth,
+    responseShape:turn.responseShape,
+    b1:{answer:'',workerLabel:getMissionWorkerLabelV2(turn.workerId),confidence:turn.routePlan&&turn.routePlan.confidence||0,responseShape:turn.responseShape},
+    b2:{shouldRender:false},
+    b3:{shouldRender:false},
+    trace:turn.decisionTrace,
+    warnings:turn.warnings,
+    timestamp:turn.timestamp
+  };
+}
+
+function adaptMissionBubblePacketToLegacyResponse(packet){
+  return {answer:packet&&packet.b1&&packet.b1.answer||'',workerId:packet&&packet.workerId||'',workerLabel:packet&&packet.workerLabel||'',route:packet&&packet.route||'',responseMode:packet&&packet.responseMode||'',responseDepth:packet&&packet.responseDepth||'',responseShape:packet&&packet.responseShape||'',dataBubble:packet&&packet.b2&&packet.b2.shouldRender?packet.b2:null,actionBubble:packet&&packet.b3&&packet.b3.shouldRender?packet.b3:null,warnings:packet&&packet.warnings||[],trace:packet&&packet.trace||[]};
+}
+
+/* =========================================================
+   MISSION TURN CHECKPOINTS
+========================================================= */
+function updateMissionBrainSessionV2(turn){
+  var session=getMissionBrainSessionV2();
+  session.turnCount=(session.turnCount||0)+1;
+  session.lastRoute=turn.route||session.lastRoute||'';
+  session.sessionTopic=turn.route||session.sessionTopic||'';
+  session.topicHistory=session.topicHistory||[];
+  session.topicHistory.push(turn.route);
+  session.topicHistory=session.topicHistory.slice(-12);
+  session.topicThread=session.topicThread||[];
+  if(turn.route&&session.topicThread.indexOf(turn.route)<0)session.topicThread.push(turn.route);
+  session.topicThread=session.topicThread.slice(-8);
+  if(turn.responsePlan&&turn.responsePlan.actionPlan){session.lastActionSuggested=turn.responsePlan.actionPlan.label||'';session.lastActionStatus='suggested';}
+  if(turn.inputSignals&&turn.inputSignals.isCompletion){session.lastActionStatus='completed';session.pendingLogPrompt=true;}
+  if(turn.inputSignals&&turn.inputSignals.isWhy){session.whyDepth=getMissionWhyDepthV2(turn);session.whyTopic=turn.route||'';}
+  else if(turn.route&&session.whyTopic&&turn.route!==session.whyTopic){session.whyDepth=0;session.whyTopic='';}
+  setMissionBrainSessionV2(session);
+}
+
+function saveMissionTurnCheckpoint(turn){
+  try{
+    var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    list.unshift(checkpoint);
+    list=list.slice(0,100);
+    if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
+    else localStorage.setItem(MISSION_TURN_CHECKPOINTS_KEY,JSON.stringify(list));
+  }catch(e){}
+}
+
+function summarizeMissionBrainStateV2(bs){
+  if(!bs)return {};
+  return {selectedRoute:bs.selectedRoute,selectedWorkerId:bs.selectedWorkerId,sessionArc:bs.sessionArc,sessionTopic:bs.sessionTopic,sessionIntent:bs.sessionIntent,userEnergy:bs.userEnergy,dpcMomentum:bs.dpcMomentum,revenueGap:bs.revenueGap,nextBestMove:bs.nextBestMove,dataNeeds:bs.dataNeeds,syncRisk:bs.syncRisk,responseDepth:bs.responseDepth,responseShape:bs.responseShape};
+}
+
+function summarizeMissionContextPacket(packet){
+  if(!packet)return {};
+  return {route:packet.routeContext&&packet.routeContext.route,worker:packet.workerContext&&packet.workerContext.primaryWorker,dataKeys:packet.dataSnapshot?Object.keys(packet.dataSnapshot):[],syncRisk:packet.syncStatus&&packet.syncStatus.risk};
+}
+
+function summarizeMissionBubblePacket(packet){
+  if(!packet)return {};
+  return {workerId:packet.workerId,route:packet.route,responseDepth:packet.responseDepth,responseShape:packet.responseShape,hasB2:packet.b2&&packet.b2.shouldRender,hasB3:packet.b3&&packet.b3.shouldRender};
+}
+
+function buildMissionFallbackBubblePacket(turn,err){
+  return {workerId:'mission_command_strategist',workerLabel:'Mission Command Strategist',route:turn&&turn.route||'now',responseMode:'diagnostic',responseDepth:'quick',responseShape:'diagnostic_steps',b1:{answer:'Something broke in the Mission Command chain. Local app data should still be safe. Best move: run System Hub > Health > Sync Check, then try the question again.',workerLabel:'Mission Command Strategist',confidence:0,responseShape:'diagnostic_steps'},b2:{shouldRender:false},b3:{shouldRender:true,label:'Run Sync Check',actionType:'sync_check',target:'system_hub',requiresConfirmation:false},trace:turn&&turn.decisionTrace||[],warnings:turn&&turn.warnings||[],error:err&&err.message?err.message:String(err||'')};
+}
+
+function compileMissionContext(turn){
+  return {identity:getMissionIdentityContextV2(),brainState:turn.brainState,routeContext:getMissionRouteContextV2(turn.route),workerContext:getMissionWorkerContextV2(turn.workerPlan),dataSnapshot:getMissionDataSnapshotV2(turn.dataNeeds),recentSession:getRelevantMissionSessionTurnsV2(turn),memory:getRelevantMissionMemoryV2(turn),syncStatus:turn.syncStatus,actionHistory:getRecentMissionActionsV2(turn)};
+}
+
+function getMissionIdentityContextV2(){
+  if(typeof A1XX_PROFILE!=='undefined')return A1XX_PROFILE;
+  return {name:'A1XX',role:'Executive Producer',app:'Money Mission OS'};
+}
+
+function getMissionRouteContextV2(route){return {route:route,dataNeeds:MISSION_ROUTE_DATA_MAP[route]||[]};}
+function getMissionWorkerContextV2(workerPlan){return workerPlan||{};}
+
+function getMissionDataSnapshotV2(dataNeeds){
+  var snap={};
+  (dataNeeds||[]).forEach(function(k){
+    try{
+      if(k==='crm')snap.crm={leads:window.__crmLeads||[]};
+      if(k==='content')snap.content={today:window.__contentPieces||[],pipeline:window.__contentPipelinePieces||[]};
+      if(k==='production')snap.production={items:window.__productionPieces||[]};
+      if(k==='calendar')snap.calendar={events:window.__calEvents||[]};
+      if(k==='report'&&typeof captureWeekData==='function')snap.report=captureWeekData();
+      if(k==='dpc'&&typeof getDailyCoach==='function')snap.dpc=getDailyCoach();
+    }catch(e){snap[k]={error:e.message||String(e)};}
+  });
+  return snap;
+}
+
+function getRelevantMissionSessionTurnsV2(turn){
+  try{var session=getMissionBrainSessionV2();return {sessionTopic:session.sessionTopic||'',topicThread:session.topicThread||[],lastActionSuggested:session.lastActionSuggested||''};}catch(e){return {};}
+}
+
+function getRelevantMissionMemoryV2(turn){return {};}
+
+function getRecentMissionActionsV2(turn){
+  try{var log=typeof getStore==='function'?(getStore('a1xx_worker_action_log_v1')||[]):[];return Array.isArray(log)?log.slice(0,10):[];}catch(e){return [];}
+}
+
+function runMissionTurn(kind,rawInput,options){
+  var turn=createMissionTurn(rawInput,kind,options||{});
+  try{
+    addMissionTrace(turn,'turn_created');
+    turn.normalizedInput=normalizeMissionInputV2(turn.rawInput);
+    addMissionTrace(turn,'input_normalized',{rawInput:turn.rawInput,normalizedInput:turn.normalizedInput});
+    turn.inputSignals=analyzeMissionInputV2(turn.normalizedInput,turn);
+    addMissionTrace(turn,'input_analyzed',turn.inputSignals);
+    turn.routePlan=getMissionRoutePlan(turn);
+    turn.route=turn.routePlan&&turn.routePlan.selectedRoute||'';
+    turn.intent=turn.routePlan&&turn.routePlan.intent||null;
+    turn.conversationType=turn.routePlan&&turn.routePlan.conversationType||'';
+    addMissionTrace(turn,'route_plan_selected',turn.routePlan);
+    turn.dataNeeds=resolveMissionDataNeeds(turn);
+    addMissionTrace(turn,'data_needs_resolved',turn.dataNeeds);
+    turn.contextStatus=getMissionContextStatus(turn.dataNeeds);
+    turn.dataConfidence=getMissionDataConfidenceV2(turn);
+    turn.syncStatus=getMissionSyncStatusV2(turn);
+    addMissionTrace(turn,'context_status_checked',{contextStatus:turn.contextStatus,dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus});
+    turn.workerPlan=selectMissionWorkers(turn);
+    turn.workerId=turn.workerPlan&&turn.workerPlan.primaryWorker||'';
+    addMissionTrace(turn,'worker_plan_selected',turn.workerPlan);
+    turn.brainState=getMissionBrainStateV2(turn);
+    addMissionTrace(turn,'brain_state_v2_built',summarizeMissionBrainStateV2(turn.brainState));
+    turn.contextPacket=compileMissionContext(turn);
+    addMissionTrace(turn,'context_compiled',summarizeMissionContextPacket(turn.contextPacket));
+    turn.responsePlan=planMissionResponse(turn);
+    turn.responseMode=turn.responsePlan.responseMode;
+    turn.responseDepth=turn.responsePlan.responseDepth;
+    turn.responseShape=turn.responsePlan.responseShape;
+    addMissionTrace(turn,'response_plan_selected',turn.responsePlan);
+    turn.bubblePacket=buildMissionResponseContract(turn);
+    addMissionTrace(turn,'bubble_packet_built',summarizeMissionBubblePacket(turn.bubblePacket));
+    saveMissionTurnCheckpoint(turn);
+    updateMissionBrainSessionV2(turn);
+    window.__missionLastTurnObjectV2=turn;
+    return turn.bubblePacket;
+  }catch(err){
+    turn.errors.push({timestamp:new Date().toISOString(),message:err&&err.message?err.message:String(err)});
+    addMissionWarning(turn,'runMissionTurn_failed',{error:err&&err.message?err.message:String(err)});
+    saveMissionTurnCheckpoint(turn);
+    window.__missionLastTurnObjectV2=turn;
+    return buildMissionFallbackBubblePacket(turn,err);
+  }
+}
+
+function runMissionTurnV2SelfCheck(){
+  var cases=[
+    {q:'what is the move',route:'now'},
+    {q:'who should i hit',route:'leads',needs:'crm'},
+    {q:'should i post or follow up',worker:'mission_command_strategist'},
+    {q:'where do i check sync',route:'sync',depth:'guided',shape:'app_navigation_guide'},
+    {q:'done',type:'CONV_ACTION_COMPLETE'},
+    {q:'show me',clarify:true},
+    {q:'walk me through follow ups',route:'leads',depth:'guided'},
+    {q:'make a plan for the week',depth:'roadmap',shape:'plan_builder'}
+  ];
+  var failures=[];
+  var priorSession=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+  var priorCheckpoints=typeof getStore==='function'?getStore(MISSION_TURN_CHECKPOINTS_KEY):null;
+  cases.forEach(function(item){
+    sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);
+    var packet=runMissionTurn('ask',item.q,{passive:true,allowLegacy:false});
+    var turn=window.__missionLastTurnObjectV2||{};
+    if(item.route&&turn.route!==item.route)failures.push(item.q+' route '+(turn.route||'none'));
+    if(item.needs&&(turn.dataNeeds||[]).indexOf(item.needs)<0)failures.push(item.q+' needs '+item.needs);
+    if(item.worker&&turn.workerId!==item.worker)failures.push(item.q+' worker '+(turn.workerId||'none'));
+    if(item.depth&&turn.responseDepth!==item.depth)failures.push(item.q+' depth '+(turn.responseDepth||'none'));
+    if(item.shape&&turn.responseShape!==item.shape)failures.push(item.q+' shape '+(turn.responseShape||'none'));
+    if(item.type&&turn.conversationType!==item.type)failures.push(item.q+' type '+(turn.conversationType||'none'));
+    if(item.clarify&&!(turn.routePlan&&turn.routePlan.clarify))failures.push(item.q+' clarify false');
+  });
+  if(priorSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorSession);
+  if(typeof setStore==='function'&&Array.isArray(priorCheckpoints))setStore(MISSION_TURN_CHECKPOINTS_KEY,priorCheckpoints);
+  return {passed:!failures.length,failures:failures,total:cases.length};
+}
+
 /* 2026-05-19 (Claude): smarter intent matching helpers — typo tolerance via tight
    Levenshtein + verb stemming. Keep these tiny + standalone so they're easy to audit. */
 function missionLevenshtein(a,b){
@@ -10796,6 +11633,10 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var intent=multi.primary;
   var conv=getMissionConversationType(cleanQuestion||'',ctx,intent,brainState);
   var route=(conv&&conv.route)||intent.route;
+  try{
+    var turnV2Packet=runMissionTurn(kind||'ask',cleanQuestion||question||'',{ctx:ctx,legacyRoute:route,legacyIntent:intent,legacyConversation:conv,passive:true,allowLegacy:false});
+    window.__missionLastTurnV2=turnV2Packet;
+  }catch(e){}
   var responseMode=getMissionResponseMode(cleanQuestion||'',route,ctx,brainState);
   var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,responseMode);
   var quietAnswer=missionShouldKeepAnswerQuiet(route,conv,cleanQuestion||'');
