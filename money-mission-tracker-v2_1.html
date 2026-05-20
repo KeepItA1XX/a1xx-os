@@ -11370,7 +11370,7 @@ var MISSION_SALES_OBJECTION_MAP={
 
 function getMissionSalesSignal(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(closer|sales coach|what are sales|sales call|discovery call|call prep|prep me|live call|what should i say|what do i say|write a dm|cold dm|warm follow up|warm follow-up|objection|roleplay|score my answer|think about it|too expensive|no budget|send more info|send info|discount|not ready|maybe next month|decision maker|prove it works|youtube is free)\b/.test(q)||/^\/(sales|closer|callprep|livecall|discovery|objection|dm|roleplay)\b/.test(q)||/^@(closer|sales)\b/.test(q);
+  return /\b(closer|sales coach|what are sales|sales call|discovery call|call prep|prep me|perp me|live call|on the phone|in a call|on a call|what should i say|what do i say|write a dm|cold dm|warm follow up|warm follow-up|atl studio follow|studio follow|objection|roleplay|score my answer|think about it|too expensive|no budget|send more info|send info|discount|not ready|maybe next month|decision maker|prove it works|youtube is free)\b/.test(q)||/^\/(sales|closer|callprep|livecall|discovery|objection|dm|roleplay)\b/.test(q)||/^@(closer|sales)\b/.test(q);
 }
 
 function getMissionSalesMode(question){
@@ -13399,7 +13399,7 @@ function getMissionSalesSubtypeV1_1(q){
 
 function getMissionOutputRouteOverrideV1_1(route,q){
   q=String(q||'').toLowerCase();
-  if(/\b(what should i say|help me reply|write a warm|warm follow|follow-up|follow up|too expensive|price|costs too much|need to think|ghosted|bump|book.*call|discount|no budget|maybe later)\b/.test(q))return 'sales';
+  if(/\b(what should i say|help me reply|write a warm|warm follow|follow-up|follow up|atl studio follow|studio follow|on the phone|live call|in a call|on a call|too expensive|price|costs too much|need to think|ghosted|bump|book.*call|discount|no budget|maybe later)\b/.test(q))return 'sales';
   if(/\b(data stale|source|where is this coming from|webhook|web hook|token|bridge|is this current|sync check|did this save|sheets|notion)\b/.test(q))return 'sync';
   if(/\b(that does not sound like me|doesn't sound like me|less hype|more direct|voice|style|remember this|save this style|dont say|don't say)\b/.test(q))return 'memory';
   if(route==='pipeline')return 'leads';
@@ -14372,7 +14372,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var shaped=applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
-  var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,cleanQuestion||question||'',conv,brainState);
+  var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
+  var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
   if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false});
   var openEndedV2=getMissionOpenEndedWorkStartResponseV2(turnV2,ctx);
   if(openEndedV2)return finishMissionAnswer(openEndedV2,{sessionArc:false,closer:false,presence:false});
