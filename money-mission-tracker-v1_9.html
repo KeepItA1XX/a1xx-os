@@ -450,6 +450,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .auth-btn:hover{background:#213f10}
 .auth-status{min-height:16px;font-size:11px;color:#d4a017;line-height:1.4;margin-top:10px}
 .auth-note{font-size:10px;color:#5f6870;line-height:1.45;margin-top:12px}
+.boot-screen{position:fixed;inset:0;z-index:13000;background:#050607;display:flex;align-items:center;justify-content:center;transition:opacity .28s ease,visibility .28s ease}
+.boot-screen.hide{opacity:0;visibility:hidden;pointer-events:none}
+.boot-card{display:grid;gap:13px;justify-items:center}
+.boot-mark{font-size:31px;font-weight:950;letter-spacing:.12em;color:#f0f3f5}
+.boot-line{width:118px;height:3px;background:#151a1f;border-radius:999px;overflow:hidden}
+.boot-line:after{content:'';display:block;width:44%;height:100%;background:#7ec845;border-radius:999px;animation:bootSlide .72s ease-in-out infinite alternate}
+.boot-text{font-size:9px;color:#7f8a92;text-transform:uppercase;letter-spacing:.16em;font-weight:900}
+@keyframes bootSlide{from{transform:translateX(-80%)}to{transform:translateX(210%)}}
 .rolodex-search{background:#0b1116;border:1px solid #33515f;border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:inset 3px 0 0 #5b9cf6}
 .rolodex-search-shell{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;background:#05080b;border:0.5px solid #2a3d4a;border-radius:11px;padding:0 10px}
 .rolodex-search-icon{font-size:15px;color:#5b9cf6;font-weight:900}
@@ -1512,6 +1520,13 @@ body{background:#090a0b;color:#d8dde1}
 </style>
 </head>
 <body>
+<div class="boot-screen" id="boot-screen" aria-hidden="true">
+  <div class="boot-card">
+    <div class="boot-mark">OS</div>
+    <div class="boot-line"></div>
+    <div class="boot-text">Refreshing</div>
+  </div>
+</div>
 <div class="auth-screen active" id="auth-screen">
   <div class="auth-card">
     <div class="auth-kicker" id="auth-mode-label">Executive Producer Access</div>
@@ -3305,6 +3320,12 @@ function showAuthScreen(show){
   var app=document.querySelector('.app');
   if(auth)auth.classList.toggle('active',!!show);
   if(app)app.style.display=show?'none':'block';
+}
+function hideBootScreen(delay){
+  setTimeout(function(){
+    var boot=document.getElementById('boot-screen');
+    if(boot)boot.classList.add('hide');
+  },typeof delay==='number'?delay:420);
 }
 function renderAccountIdentity(){
   var acct=getAccount()||{username:'A1XX',role:'Executive Producer'};
@@ -16080,11 +16101,15 @@ updateReport=function(){
 var __a1xxStarted=false;
 function startA1XX(){
   if(__a1xxStarted)return;
-  if(!initAuth())return;
+  if(!initAuth()){
+    hideBootScreen(420);
+    return;
+  }
   __a1xxStarted=true;
   try{
     init();
     setTimeout(initUniversalCardCollapse,0);
+    hideBootScreen(520);
   }catch(e){
     console.error('A1XX hard startup error',e);
     __a1xxStarted=false;
@@ -16093,6 +16118,7 @@ function startA1XX(){
       renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
       applyMissionFocus();
       setTimeout(initUniversalCardCollapse,0);
+      hideBootScreen(520);
     });
   }
 }
