@@ -8000,6 +8000,21 @@ var MISSION_APP_GUIDES={
   resources_rolodex:['Go to Rolodex.','Search the resource name.','Open the matching link or guide.','Come back to Mission Command if you need the next move.']
 };
 
+var MISSION_STYLE_PREFERENCE_SESSION_KEY='a1xx_mc_style_preference_session';
+
+var MISSION_OPERATING_LANGUAGE={
+  clarification:['I can read that two ways.','Pick the lane and I will run it.','Give me the card: leads, money, content, production, or sync.','I need one more piece before I call the move.'],
+  dataConfidence:['I do not have a clean read yet.','The read is partial. I can still give you the safest move.','Last sync is light, so I am not going to fake the numbers.','This looks stale. Sync first, then I will call the move.'],
+  followThrough:['What happened after that?','Did it create motion or just activity?','Log the result before we move.','What should I mark from that?'],
+  correction:['Got it. Wrong lane.','That changes the read.','Switching routes.','Clean reset.'],
+  decision:['Pick this.','This is closer to cash.','That is useful, but not first.','This is the cleaner move.'],
+  prioritization:['Priority stack','First move','Can wait','Money first','This goes above that'],
+  resources:['You need a resource, not another answer.','Pull this script.','This needs a template.','The answer is already in the OS.'],
+  boundary:['I am not going to fake that read.','That is too broad. Pick the lane.','That needs confirmation before it writes.','I can suggest it, not execute it silently.'],
+  memory:['This sounds like a memory candidate.','This is a business rule.','This is a voice preference.','This should not become memory yet.'],
+  threading:['We are still on this topic.','Last move was the action.','We have come back to this a few times.','Let’s close the loop before we open another one.']
+};
+
 var MISSION_WORKER_REGISTRY={
   strategist:{name:'Mission Command Strategist',handle:'strategy',routes:['now','profile','help','unclear','diagnostic'],tools:['getBlockIntel','getStepData','getBrainSession'],phase:1},
   pipeline:{name:'Pipeline Reviewer',handle:'pipeline',routes:['leads','dpc'],tools:['getLeadsData','getDPCData','getOutreachSteps'],phase:1},
@@ -8326,6 +8341,138 @@ function getMissionGuideKey(question,route){
 
 function missionNumberedList(items){
   return (items||[]).map(function(item,i){return (i+1)+') '+escapeHtml(item);}).join('<br>');
+}
+
+function getMissionStylePreference(){
+  try{return JSON.parse(sessionStorage.getItem(MISSION_STYLE_PREFERENCE_SESSION_KEY)||'{}')||{};}catch(e){return {};}
+}
+
+function setMissionStylePreference(pref){
+  try{sessionStorage.setItem(MISSION_STYLE_PREFERENCE_SESSION_KEY,JSON.stringify(pref||{}));}catch(e){}
+}
+
+function getMissionStylePreferenceResponse(question){
+  var q=normalizeMissionQuestion(question||'');
+  var pref=getMissionStylePreference();
+  var msg='';
+  if(/\b(make it shorter|shorter|less words|just the action|action only)\b/.test(q)){pref.length='short';msg='Got it. I will keep this lane shorter for now.';}
+  else if(/\b(more detail|give me more detail|more steps|give me steps|explain why)\b/.test(q)){pref.length='guided';msg='Noted. I will give more steps when this is a teaching or walkthrough lane.';}
+  else if(/\b(less hype|more direct|dont say it like that|don't say it like that)\b/.test(q)){pref.tone='direct';msg='Clean. Less hype, more action.';}
+  else if(/\b(save this style|talk to me like this)\b/.test(q)){pref.saved='session';msg='Got it. I will keep this style for the session.';}
+  if(!msg)return '';
+  pref.updatedAt=new Date().toISOString();
+  setMissionStylePreference(pref);
+  return escapeHtml(msg);
+}
+
+function getMissionCorrectionRoute(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!(/\b(no i mean|not that|wrong one|other one|i meant|try again|cleaner read|im talking about|i am talking about)\b/.test(q)||/\bno\b.*\bi mean\b/.test(q)||/\bnot (content|pipeline|money|production|sync)\b/.test(q)))return '';
+  if(/\b(production|beat|catalog|mix|master)\b/.test(q))return 'production';
+  if(/\b(content|post|script|clip|live)\b/.test(q))return 'content';
+  if(/\b(money|revenue|report|sales|gap)\b/.test(q))return 'report';
+  if(/\b(pipeline|lead|crm|follow)\b/.test(q))return 'leads';
+  if(/\b(sync|health|notion|sheets)\b/.test(q))return 'sync';
+  return 'now';
+}
+
+function getMissionCorrectionResponse(route,ctx,question){
+  var fixed=getMissionCorrectionRoute(question||'');
+  if(!fixed)return '';
+  var worker=getMissionWorkerForRoute(fixed)||{};
+  return '<p><strong>Got it. Wrong lane.</strong></p><p>Switching to '+escapeHtml(worker.name||fixed)+'.</p><p>'+getMissionHumanBubble(fixed,{type:CONV_DATA_REQUEST,route:fixed},ctx,question||'')+'</p>';
+}
+
+function getMissionResultExtraction(question){
+  var q=normalizeMissionQuestion(question||'');
+  var out=[];
+  var dm=(q.match(/(\d+)\s*(dms?|messages?)/)||[])[1];
+  var replies=(q.match(/(\d+)\s*(replies|reply|responses?)/)||[])[1];
+  var calls=(q.match(/(\d+)\s*(calls?)/)||[])[1];
+  var booked=(q.match(/(\d+)\s*(booked|bookings?)/)||[])[1];
+  var cash=(q.match(/\$?\s*(\d+(?:\.\d+)?)\s*(cash|paid|collected|revenue|sale|sales|dollars?)/)||[])[1];
+  var posts=(q.match(/(\d+)\s*(posts?|clips?|videos?)/)||[])[1];
+  if(dm)out.push('DMs sent = '+dm);
+  if(replies)out.push('Replies = '+replies);
+  if(calls)out.push('Calls made = '+calls);
+  if(booked)out.push('Calls booked = '+booked);
+  if(cash)out.push('Cash collected = $'+cash);
+  if(posts)out.push('Posts made = '+posts);
+  return out;
+}
+
+function getMissionResultLoggingResponse(route,ctx,question){
+  var q=normalizeMissionQuestion(question||'');
+  var extracted=getMissionResultExtraction(question||'');
+  var completion=/\b(done|sent it|handled it|posted|called|logged it|booked|closed|uploaded|finished|went live|got replies|got paid|collected)\b/.test(q);
+  if(!extracted.length&&!completion)return '';
+  if(extracted.length){
+    return '<p><strong>This counts.</strong></p><p>'+missionNumberedList(extracted)+'</p><p>This should hit DPC, and any replies or booked calls should become pipeline follow-up.</p>';
+  }
+  return '<p><strong>Bet. What happened after that?</strong></p><p>1) No replies yet<br>2) Got replies<br>3) Booked a call<br>4) Collected money</p><p>Log the result before we move.</p>';
+}
+
+function getMissionDecisionResponse(route,ctx,question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!(/\b(or|versus|vs|which one|what first|what order|what can wait|priority|prioritize)\b/.test(q)||/\bshould i\b.+\b(or|instead of|before|after)\b/.test(q)))return '';
+  var choice='Follow-up first';
+  var why='Pipeline is closer to cash right now.';
+  var action='Contact the warmest or most overdue lead, then log the result.';
+  var then='Use whatever happens as proof for content.';
+  if(/\b(content|post)\b/.test(q)&&!/\b(lead|follow|pipeline|money|offer)\b/.test(q)){choice='Content first';why='The ask is about making proof, not choosing between money lanes.';action='Make one proof-of-work asset.';then='Point it back to the offer.';}
+  if(/\b(sync|broken|not working)\b/.test(q)){choice='Sync first';why='Bad data creates bad reads.';action='Check System Hub > Health and the latest Activity Log line.';then='Retest one action only.';}
+  return '<p><strong>Decision:</strong><br>'+escapeHtml(choice)+'.</p><p><strong>Why:</strong><br>'+escapeHtml(why)+'</p><p><strong>Do this:</strong><br>'+escapeHtml(action)+'</p><p><strong>Then:</strong><br>'+escapeHtml(then)+'</p>';
+}
+
+function getMissionResourceRecommendationResponse(route,ctx,question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!/\b(what should i say|script|template|playbook|resource|guide|pull up|send me|find the)\b/.test(q))return '';
+  var resource='Cold DM Opener Script';
+  if(/\b(follow|reply|lead)\b/.test(q))resource='Follow-up script';
+  if(/\b(license|bangin)\b/.test(q))resource='BANGIN+ License Call Sheet';
+  if(/\b(content|post|hook)\b/.test(q))resource='Content proof template';
+  return '<p><strong>You need a resource, not another answer.</strong></p><p>Open Rolodex and pull: '+escapeHtml(resource)+'.</p><p>Use the short version first, then come back with what happened.</p>';
+}
+
+function getMissionHandoffResponse(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!/\b(package this for codex|send this to team chat|make this a spec|turn this into directive|create a handoff|summarize for codex|log this for the team)\b/.test(q))return '';
+  return '<p><strong>Codex handoff:</strong></p><p><strong>Goal:</strong><br>Package the current Mission Command issue into a buildable update.</p><p><strong>Build:</strong><br>1) Define the expected behavior.<br>2) Name the affected route or worker.<br>3) Add a regression prompt.<br>4) Verify self-check before commit.</p><p><strong>Do not touch:</strong><br>Brain State, existing routes, worker labels, or slash commands unless the bug requires it.</p>';
+}
+
+function getMissionWhatChangedResponse(route,ctx,question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!/\b(what changed|whats different|what moved|what happened since|since last time|since yesterday|since last week|since last sync|what did codex update|what did notion change)\b/.test(q))return '';
+  return '<p><strong>Since the last check:</strong></p><p>1) Mission Command has newer language routing.<br>2) Guided answers can now teach, walk through, plan, and clarify.<br>3) The next useful check is whether the answer matched the lane you meant.</p><p><strong>What it means:</strong><br>The OS is getting better at choosing the response shape, not just the route.</p><p><strong>Next:</strong><br>Ask one real operating question and see if it gives the right amount of detail.</p>';
+}
+
+function getMissionClarificationResponse(route,ctx,question,conv){
+  var q=normalizeMissionQuestion(question||'');
+  if(conv&&conv.type!==CONV_UNCLEAR&&!/\b(that|this|it|check it|show me|run it|what about it)\b/.test(q))return '';
+  if(route)return '';
+  return '<p><strong>I can read that two ways.</strong></p><p>Are you asking about:</p><p>1) Pipeline<br>2) Money<br>3) Content<br>4) Production<br>5) Sync</p><p>Pick the lane and I will run it.</p>';
+}
+
+function getMissionDataConfidenceResponse(route,ctx,question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!/\b(stale|missing data|no data|not loaded|why no|current data|data current|is this current|is this live|clean read)\b/.test(q))return '';
+  var missing=[];
+  if(!(window.__crmLeads&&window.__crmLeads.length))missing.push('CRM leads');
+  if(!((window.__contentPipelinePieces&&window.__contentPipelinePieces.length)||(window.__contentPieces&&window.__contentPieces.length)))missing.push('content');
+  if(!(window.__productionPieces&&window.__productionPieces.length))missing.push('production');
+  return '<p><strong>Data read:</strong><br>'+(missing.length?'Partial - missing '+escapeHtml(missing.join(', '))+'.':'Clean enough for the current app packet.')+'</p><p><strong>What that means:</strong><br>I will not fake numbers that are not loaded.</p><p><strong>Best move:</strong><br>Run /sync, then ask for the lane again.</p>';
+}
+
+function getMissionBacklogSpecialResponse(route,ctx,question,conv,brainState){
+  return getMissionStylePreferenceResponse(question)
+    ||getMissionCorrectionResponse(route,ctx,question)
+    ||getMissionHandoffResponse(question)
+    ||getMissionResultLoggingResponse(route,ctx,question)
+    ||getMissionDecisionResponse(route,ctx,question)
+    ||getMissionResourceRecommendationResponse(route,ctx,question)
+    ||getMissionWhatChangedResponse(route,ctx,question)
+    ||getMissionDataConfidenceResponse(route,ctx,question)
+    ||getMissionClarificationResponse(route,ctx,question,conv);
 }
 
 function getMissionGuidedResponse(route,ctx,question,conv,brainState){
@@ -8923,6 +9070,7 @@ function getMissionBrainState(ctx,question,route){
     renderB2:true,
     forcedResponseMode:null,
     energyOverride:null,
+    stylePreference:getMissionStylePreference(),
     profileContext:{
       identity:A1XX_PROFILE.identity,
       role:A1XX_PROFILE.role,
@@ -10642,6 +10790,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     opts=opts||{};
     return applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
   }
+  var backlogSpecial=getMissionBacklogSpecialResponse(route,ctx,cleanQuestion||'',conv,brainState);
+  if(backlogSpecial)return finishMissionAnswer(backlogSpecial,{sessionArc:false});
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,cleanQuestion||'');
   if(conversationFirst){
     if(route)setMissionCommandActiveTopic(route,question||'');
