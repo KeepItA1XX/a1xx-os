@@ -9847,6 +9847,7 @@ var MISSION_PATTERN_KEY='a1xx_mc_pattern_flags';
 var MISSION_NUDGE_REFRESH_MS=5*60*1000;
 var MISSION_CYCLE_HISTORY_KEY='a1xx_mc_cycle_history_v1';
 var MISSION_SESSION_LOG_KEY='a1xx_mc_session_log_v1';
+var MISSION_COMMAND_LOADING_TIMEOUT_MS=15000;
 
 function getMissionConversationType(question,ctx,intent,brainState){
   var q=normalizeMissionQuestion(question||'');
@@ -9861,6 +9862,7 @@ function getMissionConversationType(question,ctx,intent,brainState){
   if(missionShouldClarifyShowMe(q))return {type:CONV_UNCLEAR,route:'',activeRoute:active&&active.intentRoute||''};
   if(/^\/[a-z]+/.test(q))return {type:CONV_COMMAND,route:intent.route||getMissionSlashAlias(q.replace(/^\/([a-z]+).*/,'$1')),activeRoute:active&&active.intentRoute||''};
   if(getMissionCloseSignal(q))return {type:CONV_CLOSE,route:'',activeRoute:active&&active.intentRoute||''};
+  if((intent&&intent.route==='sales')||getMissionSalesSignal(question||''))return {type:CONV_DATA_REQUEST,route:'sales',activeRoute:active&&active.intentRoute||''};
   if(depth==='guided'||depth==='deep'||depth==='roadmap')return {type:CONV_DATA_REQUEST,route:intent.route||smartRoute||active&&active.intentRoute||'now',activeRoute:active&&active.intentRoute||''};
   if(/\b(what should i do today|what do i do today|what should i do next|whats the move today|what is the move today|where we at)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'now',activeRoute:active&&active.intentRoute||''};
   if(/\b(why isnt|why is not|why is my|why are my|what is wrong with|whats wrong with|not working|broken|problem|issue|diagnose|diagnostic)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'diagnostic',activeRoute:active&&active.intentRoute||''};
@@ -10945,6 +10947,9 @@ function setMissionCommandActiveTopic(route,question){
 function getMissionRenderRoute(question,brainState){
   var mention=parseMissionAtMention(question||'');
   if(mention&&mention.route)return mention.route;
+  var directIntent=getMissionCommandIntent(question||'');
+  if(directIntent&&directIntent.route==='sales')return 'sales';
+  if(getMissionSalesSignal(question||''))return 'sales';
   var conv=getMissionConversationType(question||'',null,null,brainState);
   if(conv&&conv.route)return conv.route;
   if(getMissionCloseSignal(question||''))return '';
@@ -10956,7 +10961,7 @@ function getMissionRenderRoute(question,brainState){
 }
 
 function normalizeMissionPacketRoute(packet,route,question){
-  if(!packet||!route||!getMissionContinuationSignal(question||''))return;
+  if(!packet||!route)return;
   packet.intent=packet.intent||{};
   packet.intent.route=route;
   packet.intent.label=(getMissionIntentConfig(route)||{}).label||route;
@@ -11994,7 +11999,9 @@ function runMissionCommandSelfCheck(){
     {q:'done',route:'now',mustAny:['log','result','handled','close the loop']},
     {q:'he said it is too expensive',route:'sales',mustAny:['stage','say','tone','pause']},
     {q:'write a warm follow up',route:'sales',mustAny:['goal','send','reply']},
+    {q:'write a warm follow-up',route:'sales',mustAny:['goal','send','reply']},
     {q:'prep me for a call',route:'sales',mustAny:['lead read','opening','call path']},
+    {q:'perp me for a call',route:'sales',mustAny:['lead read','opening','call path']},
     {q:'roleplay a skeptical artist',route:'sales',mustAny:['roleplay','prospect','your move']},
     {q:'score my answer',route:'sales',mustAny:['scorecard','clarify','next step']}
   ];
@@ -12017,14 +12024,16 @@ function runMissionCommandSelfCheck(){
     sessionStorage.removeItem(MISSION_BRAIN_SESSION_KEY);
     var cleaned=sanitizeMissionCommandInput(check.q);
     var route=getMissionCommandRoute(cleaned);
-    var answer=String(getMissionCommandResponse('ask',ctx,cleaned)||'').replace(/<[^>]+>/g,' ').toLowerCase();
+    var testBrain=getMissionBrainState(ctx,cleaned,route||'');
+    var visibleRoute=getMissionRenderRoute(cleaned,testBrain);
+    var answer=String(getMissionCommandResponse('ask',ctx,cleaned,testBrain)||'').replace(/<[^>]+>/g,' ').toLowerCase();
     var shape=getMissionQuestionShape(cleaned);
-    var mode=getMissionResponseMode(cleaned,route,ctx);
-    var routeOk=Array.isArray(check.route)?check.route.indexOf(route)>=0:(check.route===null?!route:route===check.route);
+    var mode=getMissionResponseMode(cleaned,visibleRoute||route,ctx,testBrain);
+    var routeOk=Array.isArray(check.route)?check.route.indexOf(route)>=0&&check.route.indexOf(visibleRoute)>=0:(check.route===null?!route&&!visibleRoute:route===check.route&&visibleRoute===check.route);
     var needles=(check.mustAny||[check.must||'']).map(function(item){return String(item||'').toLowerCase();}).filter(Boolean);
     var hasNeedle=!needles.length||needles.some(function(item){return answer.indexOf(item)>=0;});
     if(!routeOk||!hasNeedle||(check.shape&&shape.type!==check.shape)||(check.mode&&mode.mode!==check.mode)){
-      failures.push(check.q+' -> '+(route||'none'));
+      failures.push(check.q+' -> intent '+(route||'none')+' / visible '+(visibleRoute||'none'));
     }
   });
   window.__missionCommandActiveTopicRoute=priorActiveRoute;
@@ -12792,6 +12801,7 @@ function setMissionCommandLoading(question,showUser){
   var state=document.querySelector('.mission-command-state');
   var btn=document.getElementById('mission-command-ask-btn');
   window.__missionCommandBusy=true;
+  if(window.__missionCommandLoadingTimer)clearTimeout(window.__missionCommandLoadingTimer);
   if(state){state.textContent='Thinking';state.classList.add('thinking');}
   if(btn)btn.disabled=true;
   if(thread){
@@ -12801,11 +12811,22 @@ function setMissionCommandLoading(question,showUser){
     var row=appendMissionBubble('assistant','<div class="mission-thinking" aria-label="Thinking"><span class="mission-thinking-dot"></span><span class="mission-thinking-dot"></span><span class="mission-thinking-dot"></span></div>',true,'thinking-row');
     if(row)row.setAttribute('data-mission-thinking','1');
   }
+  window.__missionCommandLoadingTimer=setTimeout(function(){
+    if(!window.__missionCommandBusy)return;
+    var liveThread=document.getElementById('mission-command-thread');
+    if(liveThread)removeMissionThinkingBubble(liveThread);
+    appendMissionBubble('assistant','Mission Command took too long on that one.<br><br>The app is still safe. Try the prompt again, or ask /sync if the data feels stale.',true,'data-row');
+    clearMissionCommandLoading([]);
+  },MISSION_COMMAND_LOADING_TIMEOUT_MS);
 }
 
 function clearMissionCommandLoading(sources){
   var state=document.querySelector('.mission-command-state');
   var btn=document.getElementById('mission-command-ask-btn');
+  if(window.__missionCommandLoadingTimer){
+    clearTimeout(window.__missionCommandLoadingTimer);
+    window.__missionCommandLoadingTimer=null;
+  }
   window.__missionCommandBusy=false;
   if(state){state.textContent='Ready';state.classList.remove('thinking');}
   if(btn)btn.disabled=false;
