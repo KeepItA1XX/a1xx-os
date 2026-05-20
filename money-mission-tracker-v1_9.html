@@ -695,6 +695,11 @@ input:focus{border-color:#333}
 .mission-bubble br+br{line-height:2.1}
 .mission-bubble a{color:#7ec845;text-decoration:none;font-weight:800}
 .mission-bubble a:hover{text-decoration:underline}
+.mission-action-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.mission-action-btn{border:0.5px solid #27313a;background:#11161a;color:#cfd8df;border-radius:999px;padding:6px 9px;font-size:10px;font-weight:800;cursor:pointer}
+.mission-action-btn:hover{border-color:#7ec845;color:#f4fff0}
+.mission-action-btn.confirm{background:#182412;border-color:#466a2b;color:#dff5d5}
+.mission-action-btn.cancel{background:#160f10;border-color:#3a2428;color:#e0b9bf}
 .mission-worker-status{display:grid;gap:6px;margin-top:8px}
 .mission-worker-line{display:flex;align-items:center;justify-content:space-between;gap:8px;border:0.5px solid #181e24;background:#090b0d;border-radius:8px;padding:7px 8px}
 .mission-worker-line span:first-child{font-size:11px;color:#d7dde3;font-weight:700}
@@ -7934,7 +7939,8 @@ function getMissionWorkerForRoute(route){
 function missionPermissionCheck(toolName,actionType){
   var tool=MISSION_TOOL_REGISTRY[toolName];
   if(!tool)return {allowed:false,reason:'Unknown tool'};
-  if(actionType==='write'||tool.readOnly!==true&&actionType!=='read')return {allowed:false,reason:'Write actions activate in Phase 2 after A1XX sign-off.'};
+  if(actionType==='write'&&tool.readOnly===true)return {allowed:false,reason:'Write actions activate in Phase 2 after A1XX sign-off.'};
+  if(actionType!=='read'&&actionType!=='local_write')return {allowed:false,reason:'Unknown action type'};
   return {allowed:true};
 }
 
@@ -9260,6 +9266,8 @@ function getMissionConversationFirstResponse(conv,ctx,question){
 function getMissionConversationEnding(route,shape,mode,ctx,question){
   if(getMissionCloseSignal(question||''))return '';
   var journey=getCurrentJourneyMove(ctx);
+  var struggleList=getStore(MISSION_MEMORY_STRUGGLES_KEY)||[];
+  var recurring=struggleList.filter(function(item){return item&&item.route===route&&(item.count||0)>=2;}).slice(-1)[0];
   var type='directive';
   if(mode&&mode.mode==='empathy')type='observation';
   else if(mode&&mode.mode==='celebration')type='bridge';
@@ -9268,6 +9276,7 @@ function getMissionConversationEnding(route,shape,mode,ctx,question){
   else if(shape&&shape.type==='ask')type='question';
   else if(route==='calendar'||route==='cycle')type='bridge';
   if(type==='question')return '';
+  if(recurring)return '<strong>Pattern:</strong> This has come up before. Keep the next move small enough to log.';
   if(type==='observation')return '<strong>Read:</strong> Pressure is information. Move the one thing that changes the number.';
   if(type==='bridge'){
     return '<strong>Carry forward:</strong> '+(journey?escapeHtml('Next step: '+journey.nextCheck+'.'):'That sets up the next block.');
@@ -9417,18 +9426,105 @@ function getMissionSuggestionBubble(route,conv,followUp,links,question){
   return parts.join('<br><br>');
 }
 
+function missionActionButton(id,label,data){
+  return '<button class="mission-action-btn" onclick="mcAction(\''+escapeHtml(id)+'\',\''+encodeURIComponent(JSON.stringify(data||{}))+'\')">'+escapeHtml(label)+'</button>';
+}
+
+function getMissionActionButtons(route,ctx,question){
+  var buttons=[];
+  if(route==='leads'){
+    buttons.push(missionActionButton('followup','Log Follow-Up',{route:route}));
+    buttons.push(missionActionButton('heatup','Flag Lead Hot',{route:route}));
+  }else if(route==='dpc'||route==='report'){
+    buttons.push(missionActionButton('logdpc','Log DPC Note',{route:route}));
+  }else if(route==='now'||route==='diagnostic'){
+    buttons.push(missionActionButton('stepdone','Mark Step Done',{route:route}));
+    buttons.push(missionActionButton('savenote','Save Note',{route:route,text:question||''}));
+  }else if(route==='content'){
+    buttons.push(missionActionButton('contentdone','Mark Content Done',{route:route}));
+    buttons.push(missionActionButton('contentadd','Add Content Note',{route:route,text:question||''}));
+  }else if(route==='production'){
+    buttons.push(missionActionButton('savenote','Save Production Note',{route:route,text:question||''}));
+  }else if(route==='memory'){
+    buttons.push(missionActionButton('savenote','Save Memory Note',{route:route,text:question||''}));
+  }
+  return buttons.length?'<div class="mission-action-row">'+buttons.slice(0,3).join('')+'</div>':'';
+}
+
+function appendMissionConfirmation(actionId,data){
+  var row=appendMissionBubble('assistant','<span style="color:#8f9aa3">Confirm local action?</span><div class="mission-action-row"><button class="mission-action-btn confirm" onclick="mcConfirmAction(\''+escapeHtml(actionId)+'\',\''+encodeURIComponent(JSON.stringify(data||{}))+'\')">Confirm</button><button class="mission-action-btn cancel" onclick="mcCancelAction()">Cancel</button></div>',true,'suggest-row');
+  return row;
+}
+
+function mcAction(actionId,encodedData){
+  var data={};
+  try{data=JSON.parse(decodeURIComponent(encodedData||'%7B%7D'));}catch(e){data={};}
+  appendMissionConfirmation(actionId,data);
+}
+
+function mcCancelAction(){
+  appendMissionBubble('assistant','Cancelled. Nothing changed.',true,'suggest-row');
+}
+
+function addMissionLocalNote(text,route){
+  var clean=missionMemorySafeText(text||'');
+  if(!clean)clean='Manual Mission Command note';
+  addMissionMemoryItem(MISSION_MEMORY_NOTES_KEY,{ts:new Date().toISOString(),text:clean,route:route||'note',expiresAt:new Date(Date.now()+7*86400000).toISOString()},60);
+}
+
+function mcConfirmAction(actionId,encodedData){
+  var data={};
+  try{data=JSON.parse(decodeURIComponent(encodedData||'%7B%7D'));}catch(e){data={};}
+  var route=data.route||'now';
+  var worker=getMissionWorkerForRoute(route);
+  var check=missionPermissionCheck('getBrainSession','local_write');
+  if(!check.allowed){appendMissionBubble('assistant',escapeHtml(check.reason),true,'suggest-row');return;}
+  var msg='Local action saved.';
+  if(actionId==='stepdone'){
+    var move=getCurrentJourneyMove(window.__missionCommandContext||{});
+    if(move){
+      var state=getMissionJourneyState(move.dayType);
+      state.checks=state.checks||{};
+      state.checks[MISSION_STEPS[move.dayType][move.index].id]=MISSION_STEPS[move.dayType][move.index].checks.map(function(){return true;});
+      saveMissionJourneyState(state);
+      renderMissionJourney();
+      msg='Step marked done locally.';
+    }
+  }else if(actionId==='followup'){
+    addMissionLocalNote('Follow-up logged from Mission Command',route);
+    msg='Follow-up note saved locally.';
+  }else if(actionId==='heatup'){
+    addMissionLocalNote('Lead flagged hot from Mission Command',route);
+    msg='Hot-lead note saved locally.';
+  }else if(actionId==='logdpc'){
+    addMissionLocalNote('DPC action noted from Mission Command',route);
+    msg='DPC note saved locally.';
+  }else if(actionId==='contentdone'){
+    addMissionMemoryItem(MISSION_MEMORY_WINS_KEY,{ts:new Date().toISOString(),text:'Content marked done from Mission Command',metric:'content'},60);
+    msg='Content win saved locally.';
+  }else if(actionId==='contentadd'){
+    addMissionLocalNote(data.text||'Content idea saved from Mission Command',route);
+    msg='Content note saved locally.';
+  }else if(actionId==='savenote'){
+    addMissionLocalNote(data.text||'Mission Command note',route);
+    msg='Note saved locally.';
+  }
+  logMissionWorkerAction(worker,'getBrainSession','local_write',route);
+  appendMissionBubble('assistant',escapeHtml(msg),true,'suggest-row');
+}
+
 function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,brainState){
   var shape=getMissionQuestionShape(question||'');
   function withWorker(html){return html?getMissionWorkerLabelHtml(route)+html:html;}
-  if(shape&&shape.type==='how')return {b1:withWorker(answer),b2:'',b3:''};
+  if(shape&&shape.type==='how')return {b1:withWorker(answer),b2:'',b3:getMissionActionButtons(route,ctx,question||'')};
   var needsData=missionRouteNeedsDataBubble(route,conv,question||'');
   if(brainState&&brainState.renderB2===false)needsData=false;
-  if(!needsData)return {b1:withWorker(answer),b2:'',b3:followUp};
+  if(!needsData)return {b1:withWorker(answer),b2:'',b3:[followUp,getMissionActionButtons(route,ctx,question||'')].filter(Boolean).join('<br><br>')};
   var human=getMissionHumanBubble(route,conv,ctx,question||'')||answer;
   return {
     b1:withWorker(human),
     b2:getMissionDataBubble(route,ctx,question||''),
-    b3:getMissionSuggestionBubble(route,conv,followUp,links,question||'')
+    b3:[getMissionSuggestionBubble(route,conv,followUp,links,question||''),getMissionActionButtons(route,ctx,question||'')].filter(Boolean).join('<br><br>')
   };
 }
 
@@ -10175,29 +10271,54 @@ function addMissionMemoryItem(key,item,limit){
   setStore(key,list.slice(-(limit||40)));
 }
 
+function checkForGoalStatement(question){
+  var q=missionMemorySafeText(question||'');
+  if(!q)return false;
+  if(!/\b(my goal is|i want to hit|i need to reach|target is|i am going for|i'm going for|i want to make|i need to make)\b/i.test(q))return false;
+  addMissionMemoryItem(MISSION_MEMORY_GOALS_KEY,{ts:new Date().toISOString(),text:q,metric:missionMemoryMetric(q)},30);
+  return true;
+}
+
+function checkForWinEvent(turn,packet){
+  var q=missionMemorySafeText(turn&&turn.question||'');
+  var a=missionMemorySafeText(turn&&turn.answer||'');
+  var mode=packet&&packet.responseMode&&packet.responseMode.mode;
+  if(!(mode==='celebration'||/\b(won|win|closed|paid|booked|hit target|it worked|posted|finished|sent it|called them)\b/i.test(q)))return false;
+  addMissionMemoryItem(MISSION_MEMORY_WINS_KEY,{ts:new Date().toISOString(),text:q||a||'Mission win logged',metric:missionMemoryMetric(q||a)},60);
+  return true;
+}
+
+function checkForStrugglePattern(turn,packet){
+  var q=missionMemorySafeText(turn&&turn.question||'');
+  if(!q)return false;
+  var mode=packet&&packet.responseMode&&packet.responseMode.mode;
+  if(!(mode==='empathy'||mode==='motivation'||/\b(stuck|struggling|not working|frustrated|cant focus|cannot focus|overwhelmed|nothing works)\b/i.test(q)))return false;
+  var route=(packet&&packet.intent&&packet.intent.route)||missionMemoryMetric(q);
+  var list=getStore(MISSION_MEMORY_STRUGGLES_KEY)||[];
+  var existing=list.filter(function(item){return item.route===route&&normalizeMissionQuestion(item.text)===normalizeMissionQuestion(q);})[0];
+  if(existing){existing.count=(existing.count||1)+1;existing.lastSeen=new Date().toISOString();}
+  else list.push({ts:new Date().toISOString(),lastSeen:new Date().toISOString(),text:q,route:route,count:1});
+  setStore(MISSION_MEMORY_STRUGGLES_KEY,list.slice(-40));
+  return true;
+}
+
+function checkForPreferenceStatement(question){
+  var q=missionMemorySafeText(question||'');
+  if(!q)return false;
+  if(!/\b(i prefer|i like when|i want you to|just give me|skip the|dont explain|don't explain|short version always|keep it simple|be direct|more detail|less detail)\b/i.test(q))return false;
+  addMissionMemoryItem(MISSION_MEMORY_PREFS_KEY,{ts:new Date().toISOString(),text:q,metric:'preference'},20);
+  return true;
+}
+
 function captureMissionLongMemory(turn,packet){
   var q=missionMemorySafeText(turn&&turn.question);
   if(!q||/^(ok|cool|got it|thanks|yep|sure)$/i.test(q)||/^\/[a-z]+$/i.test(q))return;
   var now=new Date().toISOString();
   var lower=q.toLowerCase();
-  if(/\b(my goal is|i want to hit|i need to reach|target is|i am going for|i'm going for)\b/.test(lower)){
-    addMissionMemoryItem(MISSION_MEMORY_GOALS_KEY,{ts:now,text:q,metric:missionMemoryMetric(q)},30);
-  }
-  if(/\b(i prefer|just give me|skip the|i want direct|dont explain|don't explain|short version always|short version)\b/.test(lower)){
-    addMissionMemoryItem(MISSION_MEMORY_PREFS_KEY,{ts:now,text:q,metric:'preference'},20);
-  }
-  var mode=packet&&packet.responseMode&&packet.responseMode.mode;
-  if(mode==='celebration'||/\b(won|win|closed|paid|booked|hit target|it worked)\b/.test(lower)){
-    addMissionMemoryItem(MISSION_MEMORY_WINS_KEY,{ts:now,text:q,metric:missionMemoryMetric(q)},60);
-  }
-  if(mode==='empathy'||mode==='motivation'||/\b(stuck|struggling|not working|frustrated|cant focus|cannot focus)\b/.test(lower)){
-    var route=(packet&&packet.intent&&packet.intent.route)||missionMemoryMetric(q);
-    var list=getStore(MISSION_MEMORY_STRUGGLES_KEY)||[];
-    var existing=list.filter(function(item){return item.route===route&&item.text===q;})[0];
-    if(existing){existing.count=(existing.count||1)+1;existing.lastSeen=now;}
-    else list.push({ts:now,lastSeen:now,text:q,route:route,count:1});
-    setStore(MISSION_MEMORY_STRUGGLES_KEY,list.slice(-40));
-  }
+  checkForGoalStatement(q);
+  checkForPreferenceStatement(q);
+  checkForWinEvent(turn,packet);
+  checkForStrugglePattern(turn,packet);
   if(/\b(heads up|i have a call with|meeting tomorrow|trying something new|i am testing|i'm testing)\b/.test(lower)){
     addMissionMemoryItem(MISSION_MEMORY_NOTES_KEY,{ts:now,text:q,expiresAt:new Date(Date.now()+48*3600000).toISOString()},30);
   }
