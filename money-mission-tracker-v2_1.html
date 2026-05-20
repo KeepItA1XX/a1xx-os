@@ -3948,6 +3948,11 @@ function closeSystemPanel(){
 }
 
 function setSettingsTab(tab){
+  if(tab==='backups'){
+    tab='health';
+    window.__healthSubTab='backups';
+  }
+  if(['account','connections','ai','health'].indexOf(tab)<0)tab='account';
   window.__settingsTab=tab||'account';
   document.querySelectorAll('[data-settings-tab]').forEach(function(btn){
     btn.classList.toggle('active',btn.getAttribute('data-settings-tab')===window.__settingsTab);
@@ -3964,6 +3969,7 @@ function setSettingsTab(tab){
 }
 
 function setAccountSubTab(tab){
+  if(['profile','signin'].indexOf(tab)<0)tab='profile';
   window.__accountSubTab=tab||'profile';
   document.querySelectorAll('[data-account-subtab]').forEach(function(btn){
     btn.classList.toggle('active',btn.getAttribute('data-account-subtab')===window.__accountSubTab);
@@ -3974,6 +3980,7 @@ function setAccountSubTab(tab){
 }
 
 function setHealthSubTab(tab){
+  if(['status','backups','diagnostics','version'].indexOf(tab)<0)tab='status';
   window.__healthSubTab=tab||'status';
   document.querySelectorAll('[data-health-subtab]').forEach(function(btn){
     btn.classList.toggle('active',btn.getAttribute('data-health-subtab')===window.__healthSubTab);
@@ -3985,6 +3992,7 @@ function setHealthSubTab(tab){
 }
 
 function setConnectionsSubTab(tab){
+  if(['bridge','notion','google','setup'].indexOf(tab)<0)tab='bridge';
   window.__connectionsSubTab=tab||'bridge';
   document.querySelectorAll('[data-connections-subtab]').forEach(function(btn){
     btn.classList.toggle('active',btn.getAttribute('data-connections-subtab')===window.__connectionsSubTab);
@@ -3996,6 +4004,7 @@ function setConnectionsSubTab(tab){
 }
 
 function setAISubTab(tab){
+  if(['overview','workers','memory','permissions'].indexOf(tab)<0)tab='overview';
   window.__aiSubTab=tab||'overview';
   document.querySelectorAll('[data-ai-subtab]').forEach(function(btn){
     btn.classList.toggle('active',btn.getAttribute('data-ai-subtab')===window.__aiSubTab);
@@ -4098,6 +4107,12 @@ function setBackupStatus(state,title,detail,badge){
   }
 }
 
+function openBackupSettings(){
+  if(!document.getElementById('system-panel'))return;
+  setSettingsTab('health');
+  setHealthSubTab('backups');
+}
+
 function setBackupBusy(isBusy){
   ['backup-save-btn','backup-save-now-btn','backup-restore-btn'].forEach(function(id){
     var btn=document.getElementById(id);
@@ -4118,7 +4133,7 @@ async function sendBackup(silent){
   var appUrl=localStorage.getItem(SHEETS_KEY);
   if(!appUrl){
     if(!silent){
-      if(document.getElementById('system-panel'))setSettingsTab('backups');
+      openBackupSettings();
       setBackupStatus('err','Backup needs setup','Add your Apps Script URL in Sheets / Notion setup first.','Setup');
     }
     return {ok:false,error:'missing_url'};
@@ -4131,7 +4146,7 @@ async function sendBackup(silent){
   var json=JSON.stringify(payload);
   var keyCount=Object.keys(payload).length;
   if(!silent){
-    if(document.getElementById('system-panel'))setSettingsTab('backups');
+    openBackupSettings();
     var size=Math.max(1,Math.round(json.length/1000));
     setBackupStatus(json.length>45000?'warn':'','Saving backup...','Sending '+keyCount+' keys ('+size+'KB) to your Sheet. Keep this window open for a moment.','Saving');
     setBackupBusy(true);
@@ -4246,7 +4261,7 @@ function renderCloseLog(){
 
 async function restoreBackup(){
   var appUrl=localStorage.getItem(SHEETS_KEY);
-  if(document.getElementById('system-panel'))setSettingsTab('backups');
+  openBackupSettings();
   if(!appUrl){
     setBackupStatus('err','Restore needs setup','Add your Apps Script URL in Sheets / Notion setup first.','Setup');
     return;
