@@ -7758,6 +7758,175 @@ var MISSION_A1XX_RESPONSE_LIBRARY={
   fallback_calendar:['Calendar data is not fully loaded yet. Protect the current block and define one outcome.','I do not have the next event yet. Best move: keep the current block focused.','Schedule context is thin. Use the next hour for the action closest to the mission.']
 };
 
+var A1XX_PHRASE_MAP=[
+  {pattern:/\b(what'?s|whats|what is) the move\b/g,rewrite:'what should i do now'},
+  {pattern:/\b(what'?s|whats|what is) the play\b/g,rewrite:'what should i do now'},
+  {pattern:/\bwhere we at\b/g,rewrite:'where do i stand'},
+  {pattern:/\bwhere am i at\b/g,rewrite:'where do i stand'},
+  {pattern:/\bwhat we working with\b/g,rewrite:'what is my current status'},
+  {pattern:/\bhow we looking\b/g,rewrite:'what is my current status'},
+  {pattern:/\brun it back\b/g,rewrite:'tell me more'},
+  {pattern:/\block me in\b/g,rewrite:'what should i focus on now'},
+  {pattern:/\bhelp me lock in\b/g,rewrite:'what should i focus on now'},
+  {pattern:/\bbag check\b/g,rewrite:'revenue report'},
+  {pattern:/\b(what'?s|whats|what is) the bag looking like\b/g,rewrite:'revenue report'},
+  {pattern:/\bwhat came in\b/g,rewrite:'revenue report'},
+  {pattern:/\bwhat cam in\b/g,rewrite:'revenue report'},
+  {pattern:/\bhit list\b/g,rewrite:'show my leads'},
+  {pattern:/\bwho do i hit\b/g,rewrite:'who should i contact leads'},
+  {pattern:/\bwho needs a touch\b/g,rewrite:'who should i contact leads'},
+  {pattern:/\b(what'?s|whats|what is) the damage\b/g,rewrite:'revenue gap report'},
+  {pattern:/\b(what'?s|whats|what is) the gap\b/g,rewrite:'revenue gap report'},
+  {pattern:/\bcontent check\b/g,rewrite:'content status'},
+  {pattern:/\bwhat do i post\b/g,rewrite:'content recommendation'},
+  {pattern:/\bproduction check\b/g,rewrite:'production status'},
+  {pattern:/\bwhat beat needs work\b/g,rewrite:'production status'},
+  {pattern:/\bstream check\b/g,rewrite:'live stream status'},
+  {pattern:/\bshould i go live\b/g,rewrite:'live stream recommendation'},
+  {pattern:/\bcommunity check\b/g,rewrite:'community engagement status'},
+  {pattern:/\bwhat needs logging\b/g,rewrite:'data logging status'},
+  {pattern:/\bprep the week\b/g,rewrite:'weekly review planning'},
+  {pattern:/\bclose out the day\b/g,rewrite:'end of day review'},
+  {pattern:/\block in\b/g,rewrite:'lock in what should i do now'}
+];
+
+var MISSION_LANGUAGE_PACKS={
+  focus:{
+    openers:['The move is simple: {nextBestMove}.','Start with the smallest useful version of {nextBestMove}.','Do not fight the whole day. Take the next visible step.'],
+    reads:['Focus means one lane, one action, one logged result.','The OS is pointing at the move closest to momentum.','This is a block decision, not a life decision.'],
+    meanings:['This keeps the day from turning into dashboard noise.','One finished move gives the next read better signal.'],
+    moves:['Finish the smallest visible step, then log what happened.','Do the move first. Ask for the deeper read after the result.'],
+    short:['{nextBestMove}. Keep it that simple.','One lane. One move. Then log it.']
+  },
+  money:{
+    openers:['The money read is direct.','The number is not judging you; it is pointing at the constraint.','Treat the gap like a targeting signal.'],
+    reads:['{gap} is still open this week.','Revenue moves through conversations, offers, bookings, and closes.','The weekly target needs cash-facing motion before cleanup.'],
+    meanings:['Admin can wait when the money path is behind.','A qualified conversation can change the whole weekly read.'],
+    moves:['Make one direct offer or follow-up before another system check.','Pick the person closest to payment and move the conversation forward.'],
+    short:['Close the smallest money loop first.','One offer beats one more dashboard check.']
+  },
+  pipeline:{
+    openers:['Pipeline read: heat beats volume.','The list is there. The question is who is warm enough to move today.','Do not read the CRM like storage. Read it like a money map.'],
+    reads:['You have names, but the next useful signal is qualification.','Call-ready does not always mean offer-ready.','The pipeline improves when one lead gets a clearer status.'],
+    meanings:['Cold volume only matters after you find warm signal.','A direct touch turns the pipeline from noise into a decision.'],
+    moves:['Pick one call-ready lead, qualify intent, then make the direct offer if the signal is real.','Start with {topLead}, then log the result.'],
+    short:['Qualify one lead. Then offer.','Find heat before chasing volume.']
+  },
+  content:{
+    openers:['Content should come from the work, not a random brainstorm.','Make the proof-of-work version first.','The best post is usually the useful one you can finish today.'],
+    reads:['Use today’s offer, lesson, or result as the angle.','Content should warm the next conversation, not compete with sales.','One clear artist problem plus one lesson is enough.'],
+    meanings:['Proof makes the business visible.','A useful post gives the next lead a reason to respond.'],
+    moves:['Make one proof-of-work asset and point it back to the offer.','Shrink it to one hook, one proof point, and one next step.'],
+    short:['Post proof, not theory.','Make one useful asset.']
+  },
+  production:{
+    openers:['Production is leverage when the asset leaves the folder.','Pick the item closest to being heard, sold, pitched, or delivered.','The catalog grows through finished moves.'],
+    reads:['One usable asset beats five half-open ideas.','The next production move should create something visible.','Status movement turns creative work into business inventory.'],
+    meanings:['A finished beat or project creates proof, offers, and delivery speed.','Production belongs on the money path when it becomes usable.'],
+    moves:['Move one beat or project one status forward.','Finish the smallest export, upload, metadata, or delivery step.'],
+    short:['Move one asset forward.','Make it usable.']
+  },
+  calendar:{
+    openers:['Use the calendar as a guardrail.','Protect the next block like it belongs to the money path.','The schedule should reduce decisions, not create more of them.'],
+    reads:['The next event needs one clean outcome.','Prep the handoff before the block starts.','Calendar pressure is useful when it chooses one result.'],
+    meanings:['A block without an outcome turns into scattered admin.','The next event is only useful if it moves the mission forward.'],
+    moves:['Decide what should be true when the block ends.','Prep the one outcome, then protect the block.'],
+    short:['Aim the block.','One outcome before the clock starts.']
+  },
+  sync:{
+    openers:['System health is only useful if it gets you back to the mission.','Check the blocker, then leave the menu.','Sync work should be short and specific.'],
+    reads:['If one source is off, isolate it before changing anything else.','The latest log line matters more than guessing.','A clean sync means the OS has better context.'],
+    meanings:['Bad data creates bad reads.','Fix the connection only long enough to restore trust.'],
+    moves:['Check the latest Activity Log line, then retest one action.','Confirm the source, redeploy if needed, then return to the active move.'],
+    short:['Check one source. Retest once.','Clear the blocker, then move.']
+  },
+  weeklyReview:{
+    openers:['Weekly review is where the OS learns from the week.','This is the recap lane, not the panic lane.'],
+    reads:['Look for the repeated constraint: money, pipeline heat, content proof, or delivery.','The review should explain what to adjust next week.'],
+    meanings:['Patterns matter more than one-off chaos.','The week gets smarter when the lesson is logged.'],
+    moves:['Capture the win, the constraint, and the next adjustment.','Turn the week into one decision for the next cycle.'],
+    short:['Win. Constraint. Adjustment.','Log the lesson.']
+  },
+  community:{
+    openers:['Community work should create signal, not just presence.','The community lane is useful when it starts conversations.'],
+    reads:['Engagement matters when it points back to the offer, lesson, or relationship.','A simple touch can warm the next lead.'],
+    meanings:['Attention is only valuable when it becomes trust or a next step.'],
+    moves:['Make one useful comment, post, or reply that opens a real conversation.'],
+    short:['Touch the community with intent.','One real conversation beats passive scrolling.']
+  },
+  live:{
+    openers:['Going live only helps if it has a job.','Treat live as proof, not performance pressure.'],
+    reads:['The best stream has one promise and one next step.','Live is strongest when it documents the work already happening.'],
+    meanings:['A stream can create proof, trust, and conversation if it is aimed.'],
+    moves:['Pick the topic, name the outcome, and keep the CTA simple.'],
+    short:['Go live with a job.','One promise. One CTA.']
+  },
+  dataKpi:{
+    openers:['The data is a read, not a verdict.','KPI work should point to one decision.'],
+    reads:['Look for the metric closest to the constraint.','Numbers matter when they change the next action.'],
+    meanings:['More data is not better if it does not change behavior.'],
+    moves:['Pick the metric that changes the next block and act on it.'],
+    short:['Use the number. Do not stare at it.','One metric, one decision.']
+  },
+  teaching:{
+    openers:['Here is the simple version.','Let me explain it like an operator, not a manual.'],
+    reads:['This part of the OS exists to reduce decision load.','The point is to turn scattered inputs into one useful next move.'],
+    meanings:['If it does not help you decide who to contact or what to make, it should stay quiet.'],
+    moves:['Ask for the lane, then ask for the depth: quick read, deeper breakdown, why, or steps.'],
+    short:['The OS narrows the next move.','Ask for the lane first.']
+  },
+  resetRefocus:{
+    openers:['Pause. We can shrink this.','I got you. Do not solve the whole system right now.','Reset the room: one lane first.'],
+    reads:['Overwhelm means the next move is too wide.','The OS can carry the decision load if we pick the lane.'],
+    meanings:['Small is not weak. Small is how the system starts moving again.'],
+    moves:['Choose pipeline, money, content, production, or schedule. I will narrow the move from there.'],
+    short:['One lane first.','Shrink the move.']
+  },
+  celebration:{
+    openers:['That counts.','That is real progress.','Good. That is a logged win.'],
+    reads:['A finished move gives the OS better signal.','Momentum is built from completed loops.'],
+    meanings:['Wins matter more when they get logged and repeated.'],
+    moves:['Log it, then stack the next clean action.'],
+    short:['Log it and build.','Stack the next clean move.']
+  },
+  closeout:{
+    openers:['Good session.','That is enough for this pass.','Close the loop clean.'],
+    reads:['The next block gets easier when the current one is logged.'],
+    meanings:['Rest is part of the operating system.'],
+    moves:['Save the result, close the tab, and come back with a clean read.'],
+    short:['Log it. Close it.','Carry the move forward.']
+  }
+};
+
+var MISSION_INPUT_DEBUG_KEY='a1xx_mc_input_debug_v1';
+var MISSION_WHY_DEPTH_KEY='a1xx_mc_why_depth_v1';
+
+var A1XX_INPUT_LANGUAGE_BANK={
+  now_focus:{routeTarget:'now',workerTarget:'strategist',responseShape:'current_block',dataSources:['app_state','calendar'],confidenceBoost:4,naturalPhrases:['what should i focus on','what we doing','what we on','where do i start','what needs my attention','give me the read','catch me up','brief me','lock me in','help me lock in','what matters right now','what is the priority','what is the mission','what should i touch first','what can wait','what should i not touch','what can i finish right now','just tell me what to do','reset me','bring me back','get me back on track'],slangPhrases:['whats the move','whats the play','where we at','what we working with','how we looking'],typoVariants:['wat should i do','wht should i do','whats nxt'],voiceTranscriptPatterns:['okay so what should i do','i do not know what i am supposed to be doing'],signalWords:['focus','priority','mission','start','reset','block','attention']},
+  pipeline_leads:{routeTarget:'leads',workerTarget:'pipeline',responseShape:'pipeline_heat',dataSources:['notion_crm'],confidenceBoost:5,naturalPhrases:['pipeline check','how is the pipeline','what the pipeline looking like','show me leads','lead check','who is hot','who is warm','who should i call','who needs follow up','who overdue','who close to money','who should i dm','what leads came in','any new leads','any new skool members','show the hit list','who in honeybook','who got invoice','who ghosted','who needs pressure','who did i forget','who closest to a yes','who can i close today','who can book today','who needs invoice sent'],slangPhrases:['hit list','who do i hit','where the warm money','who needs a touch'],typoVariants:['pipline','pipe line','folow up','follw up','followup','crm'],voiceTranscriptPatterns:['who am i supposed to hit','who should i reach out to right now'],signalWords:['lead','leads','pipeline','crm','follow','dm','call','invoice','honeybook','skool']},
+  money_revenue:{routeTarget:'report',workerTarget:'finance',responseShape:'money_pressure',dataSources:['google_sheets','app_state'],confidenceBoost:5,naturalPhrases:['money check','revenue check','what came in','what is the money looking like','how we doing money wise','what is the number','what is the gap','how far off am i','how much left','am i on pace','am i behind','what did i make','any sales','any payments','what is cash collected','what is the cycle gap','what is the quickest money move','what should i sell today','how many sales do i need','what is the fastest path to cash','where is the leak','where is the money stuck','what should i do to make money today'],slangPhrases:['bag check','whats the damage','where the money at','what the bag looking like'],typoVariants:['revnue','revenu','revinue','mony','cashflow'],voiceTranscriptPatterns:['what is the money saying','what does the money say'],signalWords:['money','revenue','sales','gap','target','cash','paid','payment','goal','offer']},
+  dpc_daily_activity:{routeTarget:'dpc',workerTarget:'pipeline',responseShape:'data_interpretation',dataSources:['local_store','google_sheets'],confidenceBoost:4,naturalPhrases:['dpc check','daily progress check','daily profit check','how many dms','how many calls','how many closes','what have i logged','what needs logging','log dpc','save dpc','i sent dms','i booked a call','i posted','i closed one','i got a reply','what is left for today','show scoreboard','what is not logged','update the daily numbers','add this to dpc','count this','track this'],slangPhrases:['daily count','dpc gap','scoreboard'],typoVariants:['dpcs','dms','dm s'],voiceTranscriptPatterns:['i sent ten dms','i booked one call'],signalWords:['dpc','dm','dms','calls','booked','closes','logged','scoreboard','activity']},
+  content:{routeTarget:'content',workerTarget:'content',responseShape:'content_proof',dataSources:['notion_content'],confidenceBoost:4,naturalPhrases:['what should i post','what content today','what is in the queue','what needs posting','what should i make','what should i shoot','what should i edit','what should i clip','what can become content','what proof do i have','what is the best clip idea','what content supports money today','what is the cta today','should i post or follow up','what caption should i write','what content is overdue','what can i repurpose'],slangPhrases:['content check','post from today','clip idea'],typoVariants:['conent','contnet','cotent'],voiceTranscriptPatterns:['what should i turn into content'],signalWords:['content','post','clip','reel','caption','cta','youtube','instagram','threads','proof']},
+  production:{routeTarget:'production',workerTarget:'production',responseShape:'production_delivery',dataSources:['notion_production'],confidenceBoost:4,naturalPhrases:['what beat needs work','what beat should i finish','what project needs work','what client work is due','what needs mixing','what needs mastering','what needs uploading','what needs exporting','what is the production move','what is the beat move','what do i work on musically','what bangin plus drop is next','what is the catalog looking like','what project is closest to cash','what client needs delivery','what music task is priority','what beat is closest to done','what needs rough export','what needs final export'],slangPhrases:['production check','producer mode','beat move'],typoVariants:['prodution','producton','bangin plus','bangin+'],voiceTranscriptPatterns:['what should i work on musically'],signalWords:['production','beat','catalog','mix','master','export','upload','client','delivery','bangin']},
+  calendar_time:{routeTarget:'calendar',workerTarget:'calendar',responseShape:'calendar_window',dataSources:['calendar','app_state'],confidenceBoost:4,naturalPhrases:['calendar check','what is on calendar','what time i got','how much time i got','what block am i in','what is next event','what do i have today','what is my schedule','am i free','what can i do in this window','do i have time','what should i do before the next thing','what is the current block','what can wait','what can fit right now','what can i do in 15 minutes','how much runway do i have'],slangPhrases:['time check','block check','what i got next'],typoVariants:['calender','calandar','scheduele','shedule'],voiceTranscriptPatterns:['i got like ten minutes','i am between things'],signalWords:['calendar','time','schedule','block','event','meeting','class','minutes','window']},
+  weekly_review:{routeTarget:'weekly',workerTarget:'review',responseShape:'weekly_review',dataSources:['google_sheets','notion'],confidenceBoost:4,naturalPhrases:['weekly check','review the week','how did the week go','what worked','what did not work','what made money','what should i repeat','what should i cut','prep the week','plan next week','what are the top 3','what is the lesson','what is the bottleneck','close the week','reset the week','what did i learn','what should i double down on'],slangPhrases:['week review','weekly read'],typoVariants:['weekley','reveiw'],voiceTranscriptPatterns:['what is the week telling me'],signalWords:['weekly','week','review','lesson','repeat','cut','monday']},
+  goals_cycle:{routeTarget:'cycle',workerTarget:'finance',responseShape:'planning',dataSources:['app_state','google_sheets'],confidenceBoost:4,naturalPhrases:['cycle check','where am i in the cycle','how many days left','how close am i to the goal','what is the cycle target','am i on pace for the cycle','what phase am i in','what needs to happen before cycle ends','how do i finish strong','what is the current mission','what is the money mission'],slangPhrases:['cycle pressure','mission goal'],typoVariants:['cylce'],voiceTranscriptPatterns:['where are we in the cycle'],signalWords:['cycle','roadmap','days','phase','mission','deadline']},
+  community_social:{routeTarget:'community',workerTarget:'content',responseShape:'community_touch',dataSources:['notion_crm','community'],confidenceBoost:4,naturalPhrases:['community check','skool check','who should i reply to','who needs a dm','any new members','what should i post in the community','what should i ask the community','what is happening in skool','did i engage today','what social needs attention','what comments need replies','what conversations should i start','what post will wake up the group','who is engaging but not buying'],slangPhrases:['touch the people','wake up the group'],typoVariants:['scool','school members'],voiceTranscriptPatterns:['anyone new in skool'],signalWords:['community','skool','members','comments','engage','social','group']},
+  twitch_live:{routeTarget:'live',workerTarget:'content',responseShape:'live_stream_push',dataSources:['calendar','content'],confidenceBoost:4,naturalPhrases:['should i go live','stream check','twitch check','what should i stream','what is the live move','should i stream this','what live content can i do','what should the stream be about','what is the stream title','what is the live cta','how long should i stream','should i stream production','what clips can come from this','what is the live angle','what is the live mission'],slangPhrases:['turn camera on','stream the process'],typoVariants:['twich','twitchs'],voiceTranscriptPatterns:['should i turn the camera on'],signalWords:['live','stream','twitch','camera','clip','cta']},
+  sync_notion_system:{routeTarget:'sync',workerTarget:'sync',responseShape:'sync_diagnostic',dataSources:['system_health','apps_script','notion','sheets'],confidenceBoost:5,naturalPhrases:['sync check','is notion synced','did it save','did it back up','is sheets connected','is apps script working','system check','health check','what is broken','what failed','run diagnostics','check connection','where is this data saved','what database is this using','what is this card reading','is the bridge live','what is stale','what needs review','is my data safe','what happens if sync fails'],slangPhrases:['bridge check','data health'],typoVariants:['synch','helth','ap script'],voiceTranscriptPatterns:['why is this not working'],signalWords:['sync','notion','sheets','apps','script','system','health','database','bridge','backup']},
+  resources_rolodex:{routeTarget:'resources',workerTarget:'strategist',responseShape:'teaching',dataSources:['rolodex','notion'],confidenceBoost:3,naturalPhrases:['pull up resources','show resources','find the guide','where is the link','show me the playbook','open rolodex','find the script','find the template','where is the contract','where is the funnel','where is the masterclass','find what i need','what resource helps with this','pull up the sales script','show the offer doc','find the notion page','search the os'],slangPhrases:['where that thing','resource check'],typoVariants:['resorce','roladex'],voiceTranscriptPatterns:['where did i save this'],signalWords:['resource','rolodex','guide','script','template','link','playbook','search']},
+  settings_app_help:{routeTarget:'help',workerTarget:'strategist',responseShape:'teaching',dataSources:['app_state'],confidenceBoost:3,naturalPhrases:['how do i use this','what does this do','explain this app','explain this card','teach me this section','what is this for','how does mission command work','how does dpc work','how does pipeline work','where do i change settings','where do i connect notion','how do i save backup','what does this button do','how do workers work','what worker is answering'],slangPhrases:['teach me the app','app help'],typoVariants:['settngs','setings'],voiceTranscriptPatterns:['explain what this card is doing'],signalWords:['help','settings','teach','explain','button','workers','use']},
+  memory:{routeTarget:'memory',workerTarget:'memory',responseShape:'teaching',dataSources:['local_storage'],confidenceBoost:3,naturalPhrases:['remember this','save this as memory','keep this in mind','do not forget this','add this to memory','what do you remember','what do you know about me','update memory','this is a rule','this is my preference','remember this workflow','what memory is active','should this become memory'],slangPhrases:['save this style','keep this'],typoVariants:['memry'],voiceTranscriptPatterns:['do not let me forget this'],signalWords:['remember','memory','preference','rule','save']},
+  why_deeper:{routeTarget:'context',workerTarget:'previous',responseShape:'teaching',dataSources:['previous_packet'],confidenceBoost:6,naturalPhrases:['why','why that','why this','why is that the move','why does that matter','why should i do that','why first','explain why','why tho','but why','why for real','explain deeper','how does that work','what makes that true','why not the other thing','nah go deeper','break that all the way down','what is the real reason','give me the principle','what is the framework','teach me the system behind it'],slangPhrases:['run it back','go deeper for real'],typoVariants:['y tho','why thoo'],voiceTranscriptPatterns:['explain it like i am building the business'],signalWords:['why','deeper','principle','framework','logic']},
+  confirmation_complete:{routeTarget:'context',workerTarget:'previous',responseShape:'confirmation_complete',dataSources:['local_storage'],confidenceBoost:5,naturalPhrases:['done','sent it','handled it','logged it','posted','called him','called her','booked it','closed it','uploaded it','finished it','knocked it out','completed','checked it off','i did it','that is done','sent the dm','sent the invoice','booked the call','got the reply','made the post','went live','finished the beat','exported it','saved it'],slangPhrases:['bet done','handled'],typoVariants:['finised','completd'],voiceTranscriptPatterns:['that one is done'],signalWords:['done','sent','handled','logged','posted','called','booked','closed','uploaded','finished']},
+  frustration_overwhelm:{routeTarget:'now',workerTarget:'strategist',responseShape:'focus_reset',dataSources:['app_state'],confidenceBoost:5,naturalPhrases:['this is not working','i am stuck','i am lost','i am overwhelmed','too much','i do not know','this keeps happening','i am tired','i am drained','i am all over the place','i cannot focus','i keep switching tabs','i do not know where to start','this is confusing','i am frustrated','what am i missing','why is this hard','i am behind','this day got away from me','i am not locked in'],slangPhrases:['come on','seriously','too many tabs'],typoVariants:['overwelmed','confussed','frustraded'],voiceTranscriptPatterns:['i just do not know where to start'],signalWords:['stuck','lost','overwhelmed','tired','drained','confusing','frustrated','behind']},
+  celebration_win:{routeTarget:'context',workerTarget:'previous',responseShape:'celebration',dataSources:['local_storage'],confidenceBoost:5,naturalPhrases:['we got one','closed one','got paid','booked a call','got a yes','they replied','invoice paid','sold a beat','got a new member','posted','went live','finished the beat','finished the project','hit the goal','hit the target','good day','solid day','locked in today','that worked','this is moving'],slangPhrases:['we up','caught momentum'],typoVariants:['paied','payd'],voiceTranscriptPatterns:['we got a win'],signalWords:['won','closed','paid','booked','yes','sold','finished','hit','worked']},
+  closeout_end_day:{routeTarget:'weekly',workerTarget:'review',responseShape:'closing_summary',dataSources:['local_storage','google_sheets'],confidenceBoost:4,naturalPhrases:['close out','end of day','wrap up','wrapping up','done for the day','close the day','what did i do today','summarize today','review today','what needs logging before i leave','what should i save','what should i carry into tomorrow','prep tomorrow','what did i miss today','close the loop','log the day','save the day'],slangPhrases:['day wrap','wrap the day'],typoVariants:['closeout'],voiceTranscriptPatterns:['i am done for the day'],signalWords:['close','wrap','today','tomorrow','summary','review']},
+  planning_strategy:{routeTarget:'now',workerTarget:'strategist',responseShape:'planning',dataSources:['app_state'],confidenceBoost:3,naturalPhrases:['what is the plan','game plan','plan the day','plan the week','plan the block','build a roadmap','map this out','what is the strategy','what should the sequence be','how should i attack this','what order should i do this in','what is phase one','what is the rollout','what is the 3 step plan','make this simple','break this into steps'],slangPhrases:['game plan me','map it'],typoVariants:['stratagy'],voiceTranscriptPatterns:['what should happen next'],signalWords:['plan','strategy','roadmap','sequence','phase','steps']},
+  team_handoff:{routeTarget:'sync',workerTarget:'strategist',responseShape:'teaching',dataSources:['team_chat'],confidenceBoost:3,naturalPhrases:['team handoff','make a handoff','send this to codex','send this to team chat','tell claude','tell codex','create update','create directive','log this in team chat','make a notion update','package this up','turn this into spec','make this implementation ready','make a task for this'],slangPhrases:['handoff this','package it'],typoVariants:['hand off'],voiceTranscriptPatterns:['give this to the team'],signalWords:['handoff','team','codex','claude','directive','spec','update']},
+  location_environment:{routeTarget:'now',workerTarget:'calendar',responseShape:'current_block',dataSources:['app_state','calendar'],confidenceBoost:3,naturalPhrases:['i am in the car','i am driving','i am at the studio','i am at home','i am outside','i am on my phone','i am on desktop','i am about to leave','i just got back','i got 10 minutes','i got 30 minutes','i am between things','i cannot do deep work','i can only do quick stuff','what can i do from here','what can i do on my phone'],slangPhrases:['between things','quick stuff only'],typoVariants:['drving'],voiceTranscriptPatterns:['i have like ten minutes before i leave'],signalWords:['car','driving','studio','home','phone','desktop','minutes','quick']}
+};
+
 var MISSION_WORKER_REGISTRY={
   strategist:{name:'Mission Command Strategist',handle:'strategy',routes:['now','profile','help','unclear','diagnostic'],tools:['getBlockIntel','getStepData','getBrainSession'],phase:1},
   pipeline:{name:'Pipeline Reviewer',handle:'pipeline',routes:['leads','dpc'],tools:['getLeadsData','getDPCData','getOutreachSteps'],phase:1},
@@ -7831,26 +8000,32 @@ function missionWordMatches(word,vocab){
 
 function normalizeMissionQuestion(raw){
   var q=String(raw||'').toLowerCase().replace(/[^\w#\/\s-]/g,' ');
-  var fixes={shuld:'should',shoud:'should',folow:'follow',follo:'follow',followup:'followup',calender:'calendar',calandar:'calendar',scheduele:'schedule',shedule:'schedule',meting:'meeting',meetng:'meeting',contnt:'content',prodction:'production',prodution:'production',revnue:'revenue',revenu:'revenue',synch:'sync',helth:'health',anythng:'anything',brokn:'broken',memry:'memory'};
-  return q.split(/\s+/).map(function(word){return fixes[word]||word;}).join(' ').trim();
+  q=q.replace(/\bpipe line\b/g,'pipeline').replace(/\bfollw up\b/g,'follow up').replace(/\bfolow up\b/g,'follow up').replace(/\bclick funnels\b/g,'clickfunnels').replace(/\bapps script\b/g,'appsscript').replace(/\bbangin plus\b/g,'bangin+');
+  var fixes={shuld:'should',shoud:'should',folow:'follow',follo:'follow',followup:'follow up',folowup:'follow up',calender:'calendar',calandar:'calendar',scheduele:'schedule',shedule:'schedule',meting:'meeting',meetng:'meeting',conent:'content',contnet:'content',contnt:'content',prodction:'production',prodution:'production',producton:'production',revnue:'revenue',revenu:'revenue',revinue:'revenue',expence:'expense',expences:'expenses',invocie:'invoice',invioce:'invoice',synch:'sync',helth:'health',anythng:'anything',brokn:'broken',memry:'memory',pipline:'pipeline',twich:'twitch',twitchs:'twitch',rapprenuer:'rappreneur',honeybook:'honeybook',notion:'notion',bangin:'bangin',overwelmed:'overwhelmed',confussed:'confused',frustraded:'frustrated',paied:'paid',payd:'paid',finised:'finished',completd:'completed',stratagy:'strategy',drving:'driving'};
+  q=q.split(/\s+/).map(function(word){return fixes[word]||word;}).join(' ').trim();
+  q=q.replace(/\bappsscript\b/g,'apps script').replace(/\bclickfunnels\b/g,'clickfunnels');
+  return applyA1XXPhraseMap(q);
 }
 
 var MISSION_COMMAND_INTENTS=[
-  {id:'now',label:'Now',slash:['now','next','move','focus'],tags:['now','next','focus'],phrases:['what should i do','what do i do','right now','next move','focus on','where do i start','start now','do next','priority','most important','where am i','what now','where to focus','next step','where should i start','what is most important','top priority','what to do today','what do i do today','focus for today','what the focus','today focus','todays focus','what should i focus','what should i focus on','focus today','what is the focus','help me start','where to begin','next task','what is first','kick off','get started','begin here','what to tackle','first move','first thing','what should i tackle','wake up move','morning move','start here','what do i start with','how do i begin'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Content',url:'#content-tracker-card'},{label:'Open Production',url:'#production-card'}]},
+  {id:'now',label:'Now',slash:['now','next','move','focus','n','action','tasks','task','reset','plan'],tags:['now','next','focus'],phrases:['what should i do','what do i do','right now','next move','focus on','where do i start','start now','do next','priority','most important','where am i','what now','where to focus','next step','where should i start','what is most important','top priority','what to do today','what do i do today','focus for today','what the focus','today focus','todays focus','what should i focus','what should i focus on','focus today','what is the focus','help me start','where to begin','next task','what is first','kick off','get started','begin here','what to tackle','first move','first thing','what should i tackle','wake up move','morning move','start here','what do i start with','how do i begin'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Content',url:'#content-tracker-card'},{label:'Open Production',url:'#production-card'}]},
   {id:'time',label:'Time',slash:['time','clock'],tags:['time'],phrases:['what time','current time','time is it','clock','how late','what time is it','the time'],links:[]},
   {id:'day',label:'Day',slash:['day','date','today'],tags:['day','date','today'],phrases:['what day','what date','today date','day is it','date is it','what day is it','todays date'],links:[]},
   {id:'calendar',label:'Calendar',slash:['calendar','events','meetings','schedule'],tags:['calendar','meeting','meetings','schedule'],phrases:['calendar','meeting','class','call today','scheduled','schedule','agenda','appointment','next event','what is coming up','what do i have','next meeting','upcoming class','whats on calendar','any meetings','appointments','any classes','rap prenuer','academy','upcoming events','whats scheduled','what do i have today','any appointments','appointments today','scheduled today','today appointments','my schedule','what is today','classes today','next class','any calls today','scheduled calls','what is on','on the books'],links:[{label:'Open Manager',url:'#manager-split-wrapper'},{label:'Add Event',url:'https://www.notion.so/99fcf23b0cdc49e79e239e99c08438d5'}]},
-  {id:'report',label:'Report',slash:['report','money','revenue','target','gap'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','paid','closed','paid session','closed paid','closed a paid session','sales win','profit win','weekly number','how much','collected','income','weekly numbers','money in','whats the gap','how am i doing','money pace','revenue pace','to target','closer to target','behind target','ahead of target','pacing','make more money','more money','how to make more money','make money','get paid','close more','sell more','book more calls','earnings','cash flow','am i on track','on track','how are we doing','weekly recap','total collected','weekly revenue','did i hit','hit my target','how am i tracking','tracking','where am i financially','am i behind','total money','money this week','revenue check','are we good','financial check','money check'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
+  {id:'report',label:'Report',slash:['report','money','revenue','target','gap','m','finance'],tags:['report','money','revenue','target','gap'],phrases:['report','revenue','money','target','gap','sales','profit','paid','closed','paid session','closed paid','closed a paid session','sales win','profit win','weekly number','how much','collected','income','weekly numbers','money in','whats the gap','how am i doing','money pace','revenue pace','to target','closer to target','behind target','ahead of target','pacing','make more money','more money','how to make more money','make money','get paid','close more','sell more','book more calls','earnings','cash flow','am i on track','on track','how are we doing','weekly recap','total collected','weekly revenue','did i hit','hit my target','how am i tracking','tracking','where am i financially','am i behind','total money','money this week','revenue check','are we good','financial check','money check'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
   {id:'dpc',label:'DPC',slash:['dpc','campaign','daily'],tags:['dpc','campaign','daily'],phrases:['dpc','daily profit','daily campaign','dm count','dms','cold calls','calls made','booked calls','booked one','just booked','got a booking','closes','daily log','today numbers','daily numbers','today log','todays activity','what i did today','daily score','log today','dpc card','how many calls','how many dms','dms sent','calls made today','what did i log','my daily log','log update','daily activity','activity today','update my log','todays dpc','dpc update','log numbers','did i log','log review','dpc check','daily check'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'cycle',label:'Cycle',slash:['cycle','roadmap','season'],tags:['cycle','roadmap'],phrases:['cycle','roadmap','days left','deadline','current cycle','ceo roadmap','archive cycle','cycle target','cycle progress','cycle pace','days left in cycle','this cycle','foundation cycle','where are we in the cycle','cycle end','days remaining','when does cycle end','end of cycle','cycle deadline','cycle check','how many days remain','cycle score','cycle status','cycle pacing','cycle health','where in cycle','cycle update','on track for cycle','cycle goal','cycle close'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
-  {id:'leads',label:'Leads',slash:['leads','lead','pipeline','followup','followups','crm'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm','my pipeline','who to talk to','prospects','prospect','outreach','reach out','contact list','warm list','who i should contact','contact today','who to reach','crm leads','focus on leads','focus on lead','follow up leads','follow up lead','follow up today','who needs follow up','atl leads','call ready','best prospect','top prospect','who should i contact first','who is warmest','most urgent lead','contact next'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
-  {id:'content',label:'Content',slash:['content','post','make','create'],tags:['content','post','create'],phrases:['content','make','post','create','caption','reel','story','short','asset','what should i make','content calendar','idea','hook','content idea','what to post','next piece','content move','post idea','content for today','reel idea','short idea','what should i shoot','what should i film','what to film','what to record','social media','social','what to shoot','video idea','clip','reels','tiktok','ig reel','short form','what to make today','next piece of content','piece of content','content piece','instagram','ig post','next post','make today','create today','shoot today','film today','content plan','what to create','content stack'],links:[{label:'Open Content',url:'#content-tracker-card'},{label:'Open Calendar',url:null}]},
-  {id:'production',label:'Production',slash:['production','beat','beats','catalog'],tags:['production','beat','beats'],phrases:['production','beat','beats','catalog','daw','music','master beat','upload','soundee','bangin','mix','track','next beat','todays beat','production progress','studio time','beat to finish','beat queue','master beat catalog','studio session','session','bounce','export','finish beat','work on beat','fl studio','logic','protools','ableton','instrumental','sound','music production','music work','rap session','studio block','what beat','which beat','beat work','produce','producing','make a beat','new beat','beat progress','beat update','studio move','studio today'],links:[{label:'Open Production',url:'#production-card'},{label:'Open Catalog',url:null}]},
-  {id:'sync',label:'Sync',slash:['sync','health','system','settings'],tags:['sync','health','system'],phrases:['sync','health','system','broken','error','loading','not working','settings','connection','backup','diagnostic','version','logs','activity log','is something wrong','whats broken','sync status','is it working','any errors','status check','health check','is anything off','nothing is working','error message','check the logs','check logs','any issues','troubleshoot','diagnose','something wrong','app broken','sync failed','not syncing','connections','what failed','system check','any problems','problems'],links:[{label:'Open System Hub',url:'#system-panel',action:'system'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
+  {id:'leads',label:'Leads',slash:['leads','lead','pipeline','followup','followups','crm','l'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm','my pipeline','who to talk to','prospects','prospect','outreach','reach out','contact list','warm list','who i should contact','contact today','who to reach','crm leads','focus on leads','focus on lead','follow up leads','follow up lead','follow up today','who needs follow up','atl leads','call ready','best prospect','top prospect','who should i contact first','who is warmest','most urgent lead','contact next'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
+  {id:'content',label:'Content',slash:['content','post','make','create','c'],tags:['content','post','create'],phrases:['content','make','post','create','caption','reel','story','short','asset','what should i make','content calendar','idea','hook','content idea','what to post','next piece','content move','post idea','content for today','reel idea','short idea','what should i shoot','what should i film','what to film','what to record','social media','social','what to shoot','video idea','clip','reels','tiktok','ig reel','short form','what to make today','next piece of content','piece of content','content piece','instagram','ig post','next post','make today','create today','shoot today','film today','content plan','what to create','content stack'],links:[{label:'Open Content',url:'#content-tracker-card'},{label:'Open Calendar',url:null}]},
+  {id:'production',label:'Production',slash:['production','beat','beats','catalog','p'],tags:['production','beat','beats'],phrases:['production','beat','beats','catalog','daw','music','master beat','upload','soundee','bangin','mix','track','next beat','todays beat','production progress','studio time','beat to finish','beat queue','master beat catalog','studio session','session','bounce','export','finish beat','work on beat','fl studio','logic','protools','ableton','instrumental','sound','music production','music work','rap session','studio block','what beat','which beat','beat work','produce','producing','make a beat','new beat','beat progress','beat update','studio move','studio today'],links:[{label:'Open Production',url:'#production-card'},{label:'Open Catalog',url:null}]},
+  {id:'sync',label:'Sync',slash:['sync','health','system','settings','s','handoff'],tags:['sync','health','system'],phrases:['sync','health','system','broken','error','loading','not working','settings','connection','backup','diagnostic','version','logs','activity log','is something wrong','whats broken','sync status','is it working','any errors','status check','health check','is anything off','nothing is working','error message','check the logs','check logs','any issues','troubleshoot','diagnose','something wrong','app broken','sync failed','not syncing','connections','what failed','system check','any problems','problems'],links:[{label:'Open System Hub',url:'#system-panel',action:'system'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
   {id:'profile',label:'Profile',slash:['profile','identity','a1xx','account'],tags:['profile','identity','a1xx','account'],phrases:['who is a1xx','what is a1xx','who am i','who are you talking to','who is executive producer','executive producer profile','my profile','my account','what do you know about me','what is my business','tell me about a1xx','a1xx profile','account profile','user profile','who is logged in'],links:[{label:'Open Account',url:'#system-panel',action:'system'},{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]},
-  {id:'resources',label:'Resources',slash:['resources','resource','library','playbooks'],tags:['resources','resource','library','playbook'],phrases:['resources','resource library','notion library','library','playbook','playbooks','sales resources','good sales resources','sales scripts','sales playbook','training resources','what is in my notion library','whats in my notion library','show resources','show my resources','resource list','resource hub'],links:[{label:'Open Rolodex',url:'#rolodex-card'},{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]},
+  {id:'resources',label:'Resources',slash:['resources','resource','library','playbooks','search','rolodex'],tags:['resources','resource','library','playbook'],phrases:['resources','resource library','notion library','library','playbook','playbooks','sales resources','good sales resources','sales scripts','sales playbook','training resources','what is in my notion library','whats in my notion library','show resources','show my resources','resource list','resource hub'],links:[{label:'Open Rolodex',url:'#rolodex-card'},{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]},
+  {id:'community',label:'Community',slash:['community','skool','engagement'],tags:['community','skool','engagement'],phrases:['community','community check','skool','members','new members','new in skool','anyone new in skool','engagement','comments','group activity','community status','community touch','who should i engage','what came in from community'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Rolodex',url:'#rolodex-card'}]},
+  {id:'live',label:'Live',slash:['live','stream','twitch'],tags:['live','stream','twitch'],phrases:['live','go live','should i go live','stream','stream check','twitch','live stream','what should i stream','go live today','live content','twitch live'],links:[{label:'Open Content',url:'#content-tracker-card'},{label:'Open Manager',url:'#manager-split-wrapper'}]},
+  {id:'weekly',label:'Weekly Review',slash:['weekly','review','week','w','closeout'],tags:['weekly','review'],phrases:['weekly review','prep the week','close out the week','week review','weekly recap','weekly planning','what happened this week','this week so far','weekly check','review the week'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
   {id:'memory',label:'Memory',slash:['memory','history','remember','chat'],tags:['memory','history'],phrases:['remember','memory','history','asked','previous question','chat log','conversation','what did i ask','previous chat','recent ask','last question','last thing','earlier','before','what did we talk about','last time','recall','what did we discuss','previously','earlier today','what we talked about','last session','prior','go back','look back','review history','chat history','past answers'],links:[{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]},
-  {id:'help',label:'Help',slash:['help','commands','command','cheatsheet'],tags:['help','commands'],phrases:['help','commands','cheat sheet','how do i ask','what can you do','show commands','slash commands','list commands','show me what you do','what are your commands'],links:[{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]}
+  {id:'help',label:'Help',slash:['help','commands','command','cheatsheet','settings','teach'],tags:['help','commands'],phrases:['help','commands','cheat sheet','how do i ask','what can you do','show commands','slash commands','list commands','show me what you do','what are your commands'],links:[{label:'Open Command Guide',url:'https://www.notion.so/3656115281da815b8593e6c644ab1736'}]}
 ];
 
 function getMissionIntentConfig(id){
@@ -7876,6 +8051,213 @@ function scoreMissionA1XXRecognition(q,id){
 function missionFillTemplate(text,vars){
   vars=vars||{};
   return String(text||'').replace(/\{(\w+)\}/g,function(_,key){return vars[key]||'';}).replace(/\s+/g,' ').trim();
+}
+
+function applyA1XXPhraseMap(q){
+  var out=String(q||'').toLowerCase().replace(/\s+/g,' ').trim();
+  if(!out||/^[\/#@]/.test(out))return out;
+  (A1XX_PHRASE_MAP||[]).forEach(function(item){
+    out=out.replace(item.pattern,item.rewrite);
+  });
+  return out.replace(/\s+/g,' ').trim();
+}
+
+function getMissionLanguagePack(category){
+  return (MISSION_LANGUAGE_PACKS&&MISSION_LANGUAGE_PACKS[category])||MISSION_LANGUAGE_PACKS.focus||{};
+}
+
+function getMissionLanguageCategory(route,question,brainState){
+  var q=normalizeMissionQuestion(question||'');
+  if(/\b(overwhelmed|stuck|lost|confused|too much|help me|i dont know|i do not know)\b/.test(q))return 'resetRefocus';
+  if(/\b(closed|paid|won|booked|finished|done|completed|got paid|it worked)\b/.test(q))return 'celebration';
+  if(/\b(explain|teach|how does|what does this mean|walk me|help me understand)\b/.test(q))return 'teaching';
+  if(/\b(community|skool|group|members|comments|engagement)\b/.test(q))return 'community';
+  if(/\b(live|stream|twitch|go live)\b/.test(q))return 'live';
+  if(/\b(weekly review|prep the week|week review|close out the week)\b/.test(q))return 'weeklyReview';
+  if(/\b(kpi|metrics|data|numbers|logging|what needs logging)\b/.test(q))return 'dataKpi';
+  if(route==='leads')return 'pipeline';
+  if(route==='report'||route==='dpc')return 'money';
+  if(route==='content')return 'content';
+  if(route==='production')return 'production';
+  if(route==='calendar'||route==='time'||route==='day')return 'calendar';
+  if(route==='sync')return 'sync';
+  if(route==='cycle')return 'planning';
+  if(route==='help'||route==='profile'||route==='resources')return 'teaching';
+  if(route==='memory')return 'dataKpi';
+  return 'focus';
+}
+
+function getMissionResponseShape(route,brainState,convType,question){
+  var category=getMissionLanguageCategory(route,question||'',brainState||{});
+  var shape='next_action_only';
+  if(convType===CONV_QUICK_READ)shape='quick_read';
+  else if(convType===CONV_DEEPER)shape='data_interpretation';
+  else if(convType===CONV_WHY)shape='teaching';
+  else if(convType===CONV_CLOSE)shape='closing_summary';
+  else if(route==='leads')shape='pipeline_heat';
+  else if(route==='report'||route==='dpc')shape='money_pressure';
+  else if(route==='content')shape='content_proof';
+  else if(route==='production')shape='production_delivery';
+  else if(route==='calendar'||route==='time'||route==='day')shape='calendar_window';
+  else if(route==='sync')shape='sync_diagnostic';
+  else if(category==='resetRefocus')shape='focus_reset';
+  else if(category==='community')shape='community_touch';
+  else if(category==='live')shape='live_stream_push';
+  return {shape:shape,category:category,allowData:convType===CONV_DEEPER||missionQuestionHasExplicitDataAsk(route,question||''),allowSuggestion:convType===CONV_COMMAND||missionPromptIsExplicitCommand(question||'')};
+}
+
+function getMissionPhraseStore(){
+  try{
+    var raw=sessionStorage.getItem('a1xx_mc_phrase_rotation_v1');
+    var store=raw?JSON.parse(raw):{};
+    store.recent=Array.isArray(store.recent)?store.recent:[];
+    return store;
+  }catch(e){return {recent:[]};}
+}
+
+function saveMissionPhraseStore(store){
+  try{sessionStorage.setItem('a1xx_mc_phrase_rotation_v1',JSON.stringify(store||{}));}catch(e){}
+}
+
+function getMissionPhraseVariation(category,slot,vars,brainState){
+  var pack=getMissionLanguagePack(category);
+  var pool=(pack&&pack[slot])||[];
+  if((brainState&&brainState.userEnergy)==='low'&&pack.short&&pack.short.length&&slot!=='moves')pool=pack.short.concat(pool);
+  if(!pool.length)return '';
+  var store=getMissionPhraseStore();
+  var recent=store.recent||[];
+  var chosen='';
+  for(var i=0;i<pool.length;i++){
+    var line=missionFillTemplate(pool[i],vars||{});
+    var key=category+'|'+slot+'|'+line;
+    if(recent.indexOf(key)<0){chosen=line;recent.push(key);break;}
+  }
+  if(!chosen){
+    chosen=missionFillTemplate(pool[0],vars||{});
+    recent.push(category+'|'+slot+'|'+chosen);
+  }
+  store.recent=recent.slice(-18);
+  saveMissionPhraseStore(store);
+  return chosen;
+}
+
+function getMissionLanguageLine(route,slot,ctx,question){
+  var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||getMissionBrainSession();
+  var vars=getMissionVarsExpanded(ctx,brain);
+  var responseShape=getMissionResponseShape(route,brain,(getMissionConversationType(question||'',ctx,{route:route},brain)||{}).type,question||'');
+  return getMissionPhraseVariation(responseShape.category,slot||'reads',vars,brain);
+}
+
+function getMissionSlashAlias(value){
+  var s=String(value||'').toLowerCase();
+  var aliases={n:'now',l:'leads',m:'report',money:'report',c:'content',p:'production',w:'weekly',week:'weekly',review:'weekly',s:'sync',a:'now',action:'now',settings:'help',teach:'help',tasks:'now',task:'now',reset:'now',closeout:'weekly',log:'dpc',handoff:'sync',search:'resources',rolodex:'resources',live:'live',community:'community'};
+  return aliases[s]||s;
+}
+
+function missionInputAllPhrases(bank){
+  var all=[];
+  ['naturalPhrases','slangPhrases','typoVariants','voiceTranscriptPatterns'].forEach(function(key){
+    all=all.concat((bank&&bank[key])||[]);
+  });
+  return all.filter(Boolean);
+}
+
+function extractMissionSpeechSignals(q){
+  q=String(q||'').toLowerCase();
+  var sets={
+    actions:['call','text','dm','post','stream','produce','log','save','review','sync','close','book','send','upload','finish','export'],
+    objects:['lead','client','content','beat','project','invoice','community','stream','report','goal','expense','pipeline','calendar'],
+    time:['now','today','tomorrow','this week','before close','tonight','morning','money block','minutes','before pickup'],
+    emotion:['stuck','tired','lost','locked in','ready','overwhelmed','frustrated','good','hype','confused'],
+    routes:['pipeline','money','dpc','content','production','calendar','sync','review','community','live']
+  };
+  var hits={actions:[],objects:[],time:[],emotion:[],routes:[]};
+  Object.keys(sets).forEach(function(group){
+    sets[group].forEach(function(term){
+      if(q.indexOf(term)>=0)hits[group].push(term);
+    });
+  });
+  return hits;
+}
+
+function getMissionInputProfile(raw,normalized){
+  var original=String(raw||'');
+  var q=String(normalized||normalizeMissionQuestion(original)||'');
+  var words=q.split(/\s+/).filter(Boolean);
+  var signals=extractMissionSpeechSignals(q);
+  var routeScores={};
+  var matches=[];
+  var best={route:'',score:0,category:'',worker:'',shape:'',dataSources:[]};
+  Object.keys(A1XX_INPUT_LANGUAGE_BANK||{}).forEach(function(category){
+    var bank=A1XX_INPUT_LANGUAGE_BANK[category]||{};
+    var route=bank.routeTarget||'';
+    if(route==='context')route=(getLastMissionTopicTurn()||{}).intentRoute||'now';
+    route=getMissionSlashAlias(route);
+    var score=0;
+    missionInputAllPhrases(bank).forEach(function(phrase){
+      var p=normalizeMissionQuestion(phrase||'');
+      if(!p)return;
+      if(q===p)score+=10;
+      else if(q.indexOf(p)>=0)score+=p.indexOf(' ')>=0?6:3;
+    });
+    (bank.signalWords||[]).forEach(function(word){
+      if(words.indexOf(word)>=0)score+=2;
+      else if(word.length>3&&q.indexOf(word)>=0)score+=1;
+    });
+    if((signals.routes||[]).indexOf(route)>=0)score+=2;
+    if(score>0){
+      score+=(bank.confidenceBoost||0);
+      routeScores[route]=(routeScores[route]||0)+score;
+      matches.push({category:category,route:route,score:score,worker:bank.workerTarget||'',shape:bank.responseShape||'',dataSources:bank.dataSources||[]});
+      if(score>best.score)best={route:route,score:score,category:category,worker:bank.workerTarget||'',shape:bank.responseShape||'',dataSources:bank.dataSources||[]};
+    }
+  });
+  return {originalInput:original,normalizedInput:q,routeScores:routeScores,matches:matches,best:best,signals:signals};
+}
+
+function getMissionSmartRouteScore(intentId,profile){
+  if(!intentId||!profile)return 0;
+  var id=getMissionSlashAlias(intentId);
+  return (profile.routeScores&&profile.routeScores[id])||0;
+}
+
+function storeMissionInputDebug(profile,selectedRoute,selectedWorker,responseShape,confidence,usedContextCarry,whyDepth){
+  try{
+    var entry={
+      originalInput:profile&&profile.originalInput||'',
+      normalizedInput:profile&&profile.normalizedInput||'',
+      typoFixes:[],
+      phraseMatches:(profile&&profile.matches||[]).slice(0,5).map(function(m){return m.category+':'+m.route;}),
+      selectedIntent:selectedRoute||'',
+      selectedRoute:selectedRoute||'',
+      selectedWorker:selectedWorker||'',
+      responseShape:responseShape||'',
+      confidence:confidence||0,
+      usedContextCarry:!!usedContextCarry,
+      whyDepth:whyDepth||0,
+      timestamp:new Date().toISOString()
+    };
+    var log=JSON.parse(sessionStorage.getItem(MISSION_INPUT_DEBUG_KEY)||'[]');
+    log.push(entry);
+    sessionStorage.setItem(MISSION_INPUT_DEBUG_KEY,JSON.stringify(log.slice(-50)));
+    window.__missionLastInputDebug=entry;
+  }catch(e){}
+}
+
+function updateMissionWhyDepth(route,question){
+  var q=normalizeMissionQuestion(question||'');
+  var isWhy=/\b(why|deeper|principle|framework|logic|reason)\b/.test(q);
+  try{
+    var store=JSON.parse(sessionStorage.getItem(MISSION_WHY_DEPTH_KEY)||'{}');
+    if(!isWhy||store.route!==route){
+      store={route:route||'',depth:isWhy?1:0,updatedAt:new Date().toISOString()};
+    }else{
+      store.depth=Math.min(3,(store.depth||0)+1);
+      store.updatedAt=new Date().toISOString();
+    }
+    sessionStorage.setItem(MISSION_WHY_DEPTH_KEY,JSON.stringify(store));
+    return store.depth||0;
+  }catch(e){return isWhy?1:0;}
 }
 
 function pickMissionLibraryLine(poolName,vars){
@@ -8092,11 +8474,18 @@ function getMissionConversationType(question,ctx,intent,brainState){
   var q=normalizeMissionQuestion(question||'');
   var active=getLastMissionTopicTurn();
   intent=intent||getMissionCommandIntent(question||'');
+  var profile=(intent&&intent.smartProfile)||getMissionInputProfile(question||'',q);
+  var smartCategory=profile&&profile.best&&profile.best.category||'';
+  var smartRoute=(profile&&profile.best&&profile.best.score>=6&&profile.best.route&&profile.best.route!=='context')?getMissionSlashAlias(profile.best.route):'';
   var brainRoute=brainState&&brainState.sessionTopic?getMissionRouteFromBrainTopic(brainState.sessionTopic):'';
   if(!q)return {type:CONV_NEW_TOPIC,route:'now',activeRoute:active&&active.intentRoute||''};
-  if(/^\/[a-z]+/.test(q))return {type:CONV_COMMAND,route:intent.route||q.replace(/^\/([a-z]+).*/,'$1'),activeRoute:active&&active.intentRoute||''};
+  if(/^\/[a-z]+/.test(q))return {type:CONV_COMMAND,route:intent.route||getMissionSlashAlias(q.replace(/^\/([a-z]+).*/,'$1')),activeRoute:active&&active.intentRoute||''};
   if(getMissionCloseSignal(q))return {type:CONV_CLOSE,route:'',activeRoute:active&&active.intentRoute||''};
   if(intent&&intent.route==='diagnostic')return {type:CONV_DATA_REQUEST,route:'diagnostic',activeRoute:active&&active.intentRoute||''};
+  if(smartCategory==='confirmation_complete'||smartCategory==='celebration_win')return {type:CONV_FOLLOWUP,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
+  if(smartCategory==='frustration_overwhelm')return {type:CONV_FOLLOWUP,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
+  if(smartCategory==='why_deeper')return {type:CONV_WHY,route:active&&active.intentRoute||intent.route||'now',activeRoute:active&&active.intentRoute||''};
+  if(smartRoute)return {type:CONV_DATA_REQUEST,route:smartRoute,activeRoute:active&&active.intentRoute||''};
   if(/\b(what is|whats|what's|explain|tell me about)\b.*\b(bangin deal|bangin production deal|production deal|bpd)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'profile',activeRoute:active&&active.intentRoute||''};
   if(/\b(what happened|whats happened|what has happened|show me what i did|how am i performing|performance|expenses|new sales|any new sales|made this week|how much have i made)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'report',activeRoute:active&&active.intentRoute||''};
   if(/\b(how many).*\b(cooked calls|booked calls|calls)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'calendar',activeRoute:active&&active.intentRoute||''};
@@ -8485,7 +8874,8 @@ function getMissionCommandIntent(question){
   var q=normalizeMissionQuestion(raw);
   var diagnostic=getMissionDiagnosticIntent(q);
   if(diagnostic)return diagnostic;
-  var slash=(q.match(/^\/([a-z]+)/)||[])[1]||'';
+  var profile=getMissionInputProfile(raw,q);
+  var slash=getMissionSlashAlias((q.match(/^\/([a-z]+)/)||[])[1]||'');
   var tags=(q.match(/#[a-z]+/g)||[]).map(function(t){return t.slice(1);});
   var words=q.split(/\s+/).filter(Boolean);
   var best={route:'',score:0,label:'',suggestions:[]};
@@ -8498,6 +8888,7 @@ function getMissionCommandIntent(question){
     var score=0;
     if(slash&&intent.slash.indexOf(slash)>=0)score+=10;
     if(slash&&intent.id===slash)score+=10;
+    score+=getMissionSmartRouteScore(intent.id,profile);
     tags.forEach(function(tag){if(intent.tags.indexOf(tag)>=0||intent.slash.indexOf(tag)>=0)score+=7;});
     (intent.phrases||[]).forEach(function(phrase){
       if(!phrase)return;
@@ -8517,6 +8908,7 @@ function getMissionCommandIntent(question){
   });
   var ranked=MISSION_COMMAND_INTENTS.map(function(intent){
     var score=0;
+    score+=Math.round(getMissionSmartRouteScore(intent.id,profile)*.55);
     (intent.phrases||[]).forEach(function(phrase){if(q.indexOf(phrase)>=0)score+=2;});
     score+=scoreMissionA1XXRecognition(q,intent.id);
     words.forEach(function(word){
@@ -8528,7 +8920,16 @@ function getMissionCommandIntent(question){
     return {id:intent.id,label:intent.label,score:score};
   }).filter(function(item){return item.score>0&&item.id!==best.route;}).sort(function(a,b){return b.score-a.score;}).slice(0,3);
   best.suggestions=ranked;
+  if(profile.best&&profile.best.route&&profile.best.score>=6&&profile.best.score>best.score){
+    var cfg=getMissionIntentConfig(profile.best.route)||{};
+    best={route:profile.best.route,score:profile.best.score,label:cfg.label||profile.best.route,suggestions:ranked,smartProfile:profile};
+  }else{
+    best.smartProfile=profile;
+  }
   if(best.score<2)best.route='';
+  var worker=(profile.best&&profile.best.worker)||((getMissionWorkerForRoute(best.route)||{}).handle)||'';
+  var shape=(profile.best&&profile.best.shape)||'';
+  storeMissionInputDebug(profile,best.route,worker,shape,best.score,false,updateMissionWhyDepth(best.route,q));
   return best;
 }
 
@@ -8576,7 +8977,12 @@ function getMissionQuestionShape(question){
 function getMissionResponseMode(question,route,ctx,brainState){
   if(brainState&&brainState.forcedResponseMode)return {mode:brainState.forcedResponseMode,label:brainState.forcedResponseMode==='empathy'?'Empathy':brainState.forcedResponseMode==='celebration'?'Celebration':'Coach',tone:'brain'};
   var q=normalizeMissionQuestion(question||'');
+  var profile=getMissionInputProfile(question||'',q);
+  var smartCategory=profile&&profile.best&&profile.best.category||'';
   if(!q)return {mode:'coach',label:'Coach',tone:'default'};
+  if(smartCategory==='frustration_overwhelm')return {mode:'empathy',label:'Empathy',tone:'steady'};
+  if(smartCategory==='celebration_win'||smartCategory==='confirmation_complete')return {mode:'celebration',label:'Celebration',tone:'momentum'};
+  if(smartCategory==='why_deeper'||smartCategory==='settings_app_help')return {mode:'coach',label:'Coach',tone:'guided'};
   if(/\b(nothing is working|stuck|ugh|frustrated|this is hard|not working|struggling|dont get it|do not get it|why bother|whats the point|what is the point|keep trying and nothing moves)\b/.test(q))return {mode:'empathy',label:'Empathy',tone:'steady'};
   if(/\b(i won|big win|closed it|closed a paid session|closed paid|paid session|got paid|made money|hit target|good news|i did it|it worked|got the close|booked one|paid me)\b/.test(q))return {mode:'celebration',label:'Celebration',tone:'momentum'};
   if(/\b(slow|tired|drained|not feeling it|cant focus|cannot focus|dragging|losing steam|unmotivated|blah|just not there|overwhelmed|burned out|burnt out)\b/.test(q))return {mode:'motivation',label:'Motivation',tone:'steady'};
@@ -8591,17 +8997,21 @@ function getMissionCommandHelp(){
   return '<strong>MISSION COMMAND - available commands:</strong><br><br>'
     +'/now - current block and next step<br>'
     +'/leads - pipeline, heat, and who to contact<br>'
+    +'/money - revenue, pace, and money gap<br>'
     +'/dpc - daily profit campaign count and booking info<br>'
     +'/report - revenue, pace, and money gap<br>'
     +'/cycle - cycle position and target progress<br>'
     +'/content - content queue and next asset<br>'
     +'/production - beat/catalog pipeline<br>'
     +'/calendar - upcoming schedule<br>'
+    +'/week - weekly review and planning<br>'
+    +'/community - community and social touches<br>'
+    +'/live - live/stream angle<br>'
     +'/sync - system health and sync status<br>'
     +'/profile - A1XX identity and mission context<br>'
     +'/memory - recent chat memory<br>'
     +'/help - this list<br><br>'
-    +'<span style="color:#8f9aa3">Power routes: #leads #dpc #cycle #content #production. Future write commands stay confirmation-gated.</span>';
+    +'<span style="color:#8f9aa3">Shortcuts: /n /l /m /c /p /w /s. Power routes: #leads #dpc #cycle #content #production. Future write commands stay confirmation-gated.</span>';
 }
 
 /* 2026-05-19 (Claude deep pass): history continuity helper. Shows a brief note when A1XX
@@ -8996,11 +9406,22 @@ function getMissionCommandRouteAnswer(route,ctx,question){
   if(route==='content')return continuity+getMissionContentAnswer(ctx)+getMissionContextNudge('content',ctx)+getMissionIntentLinks('content');
   if(route==='production')return continuity+getMissionProductionAnswer()+getMissionContextNudge('production',ctx)+getMissionIntentLinks('production');
   if(route==='resources')return continuity+getMissionResourcesAnswer(question)+getMissionIntentLinks('resources');
+  if(route==='community')return continuity+getMissionSpecialLaneAnswer('community',ctx,question)+getMissionIntentLinks('community');
+  if(route==='live')return continuity+getMissionSpecialLaneAnswer('live',ctx,question)+getMissionIntentLinks('live');
   if(route==='sync')return continuity+getMissionSyncAnswer()+getMissionContextNudge('sync',ctx)+getMissionIntentLinks('sync');
   if(route==='memory')return getMissionMemoryAnswer(question)+getMissionIntentLinks('memory');
   if(route==='archive')return '<strong>Archive:</strong> Backup and archive tools are read-only in Phase 1. Use the existing buttons for manual backup or cycle archive until write actions are confirmation-gated.';
-  if(route==='weekly')return '<strong>Weekly Review:</strong> Weekly review data stays read-only in this worker pass. Use the existing weekly save flow, then ask for a recap.';
+  if(route==='weekly')return continuity+getMissionSpecialLaneAnswer('weeklyReview',ctx,question)+getMissionIntentLinks('weekly');
   return '';
+}
+
+function getMissionSpecialLaneAnswer(category,ctx,question){
+  var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||getMissionBrainSession();
+  var vars=getMissionVarsExpanded(ctx,brain);
+  var opener=getMissionPhraseVariation(category,'openers',vars,brain);
+  var read=getMissionPhraseVariation(category,'reads',vars,brain);
+  var move=getMissionPhraseVariation(category,'moves',vars,brain);
+  return [opener,read,move].filter(Boolean).map(escapeHtml).join('<br><br>');
 }
 
 function getMissionMultiIntentAnswer(intent,ctx,question){
@@ -9299,6 +9720,8 @@ function getMissionQuickRead(route,ctx){
   route=route||'now';
   var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||{};
   var vars=getMissionVarsExpanded(ctx,brain);
+  var language=getMissionPhraseVariation(getMissionLanguageCategory(route,'quick read',brain),'short',vars,brain);
+  if(language)return language;
   if(route==='leads')return pickMissionLibraryLineAntiRepeat('quickRead_leads',vars);
   if(route==='report')return pickMissionLibraryLineAntiRepeat('quickRead_report',vars);
   if(route==='dpc')return pickMissionLibraryLineAntiRepeat('quickRead_dpc',vars);
@@ -9312,6 +9735,8 @@ function getMissionWhyRead(route,ctx){
   route=route||'now';
   var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||{};
   var vars=getMissionVarsExpanded(ctx,brain);
+  var language=getMissionPhraseVariation(getMissionLanguageCategory(route,'why',brain),'meanings',vars,brain);
+  if(language)return language;
   if(route==='leads')return pickMissionLibraryLineAntiRepeat('why_leads',vars);
   if(route==='report')return pickMissionLibraryLineAntiRepeat('why_report',vars);
   if(route==='dpc')return pickMissionLibraryLineAntiRepeat('why_dpc',vars);
@@ -9325,6 +9750,8 @@ function getMissionWhatElseRead(route,ctx){
   route=route||'now';
   var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||{};
   var vars=getMissionVarsExpanded(ctx,brain);
+  var language=getMissionPhraseVariation(getMissionLanguageCategory(route,'what else',brain),'reads',vars,brain);
+  if(language)return language;
   if(route==='leads')return pickMissionLibraryLineAntiRepeat('whatElse_leads',vars);
   if(route==='report'||route==='dpc')return pickMissionLibraryLineAntiRepeat('whatElse_report',vars);
   if(route==='content')return pickMissionLibraryLineAntiRepeat('whatElse_content',vars);
@@ -9337,6 +9764,8 @@ function getMissionNextActionRead(route,ctx){
   route=route||'now';
   var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||{};
   var vars=getMissionVarsExpanded(ctx,brain);
+  var language=getMissionPhraseVariation(getMissionLanguageCategory(route,'what next',brain),'moves',vars,brain);
+  if(language)return language;
   if(route==='leads')return pickMissionLibraryLineAntiRepeat('nextAction_leads',vars);
   if(route==='report'||route==='dpc')return pickMissionLibraryLineAntiRepeat('nextAction_report',vars);
   if(route==='content')return pickMissionLibraryLineAntiRepeat('content_create',vars);
@@ -9359,6 +9788,9 @@ function getMissionStuckRead(route,ctx){
   route=route||'now';
   var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||{};
   var vars=getMissionVarsExpanded(ctx,brain);
+  var language=getMissionPhraseVariation('resetRefocus','openers',vars,brain);
+  var move=getMissionPhraseVariation('resetRefocus','moves',vars,brain);
+  if(language||move)return [language,move].filter(Boolean).join(' ');
   if(route==='leads')return pickMissionLibraryLineAntiRepeat('stuck_leads',vars);
   if(route==='content')return pickMissionLibraryLineAntiRepeat('content_stuck',vars);
   if(route==='production')return pickMissionLibraryLineAntiRepeat('production_move',vars);
@@ -9370,9 +9802,13 @@ function getMissionConversationFirstResponse(conv,ctx,question){
   var route=(conv&&conv.route)||'';
   var q=normalizeMissionQuestion(question||'');
   var shape=getMissionQuestionShape(question||'');
+  var profile=getMissionInputProfile(question||'',q);
+  var smartCategory=profile&&profile.best&&profile.best.category||'';
   if(!conv)return '';
   if(missionQuestionIsSimpleNowAsk(route,question||''))return getMissionHumanBubble(route,conv,ctx,question||'');
   if(conv.type===CONV_CLOSE)return getMissionCloseResponse(ctx);
+  if(smartCategory==='confirmation_complete'||smartCategory==='celebration_win')return getMissionCompletionInputResponse(route,ctx,question||'',smartCategory==='celebration_win');
+  if(smartCategory==='frustration_overwhelm')return getMissionStuckRead(route,ctx);
   if(conv.type===CONV_QUICK_READ)return getMissionQuickRead(route,ctx);
   if(conv.type===CONV_WHY)return getMissionWhyRead(route,ctx);
   if(/\b(i dont know what to do|i do not know what to do|i'm stuck|im stuck|stuck right now|can you help me|help me figure|help me decide)\b/.test(q))return getMissionStuckRead(route,ctx);
@@ -9385,6 +9821,19 @@ function getMissionConversationFirstResponse(conv,ctx,question){
     return 'Do you mean pipeline, money, content, or schedule?';
   }
   return '';
+}
+
+function getMissionCompletionInputResponse(route,ctx,question,isWin){
+  var q=normalizeMissionQuestion(question||'');
+  var line=isWin?'That counts. Log the win before the lesson disappears.':'Good. Close the loop by logging what happened.';
+  if(/\b(sent|dm|text|called|booked|closed|paid|posted|uploaded|finished|exported|went live)\b/.test(q)){
+    line=isWin?'That is a real win. Save the result, then stack the next clean move.':'Handled. What was the result: reply, booked call, payment, post, upload, or just task complete?';
+  }
+  if(route==='leads')line+=' If it touched a lead, update the CRM status next.';
+  else if(route==='content')line+=' If it became content, mark the asset status next.';
+  else if(route==='production')line+=' If it moved an asset, mark the production status next.';
+  else if(route==='report'||route==='dpc')line+=' If money or activity changed, save the DPC/report log next.';
+  return escapeHtml(line);
 }
 
 function getMissionConversationEnding(route,shape,mode,ctx,question){
@@ -9657,6 +10106,9 @@ function getMissionHumanBubble(route,conv,ctx,question){
   if(route==='leads'){
     var openLeads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
     if(!openLeads.length)return getMissionFallbackLadder('leads',ctx);
+    var pipelineLine=getMissionPhraseVariation('pipeline',conv&&conv.type===CONV_DEEPER?'reads':'openers',vars,brain);
+    var pipelineMove=getMissionPhraseVariation('pipeline','moves',vars,brain);
+    if(pipelineLine&&pipelineMove)return escapeHtml(pipelineLine)+'<br><br>'+escapeHtml(pipelineMove);
     if(conv&&conv.type===CONV_DEEPER)return pickMissionLibraryLineAntiRepeat('pipeline_d3',vars);
     if(getMissionPipelineDiagnosticSignal(question||'')||q.indexOf('pipeline')>=0)return pickMissionLibraryLineAntiRepeat(depth>=3?'pipeline_d3':'pipeline_d2',vars);
     return pickMissionLibraryLineAntiRepeat('nextAction_leads',vars);
@@ -9668,6 +10120,9 @@ function getMissionHumanBubble(route,conv,ctx,question){
   if(route==='report'&&/\b(performing|performance|how am i doing)\b/.test(q))return 'Performance read: the effort is pointed in the right direction, but the money signal is behind. The next improvement is not more planning; it is more qualified conversations and direct offers.';
   if(route==='report'){
     if(!ctx||!ctx.wk)return getMissionFallbackLadder('report',ctx);
+    var moneyLine=getMissionPhraseVariation('money',ctx.gap>0?'reads':'openers',vars,brain);
+    var moneyMove=getMissionPhraseVariation('money','moves',vars,brain);
+    if(moneyLine&&moneyMove)return escapeHtml(moneyLine)+'<br><br>'+escapeHtml(moneyMove);
     if(ctx.gap>0)return pickMissionLibraryLineAntiRepeat('report_behind',vars);
     return pickMissionLibraryLineAntiRepeat('report_ahead',vars);
   }
@@ -9678,16 +10133,30 @@ function getMissionHumanBubble(route,conv,ctx,question){
     return pickMissionLibraryLineAntiRepeat('dpc_start',vars);
   }
   if(route==='now'&&/\b(lock in|distracted|off track|spinning|overwhelmed|too many options|decision fatigue)\b/.test(q))return pickMissionLibraryLine('lockIn',vars)||escapeHtml(ctx.nowText||'Move one asset and one pipeline step.');
-  if(route==='now')return pickMissionLibraryLineAntiRepeat('now_focus',vars);
-  if(route==='calendar')return pickMissionLibraryLineAntiRepeat('calendar_protect',vars);
+  if(route==='now'){
+    var focusLine=getMissionPhraseVariation('focus','openers',vars,brain);
+    if(focusLine)return escapeHtml(focusLine);
+    return pickMissionLibraryLineAntiRepeat('now_focus',vars);
+  }
+  if(route==='calendar'){
+    var calendarLine=getMissionPhraseVariation('calendar','openers',vars,brain);
+    var calendarMove=getMissionPhraseVariation('calendar','moves',vars,brain);
+    if(calendarLine&&calendarMove)return escapeHtml(calendarLine)+'<br><br>'+escapeHtml(calendarMove);
+    return pickMissionLibraryLineAntiRepeat('calendar_protect',vars);
+  }
   if(route==='content'){
     var hasContent=(window.__contentPipelinePieces&&window.__contentPipelinePieces.length)||(window.__contentPieces&&window.__contentPieces.length);
     if(!hasContent)return getMissionFallbackLadder('content',ctx);
+    var contentLine=getMissionPhraseVariation('content',/\b(stuck|dont know|do not know|idea|ideas|script|hook|break down|steps)\b/.test(q)?'moves':'openers',vars,brain);
+    if(contentLine)return escapeHtml(contentLine);
     if(/\b(stuck|dont know|do not know|idea|ideas|script|hook|break down|steps)\b/.test(q))return pickMissionLibraryLineAntiRepeat('content_stuck',vars);
     return pickMissionLibraryLineAntiRepeat('content_create',vars);
   }
   if(route==='production'){
     if(!(window.__productionPieces&&window.__productionPieces.length))return getMissionFallbackLadder('production',ctx);
+    var productionLine=getMissionPhraseVariation('production','openers',vars,brain);
+    var productionMove=getMissionPhraseVariation('production','moves',vars,brain);
+    if(productionLine&&productionMove)return escapeHtml(productionLine)+'<br><br>'+escapeHtml(productionMove);
     return pickMissionLibraryLineAntiRepeat('production_move',vars);
   }
   if(route==='resources')return 'Use the library to support the move you are already making. One useful resource beats opening five tabs and calling it research.';
@@ -10005,19 +10474,19 @@ function runMissionCommandSelfCheck(){
     {q:'/calendar',route:'calendar',must:'Calendar'},
     {q:'/sync',route:'sync',must:'Sync'},
     {q:'/leads',route:'leads',must:'Leads',shape:'command'},
-    {q:'/now',route:'now',must:'Do this right now',shape:'command'},
+    {q:'/now',route:'now',mustAny:['move','focus','start','next'],shape:'command'},
     {q:'/report',route:'report',must:'Report',shape:'command'},
     {q:'/dpc',route:'dpc',must:'DPC',shape:'command'},
     {q:'/help',route:'help',must:'Commands',shape:'command'},
     {q:'who is A1XX',route:'profile',must:'A1XX'},
-    {q:'what should I do today?',route:'now',mustAny:['move one asset','focus','next move','current block']},
-    {q:'who should I contact?',route:'leads',must:'Leads'},
-    {q:'what should I make?',route:'content',must:'Content'},
+    {q:'what should I do today?',route:'now',mustAny:['move','focus','smallest','lane']},
+    {q:'who should I contact?',route:'leads',mustAny:['lead','qualify','pipeline','offer']},
+    {q:'what should I make?',route:'content',mustAny:['content','post','asset','proof']},
     {q:'where am I in my steps?',route:'now',mustAny:['journey','step'],shape:'where'},
     {q:'how far into the cycle am I?',route:'cycle',must:'cycle',shape:'where'},
     {q:'when should I work on production?',route:'production',must:'when',shape:'when'},
     {q:'how to make more money',route:'report',mustAny:['revenue','offer','money','close'],shape:'how'},
-    {q:'why should I focus on leads?',route:'leads',must:'why it matters',shape:'why',mode:'coach'},
+    {q:'why should I focus on leads?',route:'leads',mustAny:['warm','signal','lead','conversation','qualification'],shape:'why',mode:'coach'},
     {q:'sync is broken',route:'diagnostic',must:'diagnostic read'},
     {q:'I closed a paid session',route:'report',mustAny:['win','paid','collected','build on it'],mode:'celebration'},
     {q:'I just booked one',route:'dpc',mustAny:['win','booked','build on it','log it'],mode:'celebration'},
@@ -10026,7 +10495,18 @@ function runMissionCommandSelfCheck(){
     {q:'I am stuck',route:'diagnostic',must:'stuck read'},
     {q:'why is my pipeline not working',route:'diagnostic',must:'diagnostic read'},
     {q:'is this even working',route:'diagnostic',must:'honest read'},
-    {q:'what is my biggest bottleneck',route:'diagnostic',must:'constraint read'}
+    {q:'what is my biggest bottleneck',route:'diagnostic',must:'constraint read'},
+    {q:'community check',route:'community',mustAny:['community','conversation','engagement']},
+    {q:'should I go live',route:'live',mustAny:['live','stream','proof']},
+    {q:'prep the week',route:'weekly',mustAny:['weekly','review','week','adjustment']},
+    {q:'where we at',route:'now',mustAny:['move','focus','start','one']},
+    {q:'who do i hit',route:'leads',mustAny:['lead','qualify','pipeline','offer']},
+    {q:'what cam in',route:'report',mustAny:['money','revenue','gap','offer']},
+    {q:'i got 10 minutes before i leave',route:'now',mustAny:['move','focus','start','one']},
+    {q:'i am overwhelmed',route:'now',mustAny:['lane','shrink','stuck','move'],mode:'empathy'},
+    {q:'sent it',route:'now',mustAny:['log','done','move','next'],mode:'celebration'},
+    {q:'/m',route:'report',mustAny:['money','revenue','gap','offer'],shape:'command'},
+    {q:'/w',route:'weekly',mustAny:['week','review','lesson','adjustment'],shape:'command'}
   ];
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
