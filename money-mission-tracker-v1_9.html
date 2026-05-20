@@ -666,6 +666,9 @@ input:focus{border-color:#333}
 .mission-brief-dots{display:flex;justify-content:center;gap:7px;padding:0 10px 11px}
 .mission-brief-dot{width:8px;height:8px;border-radius:999px;border:0;background:#30363d;cursor:pointer}
 .mission-brief-dot.active{width:24px;background:#7ec845}
+.mission-brief-week-strip{margin:0 0 10px;background:#080b0d;border-color:#242d34}
+.mission-brief-week-strip .week-strip-label{color:#f0f3f5}
+.mission-brief-week-strip .week-note{color:#8f9aa3}
 @media(max-width:560px){
   .mission-brief-slide{min-height:250px;padding:12px}
   .mb-chart-row{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -1952,6 +1955,12 @@ body{background:#090a0b;color:#d8dde1}
   <div class="mission-brief-actions">
     <a class="mission-brief-link" href="#mission-command-card" onclick="openMissionCommandCard()">Open Mission Command →</a>
   </div>
+  <div class="week-strip mission-brief-week-strip">
+    <div class="week-strip-label"><div>This week at a glance</div><span id="week-meta">Loading week...</span></div>
+    <div class="week-days" id="week-days"></div>
+    <div class="week-brief" id="week-brief" style="display:none"></div>
+    <div class="week-note" id="week-note">Loading week summary...</div>
+  </div>
   <div class="mission-brief-deck" id="mission-brief-deck">
     <div class="mission-brief-deck-top">
       <button class="mission-brief-nav" onclick="moveMissionBriefSlide(-1)" title="Previous brief slide">‹</button>
@@ -2781,15 +2790,6 @@ body{background:#090a0b;color:#d8dde1}
   <div class="save-banner-left"><strong>Weekly Update</strong> — fill in every Sunday. Takes 15 minutes. This is your score card.</div>
   <div class="save-last" id="wb-last">Never updated</div>
 </div>
-
-<!-- WEEK STRIP -->
-<div class="week-strip">
-  <div class="week-strip-label"><div>This week at a glance</div><span id="week-meta">Loading week...</span></div>
-  <div class="week-days" id="week-days"></div>
-  <div class="week-brief" id="week-brief" style="display:none"></div>
-  <div class="week-note" id="week-note">Loading week summary...</div>
-</div>
-
 
 <div class="week-section">
   <div class="week-section-title sec-tog" onclick="tc('beat-body','beat-chv')">Production & Beats <span class="sec-chv" id="beat-chv">▼</span></div>
@@ -4200,6 +4200,7 @@ function buildWeekStrip(calEvents,notionPieces){
   var dayOfWeek=today.getDay();
   var monday=new Date(today);monday.setDate(today.getDate()-(dayOfWeek===0?6:dayOfWeek-1));
   var grid=document.getElementById('week-days');
+  if(!grid)return;
   grid.innerHTML='';
   var DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   var ci=getCycleIdx(),cy=CYCLES[ci],cycleWeek=Math.floor((today-pd(cy.start))/6048e5)+1;
@@ -4221,7 +4222,8 @@ function buildWeekStrip(calEvents,notionPieces){
     div.onclick=(function(day){return function(){selectWeekDay(day,calEvents||[],notionPieces||[],true);};})(new Date(d));
     grid.appendChild(div);
   }
-  document.getElementById('week-note').innerHTML='<strong style="color:#555">Legend:</strong> <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#639922;border-radius:50%;display:inline-block"></span>Content scheduled</span> · <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#3a7bd5;border-radius:50%;display:inline-block"></span>Calendar event</span> · <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#d4a017;border-radius:50%;display:inline-block"></span>Sunday review</span>';
+  var note=document.getElementById('week-note');
+  if(note)note.innerHTML='<strong style="color:#555">Legend:</strong> <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#639922;border-radius:50%;display:inline-block"></span>Content scheduled</span> · <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#3a7bd5;border-radius:50%;display:inline-block"></span>Calendar event</span> · <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#d4a017;border-radius:50%;display:inline-block"></span>Sunday review</span>';
 }
 
 function getWeekNumber(d){
@@ -13840,6 +13842,7 @@ function renderMissionBrief(contentPieces,calEvents){
     contentPieces:contentPieces||[],
     calEvents:calEvents||[]
   });
+  try{buildWeekStrip(calEvents||[],contentPieces||[]);}catch(e){console.warn('A1XX mission brief week strip render skipped',e);}
   window.__missionCommandContext=getMissionCommandContext(contentPieces||[],calEvents||[]);
   renderMissionCommand(window.__missionCommandLastPrompt||'now','');
   updateMissionToolSignals(contentPieces||[],calEvents||[]);
