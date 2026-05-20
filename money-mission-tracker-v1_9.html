@@ -269,6 +269,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .health-subpane.active{display:block}
 .account-subpane{display:none}
 .account-subpane.active{display:block}
+.connections-subpane{display:none}
+.connections-subpane.active{display:block}
+.ai-subpane{display:none}
+.ai-subpane.active{display:block}
 .settings-section{background:#0f1215;border:0.5px solid #20272e;border-radius:10px;padding:11px 12px;margin-bottom:10px}
 .settings-section-title{font-size:10px;font-weight:800;color:#8b949e;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
 .settings-list{display:grid;gap:7px}
@@ -632,7 +636,11 @@ input:focus{border-color:#333}
 .mission-simple{display:grid;gap:7px;margin:0;padding:0 10px 10px}
 .mission-simple-line{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:10px 12px;color:#f0f3f5;font-size:13px;font-weight:800;line-height:1.35}
 .mission-simple-line.urgent{border-color:#3a2800;color:#f0d08a;background:#100c02}
+.mission-brief-actions{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.mission-brief-link{display:inline-flex;align-items:center;justify-content:center;min-height:30px;border:0.5px solid #2a4015;border-radius:999px;background:#0d1808;color:#7ec845!important;font-size:10px;font-weight:900;text-decoration:none!important;padding:0 12px}
+.mission-brief-link:hover{background:#102006;border-color:#3a5a2a;color:#dff5d5!important}
 .mission-command{background:#07090b;border:0.5px solid #22303a;border-radius:12px;padding:10px;margin-bottom:10px;position:relative;overflow:hidden}
+.mission-command.standalone{border-radius:16px;padding:1rem 1.15rem;margin-bottom:10px;box-shadow:0 0 0 1px rgba(126,200,69,.02)}
 .mission-command-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .mission-command-label{font-size:9px;color:#7ec845;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
 .mission-command-state{font-size:9px;color:#7b858d;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
@@ -759,8 +767,12 @@ input:focus{border-color:#333}
 .mission-lock:hover{background:#102006}
 .mission-lock.locked{background:#10190a;color:#8fbf66}
 .mission-check.locked{display:none}
+.card-collapse-btn{width:28px;height:28px;border-radius:8px;border:0.5px solid #263039;background:#080a0c;color:#8f9aa3;font-size:13px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .18s;flex:0 0 auto}
+.card-collapse-btn:hover{border-color:#3a5a2a;color:#d7dde3;background:#0d120f}
+.card-collapsed .card-collapse-body{display:none!important}
+.card-collapsed{padding-bottom:10px!important}
 .mission-hidden{display:none!important}
-#dpc-card:target,#content-tracker-card:target,#production-card:target,#calendar-card:target,#actions-card:target{display:block!important;scroll-margin-top:18px}
+#mission-brief:target,#mission-command-card:target,#dpc-card:target,#content-tracker-card:target,#production-card:target,#calendar-card:target,#actions-card:target{display:block!important;scroll-margin-top:18px}
 
 /* DAILY PROFIT CAMPAIGN */
 .dpc-card{background:#080e04;border:1px solid #1d3010;border-radius:14px;padding:1.1rem 1.25rem;margin-bottom:10px}
@@ -1520,44 +1532,104 @@ body{background:#090a0b;color:#d8dde1}
     </div>
 
     <div class="settings-pane" id="settings-pane-connections">
-      <div class="settings-section">
-        <div class="settings-section-title">Connections</div>
-        <div class="settings-list">
-          <div class="settings-row"><div><div class="settings-row-name">Apps Script bridge</div><div class="settings-row-meta" id="settings-apps-script-url">Not connected</div></div><span class="settings-badge" id="settings-apps-script-badge">Check</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Google Sheets backend</div><div class="settings-row-meta">Weekly Saves, Daily Log, Cycle Archives, Activity Log, State Backups</div></div><span class="settings-badge">Live</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Content Calendar</div><div class="settings-row-meta">Notion database: 1a061152-81da-81bc-b7ec-cecbcba9ed8e</div></div><span class="settings-badge off">Read</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Master Beat Catalog</div><div class="settings-row-meta">Notion database: 1a761152-81da-8199-a5df-fc423d447f31</div></div><span class="settings-badge off">Read</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">OPS Sync Databases</div><div class="settings-row-meta">Daily DPC Log · Weekly Review Log · Cycle Archives</div></div><span class="settings-badge">Write</span></div>
+      <div class="settings-subtabs">
+        <button class="settings-subtab active" data-connections-subtab="bridge" onclick="setConnectionsSubTab('bridge')">Bridge</button>
+        <button class="settings-subtab" data-connections-subtab="notion" onclick="setConnectionsSubTab('notion')">Notion</button>
+        <button class="settings-subtab" data-connections-subtab="google" onclick="setConnectionsSubTab('google')">Google</button>
+        <button class="settings-subtab" data-connections-subtab="setup" onclick="setConnectionsSubTab('setup')">Setup</button>
+      </div>
+      <div class="connections-subpane active" id="connections-subpane-bridge">
+        <div class="settings-section">
+          <div class="settings-section-title">Apps Script Bridge</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Apps Script bridge</div><div class="settings-row-meta" id="settings-apps-script-url">Not connected</div></div><span class="settings-badge" id="settings-apps-script-badge">Check</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">OPS Sync Databases</div><div class="settings-row-meta">Daily DPC Log · Weekly Review Log · Cycle Archives</div></div><span class="settings-badge">Write</span></div>
+          </div>
         </div>
       </div>
-      <div class="btn-row">
-        <button class="btn" onclick="toggleSetup('sheets')">Sheets / Notion setup</button>
-        <button class="btn" onclick="toggleSetup('todoist')">Todoist setup</button>
+      <div class="connections-subpane" id="connections-subpane-notion">
+        <div class="settings-section">
+          <div class="settings-section-title">Notion Sources</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Content Calendar</div><div class="settings-row-meta">Notion database: 1a061152-81da-81bc-b7ec-cecbcba9ed8e</div></div><span class="settings-badge off">Read</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Master Beat Catalog</div><div class="settings-row-meta">Notion database: 1a761152-81da-8199-a5df-fc423d447f31</div></div><span class="settings-badge off">Read</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="connections-subpane" id="connections-subpane-google">
+        <div class="settings-section">
+          <div class="settings-section-title">Google Sources</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Google Sheets backend</div><div class="settings-row-meta">Weekly Saves, Daily Log, Cycle Archives, Activity Log, State Backups</div></div><span class="settings-badge">Live</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Calendar</div><div class="settings-row-meta">Schedule, day type, block timing, and event prep.</div></div><span class="settings-badge">Read</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="connections-subpane" id="connections-subpane-setup">
+        <div class="settings-section">
+          <div class="settings-section-title">Setup Tools</div>
+          <div class="btn-row">
+            <button class="btn" onclick="toggleSetup('sheets')">Sheets / Notion setup</button>
+            <button class="btn" onclick="toggleSetup('todoist')">Todoist setup</button>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="settings-pane" id="settings-pane-ai">
-      <div class="settings-section">
-        <div class="settings-section-title">AI / Agent Controls</div>
-        <div class="settings-ai-box">Future in-app chat starts read-only: it can summarize app, Notion, Sheets, and Calendar data. Write actions stay confirmation-gated and logged.</div>
-        <div class="settings-list">
-          <div class="settings-row"><div><div class="settings-row-name">AI Chat</div><div class="settings-row-meta">Planned drawer interface for questions, summaries, and diagnostics.</div></div><span class="settings-badge off">Off</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Chat history</div><div class="settings-row-meta">Local sessions with clean titles, hidden metadata, and project folders.</div></div><span class="settings-badge">Local</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Google chat sync</div><div class="settings-row-meta">Saves chat sessions/projects to Google Sheets. Sessions update existing rows by ID; Sync Audit appends one line per sync.</div></div><span class="settings-badge warn">Ready</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Context window</div><div class="settings-row-meta">Hidden instruction packet: identity, mission, current stats, sources, and recent memory.</div></div><span class="settings-badge">Ready</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Allowed sources</div><div class="settings-row-meta">App state, Notion, Google Sheets, Calendar. Add CRM/production scopes later.</div></div><span class="settings-badge warn">Planned</span></div>
-          <div class="settings-row"><div><div class="settings-row-name">Write permissions</div><div class="settings-row-meta">Off by default. Any future AI write must ask first and leave an audit trail.</div></div><span class="settings-badge off">Locked</span></div>
+      <div class="settings-subtabs">
+        <button class="settings-subtab active" data-ai-subtab="overview" onclick="setAISubTab('overview')">Overview</button>
+        <button class="settings-subtab" data-ai-subtab="workers" onclick="setAISubTab('workers')">Workers</button>
+        <button class="settings-subtab" data-ai-subtab="memory" onclick="setAISubTab('memory')">Memory</button>
+        <button class="settings-subtab" data-ai-subtab="permissions" onclick="setAISubTab('permissions')">Rules</button>
+      </div>
+      <div class="ai-subpane active" id="ai-subpane-overview">
+        <div class="settings-section">
+          <div class="settings-section-title">AI / Agent Controls</div>
+          <div class="settings-ai-box">Mission Command stays read-only by default: it summarizes app, Notion, Sheets, and Calendar data. Write actions stay confirmation-gated and logged.</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Mission Command</div><div class="settings-row-meta">Conversational operating layer for questions, walkthroughs, routing, and diagnostics.</div></div><span class="settings-badge">Live</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Context window</div><div class="settings-row-meta">Hidden instruction packet: identity, mission, current stats, sources, and recent memory.</div></div><span class="settings-badge">Ready</span></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" onclick="runMissionCommandSelfCheck()">Run chat check</button>
+          </div>
+          <div class="reset-status" id="mission-command-test-status"></div>
         </div>
-        <div class="btn-row">
-          <button class="btn" onclick="syncAllMissionChatSessions('manual')">Sync chats now</button>
-          <button class="btn" onclick="runMissionCommandSelfCheck()">Run chat check</button>
+      </div>
+      <div class="ai-subpane" id="ai-subpane-workers">
+        <div class="settings-section">
+          <div class="settings-section-title">Workers</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Worker routing</div><div class="settings-row-meta">Routes Mission Command answers through sales, content, production, finance, sync, and memory workers.</div></div><span class="settings-badge">Live</span></div>
+          </div>
+          <details class="settings-ai-box" id="mission-worker-status-details" ontoggle="renderMissionWorkerStatus()">
+            <summary>Worker Status</summary>
+            <div class="mission-worker-status" id="mission-worker-status-list"></div>
+          </details>
         </div>
-        <div class="reset-status" id="mission-chat-sync-status"></div>
-        <div class="reset-status" id="mission-command-test-status"></div>
-        <details class="settings-ai-box" id="mission-worker-status-details" ontoggle="renderMissionWorkerStatus()">
-          <summary>Worker Status</summary>
-          <div class="mission-worker-status" id="mission-worker-status-list"></div>
-        </details>
+      </div>
+      <div class="ai-subpane" id="ai-subpane-memory">
+        <div class="settings-section">
+          <div class="settings-section-title">Chat Memory</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Chat history</div><div class="settings-row-meta">Local sessions with clean titles, hidden metadata, and project folders.</div></div><span class="settings-badge">Local</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Google chat sync</div><div class="settings-row-meta">Saves chat sessions/projects to Google Sheets. Sessions update existing rows by ID; Sync Audit appends one line per sync.</div></div><span class="settings-badge warn">Ready</span></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" onclick="syncAllMissionChatSessions('manual')">Sync chats now</button>
+          </div>
+          <div class="reset-status" id="mission-chat-sync-status"></div>
+        </div>
+      </div>
+      <div class="ai-subpane" id="ai-subpane-permissions">
+        <div class="settings-section">
+          <div class="settings-section-title">Rules / Permissions</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Allowed sources</div><div class="settings-row-meta">App state, Notion, Google Sheets, Calendar. CRM/production scopes are read through the existing bridge.</div></div><span class="settings-badge">Read</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Write permissions</div><div class="settings-row-meta">Off by default. Any future AI write must ask first and leave an audit trail.</div></div><span class="settings-badge off">Locked</span></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1718,46 +1790,8 @@ body{background:#090a0b;color:#d8dde1}
     <div class="mission-badge" id="mission-badge">Cycle</div>
   </div>
   <div class="mission-copy" id="mission-copy">Reading your cycle target, weekly inputs, calendar, tasks, content, and production rhythm.</div>
-  <details class="mission-mini-menu">
-    <summary>Cards</summary>
-    <div class="mission-tools">
-      <a class="mission-tool" id="mission-tool-campaign" href="#dpc-card" data-mission-tool="campaign" onclick="openMissionTool('campaign',true)"><span>Campaign</span><span class="mission-tool-signal" id="mission-signal-campaign">Reading...</span></a>
-      <a class="mission-tool" id="mission-tool-content" href="#content-tracker-card" data-mission-tool="content" onclick="openMissionTool('content',true)"><span>Content</span><span class="mission-tool-signal" id="mission-signal-content">Reading...</span></a>
-      <a class="mission-tool" id="mission-tool-production" href="#production-card" data-mission-tool="production" onclick="openMissionTool('production',true)"><span>Production</span><span class="mission-tool-signal" id="mission-signal-production">Reading...</span></a>
-    </div>
-  </details>
-  <div class="mission-command">
-    <div class="mission-command-top">
-      <div class="mission-command-label">Mission Command</div>
-      <div class="mission-command-actions">
-        <button class="mission-icon-btn" onclick="toggleMissionHistory()" title="Chat history">☰</button>
-        <button class="mission-icon-btn" onclick="startMissionNewChat()" title="New chat">+</button>
-        <div class="mission-command-state">Local coach</div>
-      </div>
-    </div>
-    <button class="mission-nudge-strip" id="mission-nudge-strip" onclick="sendMissionNudgePrompt()" title="Ask Mission Command about this signal"></button>
-    <div class="mission-history-drawer" id="mission-history-drawer" aria-hidden="true">
-      <div class="mission-history-top">
-        <div class="mission-history-title">Chats</div>
-        <button class="mission-icon-btn" onclick="toggleMissionHistory(false)" title="Close history">×</button>
-      </div>
-      <div class="mission-history-projects" id="mission-history-projects"></div>
-      <div class="mission-project-form" id="mission-project-form">
-        <input id="mission-project-input" type="text" placeholder="New project" onkeydown="if(event.key==='Enter')addMissionProject()"/>
-        <button onclick="addMissionProject()">Add</button>
-      </div>
-      <div class="mission-history-list" id="mission-history-list"></div>
-    </div>
-    <div class="mission-command-thread" id="mission-command-thread">Loading today’s command view...</div>
-    <div class="mission-command-suggestions">
-      <button class="mission-command-chip" onclick="runMissionPrompt('now')">What should I do right now?</button>
-      <button class="mission-command-chip" onclick="runMissionPrompt('lead')">Who should I follow up with?</button>
-      <button class="mission-command-chip" onclick="runMissionPrompt('content')">What should I make?</button>
-    </div>
-    <div class="mission-command-input">
-      <input id="mission-command-input" type="text" maxlength="600" placeholder="Ask the OS..." onkeydown="if(event.key==='Enter')askMissionCommand()"/>
-      <button id="mission-command-ask-btn" onclick="askMissionCommand()">Ask</button>
-    </div>
+  <div class="mission-brief-actions">
+    <a class="mission-brief-link" href="#mission-command-card" onclick="openMissionCommandCard()">Open Mission Command →</a>
   </div>
   <details class="mission-intel" id="mission-intel">
     <summary>Mission Intel</summary>
@@ -1766,7 +1800,42 @@ body{background:#090a0b;color:#d8dde1}
       <div class="mission-simple-line urgent" id="mission-lead-line">Finding most urgent lead...</div>
     </div>
   </details>
-  <button class="mission-lock" id="mission-lock-btn" onclick="lockMission()">Lock Mission</button>
+  <button class="mission-lock" id="mission-lock-btn" onclick="lockMission()" hidden>Lock Mission</button>
+</div>
+
+<!-- MISSION COMMAND -->
+<div class="mission-command standalone" id="mission-command-card">
+  <div class="mission-command-top">
+    <div class="mission-command-label">Mission Command</div>
+    <div class="mission-command-actions">
+      <button class="mission-icon-btn" onclick="toggleMissionHistory()" title="Chat history">☰</button>
+      <button class="mission-icon-btn" onclick="startMissionNewChat()" title="New chat">+</button>
+      <div class="mission-command-state">Local coach</div>
+    </div>
+  </div>
+  <button class="mission-nudge-strip" id="mission-nudge-strip" onclick="sendMissionNudgePrompt()" title="Ask Mission Command about this signal"></button>
+  <div class="mission-history-drawer" id="mission-history-drawer" aria-hidden="true">
+    <div class="mission-history-top">
+      <div class="mission-history-title">Chats</div>
+      <button class="mission-icon-btn" onclick="toggleMissionHistory(false)" title="Close history">×</button>
+    </div>
+    <div class="mission-history-projects" id="mission-history-projects"></div>
+    <div class="mission-project-form" id="mission-project-form">
+      <input id="mission-project-input" type="text" placeholder="New project" onkeydown="if(event.key==='Enter')addMissionProject()"/>
+      <button onclick="addMissionProject()">Add</button>
+    </div>
+    <div class="mission-history-list" id="mission-history-list"></div>
+  </div>
+  <div class="mission-command-thread" id="mission-command-thread">Loading today’s command view...</div>
+  <div class="mission-command-suggestions">
+    <button class="mission-command-chip" onclick="runMissionPrompt('now')">What should I do right now?</button>
+    <button class="mission-command-chip" onclick="runMissionPrompt('lead')">Who should I follow up with?</button>
+    <button class="mission-command-chip" onclick="runMissionPrompt('content')">What should I make?</button>
+  </div>
+  <div class="mission-command-input">
+    <input id="mission-command-input" type="text" maxlength="600" placeholder="Ask the OS..." onkeydown="if(event.key==='Enter')askMissionCommand()"/>
+    <button id="mission-command-ask-btn" onclick="askMissionCommand()">Ask</button>
+  </div>
 </div>
 
 <!-- DAY TYPE BANNER -->
@@ -1780,6 +1849,7 @@ body{background:#090a0b;color:#d8dde1}
   </div>
   <div class="dt-right">
     <div class="dt-auto-badge" id="dt-auto-badge">Auto</div>
+    <a class="dt-override-btn" href="#mission-brief" data-day-tool="brief" onclick="selectMissionDayTool('brief')">🧭 Brief</a>
     <a class="dt-override-btn" href="#production-card" data-day-tool="beat" onclick="selectMissionDayTool('beat')">🎵 Beat</a>
     <a class="dt-override-btn" href="#dpc-card" data-day-tool="outreach" onclick="selectMissionDayTool('outreach')">💬 Outreach</a>
     <a class="dt-override-btn" href="#content-tracker-card" data-day-tool="content" onclick="selectMissionDayTool('content')">📱 Content</a>
@@ -3339,8 +3409,9 @@ function setSettingsTab(tab){
     pane.classList.toggle('active',pane.id==='settings-pane-'+window.__settingsTab);
   });
   if(window.__settingsTab==='account')setAccountSubTab(window.__accountSubTab||'profile');
+  if(window.__settingsTab==='connections')setConnectionsSubTab(window.__connectionsSubTab||'bridge');
+  if(window.__settingsTab==='ai')setAISubTab(window.__aiSubTab||'overview');
   if(window.__settingsTab==='health')setHealthSubTab(window.__healthSubTab||'status');
-  if(window.__settingsTab==='ai')renderMissionWorkerStatus();
   updateSettingsConnections();
   renderAccountIdentity();
 }
@@ -3364,6 +3435,27 @@ function setHealthSubTab(tab){
     pane.classList.toggle('active',pane.id==='health-subpane-'+window.__healthSubTab);
   });
   if(window.__healthSubTab==='status')renderSystemHealth();
+}
+
+function setConnectionsSubTab(tab){
+  window.__connectionsSubTab=tab||'bridge';
+  document.querySelectorAll('[data-connections-subtab]').forEach(function(btn){
+    btn.classList.toggle('active',btn.getAttribute('data-connections-subtab')===window.__connectionsSubTab);
+  });
+  document.querySelectorAll('.connections-subpane').forEach(function(pane){
+    pane.classList.toggle('active',pane.id==='connections-subpane-'+window.__connectionsSubTab);
+  });
+}
+
+function setAISubTab(tab){
+  window.__aiSubTab=tab||'overview';
+  document.querySelectorAll('[data-ai-subtab]').forEach(function(btn){
+    btn.classList.toggle('active',btn.getAttribute('data-ai-subtab')===window.__aiSubTab);
+  });
+  document.querySelectorAll('.ai-subpane').forEach(function(pane){
+    pane.classList.toggle('active',pane.id==='ai-subpane-'+window.__aiSubTab);
+  });
+  if(window.__aiSubTab==='workers')renderMissionWorkerStatus();
 }
 
 function updateSettingsConnections(){
@@ -13484,7 +13576,24 @@ function lockMission(){
   renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
 }
 
+function openMissionCommandCard(){
+  var el=document.getElementById('mission-command-card');
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(function(){
+    var input=document.getElementById('mission-command-input');
+    if(input)input.focus();
+  },220);
+}
+
 function selectMissionDayTool(type){
+  if(type==='brief'){
+    document.querySelectorAll('[data-day-tool]').forEach(function(btn){
+      btn.classList.toggle('active',btn.getAttribute('data-day-tool')==='brief');
+    });
+    var brief=document.getElementById('mission-brief');
+    if(brief)brief.scrollIntoView({behavior:'smooth',block:'start'});
+    return;
+  }
   var tool=getMissionPrimaryTool(type);
   openMissionTool(tool,true);
   try{setDayType(type,false,(DAY_TYPES[type]||{}).reason);}catch(e){console.warn('A1XX day type update skipped',e);}
@@ -13509,12 +13618,68 @@ function applyMissionFocus(){
 
 window.openMissionTool=openMissionTool;
 window.selectMissionDayTool=selectMissionDayTool;
+window.openMissionCommandCard=openMissionCommandCard;
 
 function toggleMissionPath(trigger){
   var card=trigger&&trigger.closest?trigger.closest('[data-mission-path-card]'):document.getElementById('mission-path-card');
   if(card)card.classList.toggle('collapsed');
 }
 window.toggleMissionPath=toggleMissionPath;
+
+var CARD_COLLAPSE_KEY='a1xx_card_collapse_state';
+
+function getCardCollapseState(){
+  try{return JSON.parse(localStorage.getItem(CARD_COLLAPSE_KEY)||'{}')||{};}catch(e){return{};}
+}
+
+function setCardCollapseState(id,collapsed){
+  try{
+    var state=getCardCollapseState();
+    state[id]=!!collapsed;
+    localStorage.setItem(CARD_COLLAPSE_KEY,JSON.stringify(state));
+  }catch(e){}
+}
+
+function setupCardCollapse(id,headerSelector){
+  var card=document.getElementById(id);
+  if(!card||card.getAttribute('data-collapse-ready')==='1')return;
+  var header=headerSelector?card.querySelector(headerSelector):card.firstElementChild;
+  if(!header)return;
+  card.setAttribute('data-collapse-ready','1');
+  var btn=document.createElement('button');
+  btn.type='button';
+  btn.className='card-collapse-btn';
+  btn.title='Collapse card';
+  btn.setAttribute('aria-label','Collapse card');
+  btn.textContent='−';
+  btn.onclick=function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    var collapsed=!card.classList.contains('card-collapsed');
+    card.classList.toggle('card-collapsed',collapsed);
+    btn.textContent=collapsed?'+':'−';
+    btn.title=collapsed?'Expand card':'Collapse card';
+    btn.setAttribute('aria-label',collapsed?'Expand card':'Collapse card');
+    setCardCollapseState(id,collapsed);
+  };
+  header.appendChild(btn);
+  Array.prototype.forEach.call(card.children,function(child){
+    if(child!==header&&!child.classList.contains('card-collapse-body'))child.classList.add('card-collapse-body');
+  });
+  var collapsed=!!getCardCollapseState()[id];
+  card.classList.toggle('card-collapsed',collapsed);
+  btn.textContent=collapsed?'+':'−';
+}
+
+function initUniversalCardCollapse(){
+  [
+    ['mission-brief','.mission-top'],
+    ['mission-command-card','.mission-command-top'],
+    ['dpc-card','.dpc-header'],
+    ['content-tracker-card','.ct-header'],
+    ['production-card','.ct-header']
+  ].forEach(function(item){setupCardCollapse(item[0],item[1]);});
+}
 
 /* ── AUTO-SAVE ── */
 var AUTO_BACKUP_META_KEY='a1xx_auto_backup_meta_v1';
@@ -15511,6 +15676,7 @@ function startA1XX(){
   __a1xxStarted=true;
   try{
     init();
+    setTimeout(initUniversalCardCollapse,0);
   }catch(e){
     console.error('A1XX hard startup error',e);
     __a1xxStarted=false;
@@ -15518,6 +15684,7 @@ function startA1XX(){
       renderDayTypeBanner({type:'outreach',auto:true,reason:'Fallback mode — startup error caught. Refresh once; if it remains, check System Health.'});
       renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
       applyMissionFocus();
+      setTimeout(initUniversalCardCollapse,0);
     });
   }
 }
