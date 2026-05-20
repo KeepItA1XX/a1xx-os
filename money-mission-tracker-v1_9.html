@@ -8025,7 +8025,8 @@ var MISSION_WORKER_REGISTRY={
   sync:{name:'Notion Sync Auditor',handle:'sync',routes:['sync'],tools:['getSyncStatus'],phase:1},
   archive:{name:'Backup Archive Manager',handle:'archive',routes:['archive','backup'],tools:['getBackupStatus','getSyncStatus'],phase:1},
   review:{name:'Weekly Review Assistant',handle:'review',routes:['weekly','review'],tools:['getWeeklyReviewData','getChatHistory'],phase:1},
-  memory:{name:'AI Memory Curator',handle:'memory',routes:['memory','history'],tools:['getBrainSession','getChatHistory'],phase:1}
+  memory:{name:'AI Memory Curator',handle:'memory',routes:['memory','history'],tools:['getBrainSession','getChatHistory'],phase:1},
+  sales:{name:'Closer Coach',handle:'closer',routes:['sales','closer','call','dm','objection','discovery','practice','roleplay','followup','closing','callprep','livecall'],tools:['getCRMLeadContext','getLeadsData','getDPCData','getChatHistory','getSalesFrameworkLibrary','getObjectionMap','getDMVariantBank','getCallScorecard'],phase:1}
 };
 
 var MISSION_TOOL_REGISTRY={
@@ -8042,7 +8043,12 @@ var MISSION_TOOL_REGISTRY={
   getSyncStatus:{readOnly:true,source:'system_health'},
   getBackupStatus:{readOnly:true,source:'google_sheets'},
   getWeeklyReviewData:{readOnly:true,source:'google_sheets'},
-  getChatHistory:{readOnly:true,source:'local_storage'}
+  getChatHistory:{readOnly:true,source:'local_storage'},
+  getCRMLeadContext:{readOnly:true,source:'notion_crm'},
+  getSalesFrameworkLibrary:{readOnly:true,source:'local_sales_library'},
+  getObjectionMap:{readOnly:true,source:'local_sales_library'},
+  getDMVariantBank:{readOnly:true,source:'local_sales_library'},
+  getCallScorecard:{readOnly:true,source:'local_sales_library'}
 };
 
 /* =========================================================
@@ -8192,13 +8198,13 @@ function analyzeMissionInputV2(normalizedInput,turn){
 
 function normalizeMissionSlashRouteV2(slash){
   var s=String(slash||'').toLowerCase();
-  var map={n:'now',now:'now',next:'now',l:'leads',lead:'leads',leads:'leads',pipeline:'leads',m:'report',money:'report',report:'report',dpc:'dpc',c:'content',content:'content',p:'production',production:'production',calendar:'calendar',cal:'calendar',w:'weekly',week:'weekly',weekly:'weekly',s:'sync',sync:'sync',health:'sync',memory:'memory',help:'help',resources:'resources',rolodex:'resources'};
+  var map={n:'now',now:'now',next:'now',l:'leads',lead:'leads',leads:'leads',pipeline:'leads',m:'report',money:'report',report:'report',dpc:'dpc',c:'content',content:'content',p:'production',production:'production',calendar:'calendar',cal:'calendar',w:'weekly',week:'weekly',weekly:'weekly',s:'sync',sync:'sync',health:'sync',memory:'memory',help:'help',resources:'resources',rolodex:'resources',sales:'sales',closer:'sales',callprep:'sales',livecall:'sales',discovery:'sales',objection:'sales',dm:'sales',roleplay:'sales'};
   return map[s]||s||'now';
 }
 
 function getRouteForWorkerMentionV2(worker){
   var w=String(worker||'').toLowerCase().replace(/^@/,'');
-  var map={strategy:'now',strategist:'now',pipeline:'leads',leads:'leads',content:'content',production:'production',calendar:'calendar',finance:'report',money:'report',sync:'sync',archive:'sync',review:'weekly',weekly:'weekly',memory:'memory'};
+  var map={strategy:'now',strategist:'now',pipeline:'leads',leads:'leads',content:'content',production:'production',calendar:'calendar',finance:'report',money:'report',sync:'sync',archive:'sync',review:'weekly',weekly:'weekly',memory:'memory',closer:'sales',sales:'sales',salescoach:'sales'};
   return map[w]||'';
 }
 
@@ -8215,8 +8221,9 @@ function scoreMissionRoutesV2(q,signals,turn){
     var mentionRoute=getRouteForWorkerMentionV2(mention[1]);
     if(mentionRoute)add(mentionRoute,0.95,'worker_mention','worker_direct');
   }
-  var singleMap={leads:'leads',pipeline:'leads',money:'report',revenue:'report',dpc:'dpc',content:'content',production:'production',calendar:'calendar',week:'weekly',review:'weekly',sync:'sync',resources:'resources',rolodex:'resources',memory:'memory',settings:'help'};
+  var singleMap={leads:'leads',pipeline:'leads',money:'report',revenue:'report',dpc:'dpc',content:'content',production:'production',calendar:'calendar',week:'weekly',review:'weekly',sync:'sync',resources:'resources',rolodex:'resources',memory:'memory',settings:'help',sales:'sales',closer:'sales',objection:'sales',discovery:'sales',roleplay:'sales'};
   if(singleMap[q])add(singleMap[q],0.92,'single_word_topic','data_request');
+  if(/\b(closer|sales coach|sales call|discovery call|call prep|callprep|live call|livecall|objection|roleplay|role play|what should i say|write a dm|cold dm|warm follow up|follow-up script|needs to think|too expensive|no budget|send more info|send info|discount|price is crazy|talk to manager|decision maker|not ready|maybe next month|book a call|move them to a call|score my answer)\b/.test(q))add('sales',0.9,'sales_coach_phrase','sales_coaching');
   if(/\b(lead|leads|pipeline|hit list|follow up|follow ups|follow-up|follow-ups|who should i contact|who should i call|who hot|who warm|crm|honeybook|invoice)\b/.test(q))add('leads',0.85,'pipeline_phrase','data_request');
   if(/\b(money|revenue|bag|cash|sales|closed|paid|goal|gap|pace|profit|expense|margin)\b/.test(q))add('report',0.82,'money_phrase','data_request');
   if(/\b(dpc|daily progress|daily profit|dm|dms|calls booked|closes|activity|scoreboard|log dpc)\b/.test(q))add('dpc',0.82,'dpc_phrase','data_request');
@@ -8332,6 +8339,7 @@ var MISSION_ROUTE_DATA_MAP={
   help:['appState'],
   community:['content','crm','missionGoal'],
   live:['content','calendar','production'],
+  sales:['crm','dpc','followups','rolodex'],
   diagnostic:['appState','syncQueue']
 };
 
@@ -8471,15 +8479,16 @@ var MISSION_WORKER_CAPABILITIES={
   backup_archive_manager:['backup','restore','archive','cycle_archive'],
   weekly_review_assistant:['weekly_review','pattern_review','lesson_capture','next_week_plan'],
   ai_memory_curator:['memory_candidate','voice_preference','business_rule','session_memory']
+  ,sales_coach:['call_prep','live_call','discovery','objection_handling','dm_reply','roleplay','scorecard','closing']
 };
 
 function getMissionWorkerForRouteV2(route){
-  var map={now:'mission_command_strategist',leads:'pipeline_reviewer',dpc:'pipeline_reviewer',content:'content_coach',production:'production_manager',calendar:'calendar_focus_guard',report:'finance_goal_tracker',money:'finance_goal_tracker',cycle:'finance_goal_tracker',sync:'notion_sync_auditor',weekly:'weekly_review_assistant',review:'weekly_review_assistant',memory:'ai_memory_curator',resources:'mission_command_strategist',help:'mission_command_strategist',community:'content_coach',live:'content_coach',diagnostic:'notion_sync_auditor'};
+  var map={now:'mission_command_strategist',leads:'pipeline_reviewer',dpc:'pipeline_reviewer',content:'content_coach',production:'production_manager',calendar:'calendar_focus_guard',report:'finance_goal_tracker',money:'finance_goal_tracker',cycle:'finance_goal_tracker',sync:'notion_sync_auditor',weekly:'weekly_review_assistant',review:'weekly_review_assistant',memory:'ai_memory_curator',resources:'mission_command_strategist',help:'mission_command_strategist',community:'content_coach',live:'content_coach',sales:'sales_coach',diagnostic:'notion_sync_auditor'};
   if(typeof getMissionWorkerForRoute==='function'){
     try{
       var legacy=getMissionWorkerForRoute(route);
       if(legacy){
-        var legacyMap={strategist:'mission_command_strategist',pipeline:'pipeline_reviewer',content:'content_coach',production:'production_manager',calendar:'calendar_focus_guard',finance:'finance_goal_tracker',sync:'notion_sync_auditor',archive:'backup_archive_manager',review:'weekly_review_assistant',memory:'ai_memory_curator'};
+        var legacyMap={strategist:'mission_command_strategist',pipeline:'pipeline_reviewer',content:'content_coach',production:'production_manager',calendar:'calendar_focus_guard',finance:'finance_goal_tracker',sync:'notion_sync_auditor',archive:'backup_archive_manager',review:'weekly_review_assistant',memory:'ai_memory_curator',sales:'sales_coach',closer:'sales_coach'};
         var legacyKey=typeof legacy==='string'?legacy:(legacy.handle||legacy.id||legacy.name||'');
         legacyKey=String(legacyKey||'').toLowerCase().replace(/\s+/g,'_');
         return legacyMap[legacyKey]||map[route]||'mission_command_strategist';
@@ -8683,17 +8692,18 @@ function getMissionActionPlanV2(turn){
   if(route==='content')action={label:'Open Content Tracker',type:'open_card',target:'content_tracker',requiresConfirmation:false};
   if(route==='production')action={label:'Open Production',type:'open_card',target:'production',requiresConfirmation:false};
   if(route==='sync')action={label:'Run Sync Check',type:'sync_check',target:'system_hub',requiresConfirmation:false};
+  if(route==='sales')action={label:'Open Hit List',type:'open_card',target:'hit_list',requiresConfirmation:false};
   if(!action&&turn.brainState&&turn.brainState.nextBestMove)action={label:'Do Next Move',type:'next_best_move',target:turn.brainState.nextBestMove,requiresConfirmation:false};
   return action;
 }
 
 function getMissionWorkerLabelV2(workerId){
-  var labels={mission_command_strategist:'Mission Command Strategist',pipeline_reviewer:'Pipeline Reviewer',content_coach:'Content Coach',production_manager:'Production Manager',calendar_focus_guard:'Calendar / Focus Guard',finance_goal_tracker:'Finance / Goal Tracker',notion_sync_auditor:'Notion Sync Auditor',backup_archive_manager:'Backup / Archive Manager',weekly_review_assistant:'Weekly Review Assistant',ai_memory_curator:'AI Memory Curator'};
+  var labels={mission_command_strategist:'Mission Command Strategist',pipeline_reviewer:'Pipeline Reviewer',content_coach:'Content Coach',production_manager:'Production Manager',calendar_focus_guard:'Calendar / Focus Guard',finance_goal_tracker:'Finance / Goal Tracker',notion_sync_auditor:'Notion Sync Auditor',backup_archive_manager:'Backup / Archive Manager',weekly_review_assistant:'Weekly Review Assistant',ai_memory_curator:'AI Memory Curator',sales_coach:'Closer Coach'};
   return labels[workerId]||'Mission Command';
 }
 
 function getMissionRouteLabelV2(route){
-  var labels={now:'Now / Focus',leads:'Pipeline / Leads',dpc:'Daily Profit Campaign',content:'Content',production:'Production',report:'Report / Money',money:'Money',calendar:'Calendar',sync:'Sync / System',memory:'Memory',weekly:'Weekly Review',resources:'Resources / Rolodex',help:'Help / App Guide'};
+  var labels={now:'Now / Focus',leads:'Pipeline / Leads',dpc:'Daily Profit Campaign',content:'Content',production:'Production',report:'Report / Money',money:'Money',calendar:'Calendar',sync:'Sync / System',memory:'Memory',weekly:'Weekly Review',resources:'Resources / Rolodex',sales:'Closer Coach',help:'Help / App Guide'};
   return labels[route]||route||'Mission';
 }
 
@@ -8989,6 +8999,7 @@ var MISSION_COMMAND_INTENTS=[
   {id:'dpc',label:'DPC',slash:['dpc','campaign','daily'],tags:['dpc','campaign','daily'],phrases:['dpc','daily profit','daily campaign','dm count','dms','cold calls','calls made','booked calls','booked one','just booked','got a booking','closes','daily log','today numbers','daily numbers','today log','todays activity','what i did today','daily score','log today','dpc card','how many calls','how many dms','dms sent','calls made today','what did i log','my daily log','log update','daily activity','activity today','update my log','todays dpc','dpc update','log numbers','did i log','log review','dpc check','daily check'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'cycle',label:'Cycle',slash:['cycle','roadmap','season'],tags:['cycle','roadmap'],phrases:['cycle','roadmap','days left','deadline','current cycle','ceo roadmap','archive cycle','cycle target','cycle progress','cycle pace','days left in cycle','this cycle','foundation cycle','where are we in the cycle','cycle end','days remaining','when does cycle end','end of cycle','cycle deadline','cycle check','how many days remain','cycle score','cycle status','cycle pacing','cycle health','where in cycle','cycle update','on track for cycle','cycle goal','cycle close'],links:[{label:'Open Campaign',url:'#dpc-card'}]},
   {id:'leads',label:'Leads',slash:['leads','lead','pipeline','followup','followups','crm','l'],tags:['leads','lead','crm','followup'],phrases:['lead','leads','follow up','follow-up','followup','who should i','who do i contact','dm','reply','crm','hot lead','warm lead','pipeline','cold lead','warm leads','hot leads','cold leads','best leads','top lead','next lead','next followup','who needs a follow up','who to call','warmest lead','hottest lead','who to dm','my pipeline','who to talk to','prospects','prospect','outreach','reach out','contact list','warm list','who i should contact','contact today','who to reach','crm leads','focus on leads','focus on lead','follow up leads','follow up lead','follow up today','who needs follow up','atl leads','call ready','best prospect','top prospect','who should i contact first','who is warmest','most urgent lead','contact next'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null}]},
+  {id:'sales',label:'Closer Coach',slash:['sales','closer','callprep','livecall','discovery','objection','dm','roleplay'],tags:['sales','closer','call','dm','objection'],phrases:['closer coach','sales coach','sales call','discovery call','call prep','prep me for a call','live call','what should i say','what do i say','write a dm','write a cold dm','write a warm follow up','respond to someone','move them to a call','he said he needs to think','she said it is too expensive','too expensive','no budget','send more info','send info','discount','price is crazy','not ready','maybe next month','talk to manager','decision maker','already has a producer','prove it works','youtube is free','what should i ask first','how do i find the problem','how do i handle objection','roleplay','score my answer','test me on objections'],links:[{label:'Open Campaign',url:'#dpc-card'},{label:'Open CRM',url:null},{label:'Open Rolodex',url:'#rolodex-card'}]},
   {id:'content',label:'Content',slash:['content','post','make','create','c'],tags:['content','post','create'],phrases:['content','make','post','create','caption','reel','story','short','asset','what should i make','content calendar','idea','hook','content idea','what to post','next piece','content move','post idea','content for today','reel idea','short idea','what should i shoot','what should i film','what to film','what to record','social media','social','what to shoot','video idea','clip','reels','tiktok','ig reel','short form','what to make today','next piece of content','piece of content','content piece','instagram','ig post','next post','make today','create today','shoot today','film today','content plan','what to create','content stack'],links:[{label:'Open Content',url:'#content-tracker-card'},{label:'Open Calendar',url:null}]},
   {id:'production',label:'Production',slash:['production','beat','beats','catalog','p'],tags:['production','beat','beats'],phrases:['production','beat','beats','catalog','daw','music','master beat','upload','soundee','bangin','mix','track','next beat','todays beat','production progress','studio time','beat to finish','beat queue','master beat catalog','studio session','session','bounce','export','finish beat','work on beat','fl studio','logic','protools','ableton','instrumental','sound','music production','music work','rap session','studio block','what beat','which beat','beat work','produce','producing','make a beat','new beat','beat progress','beat update','studio move','studio today'],links:[{label:'Open Production',url:'#production-card'},{label:'Open Catalog',url:null}]},
   {id:'sync',label:'Sync',slash:['sync','health','system','settings','s','handoff'],tags:['sync','health','system'],phrases:['sync','health','system','broken','error','loading','not working','settings','connection','backup','diagnostic','version','logs','activity log','is something wrong','whats broken','sync status','is it working','any errors','status check','health check','is anything off','nothing is working','error message','check the logs','check logs','any issues','troubleshoot','diagnose','something wrong','app broken','sync failed','not syncing','connections','what failed','system check','any problems','problems'],links:[{label:'Open System Hub',url:'#system-panel',action:'system'},{label:'Open Sheet',url:'https://docs.google.com/spreadsheets/d/1LfO6pdQM-0uEj-lmIzx_Mb3H4Qh8FLbBPEPCQTfmuTs/edit'}]},
@@ -9350,8 +9361,128 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   return '<p><strong>Data read:</strong><br>'+(missing.length?'Partial - missing '+escapeHtml(missing.join(', '))+'.':'Clean enough for the current app packet.')+'</p><p><strong>What that means:</strong><br>I will not fake numbers that are not loaded.</p><p><strong>Best move:</strong><br>Run /sync, then ask for the lane again.</p>';
 }
 
+var MISSION_SALES_CLOSER_STAGES={
+  C:{label:'Clarify why they are here',move:'Find the trigger, context, and why-now moment.'},
+  L:{label:'Label the problem',move:'Name the bottleneck and let them confirm or correct it.'},
+  O:{label:'Overview past pain',move:'Ask what they tried, what broke, and what it cost them.'},
+  S:{label:'Sell the outcome',move:'Use their desired result instead of overexplaining the process.'},
+  E:{label:'Explain concerns',move:'Isolate the real concern before answering it.'},
+  R:{label:'Reinforce the decision',move:'Confirm the decision and make the next step clear.'}
+};
+
+var MISSION_SALES_OBJECTION_MAP={
+  think:{match:/\b(think about it|need to think|think it over|not sure)\b/,type:'stall',stage:'E',say:'Totally fair. When you say you need to think about it, what part are you still unsure about - the money, the timing, or whether this actually solves it?',tone:'calm, curious, slow down at the end'},
+  expensive:{match:/\b(too expensive|price is crazy|cost too much|cant afford|can't afford|no budget|check budget)\b/,type:'money concern',stage:'E',say:'I hear you. Is it that the number is impossible right now, or that you are not fully sure the result is worth that number yet?',tone:'neutral curiosity, no discount energy'},
+  timing:{match:/\b(not the right time|maybe next month|not ready|too busy|later)\b/,type:'timing concern',stage:'E',say:'What would need to change for the timing to make sense?',tone:'soft, patient, let them answer'},
+  info:{match:/\b(send more info|send info|send details|send it over|send me)\b/,type:'information stall',stage:'E',say:'I can send it. Before I do, what are you trying to confirm from the info?',tone:'curious, do not pitch yet'},
+  decision:{match:/\b(manager|partner|boyfriend|girlfriend|team|decision maker|talk to)\b/,type:'decision support',stage:'E',say:'Makes sense. What do they need to hear for this to feel like a smart move?',tone:'collaborative'},
+  proof:{match:/\b(prove|proof|guarantee|trust|scam|works|different)\b/,type:'trust concern',stage:'E',say:'Fair question. What would count as proof for you - results, process, examples, or seeing how it would apply to your situation?',tone:'warm certainty'},
+  diy:{match:/\b(do it myself|youtube is free|already has|already have|another producer)\b/,type:'preference concern',stage:'E',say:'That may be true. What made you still take a look at this if you already have another option?',tone:'confused curiosity'}
+};
+
+function getMissionSalesSignal(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(closer|sales coach|sales call|discovery call|call prep|prep me|live call|what should i say|what do i say|write a dm|cold dm|warm follow up|objection|roleplay|score my answer|think about it|too expensive|no budget|send more info|send info|discount|not ready|maybe next month|decision maker|prove it works|youtube is free)\b/.test(q)||/^\/(sales|closer|callprep|livecall|discovery|objection|dm|roleplay)\b/.test(q)||/^@(closer|sales)\b/.test(q);
+}
+
+function getMissionSalesMode(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(/^\/livecall\b/.test(q)||/\b(on the phone|right now|live call|what should i say|what do i say|he said|she said|they said)\b/.test(q))return 'live_call';
+  if(/^\/callprep\b/.test(q)||/\b(prep me|call prep|before a call|in 10 minutes|discovery call)\b/.test(q))return 'call_prep';
+  if(/^\/dm\b/.test(q)||/\b(write a dm|cold dm|warm follow up|respond to someone|move them to a call|follow-up message)\b/.test(q))return 'dm_reply';
+  if(/^\/roleplay\b/.test(q)||/\b(roleplay|role play|test me|be a|make it harder)\b/.test(q))return 'roleplay';
+  if(/\b(score my answer|scorecard|grade my call|review my call)\b/.test(q))return 'scorecard';
+  if(/\b(objection|too expensive|think about it|no budget|not ready|send more info|discount|decision maker|prove it works)\b/.test(q))return 'objection_diffuser';
+  if(/\b(what should i ask|ask first|find the problem|label the problem|go deeper|control the call|ask about budget|ask urgency)\b/.test(q))return 'discovery_walkthrough';
+  return 'decision_next_step';
+}
+
+function getMissionSalesObjection(question){
+  var q=normalizeMissionQuestion(question||'');
+  for(var key in MISSION_SALES_OBJECTION_MAP){
+    if(MISSION_SALES_OBJECTION_MAP.hasOwnProperty(key)&&MISSION_SALES_OBJECTION_MAP[key].match.test(q))return MISSION_SALES_OBJECTION_MAP[key];
+  }
+  return null;
+}
+
+function getMissionSalesLeadLine(ctx){
+  var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
+  if(leads.length){
+    var lead=leads[0];
+    return getLeadName(lead)+' · '+(lead.status||'active')+' · '+(lead.urgency||lead.temperature||'lead');
+  }
+  return 'No specific lead selected. Use the safest next question and do not invent context.';
+}
+
+function getMissionSalesStage(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(/\b(why are they here|why now|what made|ask first|opening|start)\b/.test(q))return 'C';
+  if(/\b(label|real problem|bottleneck|issue)\b/.test(q))return 'L';
+  if(/\b(tried|past|before|what happened|cost|pain)\b/.test(q))return 'O';
+  if(/\b(offer|transition|pitch|outcome|benefit|vacation)\b/.test(q))return 'S';
+  if(getMissionSalesObjection(question))return 'E';
+  if(/\b(close|closed|paid|yes|reinforce|onboard|next step)\b/.test(q))return 'R';
+  return 'C';
+}
+
+function getMissionSalesDiscoveryQuestion(stage){
+  var bank={
+    C:'Before I explain anything, what made you want to talk today?',
+    L:'So it sounds like the issue is not effort. It is that the effort is not turning into a clear result. Is that right, or am I off?',
+    O:'What have you already tried to fix that, and what happened when you tried it?',
+    S:'If this actually solved the rollout problem, what would change first for you?',
+    E:'When you say that, what part are you still unsure about?',
+    R:'If we do this, what would make you feel confident you made the right move?'
+  };
+  return bank[stage]||bank.C;
+}
+
+function getMissionSalesDMResponse(question){
+  var q=normalizeMissionQuestion(question||'');
+  var goal=/\b(follow up|warm)\b/.test(q)?'warm follow-up':/\b(cold)\b/.test(q)?'cold opener':/\b(call)\b/.test(q)?'move to call':'qualify';
+  var send='What are you working on right now, and are you trying to just drop it or actually build a money path around it?';
+  if(goal==='cold opener')send='I saw you working. Quick question - are you mainly trying to get more people to hear the music, or turn the attention into actual fans/customers?';
+  if(goal==='warm follow-up')send='Still worth mapping this out, or did you decide to leave it alone for now?';
+  if(goal==='move to call')send='This is probably easier to map out quick. You open to 10 minutes so I can see what actually fits?';
+  return '<p><strong>Goal:</strong> '+escapeHtml(goal)+'</p><p><strong>Send:</strong><br>"'+escapeHtml(send)+'"</p><p><strong>If they reply:</strong><br>Ask one clarifying question before pitching.</p>';
+}
+
+function getMissionSalesCallPrepResponse(ctx,question){
+  var leadLine=getMissionSalesLeadLine(ctx);
+  return '<p><strong>Lead read:</strong><br>'+escapeHtml(leadLine)+'</p><p><strong>Opening:</strong><br>"Before I explain anything, what made you want to talk today?"</p><p><strong>Call path:</strong><br>1) Clarify why now.<br>2) Label the bottleneck.<br>3) Ask what they tried.<br>4) Sell the outcome in their words.<br>5) Isolate concerns.<br>6) Reinforce the decision and next step.</p>';
+}
+
+function getMissionSalesRoleplayResponse(question){
+  return '<p><strong>Roleplay mode.</strong></p><p>I am the prospect: interested, but not fully convinced yet.</p><p><strong>Prospect:</strong><br>"I like the idea, but I do not know if this is the right time for me."</p><p>Your move: ask one calm question. Do not pitch yet.</p>';
+}
+
+function getMissionSalesScorecardResponse(question){
+  return '<p><strong>Sales scorecard:</strong></p><p>1) Did you clarify why now?<br>2) Did they own the problem?<br>3) Did you ask what they tried?<br>4) Did you sell the outcome, not the process?<br>5) Did you isolate the real concern?<br>6) Did you create a clear next step?</p><p>Send me the call notes or your answer and I will score it.</p>';
+}
+
+function getMissionSalesCoachResponse(route,ctx,question,conv,brainState){
+  if(route!=='sales'&&!getMissionSalesSignal(question||''))return '';
+  var mode=getMissionSalesMode(question||'');
+  var objection=getMissionSalesObjection(question||'');
+  var stageKey=(objection&&objection.stage)||getMissionSalesStage(question||'');
+  var stage=MISSION_SALES_CLOSER_STAGES[stageKey]||MISSION_SALES_CLOSER_STAGES.C;
+  if(mode==='dm_reply')return getMissionSalesDMResponse(question||'');
+  if(mode==='call_prep')return getMissionSalesCallPrepResponse(ctx,question||'');
+  if(mode==='roleplay')return getMissionSalesRoleplayResponse(question||'');
+  if(mode==='scorecard')return getMissionSalesScorecardResponse(question||'');
+  if(mode==='discovery_walkthrough'){
+    return '<p><strong>Stage:</strong> '+stageKey+' - '+escapeHtml(stage.label)+'</p><p><strong>Ask:</strong><br>"'+escapeHtml(getMissionSalesDiscoveryQuestion(stageKey))+'"</p><p><strong>Tone:</strong><br>neutral curiosity. Let them correct you.</p>';
+  }
+  if(objection||mode==='live_call'||mode==='objection_diffuser'){
+    var read=objection||{type:'unclear concern',stage:'E',say:'Help me understand what part feels unclear right now - the result, the timing, or the money?',tone:'calm and curious'};
+    return '<p><strong>Stage:</strong> '+escapeHtml(read.stage)+' - '+escapeHtml((MISSION_SALES_CLOSER_STAGES[read.stage]||{}).label||'Explain concern')+'</p><p><strong>Read:</strong><br>This looks like a '+escapeHtml(read.type)+'.</p><p><strong>Say:</strong><br>"'+escapeHtml(read.say)+'"</p><p><strong>Tone:</strong><br>'+escapeHtml(read.tone)+'.</p><p><strong>Then:</strong><br>Pause. Do not explain yet.</p>';
+  }
+  return '<p><strong>Closer Coach:</strong><br>Ask before you pitch.</p><p><strong>Next question:</strong><br>"'+escapeHtml(getMissionSalesDiscoveryQuestion(stageKey))+'"</p><p><strong>Rule:</strong><br>If they have not owned the problem yet, give them a question, not a presentation.</p>';
+}
+
 function getMissionBacklogSpecialResponse(route,ctx,question,conv,brainState){
-  return getMissionStylePreferenceResponse(question)
+  return getMissionSalesCoachResponse(route,ctx,question,conv,brainState)
+    ||getMissionStylePreferenceResponse(question)
     ||getMissionCorrectionResponse(route,ctx,question)
     ||getMissionHandoffResponse(question)
     ||getMissionResultLoggingResponse(route,ctx,question)
@@ -10128,6 +10259,7 @@ function getMissionCommandIntent(question){
   if(backlogIntent)return backlogIntent;
   var q=normalizeMissionQuestion(raw);
   if(/\b(what should i do today|what do i do today|what should i do next|whats the move today|what is the move today|where we at)\b/.test(q))return {route:'now',score:30,label:'Now',suggestions:[],cleanQuestion:raw};
+  if(getMissionSalesSignal(raw))return {route:'sales',score:30,label:'Closer Coach',suggestions:[],cleanQuestion:raw};
   var diagnostic=getMissionDiagnosticIntent(q);
   if(diagnostic)return diagnostic;
   if(/\bwhy\b/.test(q)&&/\b(lead|leads|pipeline|crm|follow)\b/.test(q))return {route:'leads',score:30,label:'Leads',suggestions:[],cleanQuestion:raw};
@@ -10665,6 +10797,7 @@ function getMissionCommandRouteAnswer(route,ctx,question){
   if(route==='content')return continuity+getMissionContentAnswer(ctx)+getMissionContextNudge('content',ctx)+getMissionIntentLinks('content');
   if(route==='production')return continuity+getMissionProductionAnswer()+getMissionContextNudge('production',ctx)+getMissionIntentLinks('production');
   if(route==='resources')return continuity+getMissionResourcesAnswer(question)+getMissionIntentLinks('resources');
+  if(route==='sales')return getMissionSalesCoachResponse(route,ctx,question,null,null)+getMissionIntentLinks('sales');
   if(route==='community')return continuity+getMissionSpecialLaneAnswer('community',ctx,question)+getMissionIntentLinks('community');
   if(route==='live')return continuity+getMissionSpecialLaneAnswer('live',ctx,question)+getMissionIntentLinks('live');
   if(route==='sync')return continuity+getMissionSyncAnswer()+getMissionContextNudge('sync',ctx)+getMissionIntentLinks('sync');
@@ -11085,6 +11218,7 @@ function getMissionNextActionRead(route,ctx){
   if(route==='report'||route==='dpc')return pickMissionLibraryLineAntiRepeat('nextAction_report',vars);
   if(route==='content')return pickMissionLibraryLineAntiRepeat('content_create',vars);
   if(route==='production')return pickMissionLibraryLineAntiRepeat('production_move',vars);
+  if(route==='sales')return 'Next: ask the stage question, pause, and do not pitch until the prospect owns the problem.';
   if(route==='resources')return 'Next: pick one useful resource, apply it to the current money move, and skip anything that turns into passive studying.';
   return pickMissionLibraryLineAntiRepeat('now_focus',vars);
 }
@@ -11484,6 +11618,7 @@ function getMissionHumanBubble(route,conv,ctx,question){
     return pickMissionLibraryLineAntiRepeat('production_move',vars);
   }
   if(route==='resources')return 'Use the library to support the move you are already making. One useful resource beats opening five tabs and calling it research.';
+  if(route==='sales')return 'Closer Coach read: ask the question that moves the prospect one stage forward. Do not pitch before they own the problem.';
   if(route==='cycle')return pickMissionLibraryLineAntiRepeat((ctx&&ctx.cycleDaysLeft&&ctx.cycleDaysLeft<14)?'cycle_late':'cycle_early',vars);
   if(route==='sync')return 'Check system health only long enough to clear the blocker. Then get back to the active mission.';
   return '';
@@ -11683,6 +11818,7 @@ function getMissionFollowUp(route,ctx,question){
   if(route==='leads')return '<strong>Next move:</strong> Contact the hottest follow-up first, then log the result. '+escapeHtml(move);
   if(route==='content')return '<strong>Next move:</strong> Turn today’s proof into one simple asset. '+escapeHtml(move);
   if(route==='production')return '<strong>Next move:</strong> Pick one active beat or production item and move it one status forward.';
+  if(route==='sales')return '<strong>Next move:</strong> Ask one calm question, then pause and let the prospect answer.';
   if(route==='report')return '<strong>Next move:</strong> Protect one income-producing action before more admin. '+escapeHtml(move);
   if(route==='dpc')return '<strong>Next move:</strong> Do the next small DPC block, then come back and log the numbers.';
   if(route==='sync')return '<strong>Next move:</strong> If anything looks off, open System Hub > Health and check the latest Activity Log line.';
@@ -11855,7 +11991,12 @@ function runMissionCommandSelfCheck(){
     {q:'where do i check sync',route:'sync',mustAny:['system hub','health','sync']},
     {q:'make a plan for the week',route:'weekly',mustAny:['phase 1','phase 2','start here']},
     {q:'just tell me one thing',route:null,mustAny:['move','focus','one']},
-    {q:'done',route:'now',mustAny:['log','result','handled','close the loop']}
+    {q:'done',route:'now',mustAny:['log','result','handled','close the loop']},
+    {q:'he said it is too expensive',route:'sales',mustAny:['stage','say','tone','pause']},
+    {q:'write a warm follow up',route:'sales',mustAny:['goal','send','reply']},
+    {q:'prep me for a call',route:'sales',mustAny:['lead read','opening','call path']},
+    {q:'roleplay a skeptical artist',route:'sales',mustAny:['roleplay','prospect','your move']},
+    {q:'score my answer',route:'sales',mustAny:['scorecard','clarify','next step']}
   ];
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
