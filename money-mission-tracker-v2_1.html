@@ -9864,9 +9864,18 @@ function missionV2TurnShouldOwnVisibleRoute(turn){
 function missionIsOpenEndedWorkStartV2(turn){
   if(!turn)return false;
   var raw=String(turn.rawInput||'').toLowerCase().replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim();
+  raw=raw.replace(/^(yo|aye|ayo|aight|alright|bet|ok|okay)\s+/,'');
   if(/^(let s go|lets go|let s run it|lets run it|let s get it|lets get it|let s work|lets work|let s move|lets move|run it|lock in|go|ready|i m ready|im ready|we ready)$/.test(raw))return true;
   if(turn.inputEnergy==='charged'&&turn.route==='now'&&turn.routePlan&&turn.routePlan.confidence<0.65)return true;
   return false;
+}
+
+function pickMissionOpenEnergyVariantV2(turn){
+  var raw=String(turn&&turn.rawInput||'');
+  var count=0;
+  try{count=(getMissionBrainSessionV2().turnCount||0);}catch(e){}
+  var idx=(raw.length+count)%3;
+  return idx;
 }
 
 function getMissionOpenEndedWorkStartResponseV2(turn,ctx){
@@ -9876,9 +9885,12 @@ function getMissionOpenEndedWorkStartResponseV2(turn,ctx){
   if(block.phase==='money')lane='money';
   else if(block.phase==='maker')lane='content or production';
   else if(block.phase==='manager')lane='admin or sync';
-  return '<strong>Mission Command:</strong> I hear the energy.<br><br>'
-    +'Before I call the move, what are we trying to win right now: <strong>cash, content, production, or follow-up?</strong><br><br>'
-    +'<span style="color:#8f9aa3">Current read: this looks like a '+escapeHtml(lane)+' window. If you want me to decide, say: <strong>call the move</strong>. I will use the current block and the latest data.</span>';
+  var variants=[
+    'I hear the energy.<br><br>Before I call the move, what are we trying to win right now: <strong>cash, content, production, or follow-up?</strong><br><br><span style="color:#8f9aa3">Current read: this looks like a '+escapeHtml(lane)+' window. If you want me to decide, say: <strong>call the move</strong>.</span>',
+    'Locked in.<br><br>Give me the target before I steer: <strong>money, proof, delivery, or pipeline?</strong><br><br><span style="color:#8f9aa3">If you want the OS to choose from the current data, say: <strong>call the move</strong>.</span>',
+    'Good. Let us aim it.<br><br>Are we pushing for <strong>cash, a finished asset, a posted proof piece, or one follow-up?</strong><br><br><span style="color:#8f9aa3">Current read: '+escapeHtml(lane)+' has the strongest signal. Say <strong>call the move</strong> if you want me to pick.</span>'
+  ];
+  return variants[pickMissionOpenEnergyVariantV2(turn)]||variants[0];
 }
 
 /* =========================================================
@@ -13097,7 +13109,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   var openEndedV2=getMissionOpenEndedWorkStartResponseV2(turnV2,ctx);
-  if(openEndedV2)return finishMissionAnswer(openEndedV2,{sessionArc:false,closer:false});
+  if(openEndedV2)return finishMissionAnswer(openEndedV2,{sessionArc:false,closer:false,presence:false});
   var backlogSpecial=getMissionBacklogSpecialResponse(route,ctx,cleanQuestion||'',conv,brainState);
   if(backlogSpecial)return finishMissionAnswer(backlogSpecial,{sessionArc:false});
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,cleanQuestion||'');
