@@ -667,6 +667,10 @@ input:focus{border-color:#333}
 .mission-brief-dot{width:8px;height:8px;border-radius:999px;border:0;background:#30363d;cursor:pointer}
 .mission-brief-dot.active{width:24px;background:#7ec845}
 .mission-brief-week-strip{margin:0 0 10px;background:#080b0d;border-color:#242d34}
+.mission-brief-week-strip summary{cursor:pointer;list-style:none}
+.mission-brief-week-strip summary::-webkit-details-marker{display:none}
+.mission-brief-week-strip summary:after{content:'Collapse';color:#5f8d3d;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+.mission-brief-week-strip:not([open]) summary:after{content:'Open'}
 .mission-brief-week-strip .week-strip-label{color:#f0f3f5}
 .mission-brief-week-strip .week-note{color:#8f9aa3}
 @media(max-width:560px){
@@ -676,6 +680,7 @@ input:focus{border-color:#333}
   .mb-stat-value{font-size:15px}
 }
 .mission-brief-actions{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.mission-brief-actions.bottom{margin:10px 0 0}
 .mission-brief-link{display:inline-flex;align-items:center;justify-content:center;min-height:30px;border:0.5px solid #2a4015;border-radius:999px;background:#0d1808;color:#7ec845!important;font-size:10px;font-weight:900;text-decoration:none!important;padding:0 12px}
 .mission-brief-link:hover{background:#102006;border-color:#3a5a2a;color:#dff5d5!important}
 .mission-command{background:#07090b;border:0.5px solid #22303a;border-radius:12px;padding:10px;margin-bottom:10px;position:relative;overflow:hidden}
@@ -1952,15 +1957,12 @@ body{background:#090a0b;color:#d8dde1}
     <div class="mission-badge" id="mission-badge">Cycle</div>
   </div>
   <div class="mission-copy" id="mission-copy">Reading your cycle target, weekly inputs, calendar, tasks, content, and production rhythm.</div>
-  <div class="mission-brief-actions">
-    <a class="mission-brief-link" href="#mission-command-card" onclick="openMissionCommandCard()">Open Mission Command →</a>
-  </div>
-  <div class="week-strip mission-brief-week-strip">
-    <div class="week-strip-label"><div>This week at a glance</div><span id="week-meta">Loading week...</span></div>
+  <details class="week-strip mission-brief-week-strip" open>
+    <summary class="week-strip-label"><div>This week at a glance</div><span id="week-meta">Loading week...</span></summary>
     <div class="week-days" id="week-days"></div>
     <div class="week-brief" id="week-brief" style="display:none"></div>
     <div class="week-note" id="week-note">Loading week summary...</div>
-  </div>
+  </details>
   <div class="mission-brief-deck" id="mission-brief-deck">
     <div class="mission-brief-deck-top">
       <button class="mission-brief-nav" onclick="moveMissionBriefSlide(-1)" title="Previous brief slide">‹</button>
@@ -2030,6 +2032,9 @@ body{background:#090a0b;color:#d8dde1}
       <div class="mission-simple-line" id="mission-focus-line">Reading current focus...</div>
     </div>
   </details>
+  <div class="mission-brief-actions bottom">
+    <a class="mission-brief-link" href="#mission-command-card" onclick="openMissionCommandCard()">Open Mission Command →</a>
+  </div>
   <button class="mission-lock" id="mission-lock-btn" onclick="lockMission()" hidden>Lock Mission</button>
 </div>
 
@@ -3252,6 +3257,15 @@ var goldenStart=14*60,goldenEnd=15*60;
 ══════════════════════════════════════════════════════════ */
 function pd(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
 function fmt(n){return '$'+Math.round(n).toLocaleString();}
+function uiTitleCase(value){
+  var acronyms={ai:'AI',api:'API',app:'App',apps:'Apps',bangin:'BANGIN',crm:'CRM',daw:'DAW',dm:'DM',dms:'DMs',dpc:'DPC',ig:'IG',kpi:'KPI',os:'OS',url:'URL'};
+  return String(value||'').replace(/[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?/g,function(word){
+    var key=word.toLowerCase();
+    if(acronyms[key])return acronyms[key];
+    if(/^\d/.test(word))return word;
+    return word.charAt(0).toUpperCase()+word.slice(1).toLowerCase();
+  });
+}
 function pct(a,b){return b===0?0:Math.min(100,Math.max(0,Math.round(a/b*100)));}
 function fmtS(s){return pd(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function nowMins(){var n=new Date();return n.getHours()*60+n.getMinutes();}
@@ -4271,7 +4285,7 @@ function selectWeekDay(day,calEvents,notionPieces,showBrief){
       activityLine='<div style="margin-top:6px;color:#a07010;font-size:11px;font-style:italic">No activity logged that day.</div>';
     }
   }else if(state==='future'){
-    activityLine='<div style="margin-top:6px;color:#5b9cf6;font-size:11px;font-style:italic">'+escapeHtml(rhythm.action)+'</div>';
+    activityLine='<div style="margin-top:6px;color:#5b9cf6;font-size:11px;font-style:italic">'+escapeHtml(uiTitleCase(rhythm.action))+'</div>';
   }
 
   // Optional jump-to-DPC button for in-week days
@@ -4281,7 +4295,7 @@ function selectWeekDay(day,calEvents,notionPieces,showBrief){
     jumpBtn='<button onclick="openDpcForDate(\''+dKeyEsc+'\')" style="margin-top:8px;height:26px;padding:0 10px;background:#121712;border:0.5px solid #3a5a2a;border-radius:7px;color:#7ec845;font-size:10px;font-weight:800;cursor:pointer">Open in DPC →</button>';
   }
 
-  brief.innerHTML='<strong style="color:#888">'+day.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})+'</strong> · '+escapeHtml(rhythm.name)+'<br>'
+  brief.innerHTML='<strong style="color:#888">'+day.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})+'</strong> · '+escapeHtml(uiTitleCase(rhythm.name))+'<br>'
     +escapeHtml(rhythm.focus)+'<br>'
     +'<span style="color:#444">Signals:</span> '+dayContent.length+' content item'+(dayContent.length===1?'':'s')+' · '+dayCal.length+' calendar event'+(dayCal.length===1?'':'s')
     +activityLine
@@ -4515,7 +4529,7 @@ function renderDpcDateView(){
     if(tsf)tsf.style.display='none';
     if(futureBox&&rhythm){
       futureBox.style.display='block';
-      futureBox.innerHTML='<div class="fr-day">'+escapeHtml(d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}))+' · <span class="fr-name">'+escapeHtml(rhythm.name)+'</span></div>'+escapeHtml(rhythm.focus)+'<br><span style="color:#5b9cf6;font-weight:700">'+escapeHtml(rhythm.action)+'</span>';
+      futureBox.innerHTML='<div class="fr-day">'+escapeHtml(d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}))+' · <span class="fr-name">'+escapeHtml(uiTitleCase(rhythm.name))+'</span></div>'+escapeHtml(uiTitleCase(rhythm.focus))+'<br><span style="color:#5b9cf6;font-weight:700">'+escapeHtml(uiTitleCase(rhythm.action))+'</span>';
     }
   }
 }
@@ -6107,7 +6121,7 @@ function renderDailyCoach(contentPieces,calEvents){
   var blockH=Math.floor(blockMins/60),blockM=blockMins%60;
   var blockLeft=blockH>0?blockH+'h '+blockM+'m':blockM+'m';
 
-  var modeTitles={outreach:'Money Time — start conversations',clients:'Client work — deliver results',focus:'Maker Time — create and ship',busy:'Manager block — clear and move on',prep:'Pre-flight — set the day'};
+  var modeTitles={outreach:'Money Time — Start Conversations',clients:'Client Work — Deliver Results',focus:'Maker Time — Create And Ship',busy:'Manager Block — Clear And Move On',prep:'Pre-Flight — Set The Day'};
   if(modeEl)modeEl.textContent=modeTitles[modeKey]||'Income-Producing Activities';
 
   if(otEl){
@@ -13428,7 +13442,7 @@ function summarizeMissionPacket(packet){
   var brain=packet.brainState||{};
   return [
     'Cycle '+((packet.cycle||{}).num||'?')+' '+((packet.cycle||{}).name||''),
-    'Tool: '+((packet.mission||{}).tool||''),
+    'Tool: '+uiTitleCase((packet.mission||{}).tool||''),
     'Gap: '+((packet.cycle||{}).gap||0),
     'DPC: '+JSON.stringify(packet.dpc||{}),
     'Counts: '+JSON.stringify(packet.counts||{}),
@@ -13761,12 +13775,12 @@ function renderMissionBriefDeck(info){
   var heat=getMissionBriefLeadHeat();
   var contentCount=(window.__contentPipelinePieces||info.contentPieces||[]).length;
   var productionCount=(window.__productionPieces||[]).length;
-  var block=((document.getElementById('dpc-mode')||{}).textContent||'Now').replace(/\s+/g,' ').trim();
+  var block=uiTitleCase(((document.getElementById('dpc-mode')||{}).textContent||'Now').replace(/\s+/g,' ').trim());
   var nextEvent=info.nextEvent||null;
   var nextLabel=nextEvent?(nextEvent.startTime||'Soon'):'None';
-  var nextMove=(info.rhythm&&info.rhythm.action)||((document.getElementById('dpc-now-main')||{}).textContent)||'Open Command and pick the next move.';
+  var nextMove=uiTitleCase((info.rhythm&&info.rhythm.action)||((document.getElementById('dpc-now-main')||{}).textContent)||'Open Command and pick the next move.');
   setMbText('mb-today-head',block||'Current block');
-  setMbText('mb-today-copy',(info.rhythm&&info.rhythm.focus)||'Use this slide deck as the quick business read.');
+  setMbText('mb-today-copy',uiTitleCase((info.rhythm&&info.rhythm.focus)||'Use this slide deck as the quick business read.'));
   setMbText('mb-today-block',(block||'Now').split(' ')[0]);
   setMbText('mb-today-gap',gap>0?fmt(gap):'Covered');
   setMbText('mb-today-tasks',(info.openTasks||[]).length||0);
@@ -13814,23 +13828,23 @@ function renderMissionBrief(contentPieces,calEvents){
   var gap=Math.max(0,wk-rev);
   var weekOfCycle=Math.max(1,Math.floor((today-pd(cy.start))/6048e5)+1);
   var tool=mission.tool||getMissionPrimaryTool(dayType);
-  var dayNames={outreach:'money day',content:'content day',beat:'production day',manager:'manager day'};
+  var dayNames={outreach:'Money Day',content:'Content Day',beat:'Production Day',manager:'Manager Day'};
   var toolLabels={command:'Mission Command',brief:'Mission Brief',campaign:'Daily Profit Campaign',content:'Content Tracker',production:'Production',beat:'Production',outreach:'Daily Profit Campaign',manager:'Manager'};
   var nowLabel=today.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   var todayLabel=today.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
   var yesterday=getYesterdayMissionSummary();
   var nextEvent=getNextCalendarEvent(calEvents||[]);
   var openTasks=getOpenMissionTasks(3);
-  title.textContent=mission.locked?('Mission locked: '+(dayNames[dayType]||'money day')+' · '+tool):('Welcome back, Executive Producer · '+todayLabel+' · '+nowLabel);
+  title.textContent=mission.locked?('Mission Locked: '+uiTitleCase(dayNames[dayType]||'Money Day')+' · '+uiTitleCase(tool)):('Welcome Back, Executive Producer · '+todayLabel+' · '+nowLabel);
   badge.textContent='Cycle '+cy.num+' · '+cy.name+' · W'+weekOfCycle;
   copy.style.display='block';
-  copy.textContent='Today: '+(rhythm.name||dayNames[dayType]||'money day')+' · Focus: '+(rhythm.action||'Move the next useful thing.')+' · Tool: '+tool;
+  copy.textContent='Today: '+uiTitleCase(rhythm.name||dayNames[dayType]||'Money Day')+' · Focus: '+uiTitleCase(rhythm.action||'Move the next useful thing.')+' · Tool: '+uiTitleCase(tool);
   var gapLine=document.getElementById('mission-gap-line');
   var leadLine=document.getElementById('mission-lead-line');
   var focusLine=document.getElementById('mission-focus-line');
   if(gapLine)gapLine.textContent=(gap>0?fmt(gap)+' gap this week':fmt(rev)+' collected · weekly target protected')+' · '+openTasks.length+' open task'+(openTasks.length===1?'':'s')+(nextEvent?' · next: '+nextEvent.startTime:'');
   if(leadLine)leadLine.textContent=getMostUrgentLeadLine();
-  if(focusLine)focusLine.textContent='Card: '+(toolLabels[tool]||tool||'Mission')+' · Cycle week '+weekOfCycle+' · '+(nextEvent?'Next event: '+nextEvent.title:'No upcoming event loaded');
+  if(focusLine)focusLine.textContent='Card: '+uiTitleCase(toolLabels[tool]||tool||'Mission')+' · Cycle Week '+weekOfCycle+' · '+(nextEvent?'Next Event: '+uiTitleCase(nextEvent.title):'No Upcoming Event Loaded');
   renderMissionBriefDeck({
     rev:rev,
     wk:wk,
@@ -14637,32 +14651,32 @@ function algorithmDayType(calEvents){
   // Step 1: Calendar has meetings/calls → Manager
   var calText=(calEvents||[]).map(function(e){return(e.title||'').toLowerCase();}).join(' ');
   if(/\b(call|meeting|session|live|masterclass|onboard|academy)\b/.test(calText)){
-    return{type:'manager',reason:'Manager day — calls or meetings on calendar',auto:true};
+    return{type:'manager',reason:'Manager Day — Calls Or Meetings On Calendar',auto:true};
   }
 
   // Step 2: BANGIN+ upload missing and it's Wed+
   var prodData=getStore(PROD_KEY)||{};
   var banginWeek=prodData.banginThisWeek||0;
   if(!banginWeek&&dow>=3){
-    return{type:'beat',reason:'Beat day — BANGIN+ upload missing this week',auto:true};
+    return{type:'beat',reason:'Beat Day — BANGIN+ Upload Missing This Week',auto:true};
   }
 
   // Step 3: No outreach days this week yet and it's Thu+
   var outreachThisWeek=prodData.outreachDaysThisWeek||0;
   if(outreachThisWeek<2&&dow>=4){
-    return{type:'outreach',reason:'Outreach day — pipeline needs feeding',auto:true};
+    return{type:'outreach',reason:'Outreach Day — Pipeline Needs Feeding',auto:true};
   }
 
   // Step 4: No content posted in 2 days
   var lastPost=prodData.lastPostDate||'';
   var daysSincePost=lastPost?Math.floor((today-new Date(lastPost))/864e5):999;
   if(daysSincePost>=2){
-    return{type:'content',reason:'Content day — nothing posted in '+daysSincePost+' days',auto:true};
+    return{type:'content',reason:'Content Day — Nothing Posted In '+daysSincePost+' Days',auto:true};
   }
 
   // Step 5: Default by day of week
   var def=DAY_DEFAULTS[dow]||'outreach';
-  var reasons={manager:'Manager day — weekly planning day',beat:'Beat day — scheduled maker day',outreach:'Outreach day — scheduled outreach day',content:'Content day — scheduled content day'};
+  var reasons={manager:'Manager Day — Weekly Planning Day',beat:'Beat Day — Scheduled Maker Day',outreach:'Outreach Day — Scheduled Outreach Day',content:'Content Day — Scheduled Content Day'};
   return{type:def,reason:reasons[def]||'Default schedule',auto:true};
 }
 
@@ -14695,8 +14709,8 @@ function renderDayTypeBanner(entry,showOverride){
   var reasonEl=document.getElementById('dt-reason');
   var autoBadge=document.getElementById('dt-auto-badge');
   if(iconEl)iconEl.textContent=dt.icon;
-  if(typeEl){typeEl.textContent=dt.name;typeEl.style.color=dt.color;}
-  if(reasonEl)reasonEl.textContent=entry.reason;
+  if(typeEl){typeEl.textContent=uiTitleCase(dt.name);typeEl.style.color=dt.color;}
+  if(reasonEl)reasonEl.textContent=uiTitleCase(entry.reason);
   if(autoBadge){autoBadge.textContent=entry.auto?'Auto':'Manual';autoBadge.style.color=entry.auto?'#333':'#639922';}
   // Highlight active override button
   document.querySelectorAll('.dt-override-btn').forEach(function(btn){
