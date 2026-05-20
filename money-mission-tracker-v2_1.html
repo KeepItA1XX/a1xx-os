@@ -1739,7 +1739,7 @@ body:before{
     <label class="auth-remember"><input id="auth-remember" type="checkbox" checked/> Remember this device</label>
     <button class="auth-btn" id="auth-submit" onclick="handleAuthSubmit()">Sign in</button>
     <div class="auth-status" id="auth-status"></div>
-    <div class="auth-note">V1 local sign-in protects this browser session. Full backend accounts can come later.</div>
+    <div class="auth-note">v2.0 Alpha local sign-in protects this browser session. Full backend accounts can come later.</div>
   </div>
 </div>
 <div class="app">
@@ -1784,7 +1784,7 @@ body:before{
     <div class="streak" style="margin-top:14px"><span style="font-size:12px">🔥</span><span class="streak-num" id="streak-n">0</span><span class="streak-lbl">week streak</span></div>
     <div class="streak close-streak" style="margin-top:14px"><span style="font-size:12px">💰</span><span class="streak-num" id="close-streak-n">0</span><span class="streak-lbl">close streak</span></div>
     <div class="cycle-stack">
-      <div style="font-size:8px;color:#444;text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin-bottom:2px">V1 beta</div>
+      <div style="font-size:8px;color:#7ec845;text-transform:uppercase;letter-spacing:.14em;font-weight:900;margin-bottom:2px">v2.0 Alpha</div>
       <div class="cycle-pill" id="cycle-pill">Cycle 1 · Loading...</div>
     </div>
   </div>
@@ -1841,7 +1841,7 @@ body:before{
       </div>
       <div class="account-subpane" id="account-subpane-signin">
         <div class="settings-section">
-          <div class="settings-section-title">V1 Sign-In</div>
+          <div class="settings-section-title">v2.0 Alpha Sign-In</div>
           <div class="settings-field"><label for="account-username">Username</label><input id="account-username" type="text" value="A1XX"/></div>
           <div class="settings-field"><label for="account-password">New password</label><input id="account-password" type="password" placeholder="Leave blank to keep current password"/></div>
           <div class="btn-row">
@@ -1850,7 +1850,7 @@ body:before{
           </div>
           <div class="reset-status" id="account-status"></div>
         </div>
-        <div class="settings-ai-box">V1 sign-in is stored locally in this browser. It gives the OS a private front door now; real backend auth can replace it later.</div>
+        <div class="settings-ai-box">v2.0 Alpha sign-in is stored locally in this browser. It gives the OS a private front door now; real backend auth can replace it later.</div>
       </div>
     </div>
 
@@ -2040,8 +2040,8 @@ body:before{
         <div class="settings-section">
           <div class="settings-section-title">Version / Build</div>
           <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">App version</div><div class="settings-row-meta">Money Mission OS v1.9 · Account identity foundation</div></div><span class="settings-badge">v1.9</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Next milestone</div><div class="settings-row-meta">v1.9: visual modernization, stronger meeting visibility, AI-ready surfaces</div></div><span class="settings-badge warn">Next</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">App version</div><div class="settings-row-meta">Money Mission OS v2.0 Alpha · Matte Signal operating build</div></div><span class="settings-badge">v2.0 Alpha</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Operating file</div><div class="settings-row-meta">money-mission-tracker-v2_1.html · v1.9 preserved in archive</div></div><span class="settings-badge warn">Active</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Apps Script</div><div class="settings-row-meta">Redeploy after backend changes. HTML-only changes need a hard refresh.</div></div><span class="settings-badge off">Manual</span></div>
           </div>
         </div>
@@ -3378,6 +3378,8 @@ body:before{
 /* ══════════════════════════════════════════════════════════
    CONSTANTS & STATE
 ══════════════════════════════════════════════════════════ */
+var APP_VERSION='v2.0 Alpha';
+var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var TODOIST_KEY='a1xx_todoist_v1';
@@ -13048,7 +13050,7 @@ function getMissionDataPacket(question){
        for a future AI endpoint. All writes start disabled. confirmationRequired stays true
        until A1XX explicitly enables writes in Settings > AI Controls (planned v2.0). */
     llmBridge:{
-      version:'v1.9',
+      version:typeof APP_VERSION!=='undefined'?APP_VERSION:'v2.0 Alpha',
       mode:'local',
       readyForLLM:false,
       suggestedPrompt:'Answer as Mission Command for A1XX (Executive Producer). Be concise, money-first, action-first, grounded in app data. No generic motivation.',
@@ -13106,6 +13108,14 @@ function buildMissionSessionHomeHtml(){
     '</div>'+
     '<div class="mission-home-actions"><button class="primary" onclick="startMissionNewChat()">New chat</button><button onclick="renderMissionSessionThread(getActiveMissionSession())">Continue active chat</button><button onclick="toggleMissionHistory(true)">Open history</button><button onclick="runMissionPrompt(\'help\')">Command guide</button></div>'+
     '<div class="mission-home-copy">'+activeCount+' active chat'+(activeCount===1?'':'s')+' · '+archivedCount+' archived locally</div>'+
+  '</div>';
+}
+
+function buildMissionBlankChatHtml(session){
+  session=session||{};
+  return '<div class="mission-session-home">'+
+    '<div><div class="mission-home-kicker">New Chat Ready</div><div class="mission-home-title">'+escapeHtml(session.title||'Mission Command')+'</div><div class="mission-home-copy">Ask the first question below. This chat is open and ready for a clean thread.</div></div>'+
+    '<div class="mission-home-actions"><button onclick="runMissionPrompt(\'now\')">Get the move</button><button onclick="runMissionPrompt(\'lead\')">Check pipeline</button><button onclick="runMissionPrompt(\'content\')">Make something</button><button onclick="toggleMissionHistory(true)">Open history</button></div>'+
   '</div>';
 }
 
@@ -13415,7 +13425,7 @@ function renderMissionSessionThread(session){
   thread.innerHTML=messages.length?messages.map(function(msg){
     var role=msg.role||'assistant';
     return missionBubble(role,msg.body||'',role==='assistant');
-  }).join(''):buildMissionSessionHomeHtml();
+  }).join(''):buildMissionBlankChatHtml(session);
   thread.dataset.ready='1';
   scrollMissionThread(thread);
 }
@@ -13461,6 +13471,11 @@ function startMissionNewChat(){
   localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,session.id);
   renderMissionSessionThread(session);
   renderMissionHistoryPanel();
+  toggleMissionHistory(false);
+  setTimeout(function(){
+    var input=document.getElementById('mission-command-input');
+    if(input)input.focus();
+  },80);
 }
 
 function startMissionRename(id){
@@ -13915,7 +13930,7 @@ function runMissionPrompt(kind){
   var shortcutQuestion=getMissionShortcutPrompt(kind||'now');
   var input=document.getElementById('mission-command-input');
   if(input)input.value='';
-  setMissionCommandLoading('',false);
+  setMissionCommandLoading(shortcutQuestion,true);
   setTimeout(function(){renderMissionCommand(kind||'now',shortcutQuestion,true);},1300);
 }
 
