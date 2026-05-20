@@ -9296,7 +9296,7 @@ function getMissionResultLoggingResponse(route,ctx,question){
   if(extracted.length){
     return '<p><strong>This counts.</strong></p><p>'+missionNumberedList(extracted)+'</p><p>This should hit DPC, and any replies or booked calls should become pipeline follow-up.</p>';
   }
-  return '<p><strong>Bet. What happened after that?</strong></p><p>1) No replies yet<br>2) Got replies<br>3) Booked a call<br>4) Collected money</p><p>Log the result before we move.</p>';
+  return '<p><strong>Bet.</strong></p><p>What happened after that?</p><p>1) No replies yet<br>2) Got replies<br>3) Booked a call<br>4) Collected money</p><p>Log the result before we move.</p>';
 }
 
 function getMissionDecisionResponse(route,ctx,question){
@@ -9727,6 +9727,7 @@ function getMissionConversationType(question,ctx,intent,brainState){
   var brainRoute=brainState&&brainState.sessionTopic?getMissionRouteFromBrainTopic(brainState.sessionTopic):'';
   var depth=getMissionResponseDepth(q,'',brainState||{});
   if(!q)return {type:CONV_NEW_TOPIC,route:'now',activeRoute:active&&active.intentRoute||''};
+  if(missionShouldClarifyShowMe(q))return {type:CONV_UNCLEAR,route:'',activeRoute:active&&active.intentRoute||''};
   if(/^\/[a-z]+/.test(q))return {type:CONV_COMMAND,route:intent.route||getMissionSlashAlias(q.replace(/^\/([a-z]+).*/,'$1')),activeRoute:active&&active.intentRoute||''};
   if(getMissionCloseSignal(q))return {type:CONV_CLOSE,route:'',activeRoute:active&&active.intentRoute||''};
   if(depth==='guided'||depth==='deep'||depth==='roadmap')return {type:CONV_DATA_REQUEST,route:intent.route||smartRoute||active&&active.intentRoute||'now',activeRoute:active&&active.intentRoute||''};
@@ -10765,6 +10766,40 @@ function getLastMissionTopicTurn(){
   return any.length?any[any.length-1]:null;
 }
 
+function getMissionLastUsefulThreadTurn(){
+  var hist=getMissionChatHistory().slice(-12).filter(function(t){
+    return t&&t.intentRoute&&t.intentRoute!=='ask'&&!getMissionCloseSignal(t.question||'')&&!/^(why|why tho|why though|tell me more|what next|next|show me|just tell me one thing|tell me one thing)$/i.test(normalizeMissionQuestion(t.question||''));
+  });
+  return hist.length?hist[hist.length-1]:null;
+}
+
+function getMissionLastThreadAction(){
+  var turn=getMissionLastUsefulThreadTurn();
+  if(!turn)return '';
+  var text=String([turn.answer||'',turn.followUp||'',turn.brainState&&turn.brainState.nextBestMove||''].join(' ')).replace(/\s+/g,' ').trim();
+  var match=text.match(/(?:smallest useful version of|the only thing that matters right now is|start with|next step:|next:)\s*([^.!?]+)/i);
+  if(match&&match[1])return match[1].replace(/\s+/g,' ').trim();
+  return (turn.brainState&&turn.brainState.nextBestMove)||'the last move';
+}
+
+function getMissionLastThreadResource(){
+  var hist=getMissionChatHistory().slice(-8);
+  for(var i=hist.length-1;i>=0;i--){
+    var text=String([hist[i].answer||'',hist[i].followUp||''].join(' ')).replace(/\s+/g,' ').trim();
+    var match=text.match(/(?:pull:|pull up|resource:)\s*([^.!?]+)/i);
+    if(match&&match[1])return match[1].trim();
+    match=text.match(/Open Rolodex and pull:\s*([^.!?]+)/i);
+    if(match&&match[1])return match[1].trim();
+  }
+  return '';
+}
+
+function missionShouldClarifyShowMe(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!/^(show me|show it|show that|pull it up)$/.test(q))return false;
+  return !getMissionLastThreadResource();
+}
+
 function setMissionCommandActiveTopic(route,question){
   if(!route||route==='help'||route==='time'||route==='day'||route==='memory')return;
   var q=normalizeMissionQuestion(question||'');
@@ -10974,6 +11009,28 @@ function getMissionContinuationResponse(signal,ctx,question){
   return base+'<br><br><span style="color:#526944">'+escapeHtml(layer)+'</span>';
 }
 
+function getMissionThreadWhyResponse(route,ctx){
+  var last=getMissionLastUsefulThreadTurn();
+  var action=getMissionLastThreadAction();
+  if(!last||!action)return '';
+  if(route==='now'){
+    return 'Because '+action+' is the current move with the least friction.<br><br>It gives the OS a real result to read instead of another open loop.';
+  }
+  if(route==='resources'){
+    return 'Because the resource is only useful if it supports the current move.<br><br>Open one script, use it once, then come back with the result.';
+  }
+  return '';
+}
+
+function getMissionThreadMoreResponse(route,ctx){
+  var last=getMissionLastUsefulThreadTurn();
+  var action=getMissionLastThreadAction();
+  var resource=getMissionLastThreadResource();
+  if(resource)return 'Use '+escapeHtml(resource)+' as the next support piece.<br><br>Do not study the whole library. Pull the short version, send it, then log what happened.';
+  if(last&&route==='now'&&action)return 'Stay with '+escapeHtml(action)+'.<br><br>The next layer is simple: finish the smallest piece of that move, then tell me what changed.';
+  return '';
+}
+
 function getMissionQuickRead(route,ctx){
   route=route||'now';
   var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||{};
@@ -10993,9 +11050,9 @@ function getMissionWhyRead(route,ctx){
   route=route||'now';
   var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||{};
   var vars=getMissionVarsExpanded(ctx,brain);
+  if(route==='leads')return 'Leads matter because pipeline heat is closest to cash. One qualified conversation can become an offer, a call, or a clean no.';
   var language=getMissionPhraseVariation(getMissionLanguageCategory(route,'why',brain),'meanings',vars,brain);
   if(language)return language;
-  if(route==='leads')return pickMissionLibraryLineAntiRepeat('why_leads',vars);
   if(route==='report')return pickMissionLibraryLineAntiRepeat('why_report',vars);
   if(route==='dpc')return pickMissionLibraryLineAntiRepeat('why_dpc',vars);
   if(route==='content')return pickMissionLibraryLineAntiRepeat('why_content',vars);
@@ -11067,17 +11124,20 @@ function getMissionConversationFirstResponse(conv,ctx,question){
   if(missionQuestionIsSimpleNowAsk(route,question||''))return getMissionHumanBubble(route,conv,ctx,question||'');
   if(conv.type===CONV_CLOSE)return getMissionCloseResponse(ctx);
   if(getMissionResponseDepth(question||'',conv.type,brain)==='micro')return getMissionQuickRead(route||'now',ctx).replace(/\.\./g,'.');
-  var guided=getMissionGuidedResponse(route,ctx,question||'',conv,brain);
-  if(guided)return guided;
   if(smartCategory==='confirmation_complete'||smartCategory==='celebration_win')return getMissionCompletionInputResponse(route,ctx,question||'',smartCategory==='celebration_win');
   if(smartCategory==='frustration_overwhelm')return getMissionStuckRead(route,ctx);
   if(conv.type===CONV_QUICK_READ)return getMissionQuickRead(route,ctx);
-  if(conv.type===CONV_WHY)return getMissionWhyRead(route,ctx);
+  if(conv.type===CONV_WHY&&/^(tell me more|go on|say more)$/.test(q))return getMissionThreadMoreResponse(route,ctx)||getMissionWhatElseRead(route,ctx);
+  if(conv.type===CONV_WHY)return getMissionThreadWhyResponse(route,ctx)||getMissionWhyRead(route,ctx);
+  var guided=getMissionGuidedResponse(route,ctx,question||'',conv,brain);
+  if(guided)return guided;
   if(/\b(i dont know what to do|i do not know what to do|i'm stuck|im stuck|stuck right now|can you help me|help me figure|help me decide)\b/.test(q))return getMissionStuckRead(route,ctx);
   if(shape&&shape.type==='how'&&route)return getMissionStepsRead(route,ctx,question||'');
   if(conv.type===CONV_FOLLOWUP&&/^(what next|next|and then what)$/.test(normalizeMissionQuestion(question||'')))return getMissionNextActionRead(route,ctx);
+  if(conv.type===CONV_FOLLOWUP&&/^(tell me more|go on|say more)$/.test(normalizeMissionQuestion(question||'')))return getMissionThreadMoreResponse(route,ctx)||getMissionWhatElseRead(route,ctx);
   if(conv.type===CONV_WHAT_ELSE||conv.type===CONV_FOLLOWUP)return getMissionWhatElseRead(route,ctx);
   if(conv.type===CONV_UNCLEAR){
+    if(missionShouldClarifyShowMe(question||''))return 'Show you what: pipeline, money, content, production, sync, or resources?';
     var isSerious=/\b(struggling|stuck|frustrated|overwhelmed|burned|lost|confused|help me|don't know|do not know|not working)\b/i.test(q);
     if(isSerious)return getMissionStuckRead('',ctx);
     return 'Do you mean pipeline, money, content, or schedule?';
