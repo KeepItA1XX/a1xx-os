@@ -640,6 +640,9 @@ input:focus{border-color:#333}
 .mission-command-actions{display:flex;align-items:center;gap:6px;margin-left:auto}
 .mission-icon-btn{width:28px;height:28px;border-radius:8px;border:0.5px solid #263039;background:#080a0c;color:#8f9aa3;font-size:12px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .mission-icon-btn:hover{border-color:#3a5a2a;color:#d7dde3;background:#0d120f}
+.mission-nudge-strip{display:none;width:100%;min-height:30px;margin:-1px 0 8px;border:0.5px solid #1f2c24;border-radius:9px;background:#091009;color:#9ecf78;font-size:11px;font-weight:800;text-align:left;padding:0 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mission-nudge-strip.show{display:block}
+.mission-nudge-strip:hover{background:#0d1808;border-color:#2a4015;color:#dff5d5}
 .mission-command-thread{background:#0b0d0f;border:0.5px solid #2a3036;border-radius:10px;padding:14px 15px;color:#d7dde3;font-size:13px;line-height:1.6;margin-bottom:8px;min-height:230px;max-height:390px;overflow-y:auto;scroll-behavior:smooth}
 .mission-command-thread strong{color:#f0f3f5}
 .mission-history-drawer{position:absolute;inset:0 auto 0 0;width:min(285px,88%);background:#07090b;border-right:0.5px solid #263039;box-shadow:18px 0 36px rgba(0,0,0,.34);z-index:6;padding:10px;transform:translateX(-104%);transition:transform .22s ease;display:flex;flex-direction:column;gap:10px}
@@ -1732,6 +1735,7 @@ body{background:#090a0b;color:#d8dde1}
         <div class="mission-command-state">Local coach</div>
       </div>
     </div>
+    <button class="mission-nudge-strip" id="mission-nudge-strip" onclick="sendMissionNudgePrompt()" title="Ask Mission Command about this signal"></button>
     <div class="mission-history-drawer" id="mission-history-drawer" aria-hidden="true">
       <div class="mission-history-top">
         <div class="mission-history-title">Chats</div>
@@ -8009,6 +8013,8 @@ var CONV_UNCLEAR='unclear';
 var MISSION_VARIANTS_KEY='a1xx_mc_session_variants';
 var MISSION_BRAIN_SESSION_KEY='a1xx_mc_brain_session';
 var MISSION_SIGNATURE_TURN_KEY='a1xx_mc_last_signature_turn';
+var MISSION_PATTERN_KEY='a1xx_mc_pattern_flags';
+var MISSION_NUDGE_REFRESH_MS=5*60*1000;
 
 function getMissionConversationType(question,ctx,intent,brainState){
   var q=normalizeMissionQuestion(question||'');
@@ -9276,12 +9282,157 @@ function getMissionConversationEnding(route,shape,mode,ctx,question){
   else if(shape&&shape.type==='ask')type='question';
   else if(route==='calendar'||route==='cycle')type='bridge';
   if(type==='question')return '';
+  var ambient=getMissionAmbientObservation(route,ctx,question||'',(window.__missionDataPacket&&window.__missionDataPacket.brainState)||getMissionBrainSession());
+  if(ambient)return ambient;
   if(recurring)return '<strong>Pattern:</strong> This has come up before. Keep the next move small enough to log.';
   if(type==='observation')return '<strong>Read:</strong> Pressure is information. Move the one thing that changes the number.';
   if(type==='bridge'){
     return '<strong>Carry forward:</strong> '+(journey?escapeHtml('Next step: '+journey.nextCheck+'.'):'That sets up the next block.');
   }
   return getMissionFollowUp(route,ctx,question||'');
+}
+
+function getMissionPatternStore(){
+  try{
+    var key=dateKey(new Date());
+    var raw=sessionStorage.getItem(MISSION_PATTERN_KEY);
+    var store=raw?JSON.parse(raw):{};
+    if(store.day!==key)store={day:key,shown:{}};
+    store.shown=store.shown||{};
+    return store;
+  }catch(e){return {day:dateKey(new Date()),shown:{}};}
+}
+
+function saveMissionPatternStore(store){
+  try{sessionStorage.setItem(MISSION_PATTERN_KEY,JSON.stringify(store||{}));}catch(e){}
+}
+
+function claimMissionPatternFlag(key){
+  if(!key)return false;
+  var store=getMissionPatternStore();
+  if(store.shown[key])return false;
+  store.shown[key]=new Date().toISOString();
+  saveMissionPatternStore(store);
+  return true;
+}
+
+function getMissionRouteCount(route,brainState){
+  var topic=getMissionBrainTopic(route||'','')||route||'';
+  var history=(brainState&&brainState.topicHistory)||[];
+  var count=0;
+  history.slice(-5).forEach(function(item){if(item===topic||item===route)count++;});
+  return count;
+}
+
+function getMissionPatternInterrupt(route,ctx,question,brainState){
+  route=route||'now';
+  brainState=brainState||getMissionBrainSession();
+  var q=normalizeMissionQuestion(question||'');
+  if(getMissionCloseSignal(q)||/^(thanks|thank you|good|got it|done)$/.test(q))return '';
+  var block=getMissionBlockIntel();
+  var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var pace=getMissionPaceState(ctx||{});
+  if(getMissionRouteCount(route,brainState)>=3&&(brainState.turnsWithoutAction||0)>=2&&claimMissionPatternFlag('loop_'+route)){
+    return 'Small loop check: you have looked at this lane a few times. Pick the next logged move before asking for another read.';
+  }
+  if(block.phase==='money'&&['leads','dpc','report'].indexOf(route)<0&&(brainState.turnCount||0)>=4&&claimMissionPatternFlag('money_avoidance')){
+    return 'Money block is active. If the next question is not about a lead, offer, or logged DPC move, it may be admin drift.';
+  }
+  if((brainState.userEnergy==='low'||/\b(overwhelmed|stuck|tired|confused|lost)\b/.test(q))&&pace.label!=='behind'&&claimMissionPatternFlag('low_energy_green')){
+    return 'The feeling is heavy, but the read is not broken. Lower the move size before you lower the goal.';
+  }
+  if(route==='dpc'&&(daily.dms||0)===0&&(brainState.turnCount||0)>=5&&claimMissionPatternFlag('dpc_plateau')){
+    return 'DPC has not moved yet today. One real outreach touch gives the OS something better to work with.';
+  }
+  return '';
+}
+
+function getMissionCuriosityObservation(route,ctx,question,brainState){
+  route=route||'now';
+  brainState=brainState||getMissionBrainSession();
+  var block=getMissionBlockIntel();
+  var q=normalizeMissionQuestion(question||'');
+  if(getMissionCloseSignal(q)||/^(thanks|thank you)$/.test(q))return '';
+  if(block.phase==='maker'&&route!=='production'&&route!=='content'&&(brainState.turnCount||0)>=3&&claimMissionPatternFlag('maker_absence')){
+    return 'Maker block is open, but production/content has not been the question yet. Worth checking the asset lane next.';
+  }
+  if(route==='leads'&&getMissionRouteCount('leads',brainState)>=2&&(brainState.turnsWithoutAction||0)>=1&&claimMissionPatternFlag('lead_action_gap')){
+    return 'Pipeline keeps coming up. The useful question may be: which one person gets the direct touch now?';
+  }
+  if(brainState.userEnergy==='low'&&ctx&&ctx.gap<=0&&claimMissionPatternFlag('energy_contradiction')){
+    return 'Interesting mismatch: the goal pressure is covered, but your energy reads low. Protect recovery and delivery.';
+  }
+  return '';
+}
+
+function getMissionAmbientObservation(route,ctx,question,brainState){
+  var pattern=getMissionPatternInterrupt(route,ctx,question,brainState);
+  if(pattern)return '<strong>Pattern:</strong> '+escapeHtml(pattern);
+  var curiosity=getMissionCuriosityObservation(route,ctx,question,brainState);
+  if(curiosity)return '<strong>Observation:</strong> '+escapeHtml(curiosity);
+  return '';
+}
+
+function getMissionNudgeText(ctx){
+  ctx=ctx||window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+  var block=getMissionBlockIntel();
+  var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var journey=getCurrentJourneyMove(ctx);
+  var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
+  var overdue=leads.filter(function(lead){
+    if(!lead.followUpDate)return false;
+    var d=new Date(lead.followUpDate);
+    return !isNaN(d.getTime())&&d<=new Date();
+  });
+  var cycle=ctx.cycle||{};
+  var daysLeft=999;
+  if(cycle.end){
+    var end=pd(cycle.end);
+    if(end&&!isNaN(end.getTime()))daysLeft=Math.max(0,Math.ceil((end-new Date())/86400000));
+  }
+  if(daysLeft<=7&&ctx.gap>0)return 'Cycle closing soon: protect the next money move.';
+  if(overdue.length)return overdue.length+' follow-up'+(overdue.length===1?' is':'s are')+' due. Start there.';
+  if(block.phase==='money'&&!(daily.dms||0)&&!(daily.calls||0))return 'Money block is open. Start with one outreach touch.';
+  if(journey)return 'Current step: '+journey.nextCheck;
+  if(!(window.__contentPipelinePieces&&window.__contentPipelinePieces.length)&&ctx.dayType==='content')return 'Content lane is light. Capture one proof-of-work idea.';
+  if(ctx.gap<=0&&ctx.wk)return 'Weekly target covered. Protect delivery and stack the next move.';
+  if(ctx.nextEvent)return 'Next calendar item: '+(ctx.nextEvent.startTime||'soon')+' · '+(ctx.nextEvent.title||'event');
+  return 'Ask for /now if you want the clean next move.';
+}
+
+function getMissionNudgePrompt(text){
+  var s=String(text||'').toLowerCase();
+  if(s.indexOf('cycle')>=0)return '/cycle';
+  if(s.indexOf('follow-up')>=0||s.indexOf('outreach')>=0)return '/pipeline';
+  if(s.indexOf('money block')>=0)return '/dpc';
+  if(s.indexOf('content')>=0)return '/content';
+  if(s.indexOf('calendar')>=0)return '/calendar';
+  if(s.indexOf('weekly target')>=0)return '/report';
+  return '/now';
+}
+
+function renderMissionNudge(ctx){
+  var el=document.getElementById('mission-nudge-strip');
+  if(!el)return;
+  var text=getMissionNudgeText(ctx);
+  if(!text){el.textContent='';el.classList.remove('show');return;}
+  el.textContent=text.length>88?text.slice(0,85)+'...':text;
+  window.__missionNudgePrompt=getMissionNudgePrompt(text);
+  el.classList.add('show');
+}
+
+function sendMissionNudgePrompt(){
+  var input=document.getElementById('mission-command-input');
+  var prompt=window.__missionNudgePrompt||'/now';
+  if(input)input.value=prompt;
+  askMissionCommand();
+}
+
+function scheduleMissionNudgeRefresh(){
+  if(window.__missionNudgeTimer)return;
+  window.__missionNudgeTimer=setInterval(function(){
+    renderMissionNudge(window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]));
+  },MISSION_NUDGE_REFRESH_MS);
 }
 
 function extractMissionLinkRows(html){
@@ -10491,6 +10642,8 @@ function renderMissionCommand(kind,question,forceCurrent){
   var thread=document.getElementById('mission-command-thread');
   if(!thread)return;
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+  renderMissionNudge(ctx);
+  scheduleMissionNudgeRefresh();
   var packet=getMissionDataPacket(question||'');
   packet.chatMemory=getMissionChatHistory().slice(-10);
   packet.chatMemorySummary=getMissionChatMemorySummary();
