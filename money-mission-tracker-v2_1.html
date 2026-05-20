@@ -1900,6 +1900,7 @@ body:before{
           <div class="settings-section-title">Apps Script Bridge</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Apps Script bridge</div><div class="settings-row-meta" id="settings-apps-script-url">Not connected</div></div><span class="settings-badge" id="settings-apps-script-badge">Check</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Webhook token</div><div class="settings-row-meta">Optional write protection for Apps Script POST requests.</div></div><span class="settings-badge" id="settings-webhook-badge">Optional</span></div>
             <div class="settings-row"><div><div class="settings-row-name">OPS Sync Databases</div><div class="settings-row-meta">Daily DPC Log · Weekly Review Log · Cycle Archives</div></div><span class="settings-badge">Write</span></div>
           </div>
         </div>
@@ -2046,7 +2047,7 @@ body:before{
             <label class="reset-check"><input type="checkbox" id="reset-cat-streaks"/> <span>Streaks + close log + content log</span></label>
             <label class="reset-check"><input type="checkbox" id="reset-cat-banners"/> <span>Missed-day banner dismissals</span></label>
             <label class="reset-check reset-check-danger"><input type="checkbox" id="reset-cat-everything"/> <span><strong>Everything</strong> a1xx_* (full wipe — preserves only setup tokens)</span></label>
-            <div class="reset-preserve">Always preserved: Apps Script URL, Todoist token, Instagram token.</div>
+            <div class="reset-preserve">Always preserved: Apps Script URL, webhook token, Todoist token, Instagram token.</div>
             <button class="btn primary reset-execute" id="reset-browser-exec" onclick="armBrowserReset()">Reset Browser Data</button>
             <div class="reset-status" id="reset-browser-status"></div>
           </div>
@@ -2133,6 +2134,8 @@ body:before{
   <div class="setup-panel-title">Connect Google Sheets + Calendar</div>
   <div class="setup-note">Paste your Apps Script Web App URL below. This powers automatic Sheets backup, Google Calendar reading, and Notion content loading.</div>
   <div class="setup-field"><label>Apps Script Web App URL</label><input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/.../exec"/></div>
+  <div class="setup-field"><label>Webhook Token</label><input type="password" id="webhook-token" placeholder="same value as A1XX_WEBHOOK_TOKEN"/></div>
+  <div class="auth-note">Only set this after the same token exists in Apps Script Script Properties. Leave blank until then.</div>
   <div class="btn-row"><button class="btn blue" onclick="saveSheets()">Save ↗</button><button class="btn" onclick="testSheets()">Test connection</button></div>
   <div class="status" id="sheets-status"></div>
 </div>
@@ -3442,6 +3445,7 @@ var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var TODOIST_KEY='a1xx_todoist_v1';
+var WEBHOOK_TOKEN_KEY='mmos_webhook_token_v1';
 var NOTION_KEY='a1xx_notion_v1';
 var HEALTH_KEY='a1xx_system_health_v1';
 var ACCOUNT_KEY='a1xx_account_v1';
@@ -3784,6 +3788,27 @@ function fetchWithTimeout(url,opts,ms){
   return fetch(url,options).finally(function(){clearTimeout(timer);});
 }
 
+function getWebhookToken(){
+  try{return (localStorage.getItem(WEBHOOK_TOKEN_KEY)||'').trim();}
+  catch(e){return '';}
+}
+
+function withWebhookToken(payload){
+  var out=Object.assign({},payload||{});
+  var token=getWebhookToken();
+  if(token)out.token=token;
+  return out;
+}
+
+function postToAppsScript(url,payload,options){
+  return fetch(url,Object.assign({
+    method:'POST',
+    body:JSON.stringify(withWebhookToken(payload||{})),
+    mode:'no-cors',
+    redirect:'follow'
+  },options||{}));
+}
+
 async function safeLoad(label,loader,fallback,ms){
   try{
     return await Promise.race([
@@ -3835,6 +3860,8 @@ function toggleSetup(id){
   if(id==='sheets'){
     var s=localStorage.getItem(SHEETS_KEY)||'';
     document.getElementById('sheets-url').value=s;
+    var wt=document.getElementById('webhook-token');
+    if(wt)wt.value=getWebhookToken();
   }
   if(id==='todoist'){
     var td=localStorage.getItem(TODOIST_KEY)||'';
@@ -3926,8 +3953,14 @@ function updateSettingsConnections(){
   var url=localStorage.getItem(SHEETS_KEY)||'';
   var urlEl=document.getElementById('settings-apps-script-url');
   var badge=document.getElementById('settings-apps-script-badge');
+  var webhookBadge=document.getElementById('settings-webhook-badge');
   if(urlEl)urlEl.textContent=url||'Not connected';
   if(badge){badge.textContent=url?'Set':'Missing';badge.className='settings-badge '+(url?'':'warn');}
+  if(webhookBadge){
+    var hasToken=!!getWebhookToken();
+    webhookBadge.textContent=hasToken?'Ready':'Optional';
+    webhookBadge.className='settings-badge '+(hasToken?'':'warn');
+  }
 }
 
 function toggleCoachDetails(){
@@ -3949,9 +3982,14 @@ function saveTodoist(){
 
 function saveSheets(){
   var url=document.getElementById('sheets-url').value.trim();
+  var tokenEl=document.getElementById('webhook-token');
+  var webhookToken=tokenEl?tokenEl.value.trim():'';
   if(url)localStorage.setItem(SHEETS_KEY,url);
+  if(webhookToken)localStorage.setItem(WEBHOOK_TOKEN_KEY,webhookToken);
+  else localStorage.removeItem(WEBHOOK_TOKEN_KEY);
   document.getElementById('setup-sheets').classList.remove('open');
   document.getElementById('sheets-status').textContent='';
+  updateSettingsConnections();
   loadTodayData();
 }
 
@@ -3959,7 +3997,7 @@ function testSheets(){
   var url=localStorage.getItem(SHEETS_KEY);
   if(!url){document.getElementById('sheets-status').textContent='Enter URL first.';return;}
   document.getElementById('sheets-status').textContent='Sending test...';
-  fetch(url,{method:'POST',body:JSON.stringify({type:'test',date:new Date().toLocaleDateString()}),mode:'no-cors',redirect:'follow'});
+  postToAppsScript(url,{type:'test',date:new Date().toLocaleDateString()});
   setTimeout(function(){document.getElementById('sheets-status').style.color='#639922';document.getElementById('sheets-status').textContent='Sent — check Activity Log in your Sheet.';},800);
 }
 
@@ -4018,12 +4056,7 @@ async function sendBackup(silent){
     setBackupBusy(true);
   }
   try{
-    await fetch(appUrl,{
-      method:'POST',
-      body:JSON.stringify({type:'backup_save',payload:json,keyCount:keyCount,size:json.length}),
-      mode:'no-cors',
-      redirect:'follow'
-    });
+    await postToAppsScript(appUrl,{type:'backup_save',payload:json,keyCount:keyCount,size:json.length});
     if(!silent)setBackupStatus('ok','Backup saved','Saved '+keyCount+' keys to Google Sheets. Activity Log should show the backup event shortly.','Done');
     if(!silent)logDevChange('Claude (A1XX OS)','data → Sheets','Manual backup: '+keyCount+' keys, '+Math.round(json.length/1000)+'KB');
     return {ok:true,keyCount:keyCount,size:json.length};
@@ -4043,24 +4076,19 @@ async function sendBackup(silent){
 // session: optional context string (session ID, version tag, etc.)
 //
 // Other AIs can POST directly to the Apps Script URL:
-//   { type: 'log_change', agent: '...', layer: '...', summary: '...', session: '...' }
+//   { type: 'log_change', token: '...', agent: '...', layer: '...', summary: '...', session: '...' }
 //
 function logDevChange(agent,layer,summary,session){
   var url=localStorage.getItem(SHEETS_KEY);
   if(!url)return;
   try{
-    fetch(url,{
-      method:'POST',
-      body:JSON.stringify({
-        type:'log_change',
-        agent:agent||'A1XX OS',
-        layer:layer||'—',
-        summary:summary||'',
-        session:session||'',
-        ts:new Date().toISOString()
-      }),
-      mode:'no-cors',
-      redirect:'follow'
+    postToAppsScript(url,{
+      type:'log_change',
+      agent:agent||'A1XX OS',
+      layer:layer||'—',
+      summary:summary||'',
+      session:session||'',
+      ts:new Date().toISOString()
     });
   }catch(e){}
 }
@@ -4302,12 +4330,7 @@ function executeSheetReset(){
   var url=localStorage.getItem(SHEETS_KEY);
   if(!url){setResetStatus('sheet','No Apps Script URL configured — set it up under Sheets setup first.','err');return;}
   setResetStatus('sheet','Sending reset request to Apps Script...','warn');
-  fetch(url,{
-    method:'POST',
-    body:JSON.stringify({type:'reset_test_data',daily:!!opts.daily,prospects:!!opts.prospects,reason:'test data wipe via app · '+new Date().toLocaleString()}),
-    mode:'no-cors',
-    redirect:'follow'
-  }).then(function(){
+  postToAppsScript(url,{type:'reset_test_data',daily:!!opts.daily,prospects:!!opts.prospects,reason:'test data wipe via app · '+new Date().toLocaleString()}).then(function(){
     var picked=[];
     if(opts.daily)picked.push('Daily Log');
     if(opts.prospects)picked.push('Captured Leads');
@@ -4828,25 +4851,20 @@ function postDailySave(dKey,row,saveMode){
     var dayType=deriveOpsDayType(rhythm);
     var ci=(typeof getCycleIdx==='function')?getCycleIdx():0;
     var cycle=CYCLES[ci]?('Cycle '+CYCLES[ci].num+' — '+CYCLES[ci].name):'';
-    fetch(url,{
-      method:'POST',
-      body:JSON.stringify({
-        type:'daily_save',
-        date:dKey,
-        mode:saveMode||'replace',
-        dms:row.dms||0,
-        coldCalls:row.coldCalls||0,
-        content:row.content||0,
-        calls:row.calls||0,
-        closes:row.closes||0,
-        money:row.money||0,
-        leads:row.leads||0,
-        dayType:dayType,
-        cycle:cycle,
-        ts:new Date().toISOString()
-      }),
-      mode:'no-cors',
-      redirect:'follow'
+    postToAppsScript(url,{
+      type:'daily_save',
+      date:dKey,
+      mode:saveMode||'replace',
+      dms:row.dms||0,
+      coldCalls:row.coldCalls||0,
+      content:row.content||0,
+      calls:row.calls||0,
+      closes:row.closes||0,
+      money:row.money||0,
+      leads:row.leads||0,
+      dayType:dayType,
+      cycle:cycle,
+      ts:new Date().toISOString()
     });
   }catch(e){}
 }
@@ -5902,12 +5920,7 @@ function postProspectSave(rec){
   var url=localStorage.getItem(SHEETS_KEY);
   if(!url||!rec)return;
   try{
-    fetch(url,{
-      method:'POST',
-      body:JSON.stringify(Object.assign({type:'prospect_save'},rec)),
-      mode:'no-cors',
-      redirect:'follow'
-    });
+    postToAppsScript(url,Object.assign({type:'prospect_save'},rec));
   }catch(e){}
 }
 
@@ -5915,12 +5928,7 @@ function postProspectDelete(id){
   var url=localStorage.getItem(SHEETS_KEY);
   if(!url||!id)return;
   try{
-    fetch(url,{
-      method:'POST',
-      body:JSON.stringify({type:'prospect_delete',id:id}),
-      mode:'no-cors',
-      redirect:'follow'
-    });
+    postToAppsScript(url,{type:'prospect_delete',id:id});
   }catch(e){}
 }
 
@@ -7541,7 +7549,7 @@ function checkDailyArchive(){
     return task?task.content:'Task';
   });
   var payload={type:'daily_log',date:today,completedTasks:items,completedCount:items.length,totalTasks:todoistTasks.length};
-  fetch(url,{method:'POST',body:JSON.stringify(payload),mode:'no-cors',redirect:'follow'});
+  postToAppsScript(url,payload);
   localStorage.setItem('a1xx_last_archive',today);
 }
 
@@ -7647,7 +7655,7 @@ function saveWeekly(){
   if(typeof updateReport==='function')updateReport();  /* 2026-05-12: refresh Report tab cards on every weekly save */
   var data=captureWeekData();data.ts=Date.now();setStore(STORE,data);
   var url=localStorage.getItem(SHEETS_KEY);
-  if(url)fetch(url,{method:'POST',body:JSON.stringify(Object.assign({type:'weekly_save'},data)),mode:'no-cors',redirect:'follow'});
+  if(url)postToAppsScript(url,Object.assign({type:'weekly_save'},data));
   flash('saved-tag');updateLastSaved(data.ts);updateReport();
   document.getElementById('week-status').textContent='Saved at '+new Date().toLocaleTimeString();
   setTimeout(function(){document.getElementById('week-status').textContent='';},3000);
@@ -7819,11 +7827,11 @@ function archiveCycleBtn(){
     }
     window.__archiveCycleArmed=null;
     setArchiveSyncState('Sending archive','Sending Cycle '+c.num+' archive request to Apps Script...',55,'');
-    fetch(url,{method:'POST',body:JSON.stringify({type:'cycle_archive_probe',cycleNum:c.num,source:'archiveCycleBtn'}),mode:'no-cors',redirect:'follow'});
+    postToAppsScript(url,{type:'cycle_archive_probe',cycleNum:c.num,source:'archiveCycleBtn'});
     var data=captureWeekData();
     saveMissionCycleSnapshot(window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]),'archive_cycle_button');
     var payload=Object.assign({type:'cycle_archive',cycleNum:c.num,cycleName:c.name,cycleTarget:c.target,cycleStart:c.start,cycleEnd:c.end},data);
-    fetch(url,{method:'POST',body:JSON.stringify(payload),mode:'no-cors',redirect:'follow'});
+    postToAppsScript(url,payload);
     setArchiveSyncState('Archive request sent','Check Activity Log for Cycle archive button ping and Notion Cycle Archive upsert.',100,'ok');
     setTimeout(function(){var s=document.getElementById('week-status');if(s){s.textContent='';s.className='status';}},7000);
   }catch(err){
@@ -13372,12 +13380,7 @@ function syncMissionChatSession(session,reason){
     if(stamp[session.id]===sig&&reason!=='manual')return false;
     stamp[session.id]=sig;
     setStore(MISSION_CHAT_SYNC_STAMP_KEY,stamp);
-    fetch(url,{
-      method:'POST',
-      body:JSON.stringify(missionSessionSyncPayload(session,reason)),
-      mode:'no-cors',
-      redirect:'follow'
-    });
+    postToAppsScript(url,missionSessionSyncPayload(session,reason));
     return true;
   }catch(e){console.warn('Mission chat session sync skipped',e);return false;}
 }
@@ -13807,12 +13810,7 @@ function postMissionChatLog(turn){
   var url=localStorage.getItem(SHEETS_KEY);
   if(!url||!turn)return;
   try{
-    fetch(url,{
-      method:'POST',
-      body:JSON.stringify(Object.assign({type:'mission_chat_log'},turn)),
-      mode:'no-cors',
-      redirect:'follow'
-    });
+    postToAppsScript(url,Object.assign({type:'mission_chat_log'},turn));
   }catch(e){console.warn('Mission chat log skipped',e);}
 }
 
@@ -15827,9 +15825,7 @@ function pushCapture(idx){
   var url=localStorage.getItem(SHEETS_KEY);
   if(!url){alert('Connect Apps Script in setup ⚙ first.');return;}
   // no-cors POST — blind send, optimistic remove
-  fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({type:'create_content_idea',title:item.text,format:item.format,readyTo:'Create',source:'Spark capture'})
-  }).catch(function(){});
+  postToAppsScript(url,{type:'create_content_idea',title:item.text,format:item.format,readyTo:'Create',source:'Spark capture'}).catch(function(){});
   queue.splice(idx,1);
   setStore(SPARK_QUEUE_KEY,queue);
   renderSparkQueue();
