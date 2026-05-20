@@ -8896,14 +8896,16 @@ function runMissionTurn(kind,rawInput,options){
     addMissionTrace(turn,'response_plan_selected',turn.responsePlan);
     turn.bubblePacket=buildMissionResponseContract(turn);
     addMissionTrace(turn,'bubble_packet_built',summarizeMissionBubblePacket(turn.bubblePacket));
-    saveMissionTurnCheckpoint(turn);
-    updateMissionBrainSessionV2(turn);
+    if(!window.__missionCommandSelfCheckActive&&!(options&&options.skipCheckpoint)){
+      saveMissionTurnCheckpoint(turn);
+      updateMissionBrainSessionV2(turn);
+    }
     window.__missionLastTurnObjectV2=turn;
     return turn.bubblePacket;
   }catch(err){
     turn.errors.push({timestamp:new Date().toISOString(),message:err&&err.message?err.message:String(err)});
     addMissionWarning(turn,'runMissionTurn_failed',{error:err&&err.message?err.message:String(err)});
-    saveMissionTurnCheckpoint(turn);
+    if(!window.__missionCommandSelfCheckActive&&!(options&&options.skipCheckpoint))saveMissionTurnCheckpoint(turn);
     window.__missionLastTurnObjectV2=turn;
     return buildMissionFallbackBubblePacket(turn,err);
   }
@@ -12014,7 +12016,9 @@ function runMissionCommandSelfCheck(){
   var priorPhrases=sessionStorage.getItem('a1xx_mc_phrase_rotation_v1');
   var priorWhy=sessionStorage.getItem(MISSION_WHY_DEPTH_KEY);
   var priorBrain=sessionStorage.getItem(MISSION_BRAIN_SESSION_KEY);
+  window.__missionCommandSelfCheckActive=true;
   checks.forEach(function(check){
+    try{
     window.__missionCommandActiveTopicRoute='';
     window.__missionCommandActiveTopicQuestion='';
     setStore(MISSION_CHAT_HISTORY_KEY,[]);
@@ -12035,6 +12039,9 @@ function runMissionCommandSelfCheck(){
     if(!routeOk||!hasNeedle||(check.shape&&shape.type!==check.shape)||(check.mode&&mode.mode!==check.mode)){
       failures.push(check.q+' -> intent '+(route||'none')+' / visible '+(visibleRoute||'none'));
     }
+    }catch(checkErr){
+      failures.push((check&&check.q?check.q:'unknown prompt')+' -> error '+(checkErr&&checkErr.message?checkErr.message:String(checkErr)));
+    }
   });
   window.__missionCommandActiveTopicRoute=priorActiveRoute;
   window.__missionCommandActiveTopicQuestion=priorActiveQuestion;
@@ -12043,6 +12050,7 @@ function runMissionCommandSelfCheck(){
   if(priorPhrases===null)sessionStorage.removeItem('a1xx_mc_phrase_rotation_v1');else sessionStorage.setItem('a1xx_mc_phrase_rotation_v1',priorPhrases);
   if(priorWhy===null)sessionStorage.removeItem(MISSION_WHY_DEPTH_KEY);else sessionStorage.setItem(MISSION_WHY_DEPTH_KEY,priorWhy);
   if(priorBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_KEY,priorBrain);
+  window.__missionCommandSelfCheckActive=false;
   if(el){
     if(failures.length){
       el.textContent='Chat check needs review: '+failures.join(' | ');
