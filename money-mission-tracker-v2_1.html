@@ -9231,6 +9231,10 @@ var MISSION_SALES_DEEP_OUTPUT_PACK_V1={
     ]
   },
   followUpPools:{
+    atl_studio_follow_up:[
+      {id:'sales_deep_follow_atl_01',subtype:'atl_studio_follow_up',mode:'script',b2:false,b3:false,text:'Send: "Still working on that session, or did the project get pushed back?"',tags:['followup','atl_studio_bookings']},
+      {id:'sales_deep_follow_atl_02',subtype:'atl_studio_follow_up',mode:'script',b2:false,b3:false,text:'Send: "Checking in on the studio move. Are you trying to lock time this week, or still figuring out the record?"',tags:['followup','atl_studio_bookings']}
+    ],
     warm_follow_up:[
       {id:'sales_deep_follow_warm_01',subtype:'warm_follow_up',mode:'script',b2:false,b3:false,text:'Send: "Been thinking about what you said. Is that still the main thing you are trying to fix?"',tags:['followup','warm']},
       {id:'sales_deep_follow_warm_02',subtype:'warm_follow_up',mode:'script',b2:false,b3:false,text:'Send: "Still want help mapping that out, or did you pause on it?"',tags:['followup','warm']}
@@ -9296,7 +9300,7 @@ var MISSION_SALES_DEEP_OUTPUT_PACK_V1={
     {q:'score my answer',route:'sales',subtype:'scorecard'},
     {q:'write a Rappreneur OS dm',route:'sales',subtype:'offer_specific_dm'},
     {q:'write an ATL studio dm',route:'sales',subtype:'offer_specific_dm'},
-    {q:'write an ATL studio follow up',route:'sales',subtype:'offer_specific_dm'},
+    {q:'write an ATL studio follow up',route:'sales',subtype:'atl_studio_follow_up'},
     {q:'he said he cant afford it',route:'sales',subtype:'cant_afford'},
     {q:'he asked for a payment plan',route:'sales',subtype:'payment_plan'},
     {q:'they want to start smaller',route:'sales',subtype:'start_smaller'}
@@ -11525,7 +11529,7 @@ function getMissionGuidedResponse(route,ctx,question,conv,brainState){
     return '<p><strong>Let’s not fix five things at once.</strong></p><p>Check this order:</p><p>'+missionNumberedList(steps)+'</p><p><span style="color:#8f9aa3">Do not move to step 2 until step 1 is clear.</span></p>';
   }
   if(profile.shape==='plan_builder'){
-    return '<p><strong>Here is the play.</strong></p><p><strong>Phase 1: Stabilize</strong><br>1) Pick the lane.<br>2) Clear the biggest open loop.</p><p><strong>Phase 2: Execute</strong><br>1) Do the action closest to money or proof.<br>2) Log the result before switching systems.</p><p><strong>Phase 3: Review</strong><br>1) Check what moved.<br>2) Decide the next adjustment.</p><p><strong>Start here:</strong><br>'+escapeHtml((ctx&&ctx.nowText)||'Pick one money-facing move and finish it.')+'</p>';
+    return '<p><strong>Here is the play.</strong></p><p><strong>Phase 1: Stabilize</strong></p><p>1) Pick the lane.</p><p>2) Clear the biggest open loop.</p><p><strong>Phase 2: Execute</strong></p><p>1) Do the action closest to money or proof.</p><p>2) Log the result before switching systems.</p><p><strong>Phase 3: Review</strong></p><p>1) Check what moved.</p><p>2) Decide the next adjustment.</p><p><strong>Start here:</strong><br>'+escapeHtml((ctx&&ctx.nowText)||'Pick one money-facing move and finish it.')+'</p>';
   }
   return '';
 }
@@ -13457,6 +13461,7 @@ function getMissionSalesDeepObjectionKeyV1(q){
 
 function getMissionSalesDeepSubtypeV1(q){
   q=String(q||'').toLowerCase();
+  if(/\b(atl|studio|session booking|book.*studio)\b/.test(q)&&/\b(follow up|follow-up|followup|checking in|check in)\b/.test(q))return 'atl_studio_follow_up';
   if(/\b(on the phone|live call|in a call|on a call|call right now)\b/.test(q))return 'live_call';
   if(/\b(roleplay|role play|skeptical|pretend|test me)\b/.test(q))return 'roleplay_start';
   if(/\b(score my|scorecard|grade my|review my answer)\b/.test(q))return 'scorecard';
@@ -13484,8 +13489,8 @@ function getMissionSalesDeepPoolV1(pack,subtype,objectionKey,offerKey){
   if(!pack)return null;
   if(subtype==='live_call')return pack.liveCallPools&&pack.liveCallPools.live_call;
   if(objectionKey)return pack.objectionPools&&pack.objectionPools[objectionKey];
-  if(offerKey)return pack.dmOfferPools&&pack.dmOfferPools[offerKey];
   if(subtype&&pack.followUpPools&&pack.followUpPools[subtype])return pack.followUpPools[subtype];
+  if(offerKey)return pack.dmOfferPools&&pack.dmOfferPools[offerKey];
   if(subtype&&pack.outputPools&&pack.outputPools[subtype])return pack.outputPools[subtype];
   if(subtype&&pack.roleplayPools&&pack.roleplayPools[subtype])return pack.roleplayPools[subtype];
   if(subtype&&pack.scorecardPools&&pack.scorecardPools[subtype])return pack.scorecardPools[subtype];
