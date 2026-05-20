@@ -9233,6 +9233,7 @@ function saveMissionSessionLogEntry(reason,ctx){
 function applyMissionSessionArc(html,route,ctx,question,brainState,opts){
   opts=opts||{};
   if(!html||getMissionCloseSignal(question||''))return html;
+  if(opts.sessionArc===false)return html;
   if(['help','time','day'].indexOf(route)>=0)return html;
   var parts=[];
   var openLine=getMissionSessionOpenLine(ctx);
@@ -9370,6 +9371,7 @@ function getMissionConversationFirstResponse(conv,ctx,question){
   var q=normalizeMissionQuestion(question||'');
   var shape=getMissionQuestionShape(question||'');
   if(!conv)return '';
+  if(missionQuestionIsSimpleNowAsk(route,question||''))return getMissionHumanBubble(route,conv,ctx,question||'');
   if(conv.type===CONV_CLOSE)return getMissionCloseResponse(ctx);
   if(conv.type===CONV_QUICK_READ)return getMissionQuickRead(route,ctx);
   if(conv.type===CONV_WHY)return getMissionWhyRead(route,ctx);
@@ -9583,10 +9585,64 @@ function missionCompactText(html){
 function missionRouteNeedsDataBubble(route,conv,question){
   if(!route||!conv)return false;
   if(route==='diagnostic')return false;
+  if(!missionQuestionAllowsDataBubble(route,conv,question||''))return false;
   if([CONV_QUICK_READ,CONV_WHY,CONV_WHAT_ELSE,CONV_FOLLOWUP,CONV_CLOSE,CONV_UNCLEAR].indexOf(conv.type)>=0)return false;
   if(conv.type===CONV_DEEPER)return true;
   if(conv.type===CONV_COMMAND||conv.type===CONV_DATA_REQUEST)return ['now','leads','report','dpc','cycle','calendar','content','production','resources','sync'].indexOf(route)>=0;
   return false;
+}
+
+function missionPromptIsExplicitCommand(question){
+  var q=String(question||'').trim();
+  return !!q&&/^[\/#@]/.test(q);
+}
+
+function missionQuestionIsSimpleNowAsk(route,question){
+  if(route!=='now')return false;
+  var q=normalizeMissionQuestion(question||'');
+  if(missionPromptIsExplicitCommand(question))return false;
+  if(/\b(show|list|data|numbers|stats|report|gap|target|calendar|schedule|time|date|step|journey|breakdown|details|links?|buttons?|resources?|open)\b/.test(q))return false;
+  return /\b(what should i do|what do i do|what should i focus|what do i focus|what is the focus|what's the focus|whats the focus|what is the move|what's the move|whats the move|what should i be focused on|what should i do today|what do i do today|focus for today|today focus|lock in)\b/.test(q);
+}
+
+function missionQuestionHasExplicitDataAsk(route,question){
+  var q=normalizeMissionQuestion(question||'');
+  if(missionPromptIsExplicitCommand(question))return true;
+  if(/\b(show|list|pull|give me the data|data|numbers|stats|metrics|report|breakdown|details|status|summary|recap|audit|health|sync|memory|history|logs?|loaded|what is in|what's in|whats in)\b/.test(q))return true;
+  if(/\b(how many|how much|how far|how long|what time|what day|what date|what's on|whats on|who should i contact|who do i contact|who is warmest|top leads?|pipeline|leads?|calendar|schedule|events?|revenue|money|gap|target|sales|dpc|booked|calls?|content queue|production|resources?|library)\b/.test(q))return true;
+  if(route==='leads'&&/\b(pipeline|lead|leads|contact|follow|follow-up|crm|who should|who do)\b/.test(q))return true;
+  if(route==='report'&&/\b(goal|money|revenue|made|sales|performing|performance|behind|ahead|track|target|gap)\b/.test(q))return true;
+  if(route==='calendar'&&/\b(calendar|schedule|meeting|event|class|time|today)\b/.test(q))return true;
+  if(route==='sync'&&/\b(sync|health|system|broken|error|working|logs?)\b/.test(q))return true;
+  return false;
+}
+
+function missionQuestionAllowsDataBubble(route,conv,question){
+  if(missionQuestionIsSimpleNowAsk(route,question))return false;
+  if(conv&&conv.type===CONV_DEEPER)return true;
+  return missionQuestionHasExplicitDataAsk(route,question);
+}
+
+function missionQuestionAllowsSuggestionBubble(route,conv,question,links){
+  var q=normalizeMissionQuestion(question||'');
+  if(route==='help')return true;
+  if(conv&&conv.type===CONV_CLOSE)return false;
+  if(/\b(open|link|links|button|buttons|where do i find|where is|send me|resource|resources|command|commands|help|guide|settings|sync chats?|backup|archive)\b/.test(q))return true;
+  if(missionPromptIsExplicitCommand(question)&&['sync','help','resources','profile'].indexOf(route)>=0)return true;
+  return false;
+}
+
+function missionQuestionAllowsActionButtons(route,question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(mark|save|log|add|archive|backup|sync|create|store|remember this|write this|note this|move this)\b/.test(q);
+}
+
+function missionShouldKeepAnswerQuiet(route,conv,question){
+  if(!route||['help','time','day','profile','memory'].indexOf(route)>=0)return false;
+  if(missionQuestionIsSimpleNowAsk(route,question))return true;
+  if(missionPromptIsExplicitCommand(question))return false;
+  if(conv&&[CONV_QUICK_READ,CONV_WHY,CONV_DEEPER].indexOf(conv.type)>=0)return false;
+  return !missionQuestionHasExplicitDataAsk(route,question);
 }
 
 function getMissionHumanBubble(route,conv,ctx,question){
@@ -9783,16 +9839,19 @@ function mcConfirmAction(actionId,encodedData){
 
 function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,brainState){
   var shape=getMissionQuestionShape(question||'');
-  function withWorker(html){return html?getMissionWorkerLabelHtml(route)+html:html;}
-  if(shape&&shape.type==='how')return {b1:withWorker(answer),b2:'',b3:getMissionActionButtons(route,ctx,question||'')};
+  var quiet=missionShouldKeepAnswerQuiet(route,conv,question||'');
+  function withWorker(html){return html?(quiet?'':getMissionWorkerLabelHtml(route))+html:html;}
+  var allowSuggestions=missionQuestionAllowsSuggestionBubble(route,conv,question||'',links||[]);
+  var allowActions=missionQuestionAllowsActionButtons(route,question||'');
+  if(shape&&shape.type==='how')return {b1:withWorker(answer),b2:'',b3:allowActions?getMissionActionButtons(route,ctx,question||''):''};
   var needsData=missionRouteNeedsDataBubble(route,conv,question||'');
   if(brainState&&brainState.renderB2===false)needsData=false;
-  if(!needsData)return {b1:withWorker(answer),b2:'',b3:[followUp,getMissionActionButtons(route,ctx,question||'')].filter(Boolean).join('<br><br>')};
+  if(!needsData)return {b1:withWorker(answer),b2:'',b3:[allowSuggestions?followUp:'',allowActions?getMissionActionButtons(route,ctx,question||''):''].filter(Boolean).join('<br><br>')};
   var human=getMissionHumanBubble(route,conv,ctx,question||'')||answer;
   return {
     b1:withWorker(human),
     b2:getMissionDataBubble(route,ctx,question||''),
-    b3:[getMissionSuggestionBubble(route,conv,followUp,links,question||''),getMissionActionButtons(route,ctx,question||'')].filter(Boolean).join('<br><br>')
+    b3:[allowSuggestions?getMissionSuggestionBubble(route,conv,followUp,links,question||''):'',allowActions?getMissionActionButtons(route,ctx,question||''):''].filter(Boolean).join('<br><br>')
   };
 }
 
@@ -9882,13 +9941,15 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var route=(conv&&conv.route)||intent.route;
   var responseMode=getMissionResponseMode(cleanQuestion||'',route,ctx,brainState);
   var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,responseMode);
-  function finishMissionAnswer(html){
-    return applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState));
+  var quietAnswer=missionShouldKeepAnswerQuiet(route,conv,cleanQuestion||'');
+  function finishMissionAnswer(html,opts){
+    opts=opts||{};
+    return applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
   }
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,cleanQuestion||'');
   if(conversationFirst){
     if(route)setMissionCommandActiveTopic(route,question||'');
-    return finishMissionAnswer(applyMissionResponseVariant(conversationFirst,variant,{opener:true,closer:true}));
+    return finishMissionAnswer(applyMissionResponseVariant(conversationFirst,variant,quietAnswer?{opener:false,closer:false,signature:false}:{opener:true,closer:true}),quietAnswer?{sessionArc:false}:{});
   }
   if(getMissionCloseSignal(cleanQuestion||''))return getMissionCloseResponse(ctx);
   var continuation=getMissionContinuationSignal(cleanQuestion||'');
@@ -9905,9 +9966,9 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   if(routed){
     setMissionCommandActiveTopic(route,cleanQuestion||question||'');
     var shapeAddon=(route==='leads'&&getMissionPipelineDiagnosticSignal(cleanQuestion||''))?'':getMissionQuestionShapeAddon(shape,route,ctx);
-    var routedAnswer=routed+shapeAddon+getMissionResponseModeAddon(responseMode,route,ctx);
-    if(['help','time','day','profile','memory'].indexOf(route)<0)routedAnswer=applyMissionResponseVariant(routedAnswer,variant,{opener:true,closer:true});
-    return finishMissionAnswer(routedAnswer);
+    var routedAnswer=quietAnswer?routed:(routed+shapeAddon+getMissionResponseModeAddon(responseMode,route,ctx));
+    if(['help','time','day','profile','memory'].indexOf(route)<0&&!quietAnswer)routedAnswer=applyMissionResponseVariant(routedAnswer,variant,{opener:true,closer:true});
+    return finishMissionAnswer(routedAnswer,quietAnswer?{sessionArc:false}:{});
   }
   /* 2026-05-19 (Claude deep pass): partial fallback for low-confidence signals (score >0
      but below the threshold). Gives a best-guess partial answer + asks for confirmation
@@ -9945,7 +10006,7 @@ function runMissionCommandSelfCheck(){
     {q:'/dpc',route:'dpc',must:'DPC',shape:'command'},
     {q:'/help',route:'help',must:'Commands',shape:'command'},
     {q:'who is A1XX',route:'profile',must:'A1XX'},
-    {q:'what should I do today?',route:'now',must:'Do this right now'},
+    {q:'what should I do today?',route:'now',mustAny:['move one asset','focus','next move','current block']},
     {q:'who should I contact?',route:'leads',must:'Leads'},
     {q:'what should I make?',route:'content',must:'Content'},
     {q:'where am I in my steps?',route:'now',mustAny:['journey','step'],shape:'where'},
