@@ -8236,8 +8236,8 @@ function getMissionResponseDepth(input,convType,brainState){
   var q=normalizeMissionQuestion(input||'');
   if(hasMissionPhrase(q,['just tell me','one thing','action only','short answer','no breakdown','less words','just action']))return 'micro';
   if(hasMissionPhrase(q,['what is the move','whats the move','what should i do now','where we at','where do i stand','quick read','give me the read']))return 'quick';
-  if(hasMissionPhrase(q,['walk me through','where do i click','step by step','guide me','show me how','tell me exactly what to do','what button do i press','where do i go','how do i log','how do i find','how do i save','how do i archive']))return 'guided';
-  if(hasMissionPhrase(q,['teach me','explain','break down','why again','go deeper','what does this mean','how does this work','what is the framework','what is the principle','make this make sense']))return 'deep';
+  if(hasMissionPhrase(q,['walk me through','where do i click','step by step','guide me','show me how','tell me exactly what to do','what button do i press','where do i go','how do i log','how do i find','where do i find','where do i check','how do i save','how do i archive']))return 'guided';
+  if(hasMissionPhrase(q,['teach me','explain','break down','why again','go deeper','what does this mean','how does this work','what is the framework','what is the principle','make this make sense'])||/\bwhat does\b.+\bmean\b/.test(q)||/\bhow does\b.+\bwork\b/.test(q))return 'deep';
   if(hasMissionPhrase(q,['plan','roadmap','strategy','map this out','game plan','sequence','workflow','process','phase one','phase two','campaign plan']))return 'roadmap';
   if(hasMissionPhrase(q,['ideas','brainstorm','help me think','angles','what could this become','give me options','help me cook this up','variations']))return 'guided';
   if(convType===CONV_QUICK_READ)return 'quick';
@@ -8251,6 +8251,9 @@ function getMissionGuidanceProfile(question,route,convType,brainState){
   var depth=getMissionResponseDepth(q,convType,brainState||{});
   var best={category:'',shape:'',routeTarget:route||'',workerTarget:'',score:0,responseDepth:depth};
   var ideaSignal=/\b(ideas|idea|brainstorm|angles|options|variations|could|become|cook|build this out|turn this into|content angle|stream angle|sales angle|proof angle|what should i make|what should i say)\b/.test(q);
+  if(/\b(where do i|where can i|how do i|what button|what tab|what card)\b/.test(q)&&/\b(find|check|open|go|click|log|save|archive|sync|hit list|system hub|dpc|content|production|report|rolodex|calendar|backup|history|worker)\b/.test(q)){
+    return {category:'app_navigation',shape:'app_navigation_guide',routeTarget:route||'help',workerTarget:'strategist',score:12,responseDepth:'guided'};
+  }
   Object.keys(MISSION_GUIDANCE_INPUT_CATEGORIES||{}).forEach(function(key){
     var item=MISSION_GUIDANCE_INPUT_CATEGORIES[key]||{};
     var score=0;
@@ -8322,7 +8325,7 @@ function getMissionGuideKey(question,route){
 }
 
 function missionNumberedList(items){
-  return (items||[]).map(function(item,i){return (i+1)+'. '+escapeHtml(item);}).join('<br>');
+  return (items||[]).map(function(item,i){return (i+1)+') '+escapeHtml(item);}).join('<br>');
 }
 
 function getMissionGuidedResponse(route,ctx,question,conv,brainState){
@@ -8334,23 +8337,23 @@ function getMissionGuidedResponse(route,ctx,question,conv,brainState){
   var guide=MISSION_APP_GUIDES[guideKey]||[];
   if(profile.responseDepth==='micro')return '';
   if(profile.shape==='app_navigation_guide'||profile.shape==='app_walkthrough'){
-    return '<strong>Boss, do it like this.</strong><br><br>'+missionNumberedList(guide)+'<br><br><span style="color:#8f9aa3">After that, come back and type: done, or tell me what happened.</span>';
+    return '<p><strong>Boss, do it like this.</strong></p><p>'+missionNumberedList(guide)+'</p><p><span style="color:#8f9aa3">After that, come back and type: done, or tell me what happened.</span></p>';
   }
   if(profile.shape==='education_answer'){
-    return '<strong>Here is the simple version.</strong><br><br>'+escapeHtml(concept.concept)+'<br><br><strong>Why it matters:</strong><br>'+escapeHtml(concept.why)+'<br><br><strong>How to use it:</strong><br>'+escapeHtml(concept.use)+'<br><br><strong>What to watch:</strong><br>'+escapeHtml(concept.watch);
+    return '<p><strong>Here is the simple version.</strong></p><p>'+escapeHtml(concept.concept)+'</p><p><strong>Why it matters:</strong><br>'+escapeHtml(concept.why)+'</p><p><strong>How to use it:</strong><br>'+escapeHtml(concept.use)+'</p><p><strong>What to watch:</strong><br>'+escapeHtml(concept.watch)+'</p>';
   }
   if(profile.shape==='ideation_answer'||profile.shape==='creative_thinking_partner'){
-    var raw=question||'this';
+    var raw=normalizeMissionQuestion(question||'').replace(/^(give me|show me|send me|some|a few)\s+/,'').replace(/\bideas?\b/g,'').replace(/\s+/g,' ').trim()||'today’s work';
     var moneyMove=route==='leads'||route==='report'?'Turn it into one direct follow-up or offer.':'Tie it back to the current Money Mission offer.';
-    return '<strong>Bet. Here are a few lanes.</strong><br><br>1. <strong>Fast move:</strong> Make the smallest useful version today.<br><br>2. <strong>Proof move:</strong> Show the work, result, or lesson behind '+escapeHtml(raw)+'.<br><br>3. <strong>Money move:</strong> '+escapeHtml(moneyMove)+'<br><br>4. <strong>Content move:</strong> Turn it into a short post, clip, or live angle.<br><br><strong>Best pick:</strong><br>Use the proof move first, then point it at the offer.';
+    return '<p><strong>Bet. Here are a few lanes.</strong></p><p>1) <strong>Fast move:</strong> Make the smallest useful version today.</p><p>2) <strong>Proof move:</strong> Show the work, result, or lesson behind '+escapeHtml(raw)+'.</p><p>3) <strong>Money move:</strong> '+escapeHtml(moneyMove)+'</p><p>4) <strong>Content move:</strong> Turn it into a short post, clip, or live angle.</p><p><strong>Best pick:</strong><br>Use the proof move first, then point it at the offer.</p>';
   }
   if(profile.shape==='diagnostic_steps'){
     var syncTopic=route==='sync'||/\b(sync|notion|sheets|app|button|backup|system|broken|error)\b/.test(q);
     var steps=syncTopic?['Confirm what action failed.','Open System Hub > Health.','Check the latest Activity Log or sync status.','Save locally before changing anything.','Retest one action only.']:['Name the lane that feels blocked.','Check the one metric closest to the result.','Pick the smallest action that can change it.','Do that action and log what happened.'];
-    return '<strong>Let’s not fix five things at once.</strong><br><br>Check this order:<br><br>'+missionNumberedList(steps)+'<br><br><span style="color:#8f9aa3">Do not move to step 2 until step 1 is clear.</span>';
+    return '<p><strong>Let’s not fix five things at once.</strong></p><p>Check this order:</p><p>'+missionNumberedList(steps)+'</p><p><span style="color:#8f9aa3">Do not move to step 2 until step 1 is clear.</span></p>';
   }
   if(profile.shape==='plan_builder'){
-    return '<strong>Here is the play.</strong><br><br><strong>Phase 1: Stabilize</strong><br>- Pick the lane.<br>- Clear the biggest open loop.<br><br><strong>Phase 2: Execute</strong><br>- Do the action closest to money or proof.<br>- Log the result before switching systems.<br><br><strong>Phase 3: Review</strong><br>- Check what moved.<br>- Decide the next adjustment.<br><br><strong>Start here:</strong><br>'+escapeHtml((ctx&&ctx.nowText)||'Pick one money-facing move and finish it.');
+    return '<p><strong>Here is the play.</strong></p><p><strong>Phase 1: Stabilize</strong><br>1) Pick the lane.<br>2) Clear the biggest open loop.</p><p><strong>Phase 2: Execute</strong><br>1) Do the action closest to money or proof.<br>2) Log the result before switching systems.</p><p><strong>Phase 3: Review</strong><br>1) Check what moved.<br>2) Decide the next adjustment.</p><p><strong>Start here:</strong><br>'+escapeHtml((ctx&&ctx.nowText)||'Pick one money-facing move and finish it.')+'</p>';
   }
   return '';
 }
@@ -8679,9 +8682,11 @@ function getMissionConversationType(question,ctx,intent,brainState){
   var smartCategory=profile&&profile.best&&profile.best.category||'';
   var smartRoute=(profile&&profile.best&&profile.best.score>=6&&profile.best.route&&profile.best.route!=='context')?getMissionSlashAlias(profile.best.route):'';
   var brainRoute=brainState&&brainState.sessionTopic?getMissionRouteFromBrainTopic(brainState.sessionTopic):'';
+  var depth=getMissionResponseDepth(q,'',brainState||{});
   if(!q)return {type:CONV_NEW_TOPIC,route:'now',activeRoute:active&&active.intentRoute||''};
   if(/^\/[a-z]+/.test(q))return {type:CONV_COMMAND,route:intent.route||getMissionSlashAlias(q.replace(/^\/([a-z]+).*/,'$1')),activeRoute:active&&active.intentRoute||''};
   if(getMissionCloseSignal(q))return {type:CONV_CLOSE,route:'',activeRoute:active&&active.intentRoute||''};
+  if(depth==='guided'||depth==='deep'||depth==='roadmap')return {type:CONV_DATA_REQUEST,route:intent.route||smartRoute||active&&active.intentRoute||'now',activeRoute:active&&active.intentRoute||''};
   if(/\b(what should i do today|what do i do today|what should i do next|whats the move today|what is the move today|where we at)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'now',activeRoute:active&&active.intentRoute||''};
   if(/\b(why isnt|why is not|why is my|why are my|what is wrong with|whats wrong with|not working|broken|problem|issue|diagnose|diagnostic)\b/.test(q))return {type:CONV_DATA_REQUEST,route:'diagnostic',activeRoute:active&&active.intentRoute||''};
   if(intent&&intent.route==='diagnostic')return {type:CONV_DATA_REQUEST,route:'diagnostic',activeRoute:active&&active.intentRoute||''};
@@ -10283,6 +10288,8 @@ function missionQuestionHasExplicitDataAsk(route,question){
 
 function missionQuestionAllowsDataBubble(route,conv,question){
   if(missionQuestionIsSimpleNowAsk(route,question))return false;
+  var depth=getMissionResponseDepth(question||'',conv&&conv.type,{});
+  if(depth==='guided'||depth==='deep'||depth==='roadmap')return false;
   if(conv&&conv.type===CONV_DEEPER)return true;
   return missionQuestionHasExplicitDataAsk(route,question);
 }
@@ -10524,9 +10531,14 @@ function mcConfirmAction(actionId,encodedData){
 function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,brainState){
   var shape=getMissionQuestionShape(question||'');
   var quiet=missionShouldKeepAnswerQuiet(route,conv,question||'');
+  var depth=getMissionResponseDepth(question||'',conv&&conv.type,brainState||{});
+  var guidedProfile=getMissionGuidanceProfile(question||'',route,conv&&conv.type,brainState||{});
   function withWorker(html){return html?(missionPromptIsWorkerMention(question)?getMissionWorkerLabelHtml(route):'')+html:html;}
   var allowSuggestions=missionQuestionAllowsSuggestionBubble(route,conv,question||'',links||[]);
   var allowActions=missionQuestionAllowsActionButtons(route,question||'');
+  if((depth==='guided'||depth==='deep'||depth==='roadmap')&&guidedProfile&&guidedProfile.shape){
+    return {b1:withWorker(answer),b2:'',b3:''};
+  }
   if(shape&&shape.type==='how')return {b1:withWorker(answer),b2:'',b3:allowActions?getMissionActionButtons(route,ctx,question||''):''};
   var needsData=missionRouteNeedsDataBubble(route,conv,question||'');
   if(brainState&&brainState.renderB2===false)needsData=false;
@@ -10633,7 +10645,9 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,cleanQuestion||'');
   if(conversationFirst){
     if(route)setMissionCommandActiveTopic(route,question||'');
-    return finishMissionAnswer(applyMissionResponseVariant(conversationFirst,variant,quietAnswer?{opener:false,closer:false,signature:false}:{opener:true,closer:true}),quietAnswer?{sessionArc:false}:{});
+    var responseDepth=getMissionResponseDepth(cleanQuestion||'',conv&&conv.type,brainState||{});
+    var isGuidedDepth=responseDepth==='guided'||responseDepth==='deep'||responseDepth==='roadmap';
+    return finishMissionAnswer(applyMissionResponseVariant(conversationFirst,variant,(quietAnswer||isGuidedDepth)?{opener:false,closer:false,signature:false}:{opener:true,closer:true}),(quietAnswer||isGuidedDepth)?{sessionArc:false}:{});
   }
   if(getMissionCloseSignal(cleanQuestion||''))return getMissionCloseResponse(ctx);
   var continuation=getMissionContinuationSignal(cleanQuestion||'');
