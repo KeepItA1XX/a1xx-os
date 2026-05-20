@@ -13109,31 +13109,37 @@ function getMissionOutputContextV1_1(route,ctx,question,brainState){
   var root='the action loop is open';
   var constraint='the next decision has not been forced yet';
   var choice=base.move||'the next money-facing move';
+  var routeMove=base.move||'finish the next money-facing move';
   if(r==='leads'){
+    routeMove='qualify one call-ready lead, make the direct offer, then log the result';
     expanded='pipeline is not a list problem first; it is a movement problem. Move one lead to reply, call, offer, paid, or clean no.';
     diagnosis='pipeline feels noisy when heat, recency, and next ask are not separated';
     root='the lead needs a decision question, not more storage';
     constraint='no logged status change yet';
     choice='one call-ready lead';
   }else if(r==='sales'){
+    routeMove='ask one sharp question before pitching';
     expanded='sales gets cleaner when the prospect owns the problem before you explain the offer';
     diagnosis='the pitch is early if the concern is still vague';
     root='the buyer has not named the real objection yet';
     constraint='the next question has to isolate money, timing, or belief';
     choice='one sharp question';
   }else if(r==='report'||r==='money'){
+    routeMove='move the closest buyer toward payment';
     expanded='money reads are useful only when they point at the next cash path';
     diagnosis='the number is not the whole answer; the source of the next dollar is the answer';
     root='cash path needs one buyer-facing action';
     constraint='the next direct offer is not made yet';
     choice='the closest buyer';
   }else if(r==='content'){
+    routeMove='turn today’s work into one proof post';
     expanded='content should turn today’s work into proof, not create a new distraction';
     diagnosis='the content problem is usually angle selection, not effort';
     root='the post needs to support the Money Mission';
     constraint='one proof angle has not been picked yet';
     choice='the proof post';
   }else if(r==='production'){
+    routeMove='move the highest-value active asset to its next visible status';
     expanded='production matters when the asset leaves the folder and becomes delivery, proof, or an offer';
     diagnosis='too many open assets creates fake progress';
     root='the highest-value asset needs a finish line';
@@ -13151,6 +13157,7 @@ function getMissionOutputContextV1_1(route,ctx,question,brainState){
     step3:'log the result',
     frameworkName:'Signal to Action',
     framework:'read the signal, move the lane, log the result',
+    move:routeMove,
     choice:choice,
     a:'keep asking for more info',
     b:'make the next move visible',
@@ -13310,6 +13317,10 @@ function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return '';
   var outputRoute=typeof getMissionOutputRouteOverrideV1_1==='function'?getMissionOutputRouteOverrideV1_1(route,q):route;
+  var priorState=getMissionOutputStateV1();
+  if(/^(why|why again|why tho again|run it back|explain more|make it make sense|final why|more|more again|more than that|tell me more|tell me more again|say more|go on|continue|framework it|ok what do i do)$/.test(q)&&outputRoute==='now'&&priorState.topic&&priorState.topic!=='now'){
+    outputRoute=priorState.topic;
+  }
   var state=updateMissionOutputLoopStateV1(outputRoute,q);
   if(state.correctionAttemptCount>=2&&/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q)){
     return 'Wrong lane again.<br><br>Which one: <strong>Pipeline, Money, Sales, Content, Production, or Sync?</strong>';
