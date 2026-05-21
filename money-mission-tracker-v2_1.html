@@ -13549,6 +13549,28 @@ function getMissionSalesDeepSubtypeV1(q){
   return '';
 }
 
+function getMissionSalesOfferIntentV1(q){
+  q=String(q||'').toLowerCase();
+  if(/\b(open|opener|first message|cold dm|start|intro)\b/.test(q))return 'opener';
+  if(/\b(qualifier|qualify|question|ask|find out|figure out)\b/.test(q))return 'qualifier';
+  if(/\b(close|closing|call ask|book|booking|next step|lock in|move forward)\b/.test(q))return 'close';
+  if(/\b(follow up|follow-up|followup|check in|checking in|bump)\b/.test(q))return 'followup';
+  if(/\b(pitch|explain|offer frame|sell|position)\b/.test(q))return 'pitch';
+  if(/\b(reply|response|text back|dm back)\b/.test(q))return 'reply';
+  return '';
+}
+
+function filterMissionSalesOfferPoolV1(pool,offerIntent){
+  if(!pool||!pool.length||!offerIntent)return pool;
+  var filtered=pool.filter(function(t){
+    var tags=t&&t.tags||[];
+    if(offerIntent==='followup')return tags.indexOf('followup')>=0||tags.indexOf('warm')>=0;
+    if(offerIntent==='reply')return tags.indexOf('reply')>=0||tags.indexOf('qualifier')>=0;
+    return tags.indexOf(offerIntent)>=0;
+  });
+  return filtered.length?filtered:pool;
+}
+
 function getMissionSalesDeepPoolV1(pack,subtype,objectionKey,offerKey){
   if(!pack)return null;
   if(subtype==='live_call')return pack.liveCallPools&&pack.liveCallPools.live_call;
@@ -13584,9 +13606,11 @@ function getMissionSalesDeepOutputResponseV1(route,ctx,question,conv,brainState)
   var offerKey=getMissionSalesDeepOfferKeyV1(q);
   var objectionKey=getMissionSalesDeepObjectionKeyV1(q);
   var subtype=getMissionSalesDeepSubtypeV1(q);
+  var offerIntent=getMissionSalesOfferIntentV1(q);
   if(offerKey&&!subtype)subtype='offer_specific_dm';
   if(objectionKey&&!subtype)subtype=objectionKey;
   var pool=getMissionSalesDeepPoolV1(pack,subtype,objectionKey,offerKey);
+  if(offerKey)pool=filterMissionSalesOfferPoolV1(pool,offerIntent);
   var template=pickMissionSalesDeepTemplateV1(pool,q);
   if(!template)return '';
   var context=getMissionOutputContextV1_1('sales',ctx,question,brainState);
