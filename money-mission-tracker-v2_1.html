@@ -10598,6 +10598,9 @@ function isMissionWrongLaneCorrectionSignal(q){
 }
 
 function getMissionCorrectionTargetRouteV2(q){
+  var raw=String(q||'').toLowerCase();
+  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who|not pipeline.*sales|sales.*not pipeline|no not pipeline sales|not pipeline sales)\b/.test(raw))return 'sales';
+  if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say|not sales.*pipeline|pipeline.*not sales|no not sales pipeline|not sales pipeline)\b/.test(raw))return 'leads';
   q=normalizeMissionQuestion(q||'');
   if(!isMissionWrongLaneCorrectionSignal(q))return '';
   if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say|not sales.*pipeline|pipeline.*not sales)\b/.test(q))return 'leads';
@@ -11664,7 +11667,8 @@ function getMissionDecisionMemoryV1(turn,ctx){
   var directNext=/\b(what next|what now|what should i do|what do i do|next move|call the move|pick one|just tell me one thing)\b/.test(q);
   var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|report|pipeline|who hot|content|production|calendar)\b/.test(q);
   var salesAsk=/\b(what should i say|what do i say|too expensive|he said|she said|they said|ghosted|payment plan|roleplay|score my answer)\b/.test(q);
-  var shouldAnswer=!!(result&&message&&directNext&&!explicitData&&!salesAsk);
+  var openEnergy=missionIsOpenEndedWorkStartV2(turn)||/\b(yo let'?s go|lets go|let's go|lock in|ready|i'?m ready|im ready)\b/.test(q);
+  var shouldAnswer=!!(result&&message&&directNext&&!explicitData&&!salesAsk&&!openEnergy);
   return {
     hasMemory:!!result,
     lastResult:result,
@@ -11805,11 +11809,15 @@ function getMissionThreadMemoryV1(turn,ctx){
   var loop=session.resultLoop||{};
   var lastResult=loop.lastResult||null;
   var pending=loop.pendingAction||session.lastActionPlan||null;
-  var activeRoute=turn&&turn.route||thread.activeRoute||session.lastRoute||session.sessionTopic||'now';
   var lastRoute=thread.activeRoute||lastTurn&&lastTurn.route||session.lastRoute||'';
   var followup=/^(why|why again|more|more again|tell me more|run it back|what next|what now|what about that|that one|this one|same thing|continue|and then what)$/i.test(q);
+  var activeRoute=(followup&&lastTurn&&lastTurn.route&&(!(turn&&turn.route)||turn.route==='now'))?lastTurn.route:(turn&&turn.route||thread.activeRoute||session.lastRoute||session.sessionTopic||'now');
+  if(pending&&activeRoute&&((pending.route&&pending.route!==activeRoute)||/decision_memory_paid|thread_memory_paid/.test(pending.reason||'')))pending=null;
   var correction=!!(turn&&turn.inputSignals&&turn.inputSignals.isCorrection)||/\b(nah not that|not that|wrong lane|i meant)\b/.test(q);
-  var resultFollowup=!!(lastResult&&/\b(what next|what now|next move|what should i do|what do i do|why|more|run it back)\b/.test(q));
+  var lastWasCorrection=!!(lastTurn&&/\b(nah not that|not that|wrong lane|i meant)\b/.test(normalizeMissionQuestion(lastTurn.question||lastTurn.normalizedInput||'')));
+  var resultRoute=lastResult&&lastResult.route||'';
+  var routeSupersedesResult=!!(lastTurn&&lastTurn.route&&resultRoute&&lastTurn.route!==resultRoute&&/^(why|why again|more|more again|tell me more|run it back)$/i.test(q));
+  var resultFollowup=!!(lastResult&&/\b(what next|what now|next move|what should i do|what do i do|why|more|run it back)\b/.test(q)&&!lastWasCorrection&&!routeSupersedesResult);
   var explicitCommand=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|report|pipeline|who hot|content|production|calendar|what should i say|too expensive|he said|she said|they said|roleplay|score my answer)\b/.test(q);
   var routeChanged=!!(lastRoute&&activeRoute&&lastRoute!==activeRoute);
   var hasThread=!!(lastTurn||lastResult||pending);
@@ -11820,7 +11828,7 @@ function getMissionThreadMemoryV1(turn,ctx){
   if(shouldAnswer&&correction){
     reason='thread_correction';
     message='Clean reset.<br><br>I will not keep pushing '+escapeHtml(getMissionRouteLabelV2(lastRoute||activeRoute))+'.<br><br>Pick the lane and I will rerun it: Pipeline, Money, Sales, Content, Production, or Sync.';
-  }else if(shouldAnswer&&lastResult){
+  }else if(shouldAnswer&&lastResult&&resultFollowup){
     reason='last_result_thread';
     if(lastResult.type==='paid'){
       action={label:'Protect Delivery',type:'next_best_move',target:'delivery',action:'protect delivery after paid result',requiresConfirmation:false,reason:'thread_memory_paid'};
@@ -18395,11 +18403,11 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   }
   var intelligenceAnswer=getMissionArbitratedIntelligenceAnswerV1(turnV2,ctx);
   if(intelligenceAnswer)return finishMissionAnswer(intelligenceAnswer.answer,intelligenceAnswer.opts);
+  var openEndedV2=getMissionOpenEndedWorkStartResponseV2(turnV2,ctx);
+  if(openEndedV2)return finishMissionAnswer(openEndedV2,{sessionArc:false,closer:false,presence:false,explainDecision:true});
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
   if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false,explainDecision:true});
-  var openEndedV2=getMissionOpenEndedWorkStartResponseV2(turnV2,ctx);
-  if(openEndedV2)return finishMissionAnswer(openEndedV2,{sessionArc:false,closer:false,presence:false,explainDecision:true});
   var backlogSpecial=getMissionBacklogSpecialResponse(route,ctx,cleanQuestion||'',conv,brainState);
   if(backlogSpecial)return finishMissionAnswer(backlogSpecial,{sessionArc:false});
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,cleanQuestion||'');
@@ -18541,6 +18549,9 @@ function runMissionIntegritySelfCheck(){
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'no_reply',label:'No Reply Yet',route:'leads',actionLabel:'Open Hit List',recordedAt:new Date().toISOString()},history:[]}}));
   var noReplyMemory=getMissionDecisionMemoryV1({rawInput:'what should i do',route:'now'},actionCtx);
   if(!noReplyMemory.shouldAnswer||noReplyMemory.message.indexOf('Do not chase')<0)failures.push('decision_memory_no_reply');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',actionLabel:'Open Hit List',recordedAt:new Date().toISOString()},history:[]}}));
+  var paidEnergyGuard=getMissionDecisionMemoryV1({rawInput:'lock in',route:'now',inputEnergy:'charged'},actionCtx);
+  if(paidEnergyGuard.shouldAnswer)failures.push('decision_memory_open_energy_guard');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[
     {type:'no_reply',label:'No Reply Yet',route:'leads',recordedAt:new Date().toISOString()},
     {type:'no_reply',label:'No Reply Yet',route:'leads',recordedAt:new Date().toISOString()}
@@ -18572,6 +18583,9 @@ function runMissionIntegritySelfCheck(){
   if(!bookedThread.shouldAnswer||bookedThread.reason!=='last_result_thread')failures.push('thread_memory_booked_signal');
   var bookedThreadPrompt=buildMissionThreadMemoryResponseV1({threadMemory:bookedThread},actionCtx);
   if(bookedThreadPrompt.indexOf('booked-call thread')<0||bookedThreadPrompt.indexOf('opening question')<0)failures.push('thread_memory_booked_prompt');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'leads',turns:[{question:'/pipeline',route:'leads',timestamp:new Date().toISOString()}]},resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',actionLabel:'Open Hit List',recordedAt:new Date().toISOString()},history:[]}}));
+  var newerRouteThread=getMissionThreadMemoryV1({rawInput:'why',route:'leads',inputSignals:{}},actionCtx);
+  if(newerRouteThread.reason==='last_result_thread'||(newerRouteThread.message||'').indexOf('past the sale')>=0)failures.push('thread_memory_newer_route_guard');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'leads',turns:[{question:'/pipeline',route:'leads',timestamp:new Date().toISOString()}]},lastActionPlan:{label:'Open Hit List',action:'Contact GARY RAOGUY',type:'open_card',target:'hit_list',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact GARY RAOGUY',type:'open_card',target:'hit_list',route:'leads',suggestedAt:new Date().toISOString()},history:[]}}));
   var pendingThread=getMissionThreadMemoryV1({rawInput:'more',route:'leads',inputSignals:{}},actionCtx);
   if(!pendingThread.shouldAnswer||pendingThread.reason!=='pending_action_thread')failures.push('thread_memory_pending');
@@ -18676,7 +18690,7 @@ function runMissionIntegritySelfCheck(){
   var masterQASweep=runMissionMasterIntelligenceQASweepV1();
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:75};
+  return {passed:!failures.length,failures:failures,total:77};
 }
 
 function runMissionCommandSelfCheck(){
