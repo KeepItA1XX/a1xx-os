@@ -15410,11 +15410,21 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(!/Phase 1/i.test(weeklyPlan)||!/Phase 2/i.test(weeklyPlan)||!/Start here/i.test(weeklyPlan))failures.push('qa_weekly_review_plan_shape');
   var weeklyChanged=getMissionWeeklyReviewAnswerV1({rev:999,wk:500,gap:0,cycle:{name:'Foundation'}},'what changed this week');
   if(!/Weekly review read/i.test(weeklyChanged)||!/Lesson:/i.test(weeklyChanged)||!/Next move/i.test(weeklyChanged))failures.push('qa_weekly_review_read_shape');
+  var cardBrief=getMissionThisWeekCardResponseV1('now',{rev:999,wk:500,gap:0},'read the brief card',{},null);
+  if(!/Brief card|business read|Do this next/i.test(cardBrief))failures.push('qa_card_brief_read');
+  var cardOutreach=getMissionThisWeekCardResponseV1('leads',{rev:999,wk:500,gap:0},'what should i do on the outreach card',{},null);
+  if(!/Outreach card|open leads|Do this next/i.test(cardOutreach))failures.push('qa_card_outreach_read');
+  var cardContent=getMissionThisWeekCardResponseV1('content',{rev:999,wk:500,gap:0},'what should i do on the content card',{},null);
+  if(!/Content card|active item|Do this next/i.test(cardContent))failures.push('qa_card_content_read');
+  var cardProduction=getMissionThisWeekCardResponseV1('production',{rev:999,wk:500,gap:0},'what should i do on the beat card',{},null);
+  if(!/Production card|beat lane|Do this next/i.test(cardProduction))failures.push('qa_card_production_read');
+  var cardManager=getMissionThisWeekCardResponseV1('calendar',{rev:999,wk:500,gap:0},'what should i check on the manager card',{},null);
+  if(!/Manager card|calendar|Do this next/i.test(cardManager))failures.push('qa_card_manager_read');
   var accountabilityProtected=getMissionActionAccountabilityV1({rawInput:'/pipeline',route:'leads'},{});
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:23};
+  return {passed:!failures.length,failures:failures,total:28};
 }
 
 function getMissionHandoffResponse(question){
@@ -17175,6 +17185,109 @@ function getMissionWeeklyReviewAnswerV1(ctx,question){
     return 'Weekly review read:<br><br>'+escapeHtml(moneyLine)+'<br>'+escapeHtml(activityLine)+'<br>'+escapeHtml(loadedLine)+'<br><br>Lesson: '+escapeHtml(constraint)+'.<br><br>Next move is '+escapeHtml(move)+'.';
   }
   return 'Weekly review should turn the week into one decision.<br><br>'+escapeHtml(moneyLine)+'<br>'+escapeHtml(loadedLine)+'<br><br>The read is simple: '+escapeHtml(constraint)+'.<br><br>Next move is '+escapeHtml(move)+'.';
+}
+
+/* =========================================================
+   MISSION THIS WEEK CARD INTELLIGENCE — v1
+========================================================= */
+var MISSION_THIS_WEEK_CARD_INTELLIGENCE_V1={
+  id:'mission_this_week_card_intelligence_v1',
+  version:'1.0',
+  cards:['brief','outreach','content','production','manager']
+};
+
+function getMissionActiveCardV1(){
+  try{
+    var mission=typeof getMissionStore==='function'?getMissionStore():{};
+    var tool=window.__missionActiveCard||mission.tool||'';
+    if(tool==='campaign')return 'outreach';
+    if(tool==='beat')return 'production';
+    if(tool==='calendar'||tool==='tasks')return 'manager';
+    if(tool==='command')return '';
+    return ['brief','outreach','content','production','manager'].indexOf(tool)>=0?tool:'';
+  }catch(e){return '';}
+}
+
+function getMissionCardSignalV1(question,route){
+  var q=normalizeMissionQuestion(question||'');
+  var explicit='';
+  if(/\b(brief card|mission brief|brief tab|business read|dashboard card)\b/.test(q))explicit='brief';
+  else if(/\b(outreach card|outreach tab|dpc card|daily profit|hit list|pipeline card)\b/.test(q))explicit='outreach';
+  else if(/\b(content card|content tab|content tracker|post card|make something card)\b/.test(q))explicit='content';
+  else if(/\b(beat card|beat tab|production card|production tab|bangin|banging|asset card)\b/.test(q))explicit='production';
+  else if(/\b(manager card|manager tab|admin card|calendar card|tasks card|schedule card)\b/.test(q))explicit='manager';
+  if(explicit)return {card:explicit,reason:'explicit_card_phrase'};
+  if(['content','production'].indexOf(route)>=0)return {card:route,reason:'route_card'};
+  if(route==='leads'||route==='dpc'||route==='sales')return {card:'outreach',reason:'route_card'};
+  if(route==='calendar'||route==='weekly'||route==='sync')return {card:'manager',reason:'route_card'};
+  if(route==='report'||route==='money')return {card:'brief',reason:'route_card'};
+  var mode=getMissionContextMode();
+  var modeMap={brief:'brief',outreach:'outreach',content:'content',production:'production',manager:'manager'};
+  if(modeMap[mode]&&missionPromptCanUseContextMode(q,{}))return {card:modeMap[mode],reason:'context_mode'};
+  var active=getMissionActiveCardV1();
+  if(active&&missionPromptCanUseContextMode(q,{}))return {card:active,reason:'active_card'};
+  return null;
+}
+
+function getMissionThisWeekCardSnapshotV1(ctx){
+  ctx=ctx||{};
+  var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var leads=(window.__crmLeads||[]).filter(function(lead){try{return !isClosedCRMLead(lead);}catch(e){return true;}});
+  var content=(window.__contentPipelinePieces||window.__contentPieces||[]).filter(Boolean);
+  var production=(window.__productionPieces||[]).filter(Boolean);
+  var block=typeof getMissionBlockIntel==='function'?getMissionBlockIntel():{};
+  var journey=typeof getCurrentJourneyMove==='function'?getCurrentJourneyMove(ctx):null;
+  return {
+    revenue:Number(ctx.rev||0),
+    target:Number(ctx.wk||0),
+    gap:Number(ctx.gap||0),
+    blockName:block.name||'Current block',
+    minutesLeft:block.minutesLeft||0,
+    nextEvent:ctx.nextEvent||null,
+    dpc:{dms:Number(daily.dms||0),callsMade:Number(daily.coldCalls||0),booked:Number(daily.calls||0),closes:Number(daily.closes||0),money:Number(daily.money||0),content:Number(daily.content||0),replies:Number(daily.leads||0)},
+    openLeads:leads.length,
+    topLead:leads[0]?missionContextLeadName(leads[0]):'the warmest visible lead',
+    contentCount:content.length,
+    nextContent:content[0]&&(content[0].title||content[0].name||content[0].topic)||'the strongest proof from today',
+    productionCount:production.length,
+    nextProduction:production[0]&&(production[0].title||production[0].name||production[0].beat)||'the highest-value active asset',
+    journeyMove:journey&&journey.nextCheck||''
+  };
+}
+
+function getMissionThisWeekCardReadV1(card,snap){
+  if(card==='brief'){
+    var money=snap.target?fmt(snap.revenue)+' of '+fmt(snap.target)+' · '+fmt(snap.gap)+' gap':'weekly target not loaded';
+    var pressure=snap.gap>0?'money pressure is still open':'target pressure is covered';
+    return {title:'Brief card',read:'The brief is the business read. Right now '+pressure+' with '+money+'.',move:snap.gap>0?'open Outreach and move the closest buyer-facing conversation':'protect delivery, then choose the next compounding move'};
+  }
+  if(card==='outreach'){
+    var d=snap.dpc;
+    return {title:'Outreach card',read:'Outreach is reading '+snap.openLeads+' open leads and today has '+d.dms+' DMs, '+d.callsMade+' calls made, '+d.booked+' booked, '+d.closes+' closes.',move:snap.openLeads?'start with '+snap.topLead+' and log the result':'refresh the CRM read, then make one measurable outreach move'};
+  }
+  if(card==='content'){
+    return {title:'Content card',read:'Content is reading '+snap.contentCount+' active item'+(snap.contentCount===1?'':'s')+'. The card should turn work into proof, not another brainstorm.',move:snap.contentCount?'move "'+snap.nextContent+'" one status forward':'capture one proof-of-work idea and decide the post job'};
+  }
+  if(card==='production'){
+    return {title:'Production card',read:'Production is reading '+snap.productionCount+' active item'+(snap.productionCount===1?'':'s')+'. The beat lane only counts when the asset gets closer to shipping, selling, or delivery.',move:snap.productionCount?'move "'+snap.nextProduction+'" one status forward':'open the production tracker and choose one asset to start or package'};
+  }
+  return {title:'Manager card',read:'Manager is the admin, calendar, and review lane. Use it to clear the decision that unlocks action, not to hide in setup.',move:snap.nextEvent?'prep the one outcome for '+(snap.nextEvent.title||'the next event'):'review the calendar, weekly numbers, and one open admin loop'};
+}
+
+function getMissionThisWeekCardResponseV1(route,ctx,question,brainState,turn){
+  if(window.__missionCommandSelfCheckActive)return '';
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return '';
+  if(turn&&turn.actionAccountability&&turn.actionAccountability.shouldAnswer)return '';
+  var signal=getMissionCardSignalV1(question||'',route||'');
+  if(!signal)return '';
+  var direct=/\b(what should i do|what do i do|what next|what matters|read this|what am i looking at|explain this|what should i check|what should i make|where do i start|help me get started|quick read|show me)\b/.test(q);
+  if(!direct&&signal.reason!=='explicit_card_phrase')return '';
+  var snap=getMissionThisWeekCardSnapshotV1(ctx||{});
+  var read=getMissionThisWeekCardReadV1(signal.card,snap);
+  var contextLine=signal.reason==='context_mode'||signal.reason==='active_card'?'I am reading the '+read.title+' context first, then the rest of the OS behind it.':'This is the '+read.title+' read.';
+  var journey=snap.journeyMove?'<br><br>Current loaded step: '+escapeHtml(snap.journeyMove)+'.':'';
+  return escapeHtml(contextLine)+'<br><br>'+escapeHtml(read.read)+'<br><br>Do this next: '+escapeHtml(read.move)+'.'+journey;
 }
 
 function getMissionDiagnosticArea(question){
@@ -19551,6 +19664,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
   if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false,explainDecision:true});
+  var cardIntel=getMissionThisWeekCardResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(cardIntel)return finishMissionAnswer(cardIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false});
   var backlogSpecial=getMissionBacklogSpecialResponse(route,ctx,cleanQuestion||'',conv,brainState);
   if(backlogSpecial)return finishMissionAnswer(backlogSpecial,{sessionArc:false});
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,cleanQuestion||'');
