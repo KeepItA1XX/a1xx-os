@@ -814,6 +814,11 @@ input:focus{border-color:#333}
 .mission-live-toggle.active{border-color:#5d913b;background:#10180c;color:#b9f28f}
 .mission-live-toggle.active:before{background:#7ec845;box-shadow:0 0 8px rgba(126,200,69,.32)}
 .mission-live-toggle:hover{border-color:#405c31;color:#d7dde3}
+.mission-context-toggle{height:28px;border:0.5px solid #2b3238;border-radius:999px;background:#080a0c;color:#7f8a92;font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:0 10px;display:inline-flex;align-items:center;gap:6px}
+.mission-context-toggle:before{content:'';width:6px;height:6px;border-radius:999px;background:#3f464c}
+.mission-context-toggle.active{border-color:#38562a;background:#0d130b;color:#cfe8bf}
+.mission-context-toggle.active:before{background:#7ec845;box-shadow:0 0 6px rgba(126,200,69,.22)}
+.mission-context-toggle:hover{border-color:#405c31;color:#d7dde3}
 .mission-resource-list{display:flex;gap:6px;flex-wrap:wrap}
 .mission-resource{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:6px 9px;background:#0d1012;border:0.5px solid #2a3036;border-radius:8px;color:#d7dde3;text-decoration:none;font-size:11px;font-weight:700;line-height:1.25;transition:all .2s}
 .mission-resource:hover{border-color:#3a5a2a;color:#f0f3f5;background:#111711}
@@ -2201,6 +2206,7 @@ body:before{
     <div class="mission-command-label">Mission Command</div>
     <div class="mission-command-actions">
       <button class="mission-live-toggle" id="mission-live-call-toggle" onclick="toggleMissionLiveCallMode()" title="Toggle live call mode">Live Call</button>
+      <button class="mission-context-toggle" id="mission-context-toggle" onclick="clearMissionContextMode()" title="Clear Mission Command context">Context: General</button>
       <button class="mission-icon-btn" onclick="toggleMissionHistory()" title="Chat history">☰</button>
       <button class="mission-icon-btn" onclick="startMissionNewChat()" title="New chat">+</button>
       <div class="mission-command-state">Local coach</div>
@@ -9520,6 +9526,9 @@ var MISSION_ROUTER_V2_PRIMARY=true;
 var MISSION_TURN_CHECKPOINTS_KEY='a1xx_mc_turn_checkpoints_v1';
 var MISSION_BRAIN_SESSION_V2_KEY='a1xx_mc_brain_session_v2';
 var MISSION_PRESENCE_LOG_KEY='a1xx_mc_presence_log';
+var MISSION_CONTEXT_MODE_KEY='a1xx_mc_context_mode_v1';
+var MISSION_CONTEXT_MODE_LABELS={general:'General',brief:'Brief',outreach:'Outreach',content:'Content',production:'Production',manager:'Manager'};
+var MISSION_CONTEXT_MODE_ROUTES={brief:'now',outreach:'leads',content:'content',production:'production',manager:'calendar'};
 window.__missionActiveCard=window.__missionActiveCard||'command';
 window.__missionLastUserAction=window.__missionLastUserAction||null;
 window.__missionLastUserActionTimestamp=window.__missionLastUserActionTimestamp||0;
@@ -9528,6 +9537,11 @@ try{
   window.__missionCurrentSalesMode=sessionStorage.getItem('a1xx_mc_live_call_mode_v1')==='on'?'live_call':(window.__missionCurrentSalesMode||'normal');
 }catch(e){
   window.__missionCurrentSalesMode=window.__missionCurrentSalesMode||'normal';
+}
+try{
+  window.__missionContextMode=sessionStorage.getItem(MISSION_CONTEXT_MODE_KEY)||window.__missionContextMode||'general';
+}catch(e){
+  window.__missionContextMode=window.__missionContextMode||'general';
 }
 
 function createMissionTurn(rawInput,kind,options){
@@ -9588,6 +9602,64 @@ function addMissionWarning(turn,message,data){
   turn.warnings.push({timestamp:new Date().toISOString(),message:String(message||''),data:data||null});
 }
 
+function getMissionContextMode(){
+  var mode='general';
+  try{mode=sessionStorage.getItem(MISSION_CONTEXT_MODE_KEY)||window.__missionContextMode||'general';}catch(e){mode=window.__missionContextMode||'general';}
+  return MISSION_CONTEXT_MODE_LABELS[mode]?mode:'general';
+}
+
+function getMissionContextRouteForMode(mode){
+  mode=String(mode||getMissionContextMode()||'general');
+  return MISSION_CONTEXT_MODE_ROUTES[mode]||'';
+}
+
+function updateMissionContextModeUI(){
+  var btn=document.getElementById('mission-context-toggle');
+  if(!btn)return;
+  var mode=getMissionContextMode();
+  btn.textContent='Context: '+(MISSION_CONTEXT_MODE_LABELS[mode]||'General');
+  btn.classList.toggle('active',mode!=='general');
+  btn.classList.toggle('general',mode==='general');
+  btn.title=mode==='general'?'Mission Command is reading the full OS':'Clear '+(MISSION_CONTEXT_MODE_LABELS[mode]||mode)+' context';
+}
+
+function setMissionContextMode(mode,options){
+  options=options||{};
+  mode=MISSION_CONTEXT_MODE_LABELS[mode]?mode:'general';
+  window.__missionContextMode=mode;
+  try{sessionStorage.setItem(MISSION_CONTEXT_MODE_KEY,mode);}catch(e){}
+  updateMissionContextModeUI();
+  return mode;
+}
+
+function clearMissionContextMode(){
+  var mode=setMissionContextMode('general');
+  try{
+    if(typeof appendMissionBubble==='function')appendMissionBubble('assistant','Context cleared. Mission Command is reading the full OS again.',true,'suggest-row');
+  }catch(e){}
+  return mode;
+}
+
+function getMissionContextModeFromDayTool(type){
+  var map={brief:'brief',outreach:'outreach',content:'content',beat:'production',production:'production',manager:'manager'};
+  return map[String(type||'')]||'';
+}
+
+function applyMissionContextModeFromDayTool(type){
+  var mode=getMissionContextModeFromDayTool(type);
+  if(!mode)return getMissionContextMode();
+  return setMissionContextMode(getMissionContextMode()===mode?'general':mode);
+}
+
+function missionPromptCanUseContextMode(q,signals){
+  q=String(q||'').toLowerCase().trim();
+  signals=signals||{};
+  if(!q||signals.isSlashCommand||signals.isWorkerMention)return false;
+  if(signals.asksForAppNavigation||signals.asksForTeaching||signals.asksForDiagnostic)return false;
+  if(/\b(sales|closer|call|objection|what should i say|too expensive|follow up|follow-up|lead|pipeline|money|revenue|bag|cash|sync|notion|sheets|apps script|content|post|clip|production|beat|mix|master|calendar|dpc|memory|remember|resource|rolodex)\b/.test(q))return false;
+  return /\b(what should i do|what do i do|what now|what next|where we at|where do i stand|what is the move|what's the move|the move|lock in|run it|call the move|show me|more|tell me more|what should i check|what should i make|what should i work on|what matters|quick read|reset me)\b/.test(q);
+}
+
 /* =========================================================
    MISSION CONTEXTUAL INTELLIGENCE LAYER — v1
 ========================================================= */
@@ -9619,6 +9691,8 @@ function getMissionLiveContextSnapshot(){
   try{rhythm=typeof getDayRhythm==='function'?getDayRhythm(new Date().getDay())||rhythm:rhythm;}catch(err){}
   return {
     activeCard:window.__missionActiveCard||'command',
+    contextMode:getMissionContextMode(),
+    contextRoute:getMissionContextRouteForMode(getMissionContextMode()),
     lastUserAction:window.__missionLastUserAction||null,
     lastUserActionTimestamp:window.__missionLastUserActionTimestamp||0,
     dataFreshness:{
@@ -10128,6 +10202,11 @@ function scoreMissionRoutesV2(q,signals,turn){
   }
   var singleMap={leads:'leads',pipeline:'leads',money:'report',revenue:'report',dpc:'dpc',content:'content',production:'production',calendar:'calendar',week:'weekly',review:'weekly',sync:'sync',resources:'resources',rolodex:'resources',memory:'memory',settings:'help',sales:'sales',closer:'sales',objection:'sales',discovery:'sales',roleplay:'sales'};
   if(singleMap[q])add(singleMap[q],0.92,'single_word_topic','data_request');
+  var contextMode=turn&&turn.liveContext&&turn.liveContext.contextMode||getMissionContextMode();
+  var contextRoute=getMissionContextRouteForMode(contextMode);
+  if(contextRoute&&missionPromptCanUseContextMode(q,signals)){
+    add(contextRoute,0.88,'context_mode_'+contextMode,'context_mode');
+  }
   if(/\b(what should i do now|what should i do|what do i do|where do i stand|where we at|current status|current focus|focus|next move|the move|lock in|start|priority|reset me)\b/.test(q))add('now',0.84,'now_focus_phrase','focus_request');
   if(/\b(closer|sales coach|sales call|discovery call|call prep|callprep|live call|livecall|objection|roleplay|role play|what should i say|write a dm|cold dm|warm follow up|follow-up script|needs to think|too expensive|no budget|send more info|send info|discount|price is crazy|talk to manager|decision maker|not ready|maybe next month|book a call|move them to a call|score my answer)\b/.test(q))add('sales',0.9,'sales_coach_phrase','sales_coaching');
   if(/\b(lead|leads|pipeline|hit list|follow up|follow ups|follow-up|follow-ups|who should i contact|who should i call|who hot|who warm|crm|honeybook|invoice)\b/.test(q))add('leads',0.85,'pipeline_phrase','data_request');
@@ -10711,6 +10790,8 @@ function getMissionBrainStateV2(turn){
     selectedWorkerId:turn.workerId||'',
     liveContext:turn.liveContext||null,
     activeCard:turn.liveContext&&turn.liveContext.activeCard||'',
+    contextMode:turn.liveContext&&turn.liveContext.contextMode||getMissionContextMode(),
+    contextRoute:turn.liveContext&&turn.liveContext.contextRoute||getMissionContextRouteForMode(getMissionContextMode()),
     currentSalesMode:turn.liveContext&&turn.liveContext.currentSalesMode||'normal',
     inputEnergy:turn.inputEnergy||'',
     responseDepth:turn.responseDepth||'',
@@ -11196,13 +11277,18 @@ function runMissionTurnV2SelfCheck(){
     {q:'make a plan for the week',depth:'roadmap',shape:'plan_builder'},
     {q:'who is A1XX',route:'profile',slices:['identity'],onlySlices:['identity']},
     {q:'what should i post',route:'content',slices:['content','calendar','session']},
-    {q:'prep me for a call',route:'sales',slices:['pipeline','revenue','session']}
+    {q:'prep me for a call',route:'sales',slices:['pipeline','revenue','session']},
+    {q:'what should i do',route:'production',contextMode:'production'},
+    {q:'what next',route:'content',contextMode:'content'},
+    {q:'sync check',route:'sync',contextMode:'content'}
   ];
   var failures=[];
   var priorSession=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+  var priorContextMode=sessionStorage.getItem(MISSION_CONTEXT_MODE_KEY);
   var priorCheckpoints=typeof getStore==='function'?getStore(MISSION_TURN_CHECKPOINTS_KEY):null;
   cases.forEach(function(item){
     sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);
+    setMissionContextMode(item.contextMode||'general',{silent:true});
     var packet=runMissionTurn('ask',item.q,{passive:true,allowLegacy:false});
     var turn=window.__missionLastTurnObjectV2||{};
     if(item.route&&turn.route!==item.route)failures.push(item.q+' route '+(turn.route||'none'));
@@ -11220,6 +11306,7 @@ function runMissionTurnV2SelfCheck(){
     }
   });
   if(priorSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorSession);
+  if(priorContextMode===null)setMissionContextMode('general',{silent:true});else setMissionContextMode(priorContextMode,{silent:true});
   if(typeof setStore==='function'&&Array.isArray(priorCheckpoints))setStore(MISSION_TURN_CHECKPOINTS_KEY,priorCheckpoints);
   return {passed:!failures.length,failures:failures,total:cases.length};
 }
@@ -15807,6 +15894,7 @@ function renderMissionCommand(kind,question,forceCurrent){
   if(!thread)return;
   try{
   updateMissionLiveCallToggleUI();
+  updateMissionContextModeUI();
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   renderMissionNudge(ctx);
   scheduleMissionNudgeRefresh();
@@ -16155,6 +16243,7 @@ function openMissionTool(tool,shouldScroll,options){
     if(tool==='content'&&typeof setContentView==='function')setContentView('today');
     if(tool==='production'&&typeof setProductionView==='function')setProductionView('today');
     updateMissionToolState(tool,options.locked===false?false:true);
+    updateMissionContextModeUI();
     renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
     // ARCHIVED 2026-05-10 — resource drawers removed from manager card per A1XX
     // if(tool==='calendar'||tool==='manager')renderContextResources('calendar','today');
@@ -16189,12 +16278,12 @@ function selectMissionDayTool(type){
     openMissionTool('command',true);
     return;
   }
+  applyMissionContextModeFromDayTool(type);
   if(type==='brief'){
     openMissionTool('brief',true);
     return;
   }
   var tool=getMissionPrimaryTool(type);
-  openMissionTool(tool,true);
   try{setDayType(type,false,(DAY_TYPES[type]||{}).reason);}catch(e){console.warn('A1XX day type update skipped',e);}
   openMissionTool(tool,true);
 }
