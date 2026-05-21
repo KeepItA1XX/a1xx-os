@@ -12366,7 +12366,9 @@ function getMissionUnsaidQuestionV1(turn,ctx){
   };
 }
 
-function appendMissionUnsaidQuestionNudgeV1(html,turn,ctx,question){
+function appendMissionUnsaidQuestionNudgeV1(html,turn,ctx,question,opts){
+  opts=opts||{};
+  if(opts.unsaidQuestion===false)return html;
   var read=turn&&turn.unsaidQuestion||null;
   if(!read||!read.shouldNudge||!read.line)return html;
   var out=String(html||'');
@@ -15490,6 +15492,12 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(!/Outreach card|open leads|Do this next/i.test(cardOutreach))failures.push('qa_card_outreach_read');
   var cardContent=getMissionThisWeekCardResponseV1('content',{rev:999,wk:500,gap:0},'what should i do on the content card',{},null);
   if(!/Content card|active item|Do this next/i.test(cardContent))failures.push('qa_card_content_read');
+  var contentToday=getMissionContentCardIntelligenceResponseV11('content',{rev:999,wk:500,gap:0},'what should i post today',{},null);
+  if(!/Content card read|Today|Do this next/i.test(contentToday))failures.push('qa_content_card_today_read');
+  var contentPipeline=getMissionContentCardIntelligenceResponseV11('content',{rev:999,wk:500,gap:0},'what is stuck in the content pipeline',{},null);
+  if(!/Content pipeline read|Bottleneck|Do this next/i.test(contentPipeline))failures.push('qa_content_card_pipeline_read');
+  var contentPerformance=getMissionContentCardIntelligenceResponseV11('content',{rev:999,wk:500,gap:0},'content not converting',{},null);
+  if(!/Content performance read|job clarity|Do this next/i.test(contentPerformance))failures.push('qa_content_card_performance_read');
   var cardProduction=getMissionThisWeekCardResponseV1('production',{rev:999,wk:500,gap:0},'what should i do on the beat card',{},null);
   if(!/Production card|beat lane|Do this next/i.test(cardProduction))failures.push('qa_card_production_read');
   var cardManager=getMissionThisWeekCardResponseV1('calendar',{rev:999,wk:500,gap:0},'what should i check on the manager card',{},null);
@@ -15506,7 +15514,7 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:32};
+  return {passed:!failures.length,failures:failures,total:35};
 }
 
 function getMissionHandoffResponse(question){
@@ -17376,6 +17384,124 @@ function getMissionThisWeekCardResponseV1(route,ctx,question,brainState,turn){
   var contextLine=signal.reason==='context_mode'||signal.reason==='active_card'?'I am reading the '+read.title+' context first, then the rest of the OS behind it.':'This is the '+read.title+' read.';
   var journey=snap.journeyMove?'<br><br>Current loaded step: '+escapeHtml(snap.journeyMove)+'.':'';
   return escapeHtml(contextLine)+'<br><br>'+escapeHtml(read.read)+'<br><br>Do this next: '+escapeHtml(read.move)+'.'+journey;
+}
+
+/* =========================================================
+   MISSION CONTENT CARD INTELLIGENCE — v1.1
+========================================================= */
+var MISSION_CONTENT_CARD_INTELLIGENCE_V11={
+  id:'mission_content_card_intelligence_v1_1',
+  version:'1.1',
+  installMode:'additive_read_only'
+};
+
+function getMissionContentQuestionSignalV11(question,route){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return null;
+  var explicit=/\b(content card|content tab|content tracker|content pipeline|content queue|content stuck|what is stuck in the content|what should i post|what do i post|what should i make|make something|content move|content idea|content ideas|post idea|post ideas|hook|caption|proof post|repurpose|clip this|clip idea|content not converting|not converting|what content|content status|posting|publish)\b/.test(q);
+  var contextAsk=(route==='content'||getMissionActiveCardV1()==='content')&&/\b(what should i do|what next|what matters|where do i start|help me get started|read this|show me|what should i check)\b/.test(q);
+  if(!explicit&&!contextAsk)return null;
+  var mode='today';
+  if(/\b(pipeline|status|stuck|bottleneck|stage|queue|due|overdue|what content)\b/.test(q))mode='pipeline';
+  if(/\b(idea|ideas|spark|brainstorm|capture|hook|caption|angle|what should i make)\b/.test(q))mode='spark';
+  if(/\b(performance|convert|converting|not converting|metrics|dm|joins|calls|live|posted|working)\b/.test(q))mode='performance';
+  if(/\b(repurpose|clip|clips|short|shorts|reel|reels|turn this into)\b/.test(q))mode='repurpose';
+  if(/\b(post today|what should i post|publish|today)\b/.test(q))mode='today';
+  return {shouldAnswer:true,mode:mode,reason:explicit?'explicit_content_prompt':'content_context'};
+}
+
+function getMissionContentSnapshotV11(ctx){
+  ctx=ctx||{};
+  var todayPieces=(window.__contentPieces||[]).filter(Boolean);
+  var pipelinePieces=(window.__contentPipelinePieces||todayPieces||[]).filter(Boolean);
+  var log=typeof getContentLog==='function'?getContentLog():{days:{}};
+  var todayKey=typeof dateKey==='function'?dateKey(new Date()):'';
+  var postedToday=!!(log.days&&log.days[todayKey]);
+  var streak=typeof getContentStreak==='function'?getContentStreak():0;
+  var daysAgo=typeof getDaysAgoPosted==='function'?getDaysAgoPosted():99;
+  var selected=typeof selectedContentIdx!=='undefined'?Math.min(selectedContentIdx,Math.max(0,todayPieces.length-1)):0;
+  var todayPiece=todayPieces[selected]||todayPieces[0]||null;
+  var stageCounts={Idea:0,Script:0,Film:0,Edit:0,Schedule:0,Posted:0,Clip:0};
+  pipelinePieces.forEach(function(piece){
+    var stage=typeof normalizeContentStage==='function'?normalizeContentStage(piece):String(piece&&piece.status||'Idea');
+    if(stageCounts[stage]===undefined)stageCounts[stage]=0;
+    stageCounts[stage]++;
+  });
+  var bottleneck=Object.keys(stageCounts).sort(function(a,b){return (stageCounts[b]||0)-(stageCounts[a]||0);})[0]||'Idea';
+  var ideas=pipelinePieces.filter(function(piece){
+    var s=String((piece&&piece.readyTo)||(piece&&piece.stage)||(piece&&piece.status)||'').toLowerCase();
+    return !s||/create|plan|idea|concept|backlog/.test(s);
+  });
+  var longPieces=pipelinePieces.filter(function(piece){return !(typeof isShortContent==='function'?isShortContent(piece):false);});
+  var needsRepurpose=longPieces.filter(function(piece){
+    var s=String(piece&&piece.repurposeStatus||piece&&piece.status||'').toLowerCase();
+    return !/done|complete|clipped|repurposed|posted|live/.test(s);
+  });
+  var dms=pipelinePieces.reduce(function(sum,piece){return sum+(typeof contentMetric==='function'?contentMetric(piece,'dmsGenerated'):0);},0);
+  var joins=pipelinePieces.reduce(function(sum,piece){return sum+(typeof contentMetric==='function'?contentMetric(piece,'skoolJoins'):0);},0);
+  var calls=pipelinePieces.reduce(function(sum,piece){return sum+(typeof contentMetric==='function'?contentMetric(piece,'callsBooked'):0);},0);
+  return {
+    todayPieces:todayPieces,
+    pipelinePieces:pipelinePieces,
+    todayPiece:todayPiece,
+    postedToday:postedToday,
+    streak:streak,
+    daysAgo:daysAgo,
+    stageCounts:stageCounts,
+    bottleneck:bottleneck,
+    ideas:ideas,
+    needsRepurpose:needsRepurpose,
+    dms:dms,
+    joins:joins,
+    calls:calls
+  };
+}
+
+function missionContentPieceTitleV11(piece){
+  return piece&&(piece.title||piece.name||piece.topic)||'today’s proof piece';
+}
+
+function getMissionContentNextMoveV11(mode,snap){
+  snap=snap||{};
+  if(mode==='pipeline'){
+    if(snap.pipelinePieces&&snap.pipelinePieces.length)return 'open Content → Pipeline and move one '+snap.bottleneck+' item forward';
+    return 'open Content → Spark and capture one proof-of-work idea';
+  }
+  if(mode==='spark')return 'open Content → Spark and capture the rough idea before polishing it';
+  if(mode==='performance')return snap.dms||snap.joins||snap.calls?'double down on the piece creating the most DMs, joins, or calls':'post one proof piece, then start tracking DMs, joins, and calls against it';
+  if(mode==='repurpose')return snap.needsRepurpose&&snap.needsRepurpose.length?'turn "'+missionContentPieceTitleV11(snap.needsRepurpose[0])+'" into one short clip or Reel':'pick the strongest long-form idea and make one short version';
+  if(snap.todayPiece)return 'post or move "'+missionContentPieceTitleV11(snap.todayPiece)+'" one status forward';
+  return 'make one proof-of-work post from what you are doing today';
+}
+
+function getMissionContentCardIntelligenceResponseV11(route,ctx,question,brainState,turn){
+  if(window.__missionCommandSelfCheckActive)return '';
+  var signal=getMissionContentQuestionSignalV11(question||'',route||'');
+  if(!signal)return '';
+  var snap=getMissionContentSnapshotV11(ctx||{});
+  var mode=signal.mode;
+  var title=missionContentPieceTitleV11(snap.todayPiece);
+  var cta=snap.todayPiece&&typeof getContentCTA==='function'?getContentCTA(snap.todayPiece):'the current offer';
+  var pillar=snap.todayPiece&&typeof getContentPillar==='function'?getContentPillar(snap.todayPiece):'proof';
+  var move=getMissionContentNextMoveV11(mode,snap);
+  var answer='';
+  if(mode==='pipeline'){
+    answer='Content pipeline read:<br><br>'+snap.pipelinePieces.length+' active item'+(snap.pipelinePieces.length===1?'':'s')+' loaded. Bottleneck: '+snap.bottleneck+' · '+(snap.stageCounts[snap.bottleneck]||0)+' item'+((snap.stageCounts[snap.bottleneck]||0)===1?'':'s')+'.<br><br>Do this next: '+move+'.';
+  }else if(mode==='spark'){
+    answer='Content Spark read:<br><br>'+snap.ideas.length+' idea'+(snap.ideas.length===1?'':'s')+' visible in the idea lane.<br><br>Do this next: '+move+'.<br><br>Keep it rough. The first job is capture, not polish.';
+  }else if(mode==='performance'){
+    answer='Content performance read:<br><br>Visible signal: '+snap.dms+' DMs · '+snap.joins+' joins · '+snap.calls+' calls.<br><br>If content is not converting, the first fix is job clarity: teach, prove, shift belief, or invite action.<br><br>Do this next: '+move+'.';
+  }else if(mode==='repurpose'){
+    answer='Repurpose read:<br><br>'+snap.needsRepurpose.length+' long-form piece'+(snap.needsRepurpose.length===1?'':'s')+' looks usable for leverage.<br><br>Do this next: '+move+'.';
+  }else{
+    var status=snap.postedToday?'Posted today. Keep the chain alive with distribution.':(snap.daysAgo===1?'Posted yesterday. Do not break the chain.':'No post logged today yet.');
+    answer='Content card read:<br><br>'+status+'<br><br>Today’s piece: '+title+'.<br>Job: '+pillar+' → '+cta+'.<br><br>Do this next: '+move+'.';
+  }
+  if(turn){
+    turn.contentCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,pipelineCount:snap.pipelinePieces.length};
+    if(typeof addMissionTrace==='function')addMissionTrace(turn,'content_card_intelligence_selected',turn.contentCardIntelligence);
+  }
+  return escapeHtml(answer).replace(/&lt;br&gt;/g,'<br>').replace(/&quot;/g,'"');
 }
 
 /* =========================================================
@@ -19831,7 +19957,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
       if(explainerLine&&String(html||'').indexOf(explainerLine)<0)html=String(html||'')+'<br><br>'+explainerLine;
     }
     html=appendMissionConstraintGuidanceNudgeV1(html,turnV2,ctx,cleanQuestion||question||'');
-    html=appendMissionUnsaidQuestionNudgeV1(html,turnV2,ctx,cleanQuestion||question||'');
+    html=appendMissionUnsaidQuestionNudgeV1(html,turnV2,ctx,cleanQuestion||question||'',opts);
     html=applyMissionActionLayerV1(html,turnV2,ctx,cleanQuestion||question||'',opts);
     var styled=applyMissionStylePreferenceLearningV11(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)),route,cleanQuestion||question||'',opts);
     var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(styled,route,cleanQuestion||question||'',opts));
@@ -19866,12 +19992,14 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
   }
   var rolodexIntel=getMissionRolodexIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
-  if(rolodexIntel)return finishMissionAnswer(rolodexIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false});
+  if(rolodexIntel)return finishMissionAnswer(rolodexIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
+  var contentIntel=getMissionContentCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(contentIntel)return finishMissionAnswer(contentIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   if(isMissionExplicitCardPromptV1(cleanQuestion||question||'')){
     var explicitBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
-    if(explicitBriefIntel)return finishMissionAnswer(explicitBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false});
+    if(explicitBriefIntel)return finishMissionAnswer(explicitBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
     var explicitCardIntel=getMissionThisWeekCardResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
-    if(explicitCardIntel)return finishMissionAnswer(explicitCardIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false});
+    if(explicitCardIntel)return finishMissionAnswer(explicitCardIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   }
   var intelligenceAnswer=getMissionArbitratedIntelligenceAnswerV1(turnV2,ctx);
   if(intelligenceAnswer)return finishMissionAnswer(intelligenceAnswer.answer,intelligenceAnswer.opts);
