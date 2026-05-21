@@ -9497,10 +9497,194 @@ var MISSION_SALES_DEEP_INPUT_PACK_V1={
   ]
 };
 
+function extendMissionSalesDeepInputPackV1_1(){
+  var pack=typeof MISSION_SALES_DEEP_INPUT_PACK_V1!=='undefined'?MISSION_SALES_DEEP_INPUT_PACK_V1:null;
+  if(!pack||pack._v11Expanded) return;
+
+  function uniq(list){
+    var seen={};
+    return (list||[]).filter(function(item){
+      var key=String(item||'').toLowerCase();
+      if(!key||seen[key]) return false;
+      seen[key]=true;
+      return true;
+    });
+  }
+
+  function addToSubroute(subroute, phrases){
+    (pack.inputTriggers||[]).forEach(function(trigger){
+      if(trigger.subroute===subroute){
+        trigger.phrases=uniq((trigger.phrases||[]).concat(phrases||[]));
+      }
+    });
+  }
+
+  function addToMap(mapName, key, phrases){
+    pack[mapName]=pack[mapName]||{};
+    pack[mapName][key]=uniq((pack[mapName][key]||[]).concat(phrases||[]));
+  }
+
+  function addTypos(pairs){
+    pack.typoTriggers=pack.typoTriggers||[];
+    var existing={};
+    pack.typoTriggers.forEach(function(pair){
+      existing[String(pair[0]||'').toLowerCase()]=true;
+    });
+    (pairs||[]).forEach(function(pair){
+      var key=String(pair[0]||'').toLowerCase();
+      if(key&&!existing[key]){
+        existing[key]=true;
+        pack.typoTriggers.push(pair);
+      }
+    });
+  }
+
+  function addTests(tests){
+    pack.regressionTests=pack.regressionTests||[];
+    var existing={};
+    pack.regressionTests.forEach(function(test){
+      existing[String(test.q||'').toLowerCase()]=true;
+    });
+    (tests||[]).forEach(function(test){
+      var key=String(test.q||'').toLowerCase();
+      if(key&&!existing[key]){
+        existing[key]=true;
+        pack.regressionTests.push(test);
+      }
+    });
+  }
+
+  addToSubroute('script_request',[
+    'what i say back','what do i text back','reply to him','reply to her','reply to them','how do i answer','how do i respond','what is the line','give me a line','give me the line','say this cleaner','make this sound warm','make this sound direct','make it not needy','make it calm','make it shorter','shorter reply','clean this reply','help me answer this','what do i say next'
+  ]);
+  addToSubroute('dm_script',[
+    'dm him back','dm her back','dm them back','write the dm','write the text','write the message','write the response','make this a dm','same but text','turn this into a dm','turn this into a text','write a cold message','write an opener','write the opener'
+  ]);
+  addToSubroute('follow_up',[
+    'follow up text','follow up message','write the follow up text','write the follow-up message','check in','checking in','circle back','circle back message','after sending info','after the call no answer','soft check in','follow up with him','follow up with her','follow up with them','send a check in','write a check in'
+  ]);
+  addToSubroute('bump_message',[
+    'bump him','bump her','bump this','last follow up','one more follow up','final bump','quick check','quick check in','one more check','last check in'
+  ]);
+  addToSubroute('ghosted',[
+    'he disappeared','she disappeared','they disappeared','went cold','went quiet','left on read','never replied','no answer','he ducking','she ducking','they ducking','he playing','she playing','they playing','playing games','they went silent','he went silent','she went silent'
+  ]);
+  addToSubroute('live_call',[
+    'phone mode','sales call mode','in the call now','with them right now','they are on the phone','they just said','he just said','she just said','what do i say now','help right now','quick line','one line right now','on the call now','i am talking to them now','they are waiting','he is waiting','she is waiting'
+  ]);
+  addToSubroute('call_prep',[
+    'prep the call','prep for this sales call','call in 10','call in ten','i have a sales call','help me prep','what should i ask on the call','how do i start the call','before the call','call in five','call in 5','sales call in 10','sales call coming up'
+  ]);
+  addToSubroute('roleplay',[
+    'practice with me','practice objections','play the prospect','play the client','pretend to be a prospect','be skeptical','give me an objection','harder objection','busy executive','broke artist','business owner roleplay','roleplay a busy executive','roleplay a broke artist','give me a harder objection'
+  ]);
+  addToSubroute('scorecard',[
+    'score that','rate that','grade that','how was that','was that weak','did that sound good','review my dm','review this dm','score the call','score this call','grade my dm','rate my dm','was that too much','was that too soft'
+  ]);
+  addToSubroute('post_call_debrief',[
+    'call ended','off the phone','got off the phone','done with call','finished the call','review what happened','post call review','call recap','debrief the dm','dm debrief','conversation debrief','review the conversation'
+  ]);
+  addToSubroute('win_debrief',[
+    'they said yes','got a yes','deposit paid','invoice paid','sent payment','paid invoice','new sale','closed a paid session','got the deposit','they paid','we got paid','sale came in'
+  ]);
+  addToSubroute('loss_debrief',[
+    'he said no','she said no','they passed','lost one','deal died','not a fit','they are out','he passed','she passed','they declined'
+  ]);
+  addToSubroute('stall_debrief',[
+    'they stalled','he stalled','she stalled','they need time','no yes no no','left it open','not a yes yet','still unsure','no clear answer','decision is pending'
+  ]);
+  addToSubroute('discovery_question',[
+    'what should i ask','give me a discovery question','qualify him','qualify her','qualify them','qualifier','qualifying question','what is the qualifier','ask about budget','ask urgency','ask decision maker','ask pain question','ask problem question'
+  ]);
+  addToSubroute('price_delivery',[
+    'say the number','how do i say the number','drop the price','price line','say investment','how do i talk price','what do i say after price','how do i present price','tell them the price','price script'
+  ]);
+  addToSubroute('direct_close',[
+    'ask for the sale','ask for deposit','ask for invoice','send invoice','close the deal','close this out','get the yes','ask if they are ready','move forward','ask for card','ask for checkout','ask for payment link'
+  ]);
+  addToSubroute('offer_angle',[
+    'sales angle','offer angle','position this','how do i sell this','how do i pitch this','pitch angle','what is the pitch','what is the hook for the offer','angle this offer','frame this offer','make this more valuable'
+  ]);
+
+  addToMap('objectionTriggers','too_expensive',['price too high','too much money','that is high','thats high','that’s high','out of range','not in budget','price is high','that price is high']);
+  addToMap('objectionTriggers','cant_afford',['money not there','funds not there','broke right now','cash tight','cash is tight','cannot afford it','cant swing it','cannot swing it']);
+  addToMap('objectionTriggers','need_to_think',['sleep on it','sit with it','think it over','let me consider it','not sure yet','i need to sit with it','need to sleep on it']);
+  addToMap('objectionTriggers','send_more_info',['send a deck','send the link','send over info','send me something','can you send that','send me the details','send me a breakdown']);
+  addToMap('objectionTriggers','talk_to_partner',['ask my partner','ask my wife','ask my husband','ask the team','need sign off','need to run it by my partner','need to run it by the team']);
+  addToMap('objectionTriggers','not_ready',['circle back later','hit me next month','too early','not there yet','not ready for this','timing is off']);
+  addToMap('objectionTriggers','already_tried',['tried this before','been there done that','already did this','did something similar','already worked with someone']);
+  addToMap('objectionTriggers','need_results_first',['need proof','show proof','show receipts','case study','before i pay','show me results','want proof first']);
+  addToMap('objectionTriggers','start_smaller',['smaller package','starter option','cheaper option','trial option','test it first','start with less','start small']);
+  addToMap('objectionTriggers','just_want_beats',['only want beats','only need a beat','just need a beat','only studio','just recording','only need studio time','just need mixing']);
+  addToMap('objectionTriggers','no_time',['too busy','schedule packed','no bandwidth','calendar full','not enough time']);
+  addToMap('objectionTriggers','payment_plan',['split it','split payments','pay in parts','installments','instalments','payment structure','break up the payments']);
+  addToMap('objectionTriggers','check_budget',['check funds','see if i have it','see if money is there','check if i have the money']);
+
+  addTypos([
+    ['what i say','what should i say'],['wht i say','what should i say'],['wut i say','what should i say'],['repy','reply'],['responce','response'],['messege','message'],['folllow up','follow up'],['follow upp','follow up'],['chck in','check in'],['cirle back','circle back'],['paymnt','payment'],['instalments','installments'],['debrif','debrief'],['qualifer','qualifier'],['skeptikal','skeptical'],['prospct','prospect'],['invioce','invoice'],['descount','discount'],['fone mode','phone mode'],['cal in ten','call in ten'],['skor my answer','score my answer']
+  ]);
+
+  addToMap('offerTriggers','break_even',['profit leak','revenue problem','business leak','not profitable','sales system','cash system','fix my business','profit issue']);
+  addToMap('offerTriggers','rappreneur_os',['rapper','independent artist','artist rollout','music rollout','turn listeners into fans','fans who buy','artist system','music money']);
+  addToMap('offerTriggers','atl_studio_bookings',['studio time','book studio','studio session','recording session','atl session','atl artist','studio move','lock time']);
+  addToMap('offerTriggers','bangin_plus',['bangin plus','beat membership','monthly production','monthly beat','beats every month']);
+  addToMap('offerTriggers','mix_master',['mix and master','mixing and mastering','mix/mastering','mastering only','mix master reply','mix master dm']);
+  addToMap('offerTriggers','beat_license',['lease','exclusive','buy this beat','license beat','beat purchase','beat checkout','only need a beat','just need a beat','only want beats']);
+  addToMap('offerTriggers','one_on_one_coaching',['private help','coaching call','strategy call','work together','private strategy','one-on-one']);
+
+  addToMap('personaSignals','artist_signal',['independent artist','atl artist','recording session','mix master','mix and master','beat lease','music rollout']);
+  addToMap('personaSignals','business_owner_signal',['sales system','profit leak','cash system','revenue problem','business leak']);
+  addToMap('personaSignals','budget_sensitive_signal',['not in budget','out of range','cash tight','split payments','installments']);
+  addToMap('personaSignals','live_signal',['phone mode','sales call mode','they are waiting','one line right now']);
+
+  pack.signalWords=pack.signalWords||{};
+  pack.signalWords.script=uniq((pack.signalWords.script||[]).concat(['answer','line','opener']));
+  pack.signalWords.follow_up=uniq((pack.signalWords.follow_up||[]).concat(['check in','circle back','went cold','went quiet']));
+  pack.signalWords.practice=uniq((pack.signalWords.practice||[]).concat(['practice','review']));
+
+  addTests([
+    {q:'reply to him',route:'sales',subroute:'script_request'},
+    {q:'make it not needy',route:'sales',subroute:'script_request'},
+    {q:'dm her back',route:'sales',subroute:'dm_script'},
+    {q:'follow up text',route:'sales',subroute:'follow_up'},
+    {q:'bump him',route:'sales',subroute:'bump_message'},
+    {q:'he disappeared',route:'sales',subroute:'ghosted'},
+    {q:'phone mode',route:'sales',subroute:'live_call'},
+    {q:'call in 10',route:'sales',subroute:'call_prep'},
+    {q:'practice objections',route:'sales',subroute:'roleplay'},
+    {q:'score that',route:'sales',subroute:'scorecard'},
+    {q:'off the phone',route:'sales',subroute:'post_call_debrief'},
+    {q:'they said yes',route:'sales',subroute:'win_debrief'},
+    {q:'he said no',route:'sales',subroute:'loss_debrief'},
+    {q:'they stalled',route:'sales',subroute:'stall_debrief'},
+    {q:'qualify him',route:'sales',subroute:'discovery_question'},
+    {q:'say the number',route:'sales',subroute:'price_delivery'},
+    {q:'ask for deposit',route:'sales',subroute:'direct_close'},
+    {q:'sales angle',route:'sales',subroute:'offer_angle'},
+    {q:'price too high',route:'sales',subroute:'objection',objectionKey:'too_expensive'},
+    {q:'sleep on it',route:'sales',subroute:'objection',objectionKey:'need_to_think'},
+    {q:'send a deck',route:'sales',subroute:'objection',objectionKey:'send_more_info'},
+    {q:'smaller package',route:'sales',subroute:'objection',objectionKey:'start_smaller'},
+    {q:'only need a beat',route:'sales',subroute:'objection',objectionKey:'just_want_beats',offerKey:'beat_license'},
+    {q:'split payments',route:'sales',subroute:'objection',objectionKey:'payment_plan'},
+    {q:'profit leak',route:'sales',subroute:'offer_specific_dm',offerKey:'break_even'},
+    {q:'independent artist',route:'sales',subroute:'offer_specific_dm',offerKey:'rappreneur_os'},
+    {q:'studio session',route:'sales',subroute:'offer_specific_dm',offerKey:'atl_studio_bookings'},
+    {q:'mix and master',route:'sales',subroute:'offer_specific_dm',offerKey:'mix_master'},
+    {q:'buy this beat',route:'sales',subroute:'offer_specific_dm',offerKey:'beat_license'},
+    {q:'coaching call',route:'sales',subroute:'offer_specific_dm',offerKey:'one_on_one_coaching'}
+  ]);
+
+  pack.version='1.1';
+  pack._v11Expanded=true;
+}
+
+extendMissionSalesDeepInputPackV1_1();
+
 MISSION_SKILL_PACKS.push({
   id:'mc_skill_sales_deep_pack_inputs_v1',
   name:'Mission Command Sales Deep Pack v1 — Inputs',
-  version:'1.0',
+  version:MISSION_SALES_DEEP_INPUT_PACK_V1.version,
   status:'active',
   installMode:'additive_only',
   route:'sales',
