@@ -15645,6 +15645,8 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'production_card',q:'what should i do on the beat card',must:/Production card read/i,card:'production'},
       {name:'manager_card',q:'what should i check on the manager card',must:/Manager card read/i,card:'manager'},
       {name:'hit_list',q:'how is the hit list looking',must:/Hit List read/i,card:'outreach'},
+      {name:'hit_list_navigation',q:'where do i click to find the hit list',must:/Hit List read|Open Hit List|Outreach/i,card:'outreach'},
+      {name:'weekly_scorecard',q:'what should i track every week',must:/Weekly scorecard read|Track five numbers/i,card:'weekly'},
       {name:'dpc_card',q:'read the dpc card',must:/DPC read/i,card:'outreach'},
       {name:'sync_navigation',q:'where do i check sync',must:/System Hub|sync check/i},
       {name:'sales_correction',q:'i meant sales not pipeline',must:/Sales lane, not pipeline|Ask:/i},
@@ -15680,7 +15682,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:11,meta:failures.length?failures.join(', '):'11 regression prompts · explicit cards · handoff duplicate guard · leak guard'};
+  return {passed:!failures.length,failures:failures,total:13,meta:failures.length?failures.join(', '):'13 regression prompts · explicit cards · handoff duplicate guard · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -17483,7 +17485,7 @@ function getMissionWeeklyReviewAnswerV1(ctx,question){
   var constraint=getMissionWeeklyReviewConstraintV1(snap);
   var move=getMissionWeeklyReviewNextMoveV1(snap);
   if(/\b(track|kpi|metric|scorecard|every week)\b/.test(q)){
-    return 'Weekly scorecard read:<br><br>'+escapeHtml(getMissionWeeklyScorecardLineV11(snap))+'<br><br>Review it in this order:<br>1. Money.<br>2. Conversations.<br>3. Booked calls.<br>4. Closes.<br>5. Proof created.<br><br>Next move is '+escapeHtml(move)+'.';
+    return 'Weekly scorecard read:<br><br>'+escapeHtml(getMissionWeeklyScorecardLineV11(snap))+'<br><br>Review it in this order:<br>1) Money.<br>2) Conversations.<br>3) Booked calls.<br>4) Closes.<br>5) Proof created.<br><br>Next move is '+escapeHtml(move)+'.';
   }
   if(/\b(plan|prep|next week|make a plan|top 3)\b/.test(q)){
     return 'Weekly plan from the loaded read:<br><br>Phase 1: close the open loop. '+escapeHtml(constraint)+'.<br><br>Phase 2: protect the money path. '+escapeHtml(move)+'.<br><br>Phase 3: turn the lesson into a system. Pick what repeats, what gets cut, and what gets scheduled first.<br><br>Start here: '+escapeHtml(move)+'.';
