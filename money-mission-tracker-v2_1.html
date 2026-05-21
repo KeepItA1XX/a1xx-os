@@ -11736,7 +11736,7 @@ function getMissionWhatChangedEngineResponseV1(route,ctx,question,brainState){
   var changes=buildMissionChangeListV1(prior.snapshot,current);
   if(turn)addMissionDecisionTraceV1(turn,'what_changed_compared',{changeCount:changes.length,source:prior.source});
   if(!changes.length){
-    return '<p>Since the last saved checkpoint, I do not see a number or status change in the loaded app state.</p><p><strong>Current read:</strong><br>1) Money: '+fmt(current.revenue)+' of '+fmt(current.weekTarget)+' · gap '+fmt(current.gap)+'<br>2) DPC: '+current.dpc.dms+' DMs · '+current.dpc.callsMade+' calls made · '+current.dpc.booked+' booked · '+current.dpc.closes+' closes · '+fmt(current.dpc.money)+' collected<br>3) Pipeline: '+current.pipeline.open+' open leads.</p><p><strong>Next:</strong><br>Create one visible move, then log it so the next comparison has something real to read.</p>';
+    return 'Since the last saved checkpoint, I do not see a number or status change in the loaded app state.<br><br><strong>Current read:</strong><br>1) Money: '+fmt(current.revenue)+' of '+fmt(current.weekTarget)+' · gap '+fmt(current.gap)+'<br>2) DPC: '+current.dpc.dms+' DMs · '+current.dpc.callsMade+' calls made · '+current.dpc.booked+' booked · '+current.dpc.closes+' closes · '+fmt(current.dpc.money)+' collected<br>3) Pipeline: '+current.pipeline.open+' open leads.<br><br><strong>Next:</strong><br>Create one visible move, then log it so the next comparison has something real to read.';
   }
   var loadSignal=getMissionSnapshotLoadSignalV1(prior.snapshot,current);
   var intro=loadSignal==='first_loaded_snapshot'?'Since the last saved checkpoint, the app has a fuller loaded read:':'Since the last saved checkpoint:';
@@ -14358,7 +14358,8 @@ function getMissionBrainActiveStep(ctx){
   return move.nextCheck||move.action||move.title||null;
 }
 
-function getMissionBrainTopLeadMove(){
+function getMissionBrainTopLeadMove(ctx){
+  if(ctx&&ctx.leadText&&String(ctx.leadText).trim())return 'Contact '+String(ctx.leadText).trim();
   var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
   if(!leads.length)return '';
   return 'Contact '+getMostUrgentLeadLine();
@@ -14423,7 +14424,7 @@ function getMissionActionComposerV1(ctx,route,question,brainBase){
   if(selectedRoute==='sales'){
     set('Ask one calm discovery question, then pause', 'sales_call_needs_signal', 'Open Sales Coach', 'open_card', 'sales_coach', 0.9);
   }else if(selectedRoute==='leads'){
-    var leadMove=getMissionBrainTopLeadMove();
+    var leadMove=getMissionBrainTopLeadMove(ctx);
     set(leadMove||'Open the Hit List and touch the warmest visible lead', 'pipeline_needs_one_touch', 'Open Hit List', 'open_card', 'hit_list', leadMove?0.9:0.78);
   }else if(selectedRoute==='dpc'){
     var activity=(daily.dms||0)+(daily.coldCalls||0)+(daily.calls||0)+(daily.closes||0);
@@ -14469,7 +14470,7 @@ function getMissionBrainNextBestMove(ctx,brainBase){
   if(block&&block.phase&&['money','maker','manager','finale'].indexOf(block.phase)>=0&&activeStep)return 'Complete the current block step: '+activeStep;
   if(brainBase&&brainBase.dpcMomentum==='behind'&&brainBase.dpcGap>=2)return 'Log '+brainBase.dpcGap+' more DPC entries to hit today’s target';
   if(activeStep)return activeStep;
-  var leadMove=getMissionBrainTopLeadMove();
+  var leadMove=getMissionBrainTopLeadMove(ctx);
   if(leadMove)return leadMove;
   if(brainBase&&brainBase.cyclePhase==='late'&&brainBase.revenueGap>0)return 'Close the '+fmt(brainBase.revenueGap)+' cycle gap';
   return 'Complete today’s next mission step';
@@ -16980,6 +16981,10 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   var resultSignal=getMissionResultSignalV1(question||cleanQuestion||'');
+  if(resultSignal&&resultSignal.type!=='call_done'&&missionResultLoopShouldAnswerV1(resultSignal,question||cleanQuestion||'',turnV2)){
+    route=(turnV2&&turnV2.route)||route||'now';
+    return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
+  }
   if(isMissionSalesModeExitSignal(rawQ)||isMissionSalesModeExitSignal(q)){
     setMissionLiveCallMode(false,false);
     route='sales';
