@@ -14746,6 +14746,40 @@ function getMissionArbitratedIntelligenceAnswerV1(turn,ctx){
   return chosen;
 }
 
+/* =========================================================
+   MISSION MASTER INTELLIGENCE QA SWEEP — v1
+========================================================= */
+function missionVisibleAnswerHasInternalLeakV1(html){
+  var raw=String(html||'');
+  var text=normalizeMissionIntegrityText(raw);
+  return /\b(decisionTrace|decision trace|intelligenceAnswerStack|contextStatus)\b/i.test(text)||
+    /\bSource:\s*(appState|calendar|dpc|missionSteps|dataLine|syncQueue|local app state)\b/i.test(raw);
+}
+
+function runMissionMasterIntelligenceQASweepV1(){
+  var failures=[];
+  var sourceClean=applyMissionAnswerQualityGuardsV1('Open DPC and log the first real number.<br><br>Source: appState, calendar, dpc, missionSteps.','now','what next',{});
+  if(missionVisibleAnswerHasInternalLeakV1(sourceClean))failures.push('qa_internal_source_leak_guard');
+  var debugClean=applyMissionAnswerQualityGuardsV1('Use the clean read.<br><br>decisionTrace: route_plan_selected','now','what next',{});
+  if(missionVisibleAnswerHasInternalLeakV1(debugClean))failures.push('qa_decision_trace_leak_guard');
+  var stackIds=getMissionIntelligenceAnswerStackV1({
+    rawInput:'what next',
+    cognitiveLoad:{shouldAnswer:false},
+    executionMode:{shouldAnswer:false},
+    decisionMemory:{shouldAnswer:true,message:'Memory'},
+    patternMemory:{shouldAnswer:true,message:'Pattern'},
+    silenceIntelligence:{shouldAnswer:false},
+    threadMemory:{shouldAnswer:true,message:'Thread'},
+    tooMuchAdvice:{shouldAnswer:false},
+    constraintGuidance:{shouldAnswer:false},
+    decisionIntent:{shouldAnswer:true,message:'Decision'}
+  },{}).map(function(item){return item.id;});
+  if(stackIds[0]!=='decision_memory'||stackIds.indexOf('decision_intent')<0)failures.push('qa_arbiter_order_guard');
+  var directSyncPattern=getMissionPatternBasedCoachingMemoryV1({rawInput:'sync check',route:'sync',inputSignals:{},dataConfidence:{level:'low'},syncStatus:{risk:'high'},sessionDataCache:{snapshot:{dpc:{dms:1,callsMade:0,booked:0,closes:0,money:0}},counts:{dpcTotal:1}}},{dpc:{dms:1}});
+  if(directSyncPattern.shouldAnswer)failures.push('qa_direct_sync_pattern_guard');
+  return {passed:!failures.length,failures:failures,total:4};
+}
+
 function getMissionHandoffResponse(question){
   var q=normalizeMissionQuestion(question||'');
   if(!/\b(package this for codex|send this to team chat|make this a spec|turn this into directive|create a handoff|summarize for codex|log this for the team)\b/.test(q))return '';
@@ -16898,13 +16932,24 @@ function applyMissionReadabilityGuardV1(html){
   return out.trim();
 }
 
+function stripMissionInternalSourceLinesV1(html,opts){
+  var out=String(html||'');
+  opts=opts||{};
+  if(opts.allowSourceLine)return out;
+  out=out.replace(/(^|<br\s*\/?>\s*)(?:<span[^>]*>\s*)?Source:\s*(?:appState|calendar|dpc|missionSteps|local app state|connected sources|dataLine|notion|sheets|syncQueue)[^<]*(?:<\/span>\s*)?(?=<br\s*\/?>|$)/gi,'$1');
+  out=out.replace(/(^|<br\s*\/?>\s*)(?:<span[^>]*>\s*)?(?:decisionTrace|decision trace|intelligenceAnswerStack|contextStatus):[^<]*(?:<\/span>\s*)?(?=<br\s*\/?>|$)/gi,'$1');
+  return out.replace(/(<br\s*\/?>\s*){3,}/gi,'<br><br>').trim();
+}
+
 function applyMissionAnswerQualityGuardsV1(html,route,question,opts){
   var out=String(html||'');
   if(!out)return out;
   opts=opts||{};
   out=applyMissionReadabilityGuardV1(out);
+  out=stripMissionInternalSourceLinesV1(out,opts);
   if(opts.responseBeforeReason!==false)out=applyMissionResponseBeforeReasonV1(out);
   if(opts.firstSentenceRule!==false)out=applyMissionFirstSentenceRuleV1(out,route||'now',question||'');
+  out=stripMissionInternalSourceLinesV1(out,opts);
   out=applyMissionReadabilityGuardV1(out);
   return out;
 }
@@ -18628,8 +18673,10 @@ function runMissionIntegritySelfCheck(){
   if(!arbitrated||arbitrated.id!=='pattern_memory'||arbitrated.answer!=='Pattern answer'||arbiterTurn.intelligenceAnswerChosen!=='pattern_memory')failures.push('intelligence_arbiter_priority');
   var arbiterStack=getMissionIntelligenceAnswerStackV1(arbiterTurn,actionCtx).map(function(item){return item.id;}).join(',');
   if(arbiterStack.indexOf('pattern_memory')<0||arbiterStack.indexOf('thread_memory')<0||arbiterStack.indexOf('decision_intent')<0)failures.push('intelligence_arbiter_stack');
+  var masterQASweep=runMissionMasterIntelligenceQASweepV1();
+  if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:71};
+  return {passed:!failures.length,failures:failures,total:75};
 }
 
 function runMissionCommandSelfCheck(){
