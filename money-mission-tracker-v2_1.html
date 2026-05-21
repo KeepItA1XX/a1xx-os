@@ -15138,6 +15138,7 @@ function missionMentorShouldAnswerV1(turn,ctx,match){
   var q=normalizeMissionQuestion(turn.rawInput||turn.normalizedInput||'');
   var live=turn.liveContext&&turn.liveContext.currentSalesMode==='live_call';
   if(live)return false;
+  if(/\b(what changed|whats changed|what'?s changed|what moved|what happened today|what happened since|since last time|since yesterday|since last session|what is different|what'?s different)\b/.test(q))return false;
   var execution=turn.executionMode&&turn.executionMode.mode==='execution';
   var explicitTeach=/\b(teach|explain|why|how do i|how should i|framework|principle|break down|make this make sense|mentor|diagnose|audit|what does this mean)\b/.test(q);
   var strategyAsk=/\b(not working|stuck|improve|better|convert|grow|get more|track|position|offer|funnel|content not converting|pipeline empty|what is keeping me broke|why am i not making money)\b/.test(q);
@@ -15229,9 +15230,10 @@ function getMissionIntelligenceAnswerStackV1(turn,ctx){
   add('silence_intelligence',buildMissionSilenceIntelligenceResponseV1(turn,ctx));
   add('why_response',getMissionWhyResponseV1(turn,ctx));
   add('thread_memory',buildMissionThreadMemoryResponseV1(turn,ctx));
-  add('action_accountability',buildMissionActionAccountabilityResponseV1(turn,ctx));
+  add('action_accountability',buildMissionActionAccountabilityResponseV1(turn,ctx),{actionLayer:false});
   add('too_much_advice',buildMissionTooMuchAdviceResponseV1(turn,ctx));
   add('constraint_guidance',buildMissionConstraintAwareGuidanceResponseV1(turn,ctx));
+  add('what_changed_engine',typeof getMissionWhatChangedEngineResponseV1==='function'?getMissionWhatChangedEngineResponseV1(turn&&turn.route||'now',ctx,turn&&turn.rawInput||turn&&turn.normalizedInput||'',turn&&turn.brainState||{}):'',{sessionArc:false,closer:false,presence:false,actionLayer:false});
   add('mission_mentor',buildMissionMentorResponseV1(turn,ctx),{sessionArc:false,closer:false,presence:false});
   add('decision_intent',buildMissionDecisionIntentResponseV1(turn,ctx));
   return stack;
@@ -15272,6 +15274,7 @@ function scoreMissionArbiterCandidateV1(item,signal){
     too_much_advice:72,
     why_response:84,
     constraint_guidance:70,
+    what_changed_engine:118,
     mission_mentor:76,
     decision_intent:62
   }[id]||40;
@@ -15288,6 +15291,8 @@ function scoreMissionArbiterCandidateV1(item,signal){
   if(signal.explicitStrategy&&id==='thread_memory')score-=30;
   if(signal.explicitStrategy&&id==='too_much_advice')score-=25;
   if(signal.explicitStrategy&&id==='decision_memory')score-=22;
+  if(/\b(what changed|whats changed|what'?s changed|what moved|what happened today|what happened since|since last time|since yesterday|since last session|what is different|what'?s different)\b/.test(signal.q)&&id==='what_changed_engine')score=132;
+  if(/\b(what changed|whats changed|what'?s changed|what moved|what happened today|what happened since|since last time|since yesterday|since last session|what is different|what'?s different)\b/.test(signal.q)&&id==='mission_mentor')score-=80;
   if(signal.explicitData&&id==='mission_mentor')score-=12;
   if(signal.explicitData&&id==='action_accountability')score-=45;
   if(signal.explicitSales&&id==='mission_mentor'&&signal.route==='sales')score-=30;
@@ -15365,6 +15370,9 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(!accountability.shouldAnswer||accountability.reason!=='pending_action_check')failures.push('qa_action_accountability_signal');
   var accountabilityPrompt=buildMissionActionAccountabilityResponseV1({actionAccountability:accountability},{});
   if(accountabilityPrompt.indexOf('did you do this yet')<0||accountabilityPrompt.indexOf('Open Hit List')<0)failures.push('qa_action_accountability_prompt');
+  var accountabilityStack=getMissionIntelligenceAnswerStackV1({rawInput:'what should i do today',route:'now',actionAccountability:accountability},{});
+  var accountabilityStackItem=accountabilityStack.find(function(item){return item.id==='action_accountability';});
+  if(!accountabilityStackItem||accountabilityStackItem.opts.actionLayer!==false)failures.push('qa_action_accountability_action_layer_guard');
   var priorTurnObject=window.__missionLastTurnObjectV2;
   window.__missionLastTurnObjectV2={id:'qa_accountability_presence_turn',turnCount:12,rawInput:'what should i do today',route:'now',actionAccountability:accountability};
   var accountabilityPresence=applyMissionPresenceLayer(accountabilityPrompt,'now','what should i do today',{});
@@ -15374,11 +15382,13 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(/Booked Call\s+\./.test(spacingClean))failures.push('qa_punctuation_spacing_guard');
   var carryLine=getMissionRepeatCarryLineV1('now',['same lane:','still on this:','cleaner read:']);
   if(/Same read, tighter/i.test(carryLine))failures.push('qa_repeat_carry_phrase_guard');
+  var whatChangedArbiter=getMissionArbitratedIntelligenceAnswerV1({rawInput:'what changed today',normalizedInput:'what changed today',route:'report',brainState:{},dataConfidence:{level:'medium'},syncStatus:{risk:'none'}},{rev:999,wk:500,crm:[],dpc:{dms:0,callsMade:0,booked:0,closes:0,money:0}});
+  if(!whatChangedArbiter||whatChangedArbiter.id!=='what_changed_engine')failures.push('qa_what_changed_engine_priority');
   var accountabilityProtected=getMissionActionAccountabilityV1({rawInput:'/pipeline',route:'leads'},{});
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:13};
+  return {passed:!failures.length,failures:failures,total:15};
 }
 
 function getMissionHandoffResponse(question){
