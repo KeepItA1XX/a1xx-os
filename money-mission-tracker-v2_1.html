@@ -10569,6 +10569,7 @@ function updateMissionTurnCheckpointIntegrity(turn){
         list[i].integrityFlags=turn.integrityFlags||[];
         list[i].integrityOverrides=turn.integrityOverrides||[];
         list[i].liveContext=turn.liveContext||null;
+        list[i].appSnapshot=turn.changeSnapshot||list[i].appSnapshot||null;
         list[i].scratchpadSummary=summarizeMissionScratchpadV1(turn.scratchpad);
         list[i].decisionSummary=turn.decisionSummary||list[i].decisionSummary||null;
         list[i].decisionTrace=turn.decisionTrace||list[i].decisionTrace||[];
@@ -11236,6 +11237,8 @@ function selectMissionOutputResponseWithTraceV1(route,ctx,question,conv,brainSta
   }
   var salesDeepResponse=typeof getMissionSalesDeepOutputResponseV1==='function'?getMissionSalesDeepOutputResponseV1(route,ctx,question,conv,brainState):'';
   if(salesDeepResponse)return chosen('sales_deep_v1',salesDeepResponse,{route:route});
+  var whatChangedResponse=typeof getMissionWhatChangedEngineResponseV1==='function'?getMissionWhatChangedEngineResponseV1(route,ctx,question,brainState):'';
+  if(whatChangedResponse)return chosen('what_changed_engine_v1',whatChangedResponse,{route:route});
   var focusGuardResponse=typeof getMissionFocusGuardResponseV1==='function'?getMissionFocusGuardResponseV1(route,ctx,question,conv,brainState):'';
   if(focusGuardResponse)return chosen('focus_guard_day_intel_v1',focusGuardResponse,{route:route});
   var osAwareResponse=typeof getMissionOsAwareOutputResponseV1==='function'?getMissionOsAwareOutputResponseV1(route,ctx,question,conv,brainState,state,q):'';
@@ -11243,6 +11246,185 @@ function selectMissionOutputResponseWithTraceV1(route,ctx,question,conv,brainSta
   var v11Response=typeof getMissionOutputPackResponseV1_1==='function'?getMissionOutputPackResponseV1_1(route,ctx,question,conv,brainState,state,q):'';
   if(v11Response)return chosen('output_pack_v1_1',v11Response,{route:route});
   return '';
+}
+
+/* =========================================================
+   MISSION WHAT CHANGED ENGINE — v1
+========================================================= */
+function getMissionNumberV1(value){
+  var n=Number(value);
+  return isNaN(n)?0:n;
+}
+
+function getMissionLeadStatusKeyV1(lead){
+  if(!lead)return '';
+  return String(lead.status||lead.stage||lead.heat||lead.temperature||lead.pipelineStatus||lead.name||lead.title||'').toLowerCase();
+}
+
+function getMissionLeadDisplayNameV1(lead){
+  if(!lead)return 'Unnamed lead';
+  return String(lead.name||lead.title||lead.artist||lead.client||lead.company||lead.email||'Unnamed lead');
+}
+
+function getMissionItemTitleV1(item){
+  if(!item)return 'Untitled';
+  return String(item.title||item.name||item.project||item.asset||item.song||item.contentTitle||'Untitled');
+}
+
+function getMissionCurrentAppSnapshotV1(ctx){
+  ctx=ctx||window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+  var week={};
+  try{week=typeof captureWeekData==='function'?captureWeekData():{};}catch(e){week={};}
+  var dpc={};
+  try{dpc=typeof getDailyCoach==='function'?getDailyCoach():{};}catch(e){dpc={};}
+  var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
+  var hotWarm=leads.filter(function(lead){return /\b(hot|warm)\b/.test(getMissionLeadStatusKeyV1(lead));});
+  var callReady=leads.filter(function(lead){return /\b(call ready|call-ready|ready)\b/i.test(JSON.stringify(lead||{}));});
+  var content=(window.__contentPipelinePieces||window.__contentPieces||[]).filter(Boolean);
+  var production=(window.__productionPieces||[]).filter(Boolean);
+  var syncQueue=[];
+  try{syncQueue=typeof getStore==='function'?(getStore('a1xx_notion_sync_queue_v1')||[]):[];}catch(e){syncQueue=[];}
+  return {
+    version:'1.0',
+    timestamp:new Date().toISOString(),
+    dateKey:typeof dateKey==='function'?dateKey(new Date()):new Date().toDateString(),
+    revenue:getMissionNumberV1(week.revenue||week.rev||ctx.rev),
+    weekTarget:getMissionNumberV1(week.weekTarget||week.wk||ctx.wk),
+    gap:Math.max(0,getMissionNumberV1(week.weekTarget||week.wk||ctx.wk)-getMissionNumberV1(week.revenue||week.rev||ctx.rev)),
+    dpc:{
+      dms:getMissionNumberV1(dpc.dms),
+      callsMade:getMissionNumberV1(dpc.coldCalls),
+      booked:getMissionNumberV1(dpc.calls),
+      closes:getMissionNumberV1(dpc.closes),
+      money:getMissionNumberV1(dpc.money)
+    },
+    pipeline:{
+      open:leads.length,
+      hotWarm:hotWarm.length,
+      callReady:callReady.length,
+      topLead:getMissionLeadDisplayNameV1(leads[0])
+    },
+    content:{
+      count:content.length,
+      top:getMissionItemTitleV1(content[0])
+    },
+    production:{
+      count:production.length,
+      top:getMissionItemTitleV1(production[0])
+    },
+    calendar:{
+      count:(window.__calEvents||[]).length,
+      next:ctx.nextEvent&&ctx.nextEvent.title||''
+    },
+    sync:{
+      pending:Array.isArray(syncQueue)?syncQueue.filter(function(x){return x&&x.status==='pending';}).length:0,
+      failed:Array.isArray(syncQueue)?syncQueue.filter(function(x){return x&&x.status==='failed';}).length:0
+    },
+    contextMode:typeof getMissionContextMode==='function'?getMissionContextMode():'general',
+    activeTab:typeof getMissionActiveTab==='function'?getMissionActiveTab():'unknown',
+    nextBestMove:ctx.nowText||''
+  };
+}
+
+function getMissionPreviousChangeSnapshotV1(skipTurnId){
+  var list=[];
+  try{list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');}catch(e){list=[];}
+  if(!Array.isArray(list))list=[];
+  for(var i=0;i<list.length;i++){
+    if(skipTurnId&&list[i]&&list[i].turnId===skipTurnId)continue;
+    if(list[i]&&list[i].appSnapshot)return {source:'checkpoint',checkpoint:list[i],snapshot:list[i].appSnapshot};
+  }
+  for(var j=0;j<list.length;j++){
+    var cp=list[j]||{};
+    if(skipTurnId&&cp.turnId===skipTurnId)continue;
+    if(cp.timestamp&&cp.brainStateSummary){
+      return {source:'checkpoint_summary',checkpoint:cp,snapshot:{
+        timestamp:cp.timestamp,
+        revenue:getMissionNumberV1(cp.brainStateSummary.revenue||0),
+        gap:getMissionNumberV1(cp.brainStateSummary.revenueGap||0),
+        dpc:{dms:0,callsMade:0,booked:0,closes:0,money:0},
+        pipeline:{open:0,hotWarm:0,callReady:0,topLead:''},
+        content:{count:0,top:''},
+        production:{count:0,top:''},
+        calendar:{count:0,next:''},
+        sync:{pending:0,failed:0},
+        contextMode:'',
+        activeTab:'',
+        nextBestMove:cp.nextBestMove||''
+      }};
+    }
+  }
+  return null;
+}
+
+function addMissionChangeLineV1(lines,label,before,after,format){
+  if(before===after)return;
+  var b=format?format(before):before;
+  var a=format?format(after):after;
+  lines.push(label+': '+b+' → '+a);
+}
+
+function buildMissionChangeListV1(prev,current){
+  var lines=[];
+  if(!prev||!current)return lines;
+  addMissionChangeLineV1(lines,'Money',getMissionNumberV1(prev.revenue),getMissionNumberV1(current.revenue),function(v){return fmt(v);});
+  addMissionChangeLineV1(lines,'Weekly gap',getMissionNumberV1(prev.gap),getMissionNumberV1(current.gap),function(v){return fmt(v);});
+  addMissionChangeLineV1(lines,'DPC DMs',getMissionNumberV1(prev.dpc&&prev.dpc.dms),getMissionNumberV1(current.dpc&&current.dpc.dms));
+  addMissionChangeLineV1(lines,'Calls made',getMissionNumberV1(prev.dpc&&prev.dpc.callsMade),getMissionNumberV1(current.dpc&&current.dpc.callsMade));
+  addMissionChangeLineV1(lines,'Booked calls',getMissionNumberV1(prev.dpc&&prev.dpc.booked),getMissionNumberV1(current.dpc&&current.dpc.booked));
+  addMissionChangeLineV1(lines,'Closes',getMissionNumberV1(prev.dpc&&prev.dpc.closes),getMissionNumberV1(current.dpc&&current.dpc.closes));
+  addMissionChangeLineV1(lines,'Cash collected today',getMissionNumberV1(prev.dpc&&prev.dpc.money),getMissionNumberV1(current.dpc&&current.dpc.money),function(v){return fmt(v);});
+  addMissionChangeLineV1(lines,'Open leads',getMissionNumberV1(prev.pipeline&&prev.pipeline.open),getMissionNumberV1(current.pipeline&&current.pipeline.open));
+  addMissionChangeLineV1(lines,'Warm/hot leads',getMissionNumberV1(prev.pipeline&&prev.pipeline.hotWarm),getMissionNumberV1(current.pipeline&&current.pipeline.hotWarm));
+  addMissionChangeLineV1(lines,'Call-ready leads',getMissionNumberV1(prev.pipeline&&prev.pipeline.callReady),getMissionNumberV1(current.pipeline&&current.pipeline.callReady));
+  addMissionChangeLineV1(lines,'Content items loaded',getMissionNumberV1(prev.content&&prev.content.count),getMissionNumberV1(current.content&&current.content.count));
+  addMissionChangeLineV1(lines,'Production items loaded',getMissionNumberV1(prev.production&&prev.production.count),getMissionNumberV1(current.production&&current.production.count));
+  addMissionChangeLineV1(lines,'Calendar events loaded',getMissionNumberV1(prev.calendar&&prev.calendar.count),getMissionNumberV1(current.calendar&&current.calendar.count));
+  addMissionChangeLineV1(lines,'Sync pending',getMissionNumberV1(prev.sync&&prev.sync.pending),getMissionNumberV1(current.sync&&current.sync.pending));
+  addMissionChangeLineV1(lines,'Sync failed',getMissionNumberV1(prev.sync&&prev.sync.failed),getMissionNumberV1(current.sync&&current.sync.failed));
+  if(prev.contextMode!==current.contextMode)lines.push('Context mode: '+(prev.contextMode||'unknown')+' → '+(current.contextMode||'unknown'));
+  if(prev.activeTab!==current.activeTab)lines.push('Active tab: '+(prev.activeTab||'unknown')+' → '+(current.activeTab||'unknown'));
+  if(prev.nextBestMove&&current.nextBestMove&&prev.nextBestMove!==current.nextBestMove)lines.push('Next move changed: '+prev.nextBestMove+' → '+current.nextBestMove);
+  return lines;
+}
+
+function getMissionWhatChangedEngineResponseV1(route,ctx,question,brainState){
+  var q=normalizeMissionQuestion(question||'');
+  if(!/\b(what changed|whats changed|what'?s changed|what moved|what happened today|what happened since|since last time|since yesterday|since last session|what is different|what'?s different)\b/.test(q))return '';
+  var current=getMissionCurrentAppSnapshotV1(ctx);
+  var turn=window.__missionLastTurnObjectV2||null;
+  var prior=getMissionPreviousChangeSnapshotV1(turn&&turn.id);
+  if(turn){
+    turn.changeSnapshot=current;
+    addMissionDecisionTraceV1(turn,'what_changed_snapshot_built',{hasPrior:!!prior,source:prior&&prior.source||'none'});
+  }
+  if(!prior||!prior.snapshot){
+    return 'I have the current app state, but I do not have a clean prior snapshot to compare yet.<br><br>Current read:<br>1) Money: '+fmt(current.revenue)+' of '+fmt(current.weekTarget)+' · gap '+fmt(current.gap)+'<br>2) DPC: '+current.dpc.dms+' DMs · '+current.dpc.callsMade+' calls made · '+current.dpc.booked+' booked · '+current.dpc.closes+' closes · '+fmt(current.dpc.money)+' collected<br>3) Pipeline: '+current.pipeline.open+' open · '+current.pipeline.hotWarm+' warm/hot · '+current.pipeline.callReady+' call-ready<br>4) Content: '+current.content.count+' loaded<br>5) Production: '+current.production.count+' loaded<br><br>Ask again after one logged move and I can compare against this checkpoint.';
+  }
+  var changes=buildMissionChangeListV1(prior.snapshot,current);
+  if(turn)addMissionDecisionTraceV1(turn,'what_changed_compared',{changeCount:changes.length,source:prior.source});
+  if(!changes.length){
+    return 'Since the last saved checkpoint, I do not see a number or status change in the loaded app state.<br><br>Current read:<br>1) Money: '+fmt(current.revenue)+' of '+fmt(current.weekTarget)+' · gap '+fmt(current.gap)+'<br>2) DPC: '+current.dpc.dms+' DMs · '+current.dpc.callsMade+' calls made · '+current.dpc.booked+' booked · '+current.dpc.closes+' closes · '+fmt(current.dpc.money)+' collected<br>3) Pipeline: '+current.pipeline.open+' open leads<br><br>Next: create one visible move, then log it so the next comparison has something real to read.';
+  }
+  return 'Since the last saved checkpoint:<br><br>'+changes.slice(0,6).map(function(line,i){return (i+1)+') '+escapeHtml(line);}).join('<br>')+'<br><br>What it means:<br>'+escapeHtml(getMissionWhatChangedMeaningV1(changes,current))+'<br><br>Next:<br>'+escapeHtml(getMissionWhatChangedNextV1(changes,current));
+}
+
+function getMissionWhatChangedMeaningV1(changes,current){
+  var text=changes.join(' | ').toLowerCase();
+  if(/money|cash collected|closes/.test(text))return 'Money moved. Protect the buyer-facing lane and log the next result.';
+  if(/dpc|calls made|booked calls/.test(text))return 'Activity moved. Now turn the best signal into a reply, call, offer, or close.';
+  if(/open leads|warm\/hot|call-ready/.test(text))return 'Pipeline state changed. Use the latest heat before opening a new lane.';
+  if(/content|production/.test(text))return 'Asset flow changed. Turn the movement into proof or delivery.';
+  if(/sync/.test(text))return 'System state changed. Clear trust issues before making a data-driven call.';
+  return 'The app state changed enough to choose the next move from the loaded data.';
+}
+
+function getMissionWhatChangedNextV1(changes,current){
+  if(current.gap>0)return 'Move the closest buyer toward payment.';
+  if(current.dpc.dms+current.dpc.callsMade+current.dpc.booked+current.dpc.closes===0)return 'Start the DPC with one clean outreach action.';
+  if(current.pipeline.callReady>0)return 'Touch one call-ready lead and log the result.';
+  if(current.production.count>0)return 'Move one production item one status forward.';
+  return 'Pick one visible action and create the next checkpoint.';
 }
 
 /* =========================================================
@@ -12368,7 +12550,8 @@ function updateMissionBrainSessionV2(turn){
 function saveMissionTurnCheckpoint(turn){
   try{
     var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    var snapshot=turn.changeSnapshot||(typeof getMissionCurrentAppSnapshotV1==='function'?getMissionCurrentAppSnapshotV1(turn.options&&turn.options.ctx):null);
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
     list.unshift(checkpoint);
     list=list.slice(0,100);
     if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
