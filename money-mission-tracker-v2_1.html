@@ -14924,26 +14924,55 @@ function getMissionDecisionResponse(route,ctx,question){
 }
 
 /* =========================================================
-   MISSION RESOURCE RECOMMENDATION INTELLIGENCE — v1
+   MISSION RESOURCE RECOMMENDATION INTELLIGENCE — v1.1
 ========================================================= */
 function getMissionFallbackResourceCatalogV1(){
   return [
     {title:'Cold DM Opener Script',category:'Sales',type:'Script',tags:'sales dm opener lead outreach cold first message',summary:'Use when starting a cold conversation without overexplaining.'},
     {title:'Warm Follow-Up Script',category:'Sales',type:'Script',tags:'sales follow up reply lead bump ghosted warm check in',summary:'Use when the lead already knows you and needs a clean next touch.'},
+    {title:'Ghosted Lead Bump Script',category:'Sales',type:'Script',tags:'sales follow up bump ghosted no reply checking once loop close',summary:'Use when the lead went quiet and the next touch needs to be clean.'},
     {title:'Objection Isolator Script',category:'Sales',type:'Script',tags:'sales objection too expensive think budget concern price stall',summary:'Use when the prospect raises money, timing, or uncertainty.'},
+    {title:'Payment Plan Qualifier',category:'Sales',type:'Qualifier',tags:'sales payment plan structure deposit installment already yes afford budget',summary:'Use before offering a payment structure so the decision is clear.'},
+    {title:'Need To Think Response Script',category:'Sales',type:'Script',tags:'sales need to think thinking stall unsure timing money clarity',summary:'Use when the prospect asks for time and you need to isolate the real unknown.'},
+    {title:'Discovery Question Bank',category:'Sales',type:'Question Bank',tags:'sales discovery question call opener problem why now decision maker',summary:'Use when you need a better question before pitching.'},
     {title:'Call Prep Checklist',category:'Sales',type:'Checklist',tags:'sales call prep discovery closer live call booked calendar',summary:'Use before a booked call so the opening question and outcome are clear.'},
     {title:'Rappreneur OS DM Script',category:'Offer',type:'Script',tags:'rappreneur artist dm sales offer rollout fans content money music',summary:'Use for artists who need rollout, fanbase, content, or music money help.'},
     {title:'ATL Studio Follow-Up Script',category:'Offer',type:'Script',tags:'atl studio session follow up dm booking record studio time',summary:'Use for studio-session follow-up and booking momentum.'},
+    {title:'Offer Clarity Builder',category:'Offer',type:'Template',tags:'offer positioning value promise price belief niche better offer clarity',summary:'Use when the offer needs to be clearer before asking for money.'},
     {title:'Content Proof Template',category:'Content',type:'Template',tags:'content post proof hook caption case study result',summary:'Use when today’s work needs to become visible proof.'},
     {title:'Content Hook Builder',category:'Content',type:'Template',tags:'content hook ideas caption post reel short angle',summary:'Use when the content lane needs a stronger first line.'},
+    {title:'Post-Call Content Debrief',category:'Content',type:'Template',tags:'content post call loss stall objection lesson story proof debrief',summary:'Use when a call creates a lesson, objection, or proof point worth posting.'},
     {title:'BANGIN+ Upload Checklist',category:'Production',type:'Checklist',tags:'production bangin upload metadata cover art dsp even release',summary:'Use before shipping or uploading a BANGIN+ asset.'},
     {title:'Mix/Master Qualifier',category:'Production',type:'Qualifier',tags:'mix master recording release ready qualifier song studio',summary:'Use to qualify whether the song is ready for mix/master work.'},
     {title:'DPC Logging Checklist',category:'DPC',type:'Checklist',tags:'dpc log daily progress campaign activity dm call booked close collected',summary:'Use when activity happened but the OS has not learned from it yet.'},
-    {title:'Sync Health Checklist',category:'System',type:'Checklist',tags:'sync health notion sheets calendar backup apps script webhook data stale',summary:'Use when the data trust question is blocking the next move.'}
+    {title:'Weekly Review Scorecard',category:'Weekly Review',type:'Checklist',tags:'weekly review scorecard track kpi what changed week wrap it activity report',summary:'Use when the week needs a clean review instead of another daily answer.'},
+    {title:'Sync Health Checklist',category:'System',type:'Checklist',tags:'sync health notion sheets calendar backup apps script webhook data stale current trust',summary:'Use when the data trust question is blocking the next move.'},
+    {title:'App Navigation Quick Guide',category:'System',type:'Guide',tags:'app navigation where find hit list system hub brief outreach content production manager rolodex',summary:'Use when the question is about where something lives inside the OS.'}
   ];
 }
 
+function expandMissionResourceQuestionV11(q){
+  q=normalizeMissionQuestion(q||'');
+  return (q+' ')
+    .replace(/\bwhat script\b/g,'what resource script')
+    .replace(/\bwhat do i use\b/g,'what resource should i use')
+    .replace(/\bwhat should i pull\b/g,'what resource should i pull')
+    .replace(/\bwhere is the\b/g,'where do i find the')
+    .replace(/\bwhere's the\b/g,'where do i find the')
+    .replace(/\bwhat helps\b/g,'what guide helps')
+    .replace(/\bprice objection\b/g,'too expensive objection')
+    .replace(/\bthink about it\b/g,'need to think stall')
+    .replace(/\bcan't afford\b/g,'too expensive budget')
+    .replace(/\bcant afford\b/g,'too expensive budget')
+    .replace(/\bghost\b/g,'ghosted no reply bump')
+    .replace(/\bcall questions?\b/g,'discovery question call prep')
+    .replace(/\bweekly check\b/g,'weekly review scorecard')
+    .replace(/\bwrap this week\b/g,'weekly review scorecard')
+    .replace(/\bwhere do i click\b/g,'app navigation guide');
+}
+
 function scoreMissionResourceCandidateV1(resource,q,route){
+  q=expandMissionResourceQuestionV11(q);
   var hay=[resource.title,resource.name,resource.resource,resource.type,resource.category,resource.stage,resource.tags,resource.summary,resource.description,resource.notes].filter(Boolean).join(' ').toLowerCase();
   var score=0;
   q.split(/\s+/).forEach(function(term){
@@ -14960,23 +14989,31 @@ function scoreMissionResourceCandidateV1(resource,q,route){
   }
   if(/\b(too expensive|price|budget)\b/.test(q)&&/\b(objection|expensive|price|budget)\b/.test(hay))score+=10;
   if(/\b(ghosted|bump|no reply)\b/.test(q)&&/\b(ghost|bump|follow)\b/.test(hay))score+=10;
+  if(/\b(need to think|thinking|stall|unsure)\b/.test(q)&&/\b(need to think|thinking|stall|unsure|clarity)\b/.test(hay))score+=13;
+  if(/\b(payment plan|pay in parts|installment|deposit)\b/.test(q)&&/\b(payment plan|installment|deposit|already yes)\b/.test(hay))score+=15;
+  if(/\b(discovery question|call question|what question|ask next)\b/.test(q)&&/\b(discovery|question bank|call opener|why now)\b/.test(hay))score+=14;
   if(/\b(prep me|call prep|live call)\b/.test(q)&&/\b(call prep|discovery|closer)\b/.test(hay))score+=10;
   if(/\batl studio\b/.test(q)&&/\batl|studio\b/.test(hay))score+=10;
   if(/\brappreneur\b/.test(q)&&/\brappreneur|artist\b/.test(hay))score+=10;
+  if(/\b(offer|positioning|make my offer|value|promise|better offer)\b/.test(q)&&/\b(offer|positioning|value|promise|clarity)\b/.test(hay))score+=18;
+  if(/\b(make my offer|offer better|better offer|fix my offer)\b/.test(q)&&/\b(offer clarity|positioning|value promise)\b/.test(hay))score+=24;
   if(/\b(bangin|bangin plus|banging|metadata|upload|cover art|dsp|even)\b/.test(q)&&/\b(bangin|metadata|upload|cover art|dsp|even)\b/.test(hay))score+=16;
   if(/\b(mix master|mix\/master|mixing|mastering|recorded|recording|release ready)\b/.test(q)&&/\b(mix|master|recording|release ready)\b/.test(hay))score+=14;
   if(/\b(cold dm|cold message|first dm|opener)\b/.test(q)&&/\b(cold|opener|first message)\b/.test(hay))score+=12;
   if(/\b(warm follow|warm lead|check in|checking in)\b/.test(q)&&/\b(warm|follow|check in)\b/.test(hay))score+=12;
   if(/\b(proof|case study|turn.*work.*proof)\b/.test(q)&&/\b(proof|case study|result)\b/.test(hay))score+=10;
+  if(/\b(post call|call loss|call stall|lost call|sales lesson)\b/.test(q)&&/\b(post call|debrief|loss|stall|objection|lesson)\b/.test(hay))score+=13;
   if(/\b(hook|caption|content idea|post idea)\b/.test(q)&&/\b(hook|caption|content|angle)\b/.test(hay))score+=10;
   if(/\b(sync|data stale|webhook|apps script|backup)\b/.test(q)&&/\b(sync|health|webhook|apps script|backup)\b/.test(hay))score+=10;
+  if(/\b(weekly|week|wrap|what changed|scorecard|track)\b/.test(q)&&/\b(weekly|review|scorecard|kpi|what changed|wrap)\b/.test(hay))score+=10;
+  if(/\b(where do i find|where do i click|hit list|system hub|brief|outreach card|content card|beat card|manager card|rolodex)\b/.test(q)&&/\b(app navigation|where find|hit list|system hub|brief|outreach|content|production|manager|rolodex)\b/.test(hay))score+=9;
   return score;
 }
 
 function getMissionResourceRecommendationV1(route,ctx,question){
-  var q=normalizeMissionQuestion(question||'');
-  var asksForResource=/\b(script|template|playbook|resource|guide|pull up|send me|find the|checklist|qualifier)\b/.test(q);
-  var resourceHelpful=/\b(warm follow up|follow up|bump|ghosted|too expensive|payment plan|prep me for a call|call prep|atl studio|rappreneur|bangin plus|metadata|mix master|what should i say)\b/.test(q);
+  var q=expandMissionResourceQuestionV11(question||'');
+  var asksForResource=/\b(script|template|playbook|resource|guide|pull up|send me|find the|checklist|qualifier|question bank|what should i use|what do i use|what should i pull|where do i find)\b/.test(q);
+  var resourceHelpful=route==='weekly'||/\b(warm follow up|follow up|bump|ghosted|too expensive|payment plan|need to think|prep me for a call|call prep|atl studio|rappreneur|bangin plus|metadata|mix master|what should i say|discovery question|offer clarity|post call|weekly review|what should i track every week|where do i click)\b/.test(q);
   if(!asksForResource&&!resourceHelpful)return null;
   var loaded=Array.isArray(window.__resources)?window.__resources:[];
   var fallback=getMissionFallbackResourceCatalogV1();
@@ -15005,19 +15042,19 @@ function getMissionResourceRecommendationResponse(route,ctx,question){
 }
 
 /* =========================================================
-   MISSION RESOURCES / ROLODEX INTELLIGENCE — v1
+   MISSION RESOURCES / ROLODEX INTELLIGENCE — v1.1
 ========================================================= */
 var MISSION_ROLODEX_INTELLIGENCE_V1={
   id:'mission_rolodex_intelligence_v1',
-  version:'1.0',
+  version:'1.1',
   installMode:'additive_read_only'
 };
 
 function getMissionRolodexQuestionSignalV1(question,route){
-  var q=normalizeMissionQuestion(question||'');
+  var q=expandMissionResourceQuestionV11(question||'');
   if(!q)return null;
-  var explicit=/\b(rolodex|resource library|resource|resources|script|template|playbook|guide|checklist|qualifier|pull up|send me|find the|where is|where do i find|what should i use|what tool should i use|what guide helps|open the thing)\b/.test(q);
-  var supportNeed=/\b(cold dm|warm follow|follow up|bump|ghosted|too expensive|payment plan|prep me for a call|call prep|atl studio|rappreneur|bangin plus|metadata|mix master|content proof|hook builder|sync health|data stale)\b/.test(q);
+  var explicit=/\b(rolodex|resource library|resource|resources|script|template|playbook|guide|checklist|qualifier|question bank|pull up|send me|find the|where is|where do i find|what should i use|what resource should i use|what should i pull|what tool should i use|what guide helps|open the thing)\b/.test(q);
+  var supportNeed=/\b(cold dm|warm follow|follow up|bump|ghosted|too expensive|payment plan|need to think|discovery question|prep me for a call|call prep|atl studio|rappreneur|bangin plus|metadata|mix master|content proof|hook builder|post call|weekly review|sync health|data stale|where do i click)\b/.test(q);
   if(explicit||route==='resources')return {shouldAnswer:true,reason:explicit?'explicit_resource_prompt':'resources_route',supportNeed:supportNeed};
   if(supportNeed&&/\b(give me|send me|pull|use|need|where|what)\b/.test(q))return {shouldAnswer:true,reason:'support_need_resource_prompt',supportNeed:true};
   return null;
@@ -15036,13 +15073,18 @@ function getMissionRolodexResourceMetaV1(rec){
 }
 
 function getMissionRolodexUseCaseV1(question,route,meta){
-  var q=normalizeMissionQuestion(question||'');
+  var q=expandMissionResourceQuestionV11(question||'');
   if(/\b(too expensive|price|budget|payment plan|think about it|need to think)\b/.test(q))return 'This fits because the problem is not more pitching. It is isolating the real concern.';
   if(/\b(ghosted|bump|no reply|follow up|follow-up|warm)\b/.test(q))return 'This fits because the next move is one clean touch, not chasing.';
+  if(/\b(discovery question|call question|what question|ask next)\b/.test(q))return 'This fits because the next sale needs a better question before a better pitch.';
   if(/\b(call prep|prep me|booked|on the phone|live call)\b/.test(q))return 'This fits because the call needs a clear opening question before the offer.';
+  if(/\b(offer|positioning|make my offer|value|promise)\b/.test(q))return 'This fits because the offer has to make the result obvious before the price makes sense.';
+  if(/\b(post call|call loss|call stall|lost call|sales lesson)\b/.test(q))return 'This fits because the call created a lesson the OS can turn into proof.';
   if(/\b(content|post|hook|caption|proof)\b/.test(q)||route==='content')return 'This fits because the work needs to become proof, not another brainstorm.';
   if(/\b(production|beat|bangin|metadata|mix|master|upload)\b/.test(q)||route==='production')return 'This fits because the asset needs a shipping checklist, not more guessing.';
+  if(/\b(weekly|week|wrap|what changed|scorecard|track)\b/.test(q)||route==='weekly')return 'This fits because the week needs a clean scorecard before the next plan.';
   if(/\b(sync|data stale|webhook|backup|apps script)\b/.test(q)||route==='sync')return 'This fits because the blocker is data trust, not another business decision.';
+  if(/\b(where do i find|where do i click|app navigation|hit list|system hub|brief|outreach card|content card|beat card|manager card)\b/.test(q))return 'This fits because the next move is finding the right surface fast, not searching the whole app.';
   return (meta&&meta.summary)||'This fits because it supports the move you are already trying to make.';
 }
 
@@ -15050,7 +15092,7 @@ function buildMissionRolodexResponseV1(rec,meta,question,route){
   var category=meta.category||'Rolodex';
   var type=meta.type||'Resource';
   var why=getMissionRolodexUseCaseV1(question,route,meta);
-  return 'Open Rolodex and pull: '+escapeHtml(rec.title)+'.<br><br>Use it for: '+escapeHtml(category+' · '+type)+'.<br><br>'+escapeHtml(why)+'<br><br>Next: use the short version once, then come back with the result: sent, reply, booked, paid, or wrong resource.';
+  return 'Rolodex read:<br><br>Open Rolodex and pull: '+escapeHtml(rec.title)+'.<br><br>Use it for: '+escapeHtml(category+' · '+type)+'.<br><br>'+escapeHtml(why)+'<br><br>Next: use the short version once, then come back with the result: sent, reply, booked, paid, or wrong resource.';
 }
 
 function getMissionRolodexIntelligenceResponseV1(route,ctx,question,brainState,turn){
@@ -20884,6 +20926,18 @@ function runMissionIntegritySelfCheck(){
   if(rolodexSync.indexOf('Sync Health Checklist')<0||rolodexSync.indexOf('data trust')<0)failures.push('rolodex_sync_health');
   var rolodexProduction=getMissionRolodexIntelligenceResponseV1('production',actionCtx,'what checklist do i use for bangin plus metadata',{},null);
   if(rolodexProduction.indexOf('BANGIN+ Upload Checklist')<0||rolodexProduction.indexOf('shipping checklist')<0)failures.push('rolodex_production_checklist');
+  var paymentPlanResource=getMissionResourceRecommendationV1('sales',actionCtx,'he asked for a payment plan what should i use');
+  if(!paymentPlanResource||paymentPlanResource.title!=='Payment Plan Qualifier')failures.push('resource_payment_plan');
+  var thinkResource=getMissionResourceRecommendationV1('sales',actionCtx,'they need to think what script helps');
+  if(!thinkResource||thinkResource.title!=='Need To Think Response Script')failures.push('resource_need_to_think');
+  var discoveryResource=getMissionResourceRecommendationV1('sales',actionCtx,'what discovery question should i pull');
+  if(!discoveryResource||discoveryResource.title!=='Discovery Question Bank')failures.push('resource_discovery_question');
+  var weeklyResource=getMissionResourceRecommendationV1('weekly',actionCtx,'what should i track every week');
+  if(!weeklyResource||weeklyResource.title!=='Weekly Review Scorecard')failures.push('resource_weekly_scorecard');
+  var navResource=getMissionRolodexIntelligenceResponseV1('resources',actionCtx,'where do i click to find the hit list',{},null);
+  if(navResource.indexOf('App Navigation Quick Guide')<0||navResource.indexOf('finding the right surface')<0)failures.push('rolodex_navigation_guide');
+  var offerResource=getMissionResourceRecommendationV1('sales',actionCtx,'make my offer better what template should i use');
+  if(!offerResource||offerResource.title!=='Offer Clarity Builder')failures.push('resource_offer_clarity');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({lastActionPlan:{label:'Open Hit List',action:'Contact GARY RAOGUY',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact GARY RAOGUY',route:'leads',suggestedAt:new Date().toISOString()}}}));
   var constraintPending=getMissionConstraintAwareGuidanceV1({rawInput:'what next',route:'now',liveContext:{currentSalesMode:'normal'},dataConfidence:{level:'medium'},syncStatus:{risk:'none'},sessionDataCache:{snapshot:{gap:400,revenue:100,weekTarget:500}}},actionCtx);
   if(!constraintPending.shouldAnswer||constraintPending.reason!=='pending_action_constraint')failures.push('constraint_pending_action');
@@ -20971,7 +21025,7 @@ function runMissionIntegritySelfCheck(){
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
   window.__missionIntegritySelfCheckActive=false;
-  return {passed:!failures.length,failures:failures,total:104};
+  return {passed:!failures.length,failures:failures,total:110};
 }
 
 function runMissionCommandSelfCheck(){
