@@ -10402,6 +10402,103 @@ function getMissionLiveContextSnapshot(){
   };
 }
 
+/* =========================================================
+   MISSION SESSION DATA CACHE — v1
+========================================================= */
+var MISSION_SESSION_DATA_CACHE_KEY='a1xx_mc_session_data_cache_v1';
+var MISSION_SESSION_DATA_CACHE_TTL_MS=10*60*1000;
+
+function getMissionSessionDataCacheStoreV1(){
+  try{return JSON.parse(sessionStorage.getItem(MISSION_SESSION_DATA_CACHE_KEY)||'{}')||{};}catch(e){return {};}
+}
+
+function setMissionSessionDataCacheStoreV1(cache){
+  try{sessionStorage.setItem(MISSION_SESSION_DATA_CACHE_KEY,JSON.stringify(cache||{}));}catch(e){}
+}
+
+function clearMissionSessionDataCacheV1(reason){
+  try{sessionStorage.removeItem(MISSION_SESSION_DATA_CACHE_KEY);}catch(e){}
+  window.__missionSessionDataCacheLastClear=reason||'manual';
+}
+
+function getMissionSessionDataCacheAgeV1(cache){
+  if(!cache||!cache.timestamp)return null;
+  var t=new Date(cache.timestamp).getTime();
+  if(!t||isNaN(t))return null;
+  return Math.max(0,Date.now()-t);
+}
+
+function isMissionSessionDataCacheFreshV1(cache){
+  var age=getMissionSessionDataCacheAgeV1(cache);
+  return age!==null&&age<=MISSION_SESSION_DATA_CACHE_TTL_MS;
+}
+
+function buildMissionSessionDataCacheV1(ctx,reason){
+  ctx=ctx||window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
+  var snapshot=typeof getMissionCurrentAppSnapshotV1==='function'?getMissionCurrentAppSnapshotV1(ctx):{};
+  var cache={
+    version:'1.0',
+    id:'mc_cache_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    timestamp:new Date().toISOString(),
+    reason:reason||'refresh',
+    snapshot:snapshot,
+    sourceStatus:{
+      dpc:typeof getMissionSourceStatus==='function'?getMissionSourceStatus('dpc'):null,
+      crm:typeof getMissionSourceStatus==='function'?getMissionSourceStatus('crm'):null,
+      content:typeof getMissionSourceStatus==='function'?getMissionSourceStatus('content'):null,
+      production:typeof getMissionSourceStatus==='function'?getMissionSourceStatus('production'):null,
+      calendar:typeof getMissionSourceStatus==='function'?getMissionSourceStatus('calendar'):null,
+      report:typeof getMissionSourceStatus==='function'?getMissionSourceStatus('report'):null,
+      syncQueue:typeof getMissionSourceStatus==='function'?getMissionSourceStatus('syncQueue'):null
+    },
+    counts:{
+      crmLeads:snapshot.pipeline&&snapshot.pipeline.open||0,
+      content:snapshot.content&&snapshot.content.count||0,
+      production:snapshot.production&&snapshot.production.count||0,
+      calendar:snapshot.calendar&&snapshot.calendar.count||0,
+      dpcTotal:(snapshot.dpc&&snapshot.dpc.dms||0)+(snapshot.dpc&&snapshot.dpc.callsMade||0)+(snapshot.dpc&&snapshot.dpc.booked||0)+(snapshot.dpc&&snapshot.dpc.closes||0)
+    },
+    context:{
+      mode:snapshot.contextMode||getMissionContextMode(),
+      activeTab:snapshot.activeTab||'unknown',
+      activeCard:window.__missionActiveCard||'command'
+    }
+  };
+  setMissionSessionDataCacheStoreV1(cache);
+  window.__missionSessionDataCacheV1=cache;
+  return cache;
+}
+
+function getMissionSessionDataCacheV1(ctx,options){
+  options=options||{};
+  var cache=window.__missionSessionDataCacheV1||getMissionSessionDataCacheStoreV1();
+  if(!options.force&&isMissionSessionDataCacheFreshV1(cache))return cache;
+  return buildMissionSessionDataCacheV1(ctx,options.reason||'stale_or_missing');
+}
+
+function summarizeMissionSessionDataCacheV1(cache){
+  if(!cache||!cache.snapshot)return {};
+  var age=getMissionSessionDataCacheAgeV1(cache);
+  return {
+    id:cache.id||'',
+    ageMinutes:age===null?null:Math.round(age/60000),
+    reason:cache.reason||'',
+    revenue:cache.snapshot.revenue||0,
+    gap:cache.snapshot.gap||0,
+    dpc:cache.counts&&cache.counts.dpcTotal||0,
+    leads:cache.counts&&cache.counts.crmLeads||0,
+    content:cache.counts&&cache.counts.content||0,
+    production:cache.counts&&cache.counts.production||0,
+    calendar:cache.counts&&cache.counts.calendar||0,
+    contextMode:cache.context&&cache.context.mode||''
+  };
+}
+
+function getMissionCachedSnapshotV1(ctx){
+  var cache=getMissionSessionDataCacheV1(ctx,{reason:'snapshot_request'});
+  return cache&&cache.snapshot||getMissionCurrentAppSnapshotV1(ctx);
+}
+
 function normalizeMissionIntegrityText(html){
   return String(html||'').replace(/<br\s*\/?>/gi,'. ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
 }
@@ -10569,6 +10666,7 @@ function updateMissionTurnCheckpointIntegrity(turn){
         list[i].integrityFlags=turn.integrityFlags||[];
         list[i].integrityOverrides=turn.integrityOverrides||[];
         list[i].liveContext=turn.liveContext||null;
+        list[i].sessionCacheSummary=summarizeMissionSessionDataCacheV1(turn.sessionDataCache);
         list[i].appSnapshot=turn.changeSnapshot||list[i].appSnapshot||null;
         list[i].scratchpadSummary=summarizeMissionScratchpadV1(turn.scratchpad);
         list[i].decisionSummary=turn.decisionSummary||list[i].decisionSummary||null;
@@ -10989,6 +11087,10 @@ function missionFocusGuardIsTabNarrationPromptV1(q){
   return /\b(what does this mean|what am i looking at|explain this|what'?s this telling me|is this good or bad|read this for me|break this down|what do these numbers mean|what did i log|what happened today|review what i did|any errors|what'?s wrong)\b/.test(q);
 }
 
+function missionFocusGuardIsDpcLogPromptV1(q){
+  return /\b(what did i log|what i logged|did i log|log today|today'?s log|today log|daily log|log review|what did i do today|today'?s activity|todays activity|daily numbers|today numbers)\b/.test(q);
+}
+
 function missionFocusGuardIsWrapPromptV1(q){
   return /\b(wrap it|done for today|end session|close the day|end of day|session close|call it for today)\b/.test(q);
 }
@@ -11039,7 +11141,7 @@ function resolveMissionFocusGuardV1(turn,brainState,contextMode){
   if(missionFocusGuardIsWrapPromptV1(q))return {subtype:'end_of_day',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'wrap_prompt'};
   if(missionFocusGuardIsDayTypePromptV1(q))return {subtype:'day_type_read',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'day_type_prompt'};
   if(missionFocusGuardIsTimePromptV1(q))return {subtype:'time_block_read',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'time_block_prompt'};
-  if(tabState!=='unknown'&&missionFocusGuardIsTabNarrationPromptV1(q))return {subtype:'tab_narration',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'tab_narration'};
+  if(tabState!=='unknown'&&missionFocusGuardIsTabNarrationPromptV1(q)&&!missionFocusGuardIsDpcLogPromptV1(q))return {subtype:'tab_narration',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'tab_narration'};
   if(!explicitSlash&&missionFocusGuardIsSessionOpenPromptV1(q)){
     var session=getMissionFocusGuardSessionV1();
     if(!session.sessionOpenFired)return {subtype:'session_open',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'session_open'};
@@ -11280,7 +11382,7 @@ function getMissionCurrentAppSnapshotV1(ctx){
   var leads=(window.__crmLeads||[]).filter(function(lead){return !isClosedCRMLead(lead);});
   var hotWarm=leads.filter(function(lead){return /\b(hot|warm)\b/.test(getMissionLeadStatusKeyV1(lead));});
   var callReady=leads.filter(function(lead){return /\b(call ready|call-ready|ready)\b/i.test(JSON.stringify(lead||{}));});
-  var content=(window.__contentPipelinePieces||window.__contentPieces||[]).filter(Boolean);
+  var content=[].concat(window.__contentPieces||[],window.__contentPipelinePieces||[]).filter(Boolean);
   var production=(window.__productionPieces||[]).filter(Boolean);
   var syncQueue=[];
   try{syncQueue=typeof getStore==='function'?(getStore('a1xx_notion_sync_queue_v1')||[]):[];}catch(e){syncQueue=[];}
@@ -11414,7 +11516,7 @@ function getMissionVisibleChangeLinesV1(changes,loadSignal){
 function getMissionWhatChangedEngineResponseV1(route,ctx,question,brainState){
   var q=normalizeMissionQuestion(question||'');
   if(!/\b(what changed|whats changed|what'?s changed|what moved|what happened today|what happened since|since last time|since yesterday|since last session|what is different|what'?s different)\b/.test(q))return '';
-  var current=getMissionCurrentAppSnapshotV1(ctx);
+  var current=getMissionCachedSnapshotV1(ctx);
   var turn=window.__missionLastTurnObjectV2||null;
   var prior=getMissionPreviousChangeSnapshotV1(turn&&turn.id);
   if(turn){
@@ -12578,8 +12680,9 @@ function updateMissionBrainSessionV2(turn){
 function saveMissionTurnCheckpoint(turn){
   try{
     var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
-    var snapshot=turn.changeSnapshot||(typeof getMissionCurrentAppSnapshotV1==='function'?getMissionCurrentAppSnapshotV1(turn.options&&turn.options.ctx):null);
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    var sessionCache=turn.sessionDataCache||getMissionSessionDataCacheV1(turn.options&&turn.options.ctx,{reason:'checkpoint'});
+    var snapshot=turn.changeSnapshot||(sessionCache&&sessionCache.snapshot)||(typeof getMissionCurrentAppSnapshotV1==='function'?getMissionCurrentAppSnapshotV1(turn.options&&turn.options.ctx):null);
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
     list.unshift(checkpoint);
     list=list.slice(0,100);
     if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
@@ -12619,7 +12722,7 @@ function buildMissionFallbackBubblePacket(turn,err){
 }
 
 function compileMissionContext(turn){
-  return {identity:getMissionIdentityContextV2(),brainState:turn.brainState,contextSlices:turn.contextSlices||{},routeContext:getMissionRouteContextV2(turn.route),workerContext:getMissionWorkerContextV2(turn.workerPlan),dataSnapshot:getMissionDataSnapshotV2(turn.dataNeeds),recentSession:getRelevantMissionSessionTurnsV2(turn),memory:getRelevantMissionMemoryV2(turn),syncStatus:turn.syncStatus,actionHistory:getRecentMissionActionsV2(turn)};
+  return {identity:getMissionIdentityContextV2(),brainState:turn.brainState,sessionDataCache:turn.sessionDataCache||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(turn.sessionDataCache),contextSlices:turn.contextSlices||{},routeContext:getMissionRouteContextV2(turn.route),workerContext:getMissionWorkerContextV2(turn.workerPlan),dataSnapshot:getMissionDataSnapshotV2(turn.dataNeeds,turn.sessionDataCache),recentSession:getRelevantMissionSessionTurnsV2(turn),memory:getRelevantMissionMemoryV2(turn),syncStatus:turn.syncStatus,actionHistory:getRecentMissionActionsV2(turn)};
 }
 
 function getMissionIdentityContextV2(){
@@ -12630,16 +12733,23 @@ function getMissionIdentityContextV2(){
 function getMissionRouteContextV2(route){return {route:route,dataNeeds:MISSION_ROUTE_DATA_MAP[route]||[]};}
 function getMissionWorkerContextV2(workerPlan){return workerPlan||{};}
 
-function getMissionDataSnapshotV2(dataNeeds){
+function getMissionDataSnapshotV2(dataNeeds,sessionCache){
   var snap={};
+  var cached=sessionCache&&sessionCache.snapshot||null;
   (dataNeeds||[]).forEach(function(k){
     try{
-      if(k==='crm')snap.crm={leads:window.__crmLeads||[]};
-      if(k==='content')snap.content={today:window.__contentPieces||[],pipeline:window.__contentPipelinePieces||[]};
-      if(k==='production')snap.production={items:window.__productionPieces||[]};
-      if(k==='calendar')snap.calendar={events:window.__calEvents||[]};
-      if(k==='report'&&typeof captureWeekData==='function')snap.report=captureWeekData();
-      if(k==='dpc'&&typeof getDailyCoach==='function')snap.dpc=getDailyCoach();
+      if(cached&&k==='crm')snap.crm={summary:cached.pipeline,leads:window.__crmLeads||[]};
+      else if(k==='crm')snap.crm={leads:window.__crmLeads||[]};
+      if(cached&&k==='content')snap.content={summary:cached.content,today:window.__contentPieces||[],pipeline:window.__contentPipelinePieces||[]};
+      else if(k==='content')snap.content={today:window.__contentPieces||[],pipeline:window.__contentPipelinePieces||[]};
+      if(cached&&k==='production')snap.production={summary:cached.production,items:window.__productionPieces||[]};
+      else if(k==='production')snap.production={items:window.__productionPieces||[]};
+      if(cached&&k==='calendar')snap.calendar={summary:cached.calendar,events:window.__calEvents||[]};
+      else if(k==='calendar')snap.calendar={events:window.__calEvents||[]};
+      if(cached&&(k==='report'||k==='money'))snap.report={revenue:cached.revenue,weekTarget:cached.weekTarget,gap:cached.gap};
+      else if(k==='report'&&typeof captureWeekData==='function')snap.report=captureWeekData();
+      if(cached&&k==='dpc')snap.dpc=cached.dpc;
+      else if(k==='dpc'&&typeof getDailyCoach==='function')snap.dpc=getDailyCoach();
     }catch(e){snap[k]={error:e.message||String(e)};}
   });
   return snap;
@@ -12661,6 +12771,8 @@ function runMissionTurn(kind,rawInput,options){
     addMissionTrace(turn,'turn_created');
     turn.liveContext=getMissionLiveContextSnapshot();
     addMissionTrace(turn,'live_context_snapshot',turn.liveContext);
+    turn.sessionDataCache=getMissionSessionDataCacheV1(options&&options.ctx,{reason:'turn_start'});
+    addMissionDecisionTraceV1(turn,'session_data_cache_ready',summarizeMissionSessionDataCacheV1(turn.sessionDataCache));
     turn.normalizedInput=normalizeMissionInputV2(turn.rawInput);
     addMissionTrace(turn,'input_normalized',{rawInput:turn.rawInput,normalizedInput:turn.normalizedInput});
     turn.inputEnergy=getMissionInputEnergy(turn.rawInput);
