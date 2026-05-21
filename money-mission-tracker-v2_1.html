@@ -10550,6 +10550,14 @@ function compactMissionDuplicateParagraphs(html){
   return out.join('<br><br>');
 }
 
+function cleanMissionVisibleAnswerText(html){
+  return String(html||'')
+    .replace(/\bOpen\s+Open\s+/g,'Open ')
+    .replace(/\bopen\s+Open\s+/g,'open ')
+    .replace(/\bOpen\s+The\s+Current\s+Work\s+Card\b/g,'open the current work card')
+    .replace(/(^|[.!?]\s+)open the current work card/g,function(match,prefix){return prefix+'Open the current work card';});
+}
+
 function shouldMissionIntegritySuppressBubbles(turn){
   if(!turn)return false;
   var q=String(turn.rawInput||turn.normalizedInput||'').toLowerCase();
@@ -15401,6 +15409,10 @@ function setMissionOutputStateV1(state){
   try{sessionStorage.setItem(MISSION_OUTPUT_STATE_V1_KEY,JSON.stringify(state||{}));}catch(e){}
 }
 
+function resetMissionOutputStateV1(){
+  try{sessionStorage.removeItem(MISSION_OUTPUT_STATE_V1_KEY);}catch(e){}
+}
+
 function fillMissionTemplateV1(template,context){
   var ctx=context||{};
   return String(template||'').replace(/\{\{([a-zA-Z0-9_]+)\}\}/g,function(match,key){
@@ -15475,7 +15487,7 @@ function getMissionOutputContextV1_1(route,ctx,question,brainState){
   var contextMode=typeof getMissionContextMode==='function'?getMissionContextMode():'general';
   var contextModeLabel=(typeof MISSION_CONTEXT_MODE_LABELS!=='undefined'&&MISSION_CONTEXT_MODE_LABELS[contextMode])||'General';
   var routeLabels={now:'Mission Command',leads:'Outreach',sales:'Sales Coach',report:'Money',money:'Money',content:'Content',production:'Production',sync:'System Hub',memory:'Memory',help:'Command Guide',dpc:'DPC',calendar:'Calendar',weekly:'Weekly Review',resources:'Rolodex',community:'Community',live:'Live'};
-  var buttonLabels={now:'Open The Current Work Card',leads:'Open Hit List',sales:'Sales Coach',report:'Open Report',money:'Open Report',content:'Open Content Tracker',production:'Open Production',sync:'Open System Hub',memory:'Open Memory',help:'Open Command Guide',dpc:'Open DPC',calendar:'Open Calendar',weekly:'Open Weekly Review',resources:'Open Rolodex',community:'Open Community',live:'Open Live'};
+  var buttonLabels={now:'the Current Work Card',leads:'Hit List',sales:'Sales Coach',report:'Report',money:'Report',content:'Content Tracker',production:'Production',sync:'System Hub',memory:'Memory',help:'Command Guide',dpc:'DPC',calendar:'Calendar',weekly:'Weekly Review',resources:'Rolodex',community:'Community',live:'Live'};
   var whereMap={now:'the day-bar card tied to the move',leads:'Day Bar → Outreach → Hit List',sales:'Mission Command → Sales Coach',report:'Report tab or Mission Brief money slide',money:'Report tab or Mission Brief money slide',content:'Day Bar → Content',production:'Day Bar → Production',sync:'System Hub → Health → Sync Check',memory:'Mission Command → Memory',help:'Mission Command → Command Guide',dpc:'This Week → Daily Profit Campaign',calendar:'Manager → Calendar',weekly:'Activities → Weekly Review',resources:'Rolodex',community:'Community lane',live:'Live lane'};
   var moneyFeeling=gapRaw<=0?'You are doing good on the weekly target. Now protect delivery and stack the next cycle.':pctRaw>=70?'You are close enough that one clean buyer-facing move matters.':'You still have pressure on the target, so admin can wait.';
   var targetState=gapRaw<=0?'Weekly target is covered':'You still have '+fmt(gapRaw)+' left';
@@ -16693,7 +16705,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var quietAnswer=missionShouldKeepAnswerQuiet(route,conv,cleanQuestion||'');
   function finishMissionAnswer(html,opts){
     opts=opts||{};
-    var shaped=applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
+    var shaped=cleanMissionVisibleAnswerText(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   if(isMissionSalesModeExitSignal(rawQ)||isMissionSalesModeExitSignal(q)){
@@ -16709,6 +16721,10 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var correctionRouteAnswer=getMissionCommandRouteAnswer(route,ctx,question||cleanQuestion||'');
     if(correctionRouteAnswer)return finishMissionAnswer('Got it. '+getMissionRouteLabelV2(route)+' lane.<br><br>'+correctionRouteAnswer,{sessionArc:false});
     return finishMissionAnswer('Got it. Wrong lane.<br><br>Pick the lane and I will rerun it: Pipeline, Money, Sales, Content, Production, or Sync.',{sessionArc:false,closer:false,presence:false});
+  }
+  if(turnV2&&turnV2.inputSignals&&turnV2.inputSignals.isCompletion){
+    route=turnV2.route||route||'now';
+    return finishMissionAnswer('Bet. What happened after that?<br><br>1) No result yet<br>2) Got a reply<br>3) Booked a call<br>4) Collected money<br>5) Finished the asset<br><br>Log the result before we move.',{sessionArc:false,closer:false,presence:false});
   }
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
@@ -16906,6 +16922,7 @@ function runMissionCommandSelfCheck(){
   var priorWhy=sessionStorage.getItem(MISSION_WHY_DEPTH_KEY);
   var priorBrain=sessionStorage.getItem(MISSION_BRAIN_SESSION_KEY);
   var priorPresence=sessionStorage.getItem(MISSION_PRESENCE_LOG_KEY);
+  var priorOutputState=sessionStorage.getItem(MISSION_OUTPUT_STATE_V1_KEY);
   var answerWarnings=[];
   window.__missionCommandSelfCheckActive=true;
   checks.forEach(function(check){
@@ -16917,6 +16934,7 @@ function runMissionCommandSelfCheck(){
     sessionStorage.removeItem('a1xx_mc_phrase_rotation_v1');
     sessionStorage.removeItem(MISSION_WHY_DEPTH_KEY);
     sessionStorage.removeItem(MISSION_BRAIN_SESSION_KEY);
+    resetMissionOutputStateV1();
     resetMissionPresenceLog();
     var cleaned=sanitizeMissionCommandInput(check.q);
     var route=getMissionCommandRoute(cleaned);
@@ -16948,6 +16966,7 @@ function runMissionCommandSelfCheck(){
   if(priorWhy===null)sessionStorage.removeItem(MISSION_WHY_DEPTH_KEY);else sessionStorage.setItem(MISSION_WHY_DEPTH_KEY,priorWhy);
   if(priorBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_KEY,priorBrain);
   if(priorPresence===null)sessionStorage.removeItem(MISSION_PRESENCE_LOG_KEY);else sessionStorage.setItem(MISSION_PRESENCE_LOG_KEY,priorPresence);
+  if(priorOutputState===null)sessionStorage.removeItem(MISSION_OUTPUT_STATE_V1_KEY);else sessionStorage.setItem(MISSION_OUTPUT_STATE_V1_KEY,priorOutputState);
   window.__missionCommandSelfCheckActive=false;
   var integrityCheck=runMissionIntegritySelfCheck();
   if(!integrityCheck.passed){
