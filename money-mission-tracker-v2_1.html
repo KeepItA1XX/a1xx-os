@@ -14710,6 +14710,42 @@ function appendMissionConstraintGuidanceNudgeV1(html,turn,ctx,question){
   return out+'<br><br><span style="color:#8f9aa3">'+read.nudgeLine+'</span>';
 }
 
+/* =========================================================
+   MISSION INTELLIGENCE ARBITER — v1
+========================================================= */
+function getMissionIntelligenceAnswerStackV1(turn,ctx){
+  var stack=[];
+  function add(id,answer,opts){
+    if(!answer)return;
+    stack.push({
+      id:id,
+      answer:answer,
+      opts:Object.assign({sessionArc:false,closer:false,presence:false,firstSentenceRule:false},opts||{})
+    });
+  }
+  add('cognitive_load',buildMissionCognitiveLoadResponseV1(turn,ctx));
+  add('execution_mode',buildMissionExecutionModeResponseV1(turn,ctx));
+  add('decision_memory',buildMissionDecisionMemoryResponseV1(turn,ctx));
+  add('pattern_memory',buildMissionPatternCoachingResponseV1(turn,ctx));
+  add('silence_intelligence',buildMissionSilenceIntelligenceResponseV1(turn,ctx));
+  add('thread_memory',buildMissionThreadMemoryResponseV1(turn,ctx));
+  add('too_much_advice',buildMissionTooMuchAdviceResponseV1(turn,ctx));
+  add('constraint_guidance',buildMissionConstraintAwareGuidanceResponseV1(turn,ctx));
+  add('decision_intent',buildMissionDecisionIntentResponseV1(turn,ctx));
+  return stack;
+}
+
+function getMissionArbitratedIntelligenceAnswerV1(turn,ctx){
+  var stack=getMissionIntelligenceAnswerStackV1(turn,ctx);
+  var chosen=stack[0]||null;
+  if(turn){
+    turn.intelligenceAnswerStack=stack.map(function(item){return item.id;});
+    turn.intelligenceAnswerChosen=chosen&&chosen.id||'';
+    if(typeof addMissionTrace==='function')addMissionTrace(turn,'intelligence_answer_arbitrated',{chosen:turn.intelligenceAnswerChosen,stack:turn.intelligenceAnswerStack});
+  }
+  return chosen;
+}
+
 function getMissionHandoffResponse(question){
   var q=normalizeMissionQuestion(question||'');
   if(!/\b(package this for codex|send this to team chat|make this a spec|turn this into directive|create a handoff|summarize for codex|log this for the team)\b/.test(q))return '';
@@ -18312,24 +18348,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     route=turnV2.route||route||'now';
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
   }
-  var cognitiveLoadAnswer=buildMissionCognitiveLoadResponseV1(turnV2,ctx);
-  if(cognitiveLoadAnswer)return finishMissionAnswer(cognitiveLoadAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
-  var executionModeAnswer=buildMissionExecutionModeResponseV1(turnV2,ctx);
-  if(executionModeAnswer)return finishMissionAnswer(executionModeAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
-  var decisionMemoryAnswer=buildMissionDecisionMemoryResponseV1(turnV2,ctx);
-  if(decisionMemoryAnswer)return finishMissionAnswer(decisionMemoryAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
-  var patternMemoryAnswer=buildMissionPatternCoachingResponseV1(turnV2,ctx);
-  if(patternMemoryAnswer)return finishMissionAnswer(patternMemoryAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
-  var silenceIntelligenceAnswer=buildMissionSilenceIntelligenceResponseV1(turnV2,ctx);
-  if(silenceIntelligenceAnswer)return finishMissionAnswer(silenceIntelligenceAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
-  var threadMemoryAnswer=buildMissionThreadMemoryResponseV1(turnV2,ctx);
-  if(threadMemoryAnswer)return finishMissionAnswer(threadMemoryAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
-  var tooMuchAdviceAnswer=buildMissionTooMuchAdviceResponseV1(turnV2,ctx);
-  if(tooMuchAdviceAnswer)return finishMissionAnswer(tooMuchAdviceAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
-  var constraintGuidanceAnswer=buildMissionConstraintAwareGuidanceResponseV1(turnV2,ctx);
-  if(constraintGuidanceAnswer)return finishMissionAnswer(constraintGuidanceAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
-  var decisionIntentAnswer=buildMissionDecisionIntentResponseV1(turnV2,ctx);
-  if(decisionIntentAnswer)return finishMissionAnswer(decisionIntentAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
+  var intelligenceAnswer=getMissionArbitratedIntelligenceAnswerV1(turnV2,ctx);
+  if(intelligenceAnswer)return finishMissionAnswer(intelligenceAnswer.answer,intelligenceAnswer.opts);
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
   if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false,explainDecision:true});
@@ -18591,8 +18611,25 @@ function runMissionIntegritySelfCheck(){
   if(!tooMuch.shouldAnswer||tooMuch.reason!=='pending_action_not_resolved')failures.push('too_much_advice_signal');
   var tooMuchPrompt=buildMissionTooMuchAdviceResponseV1({rawInput:'what next',tooMuchAdvice:tooMuch},actionCtx);
   if(tooMuchPrompt.indexOf('stack more advice')<0||tooMuchPrompt.indexOf('What is blocking')<0)failures.push('too_much_advice_prompt');
+  var arbiterTurn=fakeTurn({
+    rawInput:'what next',
+    route:'now',
+    cognitiveLoad:{shouldAnswer:false},
+    executionMode:{shouldAnswer:false},
+    decisionMemory:{shouldAnswer:false},
+    patternMemory:{shouldAnswer:true,message:'Pattern answer',suppressBubbles:true},
+    threadMemory:{shouldAnswer:true,message:'Thread answer',suppressBubbles:true},
+    silenceIntelligence:{shouldAnswer:false},
+    tooMuchAdvice:{shouldAnswer:false},
+    constraintGuidance:{shouldAnswer:false},
+    decisionIntent:{shouldAnswer:true,message:'Decision answer'}
+  });
+  var arbitrated=getMissionArbitratedIntelligenceAnswerV1(arbiterTurn,actionCtx);
+  if(!arbitrated||arbitrated.id!=='pattern_memory'||arbitrated.answer!=='Pattern answer'||arbiterTurn.intelligenceAnswerChosen!=='pattern_memory')failures.push('intelligence_arbiter_priority');
+  var arbiterStack=getMissionIntelligenceAnswerStackV1(arbiterTurn,actionCtx).map(function(item){return item.id;}).join(',');
+  if(arbiterStack.indexOf('pattern_memory')<0||arbiterStack.indexOf('thread_memory')<0||arbiterStack.indexOf('decision_intent')<0)failures.push('intelligence_arbiter_stack');
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:69};
+  return {passed:!failures.length,failures:failures,total:71};
 }
 
 function runMissionCommandSelfCheck(){
