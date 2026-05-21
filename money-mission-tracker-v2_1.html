@@ -11553,7 +11553,7 @@ function getMissionWhatChangedEngineResponseV1(route,ctx,question,brainState){
   var loadSignal=getMissionSnapshotLoadSignalV1(prior.snapshot,current);
   var intro=loadSignal==='first_loaded_snapshot'?'Since the last saved checkpoint, the app has a fuller loaded read:':'Since the last saved checkpoint:';
   var visibleChanges=getMissionVisibleChangeLinesV1(changes,loadSignal);
-  return intro+'<br><br>'+visibleChanges.map(function(line,i){return (i+1)+') '+escapeHtml(line);}).join('<br>')+'<br><br>What it means:<br>'+escapeHtml(getMissionWhatChangedMeaningV1(changes,current,loadSignal))+'<br><br>Next:<br>'+escapeHtml(getMissionWhatChangedNextV1(changes,current,loadSignal));
+  return intro+'<br><br>'+visibleChanges.map(function(line,i){return (i+1)+') '+escapeHtml(line);}).join('<br>')+'<br><br><strong>What it means:</strong><br>'+escapeHtml(getMissionWhatChangedMeaningV1(changes,current,loadSignal))+'<br><br><strong>Next:</strong><br>'+escapeHtml(getMissionWhatChangedNextV1(changes,current,loadSignal));
 }
 
 function getMissionWhatChangedMeaningV1(changes,current,loadSignal){
@@ -11769,7 +11769,7 @@ function scoreMissionRoutesV2(q,signals,turn){
   if(singleMap[q])add(singleMap[q],0.92,'single_word_topic','data_request');
   var epInput=typeof resolveMissionA1XXExecutiveProducerInputV1==='function'?resolveMissionA1XXExecutiveProducerInputV1(q,turn):null;
   if(epInput)add(epInput.route,Math.max(0.86,epInput.confidence||0.86),'a1xx_executive_producer_'+(epInput.category||'input'),epInput.responseShape||'executive_producer_input');
-  var standaloneBanginPlus=/^(bangin\+|bangin plus)$/.test(q);
+  var standaloneBanginPlus=/^(bangin|bangin\+|bangin plus)$/.test(q);
   if(standaloneBanginPlus)add('production',0.94,'standalone_bangin_plus_production','data_request');
   var salesDeepInput=typeof resolveMissionSalesDeepInputV1==='function'?resolveMissionSalesDeepInputV1(q,turn):null;
   if(salesDeepInput&&!standaloneBanginPlus)add('sales',Math.max(0.9,salesDeepInput.confidence||0.9),'sales_deep_input_'+(salesDeepInput.subroute||'match'),'sales_'+(salesDeepInput.subroute||'input'));
@@ -14472,7 +14472,7 @@ function getMissionCommandRoute(question){
   if(/\b(who is a1xx|who am i|my profile|a1xx profile)\b/.test(q))return 'profile';
   if(/\b(waht should i say|wht should i say|wat should i say|what should i say|what do i say|help me reply)\b/.test(q))return 'sales';
   if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(q))return 'sales';
-  if(/^(bangin\+|bangin plus)$/.test(q))return 'production';
+  if(/^(bangin|bangin\+|bangin plus)$/.test(q))return 'production';
   if(/\b(what changed this week|what moved this week|review my week|weekly lesson)\b/.test(q))return 'weekly';
   return getMissionCommandIntent(question).route;
 }
@@ -16665,6 +16665,16 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     opts=opts||{};
     var shaped=applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
+  }
+  if(isMissionSalesModeExitSignal(q)){
+    setMissionLiveCallMode(false,false);
+    route='sales';
+    return finishMissionAnswer('Call mode closed.<br><br>What happened: <strong>booked, no, follow-up, or paid?</strong><br><br>Give me the result and I will help log the next move.',{sessionArc:false,closer:false,presence:false});
+  }
+  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(q)){
+    route='sales';
+    setMissionCommandActiveTopic('sales',question||'');
+    return finishMissionAnswer('Got it. Sales lane, not pipeline.<br><br>Ask: "Before I explain anything, what made you want to talk today?"<br><br>What did they say back?',{sessionArc:false,closer:false,presence:false});
   }
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
