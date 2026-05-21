@@ -11874,6 +11874,7 @@ function getMissionThreadMemoryV1(turn,ctx){
   var lastRoute=explicitLastRoute||thread.activeRoute||lastTurn&&lastTurn.route||session.lastRoute||'';
   var followup=/^(why|why again|more|more again|tell me more|run it back|what next|what now|what about that|that one|this one|same thing|continue|and then what)$/i.test(q);
   var activeRoute=(followup&&lastRoute&&(!(turn&&turn.route)||turn.route==='now'||turn.route==='dpc'))?lastRoute:(getMissionThreadExplicitRouteFromQuestionV1(turn&&turn.rawInput||turn&&turn.normalizedInput||'')||turn&&turn.route||thread.activeRoute||session.lastRoute||session.sessionTopic||'now');
+  if(followup&&explicitLastRoute)activeRoute=explicitLastRoute;
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   var pendingLooksSales=/\b(prep call|sales coach|sales|closer|call prep|booked call|opening question|discovery)\b/.test(pendingText);
   var pendingLooksPipeline=/\b(hit list|pipeline|lead|crm|follow up|contact)\b/.test(pendingText);
@@ -12351,7 +12352,7 @@ function getMissionWhatChangedEngineResponseV1(route,ctx,question,brainState){
   var changes=buildMissionChangeListV1(prior.snapshot,current);
   if(turn)addMissionDecisionTraceV1(turn,'what_changed_compared',{changeCount:changes.length,source:prior.source});
   if(!changes.length){
-    return 'Since the last saved checkpoint, I do not see a number or status change in the loaded app state.<br><br><strong>Current read:</strong><br>1) Money: '+fmt(current.revenue)+' of '+fmt(current.weekTarget)+' · gap '+fmt(current.gap)+'<br>2) DPC: '+current.dpc.dms+' DMs · '+current.dpc.callsMade+' calls made · '+current.dpc.booked+' booked · '+current.dpc.closes+' closes · '+fmt(current.dpc.money)+' collected<br>3) Pipeline: '+current.pipeline.open+' open leads.<br><br><strong>Next:</strong><br>Create one visible move, then log it so the next comparison has something real to read.';
+    return 'Since the last saved checkpoint, I do not see a number or status change in the loaded app state.<br><br><strong>Current read:</strong><br>1) Money: '+fmt(current.revenue)+' of '+fmt(current.weekTarget)+' · gap '+fmt(current.gap)+'<br>2) DPC: '+current.dpc.dms+' DMs · '+current.dpc.callsMade+' calls made · '+current.dpc.booked+' booked · '+current.dpc.closes+' closes · '+fmt(current.dpc.money)+' collected<br>3) Pipeline: '+current.pipeline.open+' open leads<br><br><strong>Next:</strong><br>Create one visible move, then log it so the next comparison has something real to read.';
   }
   var loadSignal=getMissionSnapshotLoadSignalV1(prior.snapshot,current);
   var intro=loadSignal==='first_loaded_snapshot'?'Since the last saved checkpoint, the app has a fuller loaded read:':'Since the last saved checkpoint:';
