@@ -18260,6 +18260,13 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   if(turnV2&&turnV2.responseDepth)depth=turnV2.responseDepth;
   var guidedProfile=getMissionGuidanceProfile(question||'',route,conv&&conv.type,brainState||{});
   function withWorker(html){return html?(missionPromptIsWorkerMention(question)?getMissionWorkerLabelHtml(route):'')+html:html;}
+  var protectedCorrectionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(question||''):'';
+  var protectedResultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(question||''):null;
+  var protectedResultTypes=/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/;
+  if(protectedCorrectionRoute||protectedResultSignal&&protectedResultTypes.test(protectedResultSignal.type||'')){
+    if(protectedCorrectionRoute)route=protectedCorrectionRoute;
+    return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false})),b2:'',b3:''};
+  }
   var allowSuggestions=missionQuestionAllowsSuggestionBubbleV2(route,conv,question||'',links||[],turnV2);
   var allowActions=missionQuestionAllowsActionButtons(route,question||'');
   if(!missionRenderAllowedByTurnV2(turnV2,'b3'))allowActions=false;
@@ -18519,6 +18526,10 @@ function runMissionIntegritySelfCheck(){
   if(!bookedSignal||bookedSignal.type!=='booked')failures.push('result_signal_booked_preflight');
   var bookedRoutes=scoreMissionRoutesV2('booked',{}, {rawInput:'booked'});
   if(!bookedRoutes[0]||bookedRoutes[0].route!=='sales')failures.push('route_score_booked_sales');
+  var correctionBubble=buildMissionBubblePacket('leads',{type:'CONV_DATA_REQUEST',route:'leads'},actionCtx,'i meant sales not pipeline','Got it. Sales lane, not pipeline.','','',{});
+  if(correctionBubble.b1.indexOf('Sales lane')<0||correctionBubble.b1.indexOf('Pipeline read')>=0)failures.push('bubble_protect_correction_answer');
+  var bookedBubble=buildMissionBubblePacket('dpc',{type:'CONV_ACTION_COMPLETE',route:'dpc'},actionCtx,'booked','Good. Conversation moved to calendar.','','',{});
+  if(bookedBubble.b1.indexOf('Conversation moved to calendar')<0||bookedBubble.b1.indexOf('DPC lane')>=0)failures.push('bubble_protect_result_answer');
   var clarify=runMissionResponseIntegrityCheck(fakeTurn({route:'',routePlan:{clarify:true},responseShape:'quick_read'}),{b1:'Pick a lane',b2:'',b3:'Action'});
   if(clarify.b3)failures.push('clarify_action_suppression');
   var stale=runMissionResponseIntegrityCheck(fakeTurn({rawInput:'revenue report',normalizedInput:'revenue report',route:'report',responseShape:'money_pressure',dataConfidence:{level:'low'}}),{b1:'Money read',b2:'Revenue · $10',b3:''});
@@ -18725,7 +18736,7 @@ function runMissionIntegritySelfCheck(){
   var masterQASweep=runMissionMasterIntelligenceQASweepV1();
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:82};
+  return {passed:!failures.length,failures:failures,total:84};
 }
 
 function runMissionCommandSelfCheck(){
