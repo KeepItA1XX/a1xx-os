@@ -14997,6 +14997,18 @@ function pickMissionMentorItemV1(domain,q){
   return list[idx];
 }
 
+function formatMissionMentorSectionV1(label,body){
+  body=String(body||'').replace(/\s+/g,' ').trim();
+  if(!body)return '';
+  return '<strong>'+escapeHtml(label)+':</strong><br>'+escapeHtml(body);
+}
+
+function getMissionMentorActionTextV1(item){
+  var action=String(item&&item.action||item&&item.apply||'Pick one visible action and create the next checkpoint.').replace(/\s+/g,' ').trim();
+  if(!action)return 'Pick one visible action and create the next checkpoint.';
+  return action.replace(/[.]+$/,'')+'.';
+}
+
 function buildMissionMentorResponseV1(turn,ctx){
   var match=getMissionMentorDomainV1(turn,ctx);
   if(!missionMentorShouldAnswerV1(turn,ctx,match))return '';
@@ -15011,17 +15023,23 @@ function buildMissionMentorResponseV1(turn,ctx){
   else if(domain.id==='outreach_sales'&&ctx&&ctx.crm)dataLine='Pipeline read: '+((ctx.crm||[]).length||0)+' loaded leads.';
   else if(domain.id==='content_brand'&&window.__contentPieces)dataLine='Content read: '+(window.__contentPieces.length||0)+' loaded items.';
   else if(domain.id==='business_os'&&turn&&turn.brainState&&turn.brainState.nextBestMove)dataLine='OS read: '+turn.brainState.nextBestMove+'.';
+  var nextAction=getMissionMentorActionTextV1(item);
+  var blocks=[];
   if(highLoad){
-    return '<strong>'+escapeHtml(domain.name)+':</strong> '+escapeHtml(item.truth||item.title)+'.<br><br><strong>Do this:</strong><br>'+escapeHtml(item.action||item.apply||'Pick one visible move and log the result.');
-  }
-  var html='<strong>'+escapeHtml(domain.name)+'</strong><br><br><strong>'+escapeHtml(item.title||'Mentor read')+':</strong><br>'+escapeHtml(item.truth||'Use the business principle before adding more motion.')+'<br><br>';
-  if(item.steps&&item.steps.length){
-    html+='<strong>Framework:</strong><br>'+item.steps.map(function(step,i){return (i+1)+') '+escapeHtml(step);}).join('<br>')+'<br><br>';
+    blocks.push(formatMissionMentorSectionV1(domain.name,item.truth||item.title||'Simplify the lane.'));
+    blocks.push(formatMissionMentorSectionV1('Next',nextAction));
   }else{
-    html+='<strong>How it applies:</strong><br>'+escapeHtml(item.apply||'Use this to choose the next clean move from the current app state.')+'<br><br>';
+    blocks.push('<strong>'+escapeHtml(domain.name)+'</strong>');
+    blocks.push(formatMissionMentorSectionV1(item.title||'Mentor read',item.truth||'Use the business principle before adding more motion.'));
+    if(item.steps&&item.steps.length){
+      blocks.push('<strong>Framework:</strong><br>'+item.steps.map(function(step,i){return (i+1)+') '+escapeHtml(String(step||'').replace(/\s+/g,' ').trim());}).join('<br>'));
+    }else{
+      blocks.push(formatMissionMentorSectionV1('How it applies',item.apply||'Use this to choose the next clean move from the current app state.'));
+    }
+    if(dataLine)blocks.push('<span style="color:#8f9aa3">'+escapeHtml(dataLine)+'</span>');
+    blocks.push(formatMissionMentorSectionV1('Next',nextAction));
   }
-  if(dataLine)html+='<span style="color:#8f9aa3">'+escapeHtml(dataLine)+'</span><br><br>';
-  html+='<strong>Next:</strong><br>'+escapeHtml(item.action||'Pick one visible action and create the next checkpoint.');
+  var html=blocks.filter(Boolean).join('<br><br>');
   if(turn){
     turn.mentorDomain={id:domain.id,name:domain.name,itemId:item.id||'',itemTitle:item.title||'',score:match.score,route:route};
     addMissionTrace(turn,'mentor_domain_selected',turn.mentorDomain);
@@ -19272,7 +19290,11 @@ function runMissionMentorPanelCheckV1(){
         brainState:{nextBestMove:'Pick one visible move'}
       };
       var answer=buildMissionMentorResponseV1(turn,window.__missionCommandContext||{});
+      var plain=String(answer||'').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'');
       if(!answer||!turn.mentorDomain||turn.mentorDomain.id!==test.domain)failures.push(test.q+' -> '+(turn.mentorDomain&&turn.mentorDomain.id||'none'));
+      else if(answer.indexOf('<strong>Next:</strong><br>')<0)failures.push(test.q+' -> missing Next section');
+      else if(answer.indexOf('<strong>How it applies:</strong><br>')<0&&answer.indexOf('<strong>Framework:</strong><br>')<0)failures.push(test.q+' -> missing teaching section');
+      else if(/[a-z]\.(How it applies|Next):/.test(plain))failures.push(test.q+' -> joined mentor labels');
     }catch(e){
       failures.push(test.q+' -> '+(e&&e.message?e.message:String(e)));
     }
