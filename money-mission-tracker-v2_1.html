@@ -10719,6 +10719,8 @@ function cleanMissionVisibleAnswerText(html){
     .replace(/\bOpen\s+Open\s+/g,'Open ')
     .replace(/\bopen\s+Open\s+/g,'open ')
     .replace(/\bOpen\s+The\s+Current\s+Work\s+Card\b/g,'open the current work card')
+    .replace(/\s+([.,!?;:])/g,'$1')
+    .replace(/([.!?])([A-Z])/g,'$1 $2')
     .replace(/(^|[.!?]\s+)open the current work card/g,function(match,prefix){return prefix+'Open the current work card';});
 }
 
@@ -11095,8 +11097,9 @@ function applyMissionPresenceLayer(html,route,question,opts){
   if(log.appliedTurnId===turn.id)return html;
   var plain=missionPresencePlainText(html);
   var ack=null,closer=null;
-  if(plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
-  if(plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
+  var accountabilityAnswer=!!(turn&&turn.actionAccountability&&turn.actionAccountability.shouldAnswer)||/Reply with:\s*done,\s*no reply,\s*reply,\s*booked,\s*paid,\s*or wrong lane/i.test(plain);
+  if(!accountabilityAnswer&&plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
+  if(!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
   var out=String(html||'');
   if(ack){
     out=escapeHtml(ack)+'<br><br>'+out;
@@ -15362,11 +15365,20 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(!accountability.shouldAnswer||accountability.reason!=='pending_action_check')failures.push('qa_action_accountability_signal');
   var accountabilityPrompt=buildMissionActionAccountabilityResponseV1({actionAccountability:accountability},{});
   if(accountabilityPrompt.indexOf('did you do this yet')<0||accountabilityPrompt.indexOf('Open Hit List')<0)failures.push('qa_action_accountability_prompt');
+  var priorTurnObject=window.__missionLastTurnObjectV2;
+  window.__missionLastTurnObjectV2={id:'qa_accountability_presence_turn',turnCount:12,rawInput:'what should i do today',route:'now',actionAccountability:accountability};
+  var accountabilityPresence=applyMissionPresenceLayer(accountabilityPrompt,'now','what should i do today',{});
+  if(/Anything else before you move|What is the next move from here|You need anything else right now/i.test(accountabilityPresence))failures.push('qa_action_accountability_closer_guard');
+  window.__missionLastTurnObjectV2=priorTurnObject;
+  var spacingClean=applyMissionAnswerQualityGuardsV1('Result read: <strong>Booked Call </strong>.','sales','booked',{identicalResponseGuard:false});
+  if(/Booked Call\s+\./.test(spacingClean))failures.push('qa_punctuation_spacing_guard');
+  var carryLine=getMissionRepeatCarryLineV1('now',['same lane:','still on this:','cleaner read:']);
+  if(/Same read, tighter/i.test(carryLine))failures.push('qa_repeat_carry_phrase_guard');
   var accountabilityProtected=getMissionActionAccountabilityV1({rawInput:'/pipeline',route:'leads'},{});
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:10};
+  return {passed:!failures.length,failures:failures,total:13};
 }
 
 function getMissionHandoffResponse(question){
@@ -16419,8 +16431,15 @@ function buildMissionActionAccountabilityResponseV1(turn,ctx){
   var read=turn&&turn.actionAccountability||null;
   if(!read||!read.shouldAnswer)return '';
   var pending=read.pendingAction||{};
-  var action=pending.action||pending.label||'the last move';
+  var action=formatMissionActionAccountabilityActionLineV1(pending.action||pending.label||'the last move');
   return 'Before we switch lanes, did you do this yet?<br><br><strong>'+escapeHtml(action)+'</strong><br><br>Reply with: done, no reply, reply, booked, paid, or wrong lane.';
+}
+
+function formatMissionActionAccountabilityActionLineV1(action){
+  var text=String(action||'').replace(/\s+/g,' ').trim();
+  if(!text)return 'the last move';
+  text=text.charAt(0).toUpperCase()+text.slice(1);
+  return text.replace(/\s+([.,!?;:])/g,'$1');
 }
 
 function getMissionBrainNextBestMove(ctx,brainBase){
@@ -17678,15 +17697,15 @@ function getMissionRecentAssistantAnswersV1(limit){
 
 function getMissionRepeatCarryLineV1(route,recent){
   var pool={
-    sales:['Same sales read, tighter:','Still the same objection lane:','Same move, cleaner:'],
-    leads:['Same pipeline read, sharper:','Still the lead lane:','Same money map, tighter:'],
-    dpc:['Same DPC read, cleaner:','Still the daily campaign lane:','Same scoreboard move:'],
-    report:['Same money read, tighter:','Still the number talking:','Same financial signal:'],
-    content:['Same content read, cleaner:','Still the proof lane:','Same proof move:'],
-    production:['Same production read, tighter:','Still the asset lane:','Same delivery signal:'],
-    sync:['Same sync read, cleaner:','Still the trust check:','Same system signal:'],
-    now:['Same read, tighter:','Still on this, cleaner:','Same move, sharper:']
-  }[route]||['Same read, tighter:','Still on this, cleaner:','Same move, sharper:'];
+    sales:['Same sales lane:','Still the sales lane:','Cleaner sales read:'],
+    leads:['Same pipeline lane:','Still the lead lane:','Cleaner pipeline read:'],
+    dpc:['Same DPC lane:','Still the daily campaign lane:','Cleaner scoreboard read:'],
+    report:['Same money lane:','Still the number talking:','Cleaner money read:'],
+    content:['Same content lane:','Still the proof lane:','Cleaner proof read:'],
+    production:['Same production lane:','Still the asset lane:','Cleaner delivery read:'],
+    sync:['Same sync lane:','Still the trust check:','Cleaner system read:'],
+    now:['Same lane:','Still on this:','Cleaner read:']
+  }[route]||['Same lane:','Still on this:','Cleaner read:'];
   recent=recent||[];
   for(var i=0;i<pool.length;i++){
     if(recent.indexOf(pool[i].toLowerCase())<0)return pool[i];
@@ -17738,12 +17757,14 @@ function applyMissionAnswerQualityGuardsV1(html,route,question,opts){
   if(!out)return out;
   opts=opts||{};
   out=applyMissionReadabilityGuardV1(out);
+  out=out.replace(/\s+([.,!?;:])/g,'$1');
   out=stripMissionInternalSourceLinesV1(out,opts);
   if(opts.responseBeforeReason!==false)out=applyMissionResponseBeforeReasonV1(out);
   if(opts.firstSentenceRule!==false)out=applyMissionFirstSentenceRuleV1(out,route||'now',question||'');
   if(opts.identicalResponseGuard!==false)out=applyMissionIdenticalResponseGuardV1(out,route||'now',question||'');
   out=stripMissionInternalSourceLinesV1(out,opts);
   out=applyMissionReadabilityGuardV1(out);
+  out=out.replace(/\s+([.,!?;:])/g,'$1');
   return out;
 }
 
