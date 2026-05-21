@@ -11353,8 +11353,59 @@ function summarizeMissionScratchpadV1(scratch){
   };
 }
 
+/* =========================================================
+   MISSION DECISION EXPLAINER — v1
+========================================================= */
+function getMissionDecisionExplainerV1(turn,ctx,question,brainState){
+  if(!turn&&!brainState)return null;
+  ctx=ctx||{};
+  var route=(turn&&turn.route)||(brainState&&brainState.selectedRoute)||'now';
+  var q=normalizeMissionQuestion(question||(turn&&turn.rawInput)||'');
+  var composed=typeof getMissionActionComposerV1==='function'?getMissionActionComposerV1(ctx,route,q,brainState||turn&&turn.brainState||{}):null;
+  var dataConfidence=(turn&&turn.dataConfidence&&turn.dataConfidence.level)||(brainState&&brainState.dataConfidence)||'medium';
+  var sourceKeys=(turn&&turn.dataNeeds||brainState&&brainState.dataNeeds||[]).slice(0,4);
+  var sourceText=sourceKeys.length?sourceKeys.join(', '):'current app state';
+  var reasonMap={
+    sales_call_needs_signal:'the sales lane needs the prospect to name the problem before you pitch',
+    pipeline_needs_one_touch:'pipeline only matters when one lead moves to a reply, call, offer, or clean no',
+    dpc_needs_clean_number:'today needs one real number logged before the OS can learn from it',
+    content_needs_proof_asset:'content should turn today’s work into proof, not another random idea',
+    production_needs_shippable_asset:'production has leverage when one asset gets closer to shipping, selling, or delivery',
+    sync_trust_check:'the data path needs trust before the OS calls a move from it',
+    money_read_to_behavior:'the money read should turn into buyer-facing behavior, not dashboard checking',
+    calendar_blocks_need_outcome:'the calendar is useful only if the block has one outcome',
+    weekly_review_needs_lesson:'weekly review should capture the lesson and the next repeatable move',
+    current_block_has_active_step:'the current block already has a visible step',
+    outreach_mode_active:'Outreach mode is active, so one buyer-facing touch gets priority',
+    content_mode_active:'Content mode is active, so proof gets priority',
+    production_mode_active:'Production mode is active, so a shippable asset gets priority',
+    manager_mode_active:'Manager mode is active, so the decision that unlocks action gets priority',
+    mission_journey_active_step:'the mission journey already has the next step loaded',
+    general_mode_needs_lane:'General mode needs one lane before the OS can sharpen the move'
+  };
+  return {
+    route:route,
+    action:composed&&composed.action||brainState&&brainState.nextBestMove||'pick one visible action and log it',
+    actionLabel:composed&&composed.label||'Do Next Move',
+    actionType:composed&&composed.type||'next_best_move',
+    reasonCode:composed&&composed.reason||'current_context',
+    reason:reasonMap[composed&&composed.reason]||'the current context points there first',
+    sourceText:sourceText,
+    dataConfidence:dataConfidence,
+    contextMode:(turn&&turn.liveContext&&turn.liveContext.contextMode)||(typeof getMissionContextMode==='function'?getMissionContextMode():'general'),
+    shouldShow:/\b(why|why that|why this|why should|what next|what should i do|what do i do|call the move|explain the move|why this move)\b/.test(q)
+  };
+}
+
+function getMissionDecisionExplainerLineV1(explainer){
+  if(!explainer)return '';
+  var confidence=explainer.dataConfidence==='low'?'Data confidence is light, so this is the safest move from the loaded read.':'';
+  return '<span style="color:#8f9aa3">Why this move: '+escapeHtml(explainer.reason)+'. Source: '+escapeHtml(explainer.sourceText)+'.'+(confidence?' '+escapeHtml(confidence):'')+'</span>';
+}
+
 function finalizeMissionDecisionTraceV1(turn){
   if(!turn)return null;
+  var explainer=getMissionDecisionExplainerV1(turn,turn.options&&turn.options.ctx||{},turn.rawInput||turn.normalizedInput||'',turn.brainState||{});
   var summary={
     route:turn.route||'',
     worker:turn.workerId||'',
@@ -11369,8 +11420,10 @@ function finalizeMissionDecisionTraceV1(turn){
     activeTab:turn.liveContext&&turn.liveContext.activeTab||'',
     scratchpad:summarizeMissionScratchpadV1(turn.scratchpad),
     outputPack:turn.outputPackSelected||'',
-    reason:(turn.scratchpad&&turn.scratchpad.answerGoal)||''
+    reason:(turn.scratchpad&&turn.scratchpad.answerGoal)||'',
+    decisionExplainer:explainer
   };
+  turn.decisionExplainer=explainer;
   turn.decisionSummary=summary;
   addMissionDecisionTraceV1(turn,'final_summary',summary);
   return summary;
@@ -16807,8 +16860,13 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var responseMode=getMissionResponseMode(cleanQuestion||'',route,ctx,brainState);
   var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,responseMode);
   var quietAnswer=missionShouldKeepAnswerQuiet(route,conv,cleanQuestion||'');
+  var visibleExplainer=getMissionDecisionExplainerV1(turnV2,ctx,cleanQuestion||question||'',brainState);
   function finishMissionAnswer(html,opts){
     opts=opts||{};
+    if(opts.explainDecision&&visibleExplainer&&visibleExplainer.shouldShow){
+      var explainerLine=getMissionDecisionExplainerLineV1(visibleExplainer);
+      if(explainerLine&&String(html||'').indexOf(explainerLine)<0)html=String(html||'')+'<br><br>'+explainerLine;
+    }
     var shaped=cleanMissionVisibleAnswerText(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
@@ -16832,9 +16890,9 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   }
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
-  if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false});
+  if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false,explainDecision:true});
   var openEndedV2=getMissionOpenEndedWorkStartResponseV2(turnV2,ctx);
-  if(openEndedV2)return finishMissionAnswer(openEndedV2,{sessionArc:false,closer:false,presence:false});
+  if(openEndedV2)return finishMissionAnswer(openEndedV2,{sessionArc:false,closer:false,presence:false,explainDecision:true});
   var backlogSpecial=getMissionBacklogSpecialResponse(route,ctx,cleanQuestion||'',conv,brainState);
   if(backlogSpecial)return finishMissionAnswer(backlogSpecial,{sessionArc:false});
   var conversationFirst=getMissionConversationFirstResponse(conv,ctx,cleanQuestion||'');
@@ -16861,7 +16919,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var shapeAddon=(route==='leads'&&getMissionPipelineDiagnosticSignal(cleanQuestion||''))?'':getMissionQuestionShapeAddon(shape,route,ctx);
     var routedAnswer=quietAnswer?routed:(routed+shapeAddon+getMissionResponseModeAddon(responseMode,route,ctx));
     if(['help','time','day','profile','memory'].indexOf(route)<0&&!quietAnswer)routedAnswer=applyMissionResponseVariant(routedAnswer,variant,{opener:true,closer:true});
-    return finishMissionAnswer(routedAnswer,quietAnswer?{sessionArc:false}:{});
+    return finishMissionAnswer(routedAnswer,quietAnswer?{sessionArc:false,explainDecision:true}:{explainDecision:true});
   }
   /* 2026-05-19 (Claude deep pass): partial fallback for low-confidence signals (score >0
      but below the threshold). Gives a best-guess partial answer + asks for confirmation
@@ -16920,6 +16978,9 @@ function runMissionIntegritySelfCheck(){
   if(stale.b2.indexOf('Data confidence is low')<0)failures.push('stale_data_warning');
   var empty=runMissionResponseIntegrityCheck(fakeTurn({route:'now',responseShape:'quick_read'}),{b1:'',b2:'',b3:''});
   if(!empty.b1)failures.push('empty_fallback');
+  var explainTurn=fakeTurn({route:'leads',rawInput:'why this move',normalizedInput:'why this move',brainState:{nextBestMove:'Contact GARY RAOGUY',dataNeeds:['crm','dpc']}});
+  var explainer=getMissionDecisionExplainerV1(explainTurn,{gap:0},'why this move',explainTurn.brainState);
+  if(!explainer||!explainer.shouldShow||!getMissionDecisionExplainerLineV1(explainer))failures.push('decision_explainer');
   var actionCtx={gap:400,rev:100,wk:500,dpc:{dms:0,coldCalls:0,calls:0,closes:0,money:0}};
   var salesAction=getMissionActionComposerV1(actionCtx,'sales','what should i say',{block:{phase:'money',name:'Money Time'},activeStep:'Follow up with warm leads'});
   if(!salesAction||salesAction.action.indexOf('discovery')<0||salesAction.target!=='sales_coach')failures.push('action_composer_sales');
@@ -16927,7 +16988,7 @@ function runMissionIntegritySelfCheck(){
   if(!dpcAction||dpcAction.type!=='log_dpc'||!dpcAction.requiresConfirmation)failures.push('action_composer_dpc');
   var productionAction=getMissionActionComposerV1(actionCtx,'production','bangin plus',{block:{phase:'maker',name:'Maker Time'}});
   if(!productionAction||productionAction.target!=='production')failures.push('action_composer_production');
-  return {passed:!failures.length,failures:failures,total:9};
+  return {passed:!failures.length,failures:failures,total:10};
 }
 
 function runMissionCommandSelfCheck(){
