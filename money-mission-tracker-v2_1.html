@@ -11446,6 +11446,76 @@ function rememberMissionSuggestedActionV1(turn,action){
   setMissionBrainSessionV2(session);
 }
 
+/* =========================================================
+   MISSION MICRO-WIN ACKNOWLEDGMENT — v1
+========================================================= */
+function getMissionMicroWinAcknowledgmentV1(signal,completed,turn){
+  var type=signal&&signal.type||'';
+  var label=completed&&completed.result&&completed.result.label||signal&&signal.label||'Result';
+  var route=turn&&turn.route||completed&&completed.result&&completed.result.route||'';
+  var map={
+    paid:{
+      level:'major',
+      acknowledgment:'That is the result.',
+      resultRead:label,
+      next:'log the money, update the lead status, then protect delivery'
+    },
+    booked:{
+      level:'solid',
+      acknowledgment:'Good. Conversation moved to calendar.',
+      resultRead:label,
+      next:'add the call, update the lead, and prep one opening question'
+    },
+    reply:{
+      level:'solid',
+      acknowledgment:'Good. There is signal now.',
+      resultRead:label,
+      next:'qualify intent before pitching. Ask one clean question and pause'
+    },
+    no_reply:{
+      level:'useful',
+      acknowledgment:'Useful signal, not a loss.',
+      resultRead:label,
+      next:'mark the touch, then bump once later instead of chasing it right now'
+    },
+    follow_up:{
+      level:'open_loop',
+      acknowledgment:'Good. This is still alive, but unresolved.',
+      resultRead:label,
+      next:'isolate what is unresolved: money, timing, trust, or fit'
+    },
+    done:{
+      level:'closed_action',
+      acknowledgment:'Clean. That action is closed.',
+      resultRead:label,
+      next:'capture the actual result so the OS can learn from it'
+    }
+  };
+  var ack=map[type]||{
+    level:'noted',
+    acknowledgment:'Logged.',
+    resultRead:label,
+    next:'capture the next visible result'
+  };
+  return {
+    type:type,
+    route:route,
+    label:label,
+    level:ack.level,
+    acknowledgment:ack.acknowledgment,
+    resultRead:ack.resultRead,
+    next:ack.next,
+    shouldCelebrate:type==='paid'||type==='booked'||type==='reply'
+  };
+}
+
+function buildMissionMicroWinResultPromptV1(turn,signal,completed){
+  if(!signal)return '';
+  var ack=getMissionMicroWinAcknowledgmentV1(signal,completed,turn);
+  if(!ack)return '';
+  return escapeHtml(ack.acknowledgment)+'<br><br>Result read: <strong>'+escapeHtml(ack.resultRead)+'</strong>.<br><br>Next: '+escapeHtml(ack.next)+'.';
+}
+
 function completeMissionResultLoopV1(signal,turn){
   if(!signal)return null;
   var session=getMissionResultLoopSessionV1();
@@ -11458,6 +11528,7 @@ function completeMissionResultLoopV1(signal,turn){
     action:pending&&pending.action||'',
     recordedAt:new Date().toISOString()
   };
+  result.microWin=getMissionMicroWinAcknowledgmentV1(signal,{result:result,pending:pending},turn);
   session.resultLoop.lastResult=result;
   session.resultLoop.history.unshift(result);
   session.resultLoop.history=session.resultLoop.history.slice(0,12);
@@ -11476,25 +11547,12 @@ function buildMissionResultLoopPromptV1(turn,signal){
     return 'Call mode closed.<br><br>What happened: <strong>booked, no, follow-up, or paid?</strong><br><br>Give me the result and I will help log the next move.';
   }
   if(signal&&signal.type==='done'){
-    return 'Clean. Did '+escapeHtml(actionLabel)+' create a result?<br><br>1) No reply yet<br>2) Got a reply<br>3) Booked a call<br>4) Collected money<br>5) Finished the asset<br><br>Pick the result so the OS can close the loop.';
+    var doneAck=getMissionMicroWinAcknowledgmentV1(signal,{result:{type:'done',label:signal.label||'Action Done'}},turn);
+    return escapeHtml(doneAck.acknowledgment)+' Did '+escapeHtml(actionLabel)+' create a result?<br><br>1) No reply yet<br>2) Got a reply<br>3) Booked a call<br>4) Collected money<br>5) Finished the asset<br><br>Pick the result so the OS can close the loop.';
   }
   var completed=completeMissionResultLoopV1(signal,turn);
-  var label=completed&&completed.result&&completed.result.label||signal&&signal.label||'Result';
-  if(signal&&signal.type==='paid'){
-    return 'That is the result we care about.<br><br>Result read: <strong>'+escapeHtml(label)+'</strong>.<br><br>Next: log the money, update the lead status, then protect delivery.';
-  }
-  if(signal&&signal.type==='booked'){
-    return 'Good. The conversation moved.<br><br>Result read: <strong>'+escapeHtml(label)+'</strong>.<br><br>Next: add the call to the calendar, update the lead, and prep one opening question.';
-  }
-  if(signal&&signal.type==='reply'){
-    return 'That moved.<br><br>Result read: <strong>'+escapeHtml(label)+'</strong>.<br><br>Next: qualify intent before pitching. Ask one clean question and pause.';
-  }
-  if(signal&&signal.type==='no_reply'){
-    return 'No reply is still useful signal.<br><br>Result read: <strong>'+escapeHtml(label)+'</strong>.<br><br>Next: mark the touch, then bump once later instead of chasing it right now.';
-  }
-  if(signal&&signal.type==='follow_up'){
-    return 'That is a follow-up loop.<br><br>Result read: <strong>'+escapeHtml(label)+'</strong>.<br><br>Next: isolate what is unresolved: money, timing, trust, or fit.';
-  }
+  var microWinPrompt=buildMissionMicroWinResultPromptV1(turn,signal,completed);
+  if(microWinPrompt)return microWinPrompt;
   return '';
 }
 
@@ -17684,6 +17742,12 @@ function runMissionIntegritySelfCheck(){
   if(resultPrompt.indexOf('Open Hit List')<0||resultPrompt.indexOf('Got a reply')<0)failures.push('result_loop_prompt');
   var bookedPrompt=buildMissionResultLoopPromptV1(resultTurn,{type:'booked',label:'Booked Call'});
   if(bookedPrompt.indexOf('add the call')<0)failures.push('result_loop_booked');
+  var paidAck=buildMissionMicroWinResultPromptV1(resultTurn,{type:'paid',label:'Collected Money'},{result:{type:'paid',label:'Collected Money'}});
+  if(paidAck.indexOf('That is the result')<0||paidAck.indexOf('protect delivery')<0)failures.push('micro_win_paid');
+  var bookedAck=buildMissionMicroWinResultPromptV1(resultTurn,{type:'booked',label:'Booked Call'},{result:{type:'booked',label:'Booked Call'}});
+  if(bookedAck.indexOf('Conversation moved to calendar')<0||bookedAck.indexOf('opening question')<0)failures.push('micro_win_booked');
+  var noReplyAck=buildMissionMicroWinResultPromptV1(resultTurn,{type:'no_reply',label:'No Reply Yet'},{result:{type:'no_reply',label:'No Reply Yet'}});
+  if(noReplyAck.indexOf('Useful signal')<0||noReplyAck.indexOf('not a loss')<0)failures.push('micro_win_no_reply');
   if(missionResultLoopShouldAnswerV1(getMissionResultSignalV1('he ghosted'),'he ghosted',resultTurn))failures.push('result_loop_ghosted_guard');
   if(priorResultSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorResultSession);
   var actionCtx={gap:400,rev:100,wk:500,dpc:{dms:0,coldCalls:0,calls:0,closes:0,money:0}};
@@ -17729,7 +17793,7 @@ function runMissionIntegritySelfCheck(){
   var tooMuchPrompt=buildMissionTooMuchAdviceResponseV1({rawInput:'what next',tooMuchAdvice:tooMuch},actionCtx);
   if(tooMuchPrompt.indexOf('stack more advice')<0||tooMuchPrompt.indexOf('What is blocking')<0)failures.push('too_much_advice_prompt');
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:29};
+  return {passed:!failures.length,failures:failures,total:32};
 }
 
 function runMissionCommandSelfCheck(){
