@@ -9149,6 +9149,121 @@ MISSION_SKILL_PACKS.push({
   ]
 });
 
+var MISSION_OS_AWARE_OUTPUT_PACK_V1={
+  id:'mc_skill_os_aware_output_pack_v1',
+  version:'1.0',
+  installMode:'additive_only',
+  purpose:'Make Mission Command answer as the app itself: aware of current route, app state, data confidence, active context, and the job it is doing for A1XX.',
+  routePools:{
+    now:[
+      {id:'os_now_01',text:'I am reading the current block, active context, and next saved move.<br><br>Right now, my job is to get you into motion, not open another dashboard.<br><br>Move: {{move}}'},
+      {id:'os_now_02',text:'From inside the OS, this is the cleanest read: {{move}}.<br><br>I am using the current block first, then the mission data second.'},
+      {id:'os_now_03',text:'I can see enough to call the next step.<br><br>Do this first: {{move}}<br><br>Then come back with what changed.'},
+      {id:'os_now_04',text:'The app is trying to reduce the decision load here.<br><br>One lane. One action. One logged result.<br><br>Start with {{move}}.'}
+    ],
+    report:[
+      {id:'os_money_01',text:'I am reading the money layer: weekly target, current gap, and the next cash path.<br><br>Read: {{moneyRead}}<br><br>Move: {{move}}'},
+      {id:'os_money_02',text:'The number is already in the OS. My job is to turn it into behavior.<br><br>Gap: {{gap}}<br>Best cash-facing move: {{move}}'},
+      {id:'os_money_03',text:'If you are trying to make money today, I am looking for the closest buyer-facing action.<br><br>That points to: {{move}}'},
+      {id:'os_money_04',text:'I am not judging the number. I am reading pressure.<br><br>Pressure says: {{move}}'}
+    ],
+    leads:[
+      {id:'os_leads_01',text:'I am reading the CRM like a movement map, not storage.<br><br>Best lead signal: {{lead}}<br><br>Move: {{move}}'},
+      {id:'os_leads_02',text:'Pipeline only helps if it creates a status change.<br><br>I am looking for reply, call, offer, paid, or clean no.<br><br>Start with {{lead}}.'},
+      {id:'os_leads_03',text:'The OS is using lead heat, last touch, and call-ready status here.<br><br>Next move: {{move}}'},
+      {id:'os_leads_04',text:'I can see the pipeline lane.<br><br>Do not chase volume yet. Move one person to the next decision.'}
+    ],
+    sales:[
+      {id:'os_sales_01',text:'Sales Coach is active.<br><br>I am listening for the stage of the conversation, not trying to give a speech.<br><br>Say: "{{script}}"'},
+      {id:'os_sales_02',text:'This is a call/conversation moment.<br><br>I am keeping you in question mode so you do not pitch too early.<br><br>Ask: "{{question}}"'},
+      {id:'os_sales_03',text:'I am reading this as sales pressure, not pipeline storage.<br><br>Use one clean line: "{{message}}"'},
+      {id:'os_sales_04',text:'The app is helping you keep control of the conversation.<br><br>Ask, pause, then let them give you the real objection.'}
+    ],
+    content:[
+      {id:'os_content_01',text:'I am reading the content lane against the Money Mission, not random ideas.<br><br>Best angle: {{angle}}<br><br>Hook: "{{hook}}"'},
+      {id:'os_content_02',text:'Content should come from today’s proof.<br><br>The app is trying to turn work into a visible asset.<br><br>Make: {{angle}}.'},
+      {id:'os_content_03',text:'I am checking whether this supports trust, sales, or proof.<br><br>Use the version that points back to the offer.'},
+      {id:'os_content_04',text:'From the OS view, this is not a content dump.<br><br>It is proof capture. Make one piece and log it.'}
+    ],
+    production:[
+      {id:'os_prod_01',text:'I am reading production by what can ship, sell, or support proof.<br><br>First asset: {{asset}}<br><br>Move: {{move}}'},
+      {id:'os_prod_02',text:'Production is active when the asset changes status.<br><br>The app wants one visible movement, not five open ideas.'},
+      {id:'os_prod_03',text:'I am looking for the highest-value active project.<br><br>Finish: {{asset}}'},
+      {id:'os_prod_04',text:'The production lane is not just creative work. It is delivery, proof, or sales leverage.<br><br>Next: {{move}}'}
+    ],
+    sync:[
+      {id:'os_sync_01',text:'System read.<br><br>I am checking whether the answer should trust local state, connected sources, or the last sync.<br><br>Confidence: {{confidence}}'},
+      {id:'os_sync_02',text:'I can answer from the current packet, but I will not fake live data.<br><br>Source path: {{sourceA}} → {{sourceB}} → Mission Command.'},
+      {id:'os_sync_03',text:'This is a data-confidence question.<br><br>If the read feels stale, run the sync check before making a decision from it.'},
+      {id:'os_sync_04',text:'The OS is protecting the data chain here.<br><br>Local save first. Connected source second. Mission Command read after that.'}
+    ],
+    memory:[
+      {id:'os_mem_01',text:'I am treating that as a possible operating rule, not just a chat line.<br><br>Rule candidate: {{rule}}'},
+      {id:'os_mem_02',text:'This sounds like voice or workflow memory.<br><br>I can use it for this session, but saving it long-term needs confirmation.'},
+      {id:'os_mem_03',text:'Memory lane is active.<br><br>The app should only save rules that will still matter later.'}
+    ],
+    help:[
+      {id:'os_help_01',text:'Mission Command is the operating layer of the app.<br><br>I read the current route, the active context, and the available data, then turn that into the next move.'},
+      {id:'os_help_02',text:'The app is not trying to answer everything at once.<br><br>It is trying to answer the thing you need next: money, leads, content, production, sync, or guidance.'}
+    ]
+  },
+  conversationPools:{
+    open_energy:[
+      {id:'os_energy_01',text:'I hear the lock-in energy.<br><br>I am checking the current block and the Money Mission before I call the move.<br><br>Win condition: cash, content, production, or follow-up?'},
+      {id:'os_energy_02',text:'Bet. I am reading the OS before giving you motion.<br><br>If you want me to decide, I will bias toward the closest money-facing move.'}
+    ],
+    stuck:[
+      {id:'os_stuck_01',text:'I am not going to dump the whole OS on you.<br><br>When you are stuck, my job is to shrink the field.<br><br>Smallest useful move: {{move}}'},
+      {id:'os_stuck_02',text:'Stuck means we need less screen, not more screen.<br><br>I am reading the active context and giving you one move: {{move}}'}
+    ],
+    decision:[
+      {id:'os_decision_01',text:'Decision read.<br><br>I am comparing what is closest to money, proof, and delivery.<br><br>Pick: {{choice}}'},
+      {id:'os_decision_02',text:'The OS is sorting this by leverage.<br><br>Do first: {{choice}}<br><br>Everything else can wait until that moves.'}
+    ],
+    explain:[
+      {id:'os_explain_01',text:'Here is what I am doing behind the scenes:<br><br>1) Reading the route.<br>2) Checking the context I can trust.<br>3) Picking the response depth.<br>4) Turning it into the next action.'},
+      {id:'os_explain_02',text:'The deeper reason is simple: the app is trying to turn scattered business context into one useful action.'}
+    ],
+    test_check:[
+      {id:'os_test_01',text:'Test it like this:<br><br>1) Ask one money question.<br>2) Ask one route question.<br>3) Ask one typo/slang version.<br>4) Ask one guard prompt like /pipeline or sync check.<br><br>If those route cleanly, the layer is working.'}
+    ]
+  },
+  regressionTests:[
+    {q:'how much money are we making',route:'report',mustAny:['money','target','gap','move','cash']},
+    {q:'what do i need to do today',route:'now',mustAny:['current block','move','action','OS']},
+    {q:'what is keeping me broke',route:'report',mustAny:['money','pressure','cash','move']},
+    {q:'help me get started',route:'now',mustAny:['decision','move','action','OS']},
+    {q:'walk me through this app',route:'help',mustAny:['Mission Command','operating','app']},
+    {q:'sync check',route:'sync',mustAny:['source','sync','data','confidence']}
+  ]
+};
+
+function getMissionOsAwareOutputResponseV1(route,ctx,question,conv,brainState,state,q){
+  var pack=typeof MISSION_OS_AWARE_OUTPUT_PACK_V1!=='undefined'?MISSION_OS_AWARE_OUTPUT_PACK_V1:null;
+  if(!pack)return '';
+  q=q||normalizeMissionQuestion(question||'');
+  var routeAlias={pipeline:'leads',money:'report',diagnostic:'sync'};
+  var r=routeAlias[route]||route||'now';
+  if(r==='money')r='report';
+  var profile=typeof getMissionInputProfile==='function'?getMissionInputProfile(question||'',q):null;
+  var smartCategory=profile&&profile.best&&profile.best.category||'';
+  var pool=null;
+  if(smartCategory==='open_energy_work_start')pool=pack.conversationPools.open_energy;
+  else if(['frustration_overwhelm','ep_os_problem_reset'].indexOf(smartCategory)>=0)pool=pack.conversationPools.stuck;
+  else if(['ep_os_make_decision'].indexOf(smartCategory)>=0||/\b(which|should i|what first|what should come first|what can wait)\b/.test(q))pool=pack.conversationPools.decision;
+  else if(['ep_os_explain_depth','ep_learning_question'].indexOf(smartCategory)>=0||/\b(what do you mean|how does that work|explain|make this make sense)\b/.test(q))pool=pack.conversationPools.explain;
+  else if(['ep_test_verification'].indexOf(smartCategory)>=0||/\b(test|chat check|verify|verification)\b/.test(q))pool=pack.conversationPools.test_check;
+  else pool=pack.routePools[r]||pack.routePools.now;
+  var context=getMissionOutputContextV1_1(r,ctx,question,brainState);
+  context.moneyRead=context.gap==='0'||context.gap==='$0'?'weekly target pressure is covered, so protect delivery and next-cycle setup':'there is still a gap, so prioritize the closest buyer-facing action';
+  context.choice=context.choice||context.move||'the next money-facing move';
+  var template=pickMissionTemplateFromPoolV1_1(pool,r,q,context);
+  if(!template)return '';
+  var filled=fillMissionTemplateV1(template.text,context);
+  if(/\{\{[a-zA-Z0-9_]+\}\}/.test(filled))return '';
+  return filled;
+}
+
 var MISSION_SALES_DEEP_OUTPUT_PACK_V1={
   id:'mc_skill_sales_deep_pack_outputs_v1',
   version:'1.0',
@@ -14734,6 +14849,8 @@ function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
   var conversationType=conv&&conv.type||'';
   var salesDeepResponse=typeof getMissionSalesDeepOutputResponseV1==='function'?getMissionSalesDeepOutputResponseV1(outputRoute,ctx,question,conv,brainState):'';
   if(salesDeepResponse)return salesDeepResponse;
+  var osAwareResponse=typeof getMissionOsAwareOutputResponseV1==='function'?getMissionOsAwareOutputResponseV1(outputRoute,ctx,question,conv,brainState,state,q):'';
+  if(osAwareResponse)return osAwareResponse;
   var v11Response=typeof getMissionOutputPackResponseV1_1==='function'?getMissionOutputPackResponseV1_1(outputRoute,ctx,question,conv,brainState,state,q):'';
   if(v11Response)return v11Response;
   var shouldHandle=false;
