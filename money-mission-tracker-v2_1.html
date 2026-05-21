@@ -809,6 +809,11 @@ input:focus{border-color:#333}
 .mission-command-input button{height:34px;background:#0d1808;border:0.5px solid #2a4015;border-radius:9px;color:#7ec845;font-size:11px;font-weight:800;cursor:pointer;padding:0 13px}
 .mission-command-input button:hover{background:#102006}
 .mission-command-input button:disabled{opacity:.55;cursor:wait}
+.mission-live-toggle{height:28px;border:0.5px solid #2b3238;border-radius:999px;background:#080a0c;color:#7f8a92;font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:0 10px;display:inline-flex;align-items:center;gap:6px}
+.mission-live-toggle:before{content:'';width:6px;height:6px;border-radius:999px;background:#3f464c;box-shadow:none}
+.mission-live-toggle.active{border-color:#5d913b;background:#10180c;color:#b9f28f}
+.mission-live-toggle.active:before{background:#7ec845;box-shadow:0 0 8px rgba(126,200,69,.32)}
+.mission-live-toggle:hover{border-color:#405c31;color:#d7dde3}
 .mission-resource-list{display:flex;gap:6px;flex-wrap:wrap}
 .mission-resource{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:6px 9px;background:#0d1012;border:0.5px solid #2a3036;border-radius:8px;color:#d7dde3;text-decoration:none;font-size:11px;font-weight:700;line-height:1.25;transition:all .2s}
 .mission-resource:hover{border-color:#3a5a2a;color:#f0f3f5;background:#111711}
@@ -2195,6 +2200,7 @@ body:before{
   <div class="mission-command-top">
     <div class="mission-command-label">Mission Command</div>
     <div class="mission-command-actions">
+      <button class="mission-live-toggle" id="mission-live-call-toggle" onclick="toggleMissionLiveCallMode()" title="Toggle live call mode">Live Call</button>
       <button class="mission-icon-btn" onclick="toggleMissionHistory()" title="Chat history">☰</button>
       <button class="mission-icon-btn" onclick="startMissionNewChat()" title="New chat">+</button>
       <div class="mission-command-state">Local coach</div>
@@ -9518,7 +9524,11 @@ window.__missionActiveCard=window.__missionActiveCard||'command';
 window.__missionLastUserAction=window.__missionLastUserAction||null;
 window.__missionLastUserActionTimestamp=window.__missionLastUserActionTimestamp||0;
 window.__missionLastSyncTimes=window.__missionLastSyncTimes||{};
-window.__missionCurrentSalesMode=window.__missionCurrentSalesMode||'normal';
+try{
+  window.__missionCurrentSalesMode=sessionStorage.getItem('a1xx_mc_live_call_mode_v1')==='on'?'live_call':(window.__missionCurrentSalesMode||'normal');
+}catch(e){
+  window.__missionCurrentSalesMode=window.__missionCurrentSalesMode||'normal';
+}
 
 function createMissionTurn(rawInput,kind,options){
   var now=new Date();
@@ -9681,20 +9691,42 @@ function setMissionSalesModeFromTurn(turn){
   if(!turn)return;
   var q=String(turn.rawInput||turn.normalizedInput||'').toLowerCase();
   if(isMissionSalesModeExitSignal(q)||/\b(debrief)\b/.test(q)){
-    window.__missionCurrentSalesMode='normal';
+    setMissionLiveCallMode(false,false);
     turn.integrityFlags=turn.integrityFlags||[];
     turn.integrityFlags.push('sales_mode_ended');
     return;
   }
-  if(/\b(on the phone|live call|in a call|on a call|call right now)\b/.test(q))window.__missionCurrentSalesMode='live_call';
+  if(/\b(on the phone|live call|in a call|on a call|call right now)\b/.test(q))setMissionLiveCallMode(true,false);
   else if(/\b(roleplay|role play|test me|skeptical prospect|busy prospect)\b/.test(q))window.__missionCurrentSalesMode='roleplay';
   else if(/\b(score my answer|scorecard|grade my call|review my answer)\b/.test(q))window.__missionCurrentSalesMode='scorecard';
-  else if(/\b(stop roleplay|quit roleplay|end session|that's enough|that is enough)\b/.test(q))window.__missionCurrentSalesMode='normal';
+  else if(/\b(stop roleplay|quit roleplay|end session|that's enough|that is enough)\b/.test(q))setMissionLiveCallMode(false,false);
 }
 
 function isMissionSalesModeExitSignal(q){
   q=normalizeMissionQuestion(q||'');
   return /\b(call is done|call done|got off|hung up|call ended|off the phone|just got off|done with the call|finished the call|end live call|stop live call)\b/.test(q);
+}
+
+function setMissionLiveCallMode(active,announce){
+  window.__missionCurrentSalesMode=active?'live_call':'normal';
+  try{sessionStorage.setItem('a1xx_mc_live_call_mode_v1',active?'on':'off');}catch(e){}
+  updateMissionLiveCallToggleUI();
+  if(announce&&typeof appendMissionBubble==='function'){
+    appendMissionBubble('assistant',active?'Live Call mode on.<br><br>Keep prompts short. I will answer for the call, not the dashboard.':'Live Call mode off.<br><br>Send the result when you are ready: booked, no, follow-up, or paid.',true,'suggest-row');
+  }
+}
+
+function toggleMissionLiveCallMode(){
+  setMissionLiveCallMode(window.__missionCurrentSalesMode!=='live_call',true);
+}
+
+function updateMissionLiveCallToggleUI(){
+  var btn=document.getElementById('mission-live-call-toggle');
+  if(!btn)return;
+  var active=window.__missionCurrentSalesMode==='live_call';
+  btn.classList.toggle('active',active);
+  btn.setAttribute('aria-pressed',active?'true':'false');
+  btn.textContent=active?'Call On':'Live Call';
 }
 
 function runMissionResponseIntegrityCheck(turn,bubblePacket){
@@ -13919,7 +13951,7 @@ function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return '';
   if(isMissionSalesModeExitSignal(q)){
-    window.__missionCurrentSalesMode='normal';
+    setMissionLiveCallMode(false,false);
     return 'Call mode closed.<br><br>What happened: <strong>booked, no, follow-up, or paid?</strong><br><br>Give me the result and I will help log the next move.';
   }
   if(/\b(where do i|how do i get|what tab|what card|what button|where is)\b/.test(q)&&/\b(sync|system hub|health|backup|notion|sheets|connection)\b/.test(q))return '';
@@ -15746,6 +15778,7 @@ function renderMissionCommand(kind,question,forceCurrent){
   var thread=document.getElementById('mission-command-thread');
   if(!thread)return;
   try{
+  updateMissionLiveCallToggleUI();
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   renderMissionNudge(ctx);
   scheduleMissionNudgeRefresh();
