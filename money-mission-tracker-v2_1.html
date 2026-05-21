@@ -12208,6 +12208,58 @@ function buildMissionExecutionModeResponseV1(turn,ctx){
   return 'Good. Stay in it.<br><br>Next physical step: '+escapeHtml(action)+'.<br><br>Then tell me what happened.';
 }
 
+/* =========================================================
+   MISSION DECISION INTENT DETECTOR — v1
+========================================================= */
+function getMissionDecisionIntentV1(rawInput,turn,session){
+  var q=normalizeMissionQuestion(rawInput||'');
+  var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|revenue report|show me|pipeline|who hot|calendar|content status|production status)\b/.test(q);
+  var salesAsk=/\b(what should i say|what do i say|too expensive|cant afford|can't afford|he said|she said|they said|ghosted|payment plan|roleplay|score my answer|prep me for a call)\b/.test(q);
+  var planning=/\b(make a plan|build a plan|roadmap|strategy|map this out|next week|phase one|phase two)\b/.test(q);
+  var actionDecision=/\b(call the move|pick the move|pick one|choose one|choose for me|decide for me|tell me what to do|what should i do|what do i do|what next|what now|what is the move|what's the move|whats the move|one move|next move)\b/.test(q);
+  var justTell=/\b(just tell me|one thing|just one thing|answer only|short answer|straight answer|be direct|say less)\b/.test(q);
+  var validation=/\b(is this good|is this worth it|worth doing|does this make sense|should i do this|should i send this|should i post this|should i call|should i follow up)\b/.test(q);
+  var rating=/\b(rate this|score this|grade this|how good is this|is this strong|is this weak)\b/.test(q);
+  var yesNo=/^(should|can|do|does|is|are|will|would)\b/.test(q)&&/\?$/.test(String(rawInput||'').trim());
+  var kind='';
+  if(actionDecision||justTell)kind='action_decision';
+  else if(validation||yesNo)kind='validation';
+  else if(rating)kind='rating';
+  var shouldAnswer=!!kind&&!explicitData&&!planning&&!salesAsk;
+  return {
+    kind:kind,
+    confidence:shouldAnswer?0.88:0,
+    explicitData:explicitData,
+    salesAsk:salesAsk,
+    planningSignal:planning,
+    shouldAnswer:shouldAnswer,
+    shouldForceNow:kind==='action_decision'&&!explicitData&&!planning&&!salesAsk,
+    suppressBubbles:shouldAnswer,
+    responseDepth:shouldAnswer?'micro':'standard',
+    responseShape:shouldAnswer?'direct_decision':'quick_read'
+  };
+}
+
+function buildMissionDecisionIntentResponseV1(turn,ctx){
+  var decision=turn&&turn.decisionIntent||null;
+  if(!decision||!decision.shouldAnswer)return '';
+  var q=normalizeMissionQuestion(turn.rawInput||'');
+  if(decision.kind==='rating'){
+    return 'Send the thing you want scored.<br><br>I will grade it on clarity, fit, timing, and next action.';
+  }
+  if(decision.kind==='validation'){
+    if(/\b(post|content)\b/.test(q)){
+      return 'My read: yes, if it proves the work or moves the offer.<br><br>If it is just noise, park it.';
+    }
+    if(/\b(call|follow up|send)\b/.test(q)){
+      return 'My read: yes.<br><br>Send the clean ask, then wait for the answer.';
+    }
+    return 'My read: yes, if it creates a visible status change.<br><br>If not, skip it for now.';
+  }
+  var action=missionExecutionActionFromContextV1(turn,ctx);
+  return 'Call: '+escapeHtml(action)+'.<br><br>Do that first. Then tell me what changed.';
+}
+
 function tryMissionContextCarryRoute(turn){
   var q=turn&&turn.normalizedInput||'';
   var signals=turn&&turn.inputSignals||{};
@@ -12317,6 +12369,19 @@ function getMissionConversationTypeV2(q,signals,route,turn){
 function getMissionRoutePlan(turn){
   var q=turn.normalizedInput||'';
   var signals=turn.inputSignals||{};
+  if(turn&&turn.decisionIntent&&turn.decisionIntent.shouldForceNow){
+    return {
+      selectedRoute:'now',
+      confidence:0.9,
+      confidenceBand:getMissionRouteConfidenceBand(0.9),
+      possibleRoutes:[{route:'now',score:0.9,reason:'decision_intent_direct',intentType:'direct_decision'}],
+      contextCarry:false,
+      clarify:false,
+      routeReason:'decision_intent_direct',
+      intent:{name:'now',type:'direct_decision'},
+      conversationType:'CONV_DECISION'
+    };
+  }
   if(turn&&turn.executionMode&&turn.executionMode.shouldForceNow){
     return {
       selectedRoute:'now',
@@ -12781,6 +12846,7 @@ function getMissionBrainStateV2(turn){
     selectedWorkerId:turn.workerId||'',
     liveContext:turn.liveContext||null,
     executionMode:turn.executionMode||null,
+    decisionIntent:turn.decisionIntent||null,
     activeCard:turn.liveContext&&turn.liveContext.activeCard||'',
     contextMode:turn.liveContext&&turn.liveContext.contextMode||getMissionContextMode(),
     contextRoute:turn.liveContext&&turn.liveContext.contextRoute||getMissionContextRouteForMode(getMissionContextMode()),
@@ -12873,6 +12939,7 @@ function inferMissionMemoryCategoryV2(q){
 }
 
 function getMissionResponseDepthV2(turn){
+  if(turn&&turn.decisionIntent&&turn.decisionIntent.shouldAnswer)return turn.decisionIntent.responseDepth||'micro';
   if(turn&&turn.executionMode&&turn.executionMode.mode==='execution')return turn.executionMode.responseDepth||'micro';
   if(turn&&turn.cognitiveLoad&&turn.cognitiveLoad.simplifyMode)return turn.cognitiveLoad.responseDepth||'quick';
   if(turn&&turn.scratchpad&&turn.scratchpad.responseDepthHint)return turn.scratchpad.responseDepthHint;
@@ -12892,6 +12959,7 @@ function getMissionResponseDepthV2(turn){
 
 function getMissionResponseShapeV2(turn){
   var route=turn.route||'now',s=turn.inputSignals||{},depth=turn.responseDepth||'';
+  if(turn&&turn.decisionIntent&&turn.decisionIntent.shouldAnswer)return turn.decisionIntent.responseShape||'direct_decision';
   if(turn&&turn.executionMode&&turn.executionMode.mode==='execution')return turn.executionMode.responseShape||'execution_step';
   if(turn&&turn.cognitiveLoad&&turn.cognitiveLoad.simplifyMode)return turn.cognitiveLoad.responseShape||'focus_reset';
   if(turn&&turn.scratchpad&&turn.scratchpad.responseShapeHint)return turn.scratchpad.responseShapeHint;
@@ -12934,6 +13002,7 @@ function getMissionBubblePlanV2(turn,depth,shape){
   var explicitDataAsk=false;
   try{explicitDataAsk=!!(turn.inputSignals&&turn.inputSignals.isSlashCommand)||!!(typeof missionQuestionHasExplicitDataAsk==='function'&&missionQuestionHasExplicitDataAsk(turn.route,turn.rawInput));}catch(e){}
   var renderB2=true,renderB3=true;
+  if(turn&&turn.decisionIntent&&turn.decisionIntent.suppressBubbles){renderB2=false;renderB3=false;}
   if(turn&&turn.executionMode&&turn.executionMode.suppressBubbles){renderB2=false;renderB3=false;}
   if(turn&&turn.cognitiveLoad&&turn.cognitiveLoad.suppressBubbles){renderB2=false;renderB3=false;}
   if(depth==='micro'){renderB2=false;renderB3=false;}
@@ -12984,6 +13053,7 @@ function buildMissionResponseContract(turn){
     conversationType:turn.conversationType,
     inputEnergy:turn.inputEnergy,
     executionMode:turn.executionMode||null,
+    decisionIntent:turn.decisionIntent||null,
     responseMode:turn.responseMode,
     responseDepth:turn.responseDepth,
     responseShape:turn.responseShape,
@@ -13139,7 +13209,7 @@ function saveMissionTurnCheckpoint(turn){
     var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
     var sessionCache=turn.sessionDataCache||getMissionSessionDataCacheV1(turn.options&&turn.options.ctx,{reason:'checkpoint'});
     var snapshot=turn.changeSnapshot||(sessionCache&&sessionCache.snapshot)||(typeof getMissionCurrentAppSnapshotV1==='function'?getMissionCurrentAppSnapshotV1(turn.options&&turn.options.ctx):null);
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,decisionIntent:turn.decisionIntent||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
     list.unshift(checkpoint);
     list=list.slice(0,100);
     if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
@@ -13149,7 +13219,7 @@ function saveMissionTurnCheckpoint(turn){
 
 function summarizeMissionBrainStateV2(bs){
   if(!bs)return {};
-  return {selectedRoute:bs.selectedRoute,selectedWorkerId:bs.selectedWorkerId,inputEnergy:bs.inputEnergy,executionMode:bs.executionMode&&bs.executionMode.mode||'',sessionArc:bs.sessionArc,sessionTopic:bs.sessionTopic,sessionIntent:bs.sessionIntent,userEnergy:bs.userEnergy,dpcMomentum:bs.dpcMomentum,revenueGap:bs.revenueGap,nextBestMove:bs.nextBestMove,dataNeeds:bs.dataNeeds,contextSlices:bs.contextSlices||[],syncRisk:bs.syncRisk,responseDepth:bs.responseDepth,responseShape:bs.responseShape};
+  return {selectedRoute:bs.selectedRoute,selectedWorkerId:bs.selectedWorkerId,inputEnergy:bs.inputEnergy,executionMode:bs.executionMode&&bs.executionMode.mode||'',decisionIntent:bs.decisionIntent&&bs.decisionIntent.kind||'',sessionArc:bs.sessionArc,sessionTopic:bs.sessionTopic,sessionIntent:bs.sessionIntent,userEnergy:bs.userEnergy,dpcMomentum:bs.dpcMomentum,revenueGap:bs.revenueGap,nextBestMove:bs.nextBestMove,dataNeeds:bs.dataNeeds,contextSlices:bs.contextSlices||[],syncRisk:bs.syncRisk,responseDepth:bs.responseDepth,responseShape:bs.responseShape};
 }
 
 function summarizeMissionContextSlices(slices){
@@ -13171,7 +13241,7 @@ function summarizeMissionContextPacket(packet){
 
 function summarizeMissionBubblePacket(packet){
   if(!packet)return {};
-  return {workerId:packet.workerId,route:packet.route,inputEnergy:packet.inputEnergy,executionMode:packet.executionMode&&packet.executionMode.mode||'',responseDepth:packet.responseDepth,responseShape:packet.responseShape,hasB2:packet.b2&&packet.b2.shouldRender,hasB3:packet.b3&&packet.b3.shouldRender};
+  return {workerId:packet.workerId,route:packet.route,inputEnergy:packet.inputEnergy,executionMode:packet.executionMode&&packet.executionMode.mode||'',decisionIntent:packet.decisionIntent&&packet.decisionIntent.kind||'',responseDepth:packet.responseDepth,responseShape:packet.responseShape,hasB2:packet.b2&&packet.b2.shouldRender,hasB3:packet.b3&&packet.b3.shouldRender};
 }
 
 function buildMissionFallbackBubblePacket(turn,err){
@@ -13241,6 +13311,8 @@ function runMissionTurn(kind,rawInput,options){
     addMissionTrace(turn,'cognitive_load_read',turn.cognitiveLoad);
     turn.executionMode=getMissionExecutionModeV1(turn.rawInput,turn,getMissionBrainSessionV2(),typeof getMissionChatHistory==='function'?getMissionChatHistory():[]);
     addMissionTrace(turn,'execution_mode_read',turn.executionMode);
+    turn.decisionIntent=getMissionDecisionIntentV1(turn.rawInput,turn,getMissionBrainSessionV2());
+    addMissionTrace(turn,'decision_intent_read',turn.decisionIntent);
     turn.routePlan=getMissionRoutePlan(turn);
     turn.route=turn.routePlan&&turn.routePlan.selectedRoute||'';
     turn.intent=turn.routePlan&&turn.routePlan.intent||null;
@@ -17381,6 +17453,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   if(cognitiveLoadAnswer)return finishMissionAnswer(cognitiveLoadAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
   var executionModeAnswer=buildMissionExecutionModeResponseV1(turnV2,ctx);
   if(executionModeAnswer)return finishMissionAnswer(executionModeAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
+  var decisionIntentAnswer=buildMissionDecisionIntentResponseV1(turnV2,ctx);
+  if(decisionIntentAnswer)return finishMissionAnswer(decisionIntentAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
   if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false,explainDecision:true});
@@ -17506,7 +17580,13 @@ function runMissionIntegritySelfCheck(){
   if(planningRead.mode!=='planning'||planningRead.responseShape!=='plan_builder')failures.push('planning_mode_signal');
   var executionPrompt=buildMissionExecutionModeResponseV1({rawInput:'I am sending it now',route:'now',executionMode:executionRead,brainState:{nextBestMove:'Send the direct ask'}},{});
   if(executionPrompt.indexOf('Stay in it')<0||executionPrompt.indexOf('Send the direct ask')<0)failures.push('execution_mode_prompt');
-  return {passed:!failures.length,failures:failures,total:21};
+  var decisionRead=getMissionDecisionIntentV1('call the move',{rawInput:'call the move',route:'now',liveContext:{currentSalesMode:'normal'}},{});
+  if(!decisionRead.shouldAnswer||!decisionRead.shouldForceNow||decisionRead.responseShape!=='direct_decision')failures.push('decision_intent_signal');
+  var decisionPrompt=buildMissionDecisionIntentResponseV1({rawInput:'call the move',route:'now',decisionIntent:decisionRead,brainState:{nextBestMove:'Open the Hit List'}},{});
+  if(decisionPrompt.indexOf('Call:')<0||decisionPrompt.indexOf('Open the Hit List')<0)failures.push('decision_intent_prompt');
+  var decisionSalesGuard=getMissionDecisionIntentV1('what should i say',{rawInput:'what should i say',route:'sales',liveContext:{currentSalesMode:'normal'}},{});
+  if(decisionSalesGuard.shouldAnswer)failures.push('decision_intent_sales_guard');
+  return {passed:!failures.length,failures:failures,total:24};
 }
 
 function runMissionCommandSelfCheck(){
