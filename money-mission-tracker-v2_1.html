@@ -15598,6 +15598,7 @@ function runMissionBroadRegressionHardeningV1(){
       var plain=answer.replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
       if(!test.must.test(plain))failures.push(test.name+'_route_drift');
       if((plain.match(/Before switching:/g)||[]).length>1)failures.push(test.name+'_duplicate_handoff');
+      if(test.card&&/\b(Same pipeline lane|Which lead do you want to move first|Who is closest to a real decision|Want to go through one lead at a time)\b/i.test(plain))failures.push(test.name+'_route_garnish_bleed');
       if(missionVisibleAnswerHasInternalLeakV1(answer))failures.push(test.name+'_internal_leak');
     });
     ['brief','outreach','content','production','manager'].forEach(function(card){
@@ -18040,6 +18041,31 @@ function applyMissionCrossCardAlignmentV1(html,opts){
   var handoff=getMissionCardAlignmentHandoffV1(card);
   if(!handoff)return out;
   return out+'<br><br>Before switching: '+escapeHtml(handoff)+'.';
+}
+
+function cleanMissionCardRouteGarnishV1(html,opts){
+  opts=opts||{};
+  if(!opts.cardAlignment)return html;
+  var out=String(html||'');
+  if(!out)return out;
+  out=out.replace(/^(Same pipeline lane:|Still the lead lane:|Cleaner pipeline read:|Same sales lane:|Still the sales lane:|Cleaner sales read:|Same DPC lane:|Still the daily campaign lane:|Cleaner scoreboard read:|Same money lane:|Still the number talking:|Cleaner money read:|Same content lane:|Still the proof lane:|Cleaner proof read:|Same production lane:|Still the asset lane:|Cleaner delivery read:|Same sync lane:|Still the trust check:|Cleaner system read:|Same lane:|Still on this:|Cleaner read:)\s*(<br\s*\/?>\s*){1,2}/i,'');
+  out=out.replace(/(<br\s*\/?>\s*){1,2}<span[^>]*>\s*(Want to go through one lead at a time\?|Which lead do you want to move first\?|Who is closest to a real decision\?|What did they say back\?|Want to practice the next line\?|Want to roleplay the next objection\?)\s*<\/span>\s*$/i,'');
+  return out;
+}
+
+function protectMissionExplicitCardAnswerOptionsV1(opts){
+  opts=opts||{};
+  if(!opts.cardAlignment)return opts;
+  opts.sessionArc=false;
+  opts.closer=false;
+  opts.presence=false;
+  opts.explainDecision=false;
+  opts.actionLayer=false;
+  opts.unsaidQuestion=false;
+  opts.constraintGuidance=false;
+  opts.firstSentenceRule=false;
+  opts.identicalResponseGuard=false;
+  return opts;
 }
 
 /* =========================================================
@@ -20490,17 +20516,19 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var visibleExplainer=getMissionDecisionExplainerV1(turnV2,ctx,cleanQuestion||question||'',brainState);
   function finishMissionAnswer(html,opts){
     opts=opts||{};
+    opts=protectMissionExplicitCardAnswerOptionsV1(opts);
     if(opts.explainDecision&&visibleExplainer&&visibleExplainer.shouldShow){
       var explainerLine=getMissionDecisionExplainerLineV1(visibleExplainer);
       if(explainerLine&&String(html||'').indexOf(explainerLine)<0)html=String(html||'')+'<br><br>'+explainerLine;
     }
     html=applyMissionCrossCardAlignmentV1(html,opts);
-    html=appendMissionConstraintGuidanceNudgeV1(html,turnV2,ctx,cleanQuestion||question||'');
+    if(opts.constraintGuidance!==false)html=appendMissionConstraintGuidanceNudgeV1(html,turnV2,ctx,cleanQuestion||question||'');
     html=appendMissionUnsaidQuestionNudgeV1(html,turnV2,ctx,cleanQuestion||question||'',opts);
     html=applyMissionActionLayerV1(html,turnV2,ctx,cleanQuestion||question||'',opts);
     var styled=applyMissionStylePreferenceLearningV11(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)),route,cleanQuestion||question||'',opts);
     var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(styled,route,cleanQuestion||question||'',opts));
     shaped=cleanMissionVisibleAnswerText(applyMissionB1ProseGuard(shaped,{route:route,question:cleanQuestion||question||'',turn:turnV2,opts:opts}));
+    shaped=cleanMissionCardRouteGarnishV1(shaped,opts);
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(rawQ)||/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
