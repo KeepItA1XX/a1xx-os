@@ -286,6 +286,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .settings-badge.warn{color:#d4a017;border-color:#3a2800;background:#150e00}
 .settings-badge.off{color:#7b838b;border-color:#252b31;background:#101418}
 .settings-ai-box{background:#090b10;border:0.5px dashed #2a3340;border-radius:9px;padding:9px 10px;font-size:11px;color:#8b949e;line-height:1.55;margin-bottom:8px}
+.settings-qa-results{display:grid;gap:6px;margin-top:8px}
+.settings-qa-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#080a0c;border:0.5px solid #1b2229;border-radius:8px;padding:7px 9px}
+.settings-qa-name{font-size:10px;font-weight:800;color:#d7dde3}
+.settings-qa-meta{font-size:9px;color:#68727c;line-height:1.35;margin-top:2px}
+.settings-qa-pill{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;border-radius:999px;padding:3px 6px;border:0.5px solid #263039;color:#8b949e;white-space:nowrap}
+.settings-qa-pill.pass{color:#7ec845;border-color:#2a4015;background:#0f1a0a}
+.settings-qa-pill.fail{color:#ff8a70;border-color:#4a1d14;background:#190907}
 @media(max-width:520px){
   .system-panel{width:96vw;grid-template-columns:118px 1fr}
   .settings-nav{padding:12px 8px}
@@ -2011,8 +2018,12 @@ body:before{
           </div>
           <div class="btn-row">
             <button class="btn" onclick="runMissionCommandSelfCheck()">Run chat check</button>
+            <button class="btn primary" onclick="runMissionQAPanelCheck()">Run Mission QA</button>
           </div>
           <div class="reset-status" id="mission-command-test-status"></div>
+          <div class="settings-qa-results" id="mission-qa-panel-results">
+            <div class="settings-qa-row"><div><div class="settings-qa-name">Mission QA</div><div class="settings-qa-meta">Run this after brain, routing, or skill-pack changes.</div></div><span class="settings-qa-pill">Idle</span></div>
+          </div>
         </div>
       </div>
       <div class="ai-subpane" id="ai-subpane-workers">
@@ -18979,6 +18990,83 @@ function runMissionCommandSelfCheck(){
     }
   }
   return {passed:!failures.length,failures:failures,answerWarnings:answerWarnings,total:checks.length};
+}
+
+function renderMissionQAPanelRows(rows){
+  var box=document.getElementById('mission-qa-panel-results');
+  if(!box)return;
+  box.innerHTML=(rows||[]).map(function(row){
+    var pass=!!row.passed;
+    return '<div class="settings-qa-row"><div><div class="settings-qa-name">'+escapeHtml(row.name||'Check')+'</div><div class="settings-qa-meta">'+escapeHtml(row.meta||'')+'</div></div><span class="settings-qa-pill '+(pass?'pass':'fail')+'">'+(pass?'Pass':'Review')+'</span></div>';
+  }).join('');
+}
+
+function runMissionThreadRouteGuardPanelCheckV1(){
+  var key=MISSION_BRAIN_SESSION_V2_KEY;
+  var prior=sessionStorage.getItem(key);
+  try{
+    sessionStorage.setItem(key,JSON.stringify({
+      lastRoute:'sales',
+      sessionTopic:'sales',
+      threadMemory:{activeRoute:'sales',turns:[{question:'/pipeline',route:'sales',timestamp:new Date().toISOString()}]},
+      resultLoop:{history:[]}
+    }));
+    var memory=getMissionThreadMemoryV1({rawInput:'why',route:'now',inputSignals:{isWhy:true}},{});
+    var text=String(memory&&memory.message||'');
+    return {
+      passed:memory&&memory.activeRoute==='leads'&&text.indexOf('Closer Coach')<0&&text.indexOf('Prep Call')<0,
+      meta:'Pipeline follow-up guard: '+(memory&&getMissionRouteLabelV2(memory.activeRoute)||'none')
+    };
+  }catch(e){
+    return {passed:false,meta:e&&e.message?e.message:String(e)};
+  }finally{
+    if(prior===null)sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key,prior);
+  }
+}
+
+function runMissionQAPanelCheck(){
+  var status=document.getElementById('mission-command-test-status');
+  if(status){status.textContent='Running Mission QA...';status.className='reset-status';}
+  renderMissionQAPanelRows([{name:'Mission QA',meta:'Running route, integrity, memory, and response checks...',passed:true}]);
+  var rows=[];
+  var failed=false;
+  function add(name,result,meta){
+    var passed=!!(result&&result.passed);
+    failed=failed||!passed;
+    rows.push({name:name,passed:passed,meta:meta||result&&result.meta||''});
+  }
+  try{
+    var chat=runMissionCommandSelfCheck();
+    add('Chat Routes',chat,(chat.total||0)+' prompts · '+((chat.answerWarnings&&chat.answerWarnings.length)||0)+' wording notes');
+  }catch(e){
+    add('Chat Routes',{passed:false,meta:e&&e.message?e.message:String(e)});
+  }
+  try{
+    var integrity=runMissionIntegritySelfCheck();
+    add('Integrity Layer',integrity,(integrity.total||0)+' checks'+(integrity.failures&&integrity.failures.length?' · '+integrity.failures.join(', '):''));
+  }catch(e){
+    add('Integrity Layer',{passed:false,meta:e&&e.message?e.message:String(e)});
+  }
+  try{
+    var master=runMissionMasterIntelligenceQASweepV1();
+    add('Master Intelligence QA',master,(master.total||0)+' checks'+(master.failures&&master.failures.length?' · '+master.failures.join(', '):''));
+  }catch(e){
+    add('Master Intelligence QA',{passed:false,meta:e&&e.message?e.message:String(e)});
+  }
+  add('Thread Memory Guard',runMissionThreadRouteGuardPanelCheckV1());
+  try{
+    var spacing=applyMissionReadabilityGuardV1('3) Pipeline: 32 open leads.<strong>Next:</strong><br>Create one visible move');
+    add('Readability Guard',{passed:spacing.indexOf('<br><br><strong>Next:</strong>')>=0,meta:'Spacing before section labels'});
+  }catch(e){
+    add('Readability Guard',{passed:false,meta:e&&e.message?e.message:String(e)});
+  }
+  renderMissionQAPanelRows(rows);
+  if(status){
+    status.textContent=failed?'Mission QA needs review. Open the rows below.':'Mission QA passed: routes, intelligence, thread memory, and readability are clean.';
+    status.className='reset-status '+(failed?'err':'ok');
+  }
+  return {passed:!failed,rows:rows};
 }
 
 function getMissionDataPacket(question){
