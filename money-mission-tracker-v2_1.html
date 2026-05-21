@@ -12511,6 +12511,13 @@ function scoreMissionRoutesV2(q,signals,turn){
     if(route)routes.push({route:route,score:score,reason:reason||'',intentType:intentType||''});
   }
   if(turn&&turn.options&&turn.options.legacyRoute)add(turn.options.legacyRoute,MISSION_ROUTER_V2_PRIMARY?0.42:0.88,MISSION_ROUTER_V2_PRIMARY?'legacy_fallback_route':'legacy_visible_route','legacy');
+  var rawTurnInput=turn&&turn.rawInput||q||'';
+  var correctionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(rawTurnInput):'';
+  if(correctionRoute)add(correctionRoute,0.99,'correction_target_route','correction');
+  var salesResultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(rawTurnInput):null;
+  if(salesResultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done)$/.test(salesResultSignal.type||'')){
+    add('sales',0.97,'result_signal_'+salesResultSignal.type,'result_update');
+  }
   var slash=String(q||'').match(/^\/([a-z0-9_]+)/);
   if(slash)add(normalizeMissionSlashRouteV2(slash[1]),1,'slash_command','command');
   var mention=String(q||'').match(/^@([a-z0-9_]+)/);
@@ -18363,6 +18370,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var intent=multi.primary;
   var conv=getMissionConversationType(cleanQuestion||'',ctx,intent,brainState);
   var route=(conv&&conv.route)||intent.route;
+  var preflightCorrectionTarget=getMissionCorrectionTargetRouteV2(question||'')||getMissionCorrectionTargetRouteV2(rawQ)||getMissionCorrectionTargetRouteV2(q);
+  var preflightResultSignal=getMissionResultSignalV1(question||cleanQuestion||'');
   if(intent&&intent.route&&missionQuestionHasExplicitDataAsk(intent.route,cleanQuestion||question||''))route=intent.route;
   var turnV2=null;
   try{
@@ -18394,7 +18403,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(styled,route,cleanQuestion||question||'',opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
-  var resultSignal=getMissionResultSignalV1(question||cleanQuestion||'');
+  var resultSignal=preflightResultSignal||getMissionResultSignalV1(question||cleanQuestion||'');
   if(resultSignal&&resultSignal.type!=='call_done'&&missionResultLoopShouldAnswerV1(resultSignal,question||cleanQuestion||'',turnV2)){
     route=(turnV2&&turnV2.route)||route||'now';
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
@@ -18404,7 +18413,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     route='sales';
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,{type:'call_done',label:'Call Done',confidence:0.95}),{sessionArc:false,closer:false,presence:false});
   }
-  var correctionTarget=getMissionCorrectionTargetRouteV2(rawQ)||getMissionCorrectionTargetRouteV2(q);
+  var correctionTarget=preflightCorrectionTarget||getMissionCorrectionTargetRouteV2(rawQ)||getMissionCorrectionTargetRouteV2(q);
   if(correctionTarget){
     route=correctionTarget;
     setMissionCommandActiveTopic(route,question||'');
@@ -18503,6 +18512,13 @@ function runMissionIntegritySelfCheck(){
   window.__missionCurrentSalesMode='normal';
   var exitSignal=isMissionSalesModeExitSignal('call is done')&&!getMissionSalesPhraseBridgeV1('call is done')&&getMissionSalesMode('call is done')==='normal';
   if(!exitSignal)failures.push('sales_mode_exit_signal');
+  if(getMissionCorrectionTargetRouteV2('i meant sales not pipeline')!=='sales')failures.push('correction_target_sales_preflight');
+  var correctionRoutes=scoreMissionRoutesV2('i meant sales not pipeline',{}, {rawInput:'i meant sales not pipeline'});
+  if(!correctionRoutes[0]||correctionRoutes[0].route!=='sales')failures.push('route_score_correction_sales');
+  var bookedSignal=getMissionResultSignalV1('booked');
+  if(!bookedSignal||bookedSignal.type!=='booked')failures.push('result_signal_booked_preflight');
+  var bookedRoutes=scoreMissionRoutesV2('booked',{}, {rawInput:'booked'});
+  if(!bookedRoutes[0]||bookedRoutes[0].route!=='sales')failures.push('route_score_booked_sales');
   var clarify=runMissionResponseIntegrityCheck(fakeTurn({route:'',routePlan:{clarify:true},responseShape:'quick_read'}),{b1:'Pick a lane',b2:'',b3:'Action'});
   if(clarify.b3)failures.push('clarify_action_suppression');
   var stale=runMissionResponseIntegrityCheck(fakeTurn({rawInput:'revenue report',normalizedInput:'revenue report',route:'report',responseShape:'money_pressure',dataConfidence:{level:'low'}}),{b1:'Money read',b2:'Revenue · $10',b3:''});
@@ -18709,7 +18725,7 @@ function runMissionIntegritySelfCheck(){
   var masterQASweep=runMissionMasterIntelligenceQASweepV1();
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:78};
+  return {passed:!failures.length,failures:failures,total:82};
 }
 
 function runMissionCommandSelfCheck(){
