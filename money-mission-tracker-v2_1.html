@@ -11507,6 +11507,82 @@ function missionResultLoopShouldAnswerV1(signal,question,turn){
   return !!(turn&&turn.inputSignals&&turn.inputSignals.isCompletion);
 }
 
+/* =========================================================
+   MISSION DECISION MEMORY — v1
+========================================================= */
+function getMissionDecisionMemorySessionV1(){
+  try{
+    var session=getMissionBrainSessionV2();
+    var loop=session.resultLoop||{};
+    return {
+      lastResult:loop.lastResult||null,
+      pendingAction:loop.pendingAction||session.lastActionPlan||null,
+      history:Array.isArray(loop.history)?loop.history.slice(0,8):[],
+      lastActionSuggested:session.lastActionSuggested||'',
+      lastActionStatus:session.lastActionStatus||'none'
+    };
+  }catch(e){
+    return {lastResult:null,pendingAction:null,history:[],lastActionSuggested:'',lastActionStatus:'none'};
+  }
+}
+
+function getMissionDecisionMemoryV1(turn,ctx){
+  var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||'');
+  var session=getMissionDecisionMemorySessionV1();
+  var result=session.lastResult||null;
+  var action=null;
+  var message='';
+  var label='';
+  var type=result&&result.type||'';
+  if(type==='paid'){
+    label='Protect Delivery';
+    action={label:'Protect Delivery',type:'next_best_move',target:'delivery',action:'log the money, update the lead, then protect delivery',requiresConfirmation:false,reason:'decision_memory_paid'};
+    message='Last result was paid.<br><br>Next move: log the money, update the lead, then protect delivery.';
+  }else if(type==='booked'){
+    label='Prep Call';
+    action={label:'Prep Call',type:'open_card',target:'sales_coach',action:'prep the booked call and add the calendar detail',requiresConfirmation:false,reason:'decision_memory_booked'};
+    message='Last result was booked.<br><br>Next move: prep the call, add the calendar detail, and open with one discovery question.';
+  }else if(type==='reply'){
+    label='Qualify Intent';
+    action={label:'Qualify Intent',type:'open_card',target:'sales_coach',action:'qualify intent before pitching',requiresConfirmation:false,reason:'decision_memory_reply'};
+    message='Last result was a reply.<br><br>Next move: qualify intent before pitching.';
+  }else if(type==='no_reply'){
+    label='Switch Warm Signal';
+    action={label:'Switch Warm Signal',type:'open_card',target:'hit_list',action:'mark the touch, bump later, then move to the next warm signal',requiresConfirmation:false,reason:'decision_memory_no_reply'};
+    message='Last result was no reply.<br><br>Do not chase that same touch right now.<br><br>Mark it, bump later, and move to the next warm signal.';
+  }else if(type==='follow_up'){
+    label='Isolate Concern';
+    action={label:'Isolate Concern',type:'open_card',target:'sales_coach',action:'isolate the unresolved concern',requiresConfirmation:false,reason:'decision_memory_follow_up'};
+    message='Last result needs follow-up.<br><br>Next move: isolate the real concern: money, timing, trust, or fit.';
+  }else if(type==='done'){
+    label='Capture Result';
+    action={label:'Capture Result',type:'result_prompt',target:'mission_command',action:'capture what happened after the action',requiresConfirmation:true,reason:'decision_memory_done'};
+    message='The last action is marked done, but the result is not clear yet.<br><br>What happened: no reply, reply, booked, paid, or finished?';
+  }
+  var directNext=/\b(what next|what now|what should i do|what do i do|next move|call the move|pick one|just tell me one thing)\b/.test(q);
+  var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|report|pipeline|who hot|content|production|calendar)\b/.test(q);
+  var salesAsk=/\b(what should i say|what do i say|too expensive|he said|she said|they said|ghosted|payment plan|roleplay|score my answer)\b/.test(q);
+  var shouldAnswer=!!(result&&message&&directNext&&!explicitData&&!salesAsk);
+  return {
+    hasMemory:!!result,
+    lastResult:result,
+    pendingAction:session.pendingAction,
+    resultHistory:session.history,
+    label:label,
+    action:action,
+    message:message,
+    shouldAnswer:shouldAnswer,
+    reason:type?'last_result_'+type:'',
+    suppressBubbles:shouldAnswer
+  };
+}
+
+function buildMissionDecisionMemoryResponseV1(turn,ctx){
+  var memory=turn&&turn.decisionMemory||null;
+  if(!memory||!memory.shouldAnswer)return '';
+  return memory.message||'';
+}
+
 function finalizeMissionDecisionTraceV1(turn){
   if(!turn)return null;
   var explainer=getMissionDecisionExplainerV1(turn,turn.options&&turn.options.ctx||{},turn.rawInput||turn.normalizedInput||'',turn.brainState||{});
@@ -12847,6 +12923,7 @@ function getMissionBrainStateV2(turn){
     liveContext:turn.liveContext||null,
     executionMode:turn.executionMode||null,
     decisionIntent:turn.decisionIntent||null,
+    decisionMemory:turn.decisionMemory||null,
     activeCard:turn.liveContext&&turn.liveContext.activeCard||'',
     contextMode:turn.liveContext&&turn.liveContext.contextMode||getMissionContextMode(),
     contextRoute:turn.liveContext&&turn.liveContext.contextRoute||getMissionContextRouteForMode(getMissionContextMode()),
@@ -13002,6 +13079,7 @@ function getMissionBubblePlanV2(turn,depth,shape){
   var explicitDataAsk=false;
   try{explicitDataAsk=!!(turn.inputSignals&&turn.inputSignals.isSlashCommand)||!!(typeof missionQuestionHasExplicitDataAsk==='function'&&missionQuestionHasExplicitDataAsk(turn.route,turn.rawInput));}catch(e){}
   var renderB2=true,renderB3=true;
+  if(turn&&turn.decisionMemory&&turn.decisionMemory.suppressBubbles){renderB2=false;renderB3=false;}
   if(turn&&turn.decisionIntent&&turn.decisionIntent.suppressBubbles){renderB2=false;renderB3=false;}
   if(turn&&turn.executionMode&&turn.executionMode.suppressBubbles){renderB2=false;renderB3=false;}
   if(turn&&turn.cognitiveLoad&&turn.cognitiveLoad.suppressBubbles){renderB2=false;renderB3=false;}
@@ -13019,8 +13097,9 @@ function getMissionBubblePlanV2(turn,depth,shape){
 
 function getMissionActionPlanV2(turn){
   var shape=turn.responseShape||'',route=turn.route||'',action=null;
+  if(turn&&turn.decisionMemory&&turn.decisionMemory.action)action=turn.decisionMemory.action;
   var composed=typeof getMissionActionComposerV1==='function'?getMissionActionComposerV1(turn.options&&turn.options.ctx||{},route,turn.rawInput||turn.normalizedInput||'',turn.brainState||{}):null;
-  if(composed&&composed.action){
+  if(!action&&composed&&composed.action){
     action={label:composed.label||'Do Next Move',type:composed.type||'next_best_move',target:composed.target||composed.action,requiresConfirmation:!!composed.requiresConfirmation,reason:composed.reason||'',action:composed.action};
   }
   if(!action&&(shape==='pipeline_heat'||route==='leads'))action={label:'Open Hit List',type:'open_card',target:'hit_list',requiresConfirmation:false};
@@ -13054,6 +13133,7 @@ function buildMissionResponseContract(turn){
     inputEnergy:turn.inputEnergy,
     executionMode:turn.executionMode||null,
     decisionIntent:turn.decisionIntent||null,
+    decisionMemory:turn.decisionMemory||null,
     responseMode:turn.responseMode,
     responseDepth:turn.responseDepth,
     responseShape:turn.responseShape,
@@ -13209,7 +13289,7 @@ function saveMissionTurnCheckpoint(turn){
     var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
     var sessionCache=turn.sessionDataCache||getMissionSessionDataCacheV1(turn.options&&turn.options.ctx,{reason:'checkpoint'});
     var snapshot=turn.changeSnapshot||(sessionCache&&sessionCache.snapshot)||(typeof getMissionCurrentAppSnapshotV1==='function'?getMissionCurrentAppSnapshotV1(turn.options&&turn.options.ctx):null);
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,decisionIntent:turn.decisionIntent||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,decisionIntent:turn.decisionIntent||null,decisionMemory:turn.decisionMemory||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
     list.unshift(checkpoint);
     list=list.slice(0,100);
     if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
@@ -13219,7 +13299,7 @@ function saveMissionTurnCheckpoint(turn){
 
 function summarizeMissionBrainStateV2(bs){
   if(!bs)return {};
-  return {selectedRoute:bs.selectedRoute,selectedWorkerId:bs.selectedWorkerId,inputEnergy:bs.inputEnergy,executionMode:bs.executionMode&&bs.executionMode.mode||'',decisionIntent:bs.decisionIntent&&bs.decisionIntent.kind||'',sessionArc:bs.sessionArc,sessionTopic:bs.sessionTopic,sessionIntent:bs.sessionIntent,userEnergy:bs.userEnergy,dpcMomentum:bs.dpcMomentum,revenueGap:bs.revenueGap,nextBestMove:bs.nextBestMove,dataNeeds:bs.dataNeeds,contextSlices:bs.contextSlices||[],syncRisk:bs.syncRisk,responseDepth:bs.responseDepth,responseShape:bs.responseShape};
+  return {selectedRoute:bs.selectedRoute,selectedWorkerId:bs.selectedWorkerId,inputEnergy:bs.inputEnergy,executionMode:bs.executionMode&&bs.executionMode.mode||'',decisionIntent:bs.decisionIntent&&bs.decisionIntent.kind||'',decisionMemory:bs.decisionMemory&&bs.decisionMemory.reason||'',sessionArc:bs.sessionArc,sessionTopic:bs.sessionTopic,sessionIntent:bs.sessionIntent,userEnergy:bs.userEnergy,dpcMomentum:bs.dpcMomentum,revenueGap:bs.revenueGap,nextBestMove:bs.nextBestMove,dataNeeds:bs.dataNeeds,contextSlices:bs.contextSlices||[],syncRisk:bs.syncRisk,responseDepth:bs.responseDepth,responseShape:bs.responseShape};
 }
 
 function summarizeMissionContextSlices(slices){
@@ -13241,7 +13321,7 @@ function summarizeMissionContextPacket(packet){
 
 function summarizeMissionBubblePacket(packet){
   if(!packet)return {};
-  return {workerId:packet.workerId,route:packet.route,inputEnergy:packet.inputEnergy,executionMode:packet.executionMode&&packet.executionMode.mode||'',decisionIntent:packet.decisionIntent&&packet.decisionIntent.kind||'',responseDepth:packet.responseDepth,responseShape:packet.responseShape,hasB2:packet.b2&&packet.b2.shouldRender,hasB3:packet.b3&&packet.b3.shouldRender};
+  return {workerId:packet.workerId,route:packet.route,inputEnergy:packet.inputEnergy,executionMode:packet.executionMode&&packet.executionMode.mode||'',decisionIntent:packet.decisionIntent&&packet.decisionIntent.kind||'',decisionMemory:packet.decisionMemory&&packet.decisionMemory.reason||'',responseDepth:packet.responseDepth,responseShape:packet.responseShape,hasB2:packet.b2&&packet.b2.shouldRender,hasB3:packet.b3&&packet.b3.shouldRender};
 }
 
 function buildMissionFallbackBubblePacket(turn,err){
@@ -13318,6 +13398,8 @@ function runMissionTurn(kind,rawInput,options){
     turn.intent=turn.routePlan&&turn.routePlan.intent||null;
     turn.conversationType=turn.routePlan&&turn.routePlan.conversationType||'';
     addMissionTrace(turn,'route_plan_selected',turn.routePlan);
+    turn.decisionMemory=getMissionDecisionMemoryV1(turn,options&&options.ctx||{});
+    addMissionTrace(turn,'decision_memory_read',{hasMemory:turn.decisionMemory&&turn.decisionMemory.hasMemory,reason:turn.decisionMemory&&turn.decisionMemory.reason,shouldAnswer:turn.decisionMemory&&turn.decisionMemory.shouldAnswer});
     turn.contextSlices=resolveMissionContextSlices(turn.route);
     addMissionTrace(turn,'context_slices_resolved',summarizeMissionContextSlices(turn.contextSlices));
     turn.hasData=missionPresenceHasData(turn);
@@ -17453,6 +17535,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   if(cognitiveLoadAnswer)return finishMissionAnswer(cognitiveLoadAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
   var executionModeAnswer=buildMissionExecutionModeResponseV1(turnV2,ctx);
   if(executionModeAnswer)return finishMissionAnswer(executionModeAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
+  var decisionMemoryAnswer=buildMissionDecisionMemoryResponseV1(turnV2,ctx);
+  if(decisionMemoryAnswer)return finishMissionAnswer(decisionMemoryAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
   var decisionIntentAnswer=buildMissionDecisionIntentResponseV1(turnV2,ctx);
   if(decisionIntentAnswer)return finishMissionAnswer(decisionIntentAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
@@ -17586,7 +17670,17 @@ function runMissionIntegritySelfCheck(){
   if(decisionPrompt.indexOf('Call:')<0||decisionPrompt.indexOf('Open the Hit List')<0)failures.push('decision_intent_prompt');
   var decisionSalesGuard=getMissionDecisionIntentV1('what should i say',{rawInput:'what should i say',route:'sales',liveContext:{currentSalesMode:'normal'}},{});
   if(decisionSalesGuard.shouldAnswer)failures.push('decision_intent_sales_guard');
-  return {passed:!failures.length,failures:failures,total:24};
+  var priorMemorySession=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',actionLabel:'Open Hit List',recordedAt:new Date().toISOString()},history:[]}}));
+  var paidMemory=getMissionDecisionMemoryV1({rawInput:'what next',route:'now'},actionCtx);
+  if(!paidMemory.shouldAnswer||!paidMemory.action||paidMemory.action.reason!=='decision_memory_paid')failures.push('decision_memory_paid');
+  var paidMemoryPrompt=buildMissionDecisionMemoryResponseV1({rawInput:'what next',decisionMemory:paidMemory},actionCtx);
+  if(paidMemoryPrompt.indexOf('Last result was paid')<0||paidMemoryPrompt.indexOf('protect delivery')<0)failures.push('decision_memory_prompt');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'no_reply',label:'No Reply Yet',route:'leads',actionLabel:'Open Hit List',recordedAt:new Date().toISOString()},history:[]}}));
+  var noReplyMemory=getMissionDecisionMemoryV1({rawInput:'what should i do',route:'now'},actionCtx);
+  if(!noReplyMemory.shouldAnswer||noReplyMemory.message.indexOf('Do not chase')<0)failures.push('decision_memory_no_reply');
+  if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
+  return {passed:!failures.length,failures:failures,total:27};
 }
 
 function runMissionCommandSelfCheck(){
