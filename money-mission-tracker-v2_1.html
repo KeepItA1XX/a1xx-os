@@ -10418,6 +10418,7 @@ function setMissionSessionDataCacheStoreV1(cache){
 
 function clearMissionSessionDataCacheV1(reason){
   try{sessionStorage.removeItem(MISSION_SESSION_DATA_CACHE_KEY);}catch(e){}
+  window.__missionSessionDataCacheV1=null;
   window.__missionSessionDataCacheLastClear=reason||'manual';
 }
 
@@ -10431,6 +10432,24 @@ function getMissionSessionDataCacheAgeV1(cache){
 function isMissionSessionDataCacheFreshV1(cache){
   var age=getMissionSessionDataCacheAgeV1(cache);
   return age!==null&&age<=MISSION_SESSION_DATA_CACHE_TTL_MS;
+}
+
+function getMissionLiveDataCountsForCacheV1(){
+  return {
+    crmLeads:(window.__crmLeads||[]).length,
+    content:[].concat(window.__contentPieces||[],window.__contentPipelinePieces||[]).filter(Boolean).length,
+    production:(window.__productionPieces||[]).length,
+    calendar:(window.__calEvents||[]).length
+  };
+}
+
+function missionSessionDataCacheNeedsRefreshV1(cache){
+  if(!cache||!cache.counts)return true;
+  var live=getMissionLiveDataCountsForCacheV1();
+  return live.crmLeads!==(cache.counts.crmLeads||0)||
+    live.content!==(cache.counts.content||0)||
+    live.production!==(cache.counts.production||0)||
+    live.calendar!==(cache.counts.calendar||0);
 }
 
 function buildMissionSessionDataCacheV1(ctx,reason){
@@ -10472,7 +10491,7 @@ function buildMissionSessionDataCacheV1(ctx,reason){
 function getMissionSessionDataCacheV1(ctx,options){
   options=options||{};
   var cache=window.__missionSessionDataCacheV1||getMissionSessionDataCacheStoreV1();
-  if(!options.force&&isMissionSessionDataCacheFreshV1(cache))return cache;
+  if(!options.force&&isMissionSessionDataCacheFreshV1(cache)&&!missionSessionDataCacheNeedsRefreshV1(cache))return cache;
   return buildMissionSessionDataCacheV1(ctx,options.reason||'stale_or_missing');
 }
 
@@ -18490,6 +18509,7 @@ async function loadTodayData(){
   window.__resources=resources||[];
   window.__crmLeads=crmLeads||[];
   window.__calEvents=calEvents||[];
+  clearMissionSessionDataCacheV1('data_load_complete');
   safeRender('day type',function(){initDayType(calEvents||[]);});
   safeRender('week strip',function(){buildWeekStrip(calEvents||[],notionPieces||[]);});
   await safeLoad('Todoist',function(){return loadTodoist();},null,12000);
