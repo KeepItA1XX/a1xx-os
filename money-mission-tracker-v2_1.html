@@ -15568,6 +15568,137 @@ function applyMissionProseRules(html){
   return out.trim();
 }
 
+/* =========================================================
+   MISSION ANSWER QUALITY GUARDS — v1
+========================================================= */
+function missionPlainTextV1(html){
+  return String(html||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function missionSplitAnswerBlocksV1(html){
+  return String(html||'').split(/(?:<br\s*\/?>\s*){2,}/i).map(function(block){return block.trim();}).filter(Boolean);
+}
+
+function missionJoinAnswerBlocksV1(blocks){
+  return (blocks||[]).filter(Boolean).join('<br><br>');
+}
+
+function missionBlockStartsReasonFirstV1(block){
+  var text=missionPlainTextV1(block).toLowerCase();
+  if(/^since the last (saved checkpoint|session|time|turn|check)/.test(text))return false;
+  return /^(because|since|given that|based on|looking at|from the app view|the reason|reason:|the data shows|to answer your question|when it comes to|in terms of|i am using)\b/.test(text);
+}
+
+function missionBlockLooksAnswerFirstV1(block){
+  var text=missionPlainTextV1(block).toLowerCase();
+  if(!text)return false;
+  if(/^(ask|send|open|log|pick|start|finish|move|check|call|post|book|prep|use|do|stop|keep|protect|choose|make|run)\b/.test(text))return true;
+  if(/^(yes|no|do not|don't|the move|the answer|next|first|clean|good|that is|this is)\b/.test(text))return true;
+  return /^\d+\)/.test(text);
+}
+
+function applyMissionResponseBeforeReasonV1(html){
+  var out=String(html||'');
+  var blocks=missionSplitAnswerBlocksV1(out);
+  if(blocks.length<2||!missionBlockStartsReasonFirstV1(blocks[0]))return out;
+  for(var i=1;i<Math.min(blocks.length,4);i++){
+    if(missionBlockLooksAnswerFirstV1(blocks[i])){
+      var answer=blocks.splice(i,1)[0];
+      blocks.unshift(answer);
+      return missionJoinAnswerBlocksV1(blocks);
+    }
+  }
+  return out;
+}
+
+function getMissionFirstSentenceCategoryV1(sentence){
+  var s=String(sentence||'').toLowerCase();
+  if(/^(ask|send|open|log|pick|start|finish|move|check|call|post|book|prep|use|do|stop|keep|protect)\b/.test(s))return 'imperative';
+  if(/^(money|pipeline|dpc|content|production|sync|calendar|revenue|today)\b/.test(s))return 'data_first';
+  if(/^(what|where|which|are|did|does|is)\b/.test(s))return 'question';
+  if(/^(i am|i can|the app|the os|mission command|this looks|that looks|the clean read)\b/.test(s))return 'observation';
+  return 'direct_statement';
+}
+
+function missionFirstSentenceNeedsFresheningV1(first,recent){
+  first=String(first||'').toLowerCase();
+  if(!first||/^(ask:|send:|say:|start with:|goal:|result read:)/.test(first))return false;
+  var generic=/^(got it|on it|say less|straight to it|picking it back up|still on this|the clean read|here is the move|the move is simple)\b/.test(first);
+  if(!generic)return false;
+  var firstCategory=getMissionFirstSentenceCategoryV1(first);
+  var matches=(recent||[]).slice(-4).filter(function(item){
+    return item===first||getMissionFirstSentenceCategoryV1(item)===firstCategory&&/^(got it|on it|say less|straight to it|picking it back up|still on this|the clean read|here is the move|the move is simple)\b/.test(item);
+  });
+  return matches.length>=1;
+}
+
+function getMissionFreshOpeningV1(route,recent){
+  var pools={
+    sales:['Keep it calm.','Use one question.','Stay in discovery.'],
+    leads:['Pipeline is action now.','Use the warmest signal.','Move one lead.'],
+    dpc:['Put one number on the board.','Make the day measurable.','Log the next clean result.'],
+    report:['Turn the number into behavior.','Use the money read.','Protect the cash path.'],
+    content:['Turn today into proof.','Make the proof piece.','Use what already happened.'],
+    production:['Move one asset closer to shipping.','Finish the nearest delivery.','Use production for leverage.'],
+    sync:['Check trust first.','Verify the bridge.','Clear one system blocker.'],
+    now:['Here is the move.','Use the current block.','Take the next visible step.']
+  };
+  var pool=pools[route]||pools.now;
+  recent=recent||[];
+  for(var i=0;i<pool.length;i++){
+    if(recent.indexOf(pool[i].toLowerCase())<0)return pool[i];
+  }
+  return pool[0];
+}
+
+function replaceMissionFirstSentenceV1(html,replacement){
+  var out=String(html||'');
+  var blocks=missionSplitAnswerBlocksV1(out);
+  if(!blocks.length)return out;
+  var first=blocks[0];
+  var plain=missionPlainTextV1(first);
+  if(!plain)return out;
+  if(/^<strong>/i.test(first)||/^(ask:|send:|say:|start with:|goal:|result read:)/i.test(plain))return out;
+  var sentence=plain.match(/^(.+?[.!?])(?:\s|$)/);
+  if(!sentence)return out;
+  var oldSentence=sentence[1];
+  if(first.indexOf(oldSentence)<0)return out;
+  blocks[0]=first.replace(oldSentence,replacement);
+  return missionJoinAnswerBlocksV1(blocks);
+}
+
+function applyMissionFirstSentenceRuleV1(html,route){
+  var out=String(html||'');
+  var first=getMissionFirstSentence(out);
+  var recent=getMissionRecentAssistantSentences(8);
+  if(!missionFirstSentenceNeedsFresheningV1(first,recent))return out;
+  return replaceMissionFirstSentenceV1(out,getMissionFreshOpeningV1(route,recent));
+}
+
+function applyMissionReadabilityGuardV1(html){
+  var out=String(html||'');
+  if(!out)return out;
+  out=out.replace(/<\/p>\s*<p>/gi,'<br><br>');
+  out=out.replace(/<\/?p>/gi,'');
+  out=out.replace(/([.!?])(\d+\))/g,'$1<br>$2');
+  out=out.replace(/([a-z0-9.!?])(<strong>)/gi,'$1<br><br>$2');
+  out=out.replace(/(<\/strong>)([A-Z0-9])/g,'$1<br>$2');
+  out=out.replace(/([a-z0-9])((?:Current read|Next|What it means|Why this move|Result read):)/g,'$1<br><br>$2');
+  out=out.replace(/(<br\s*\/?>\s*){3,}/gi,'<br><br>');
+  return out.trim();
+}
+
+function applyMissionAnswerQualityGuardsV1(html,route,question,opts){
+  var out=String(html||'');
+  if(!out)return out;
+  opts=opts||{};
+  out=applyMissionReadabilityGuardV1(out);
+  if(opts.responseBeforeReason!==false)out=applyMissionResponseBeforeReasonV1(out);
+  if(opts.firstSentenceRule!==false)out=applyMissionFirstSentenceRuleV1(out,route||'now',question||'');
+  out=applyMissionReadabilityGuardV1(out);
+  return out;
+}
+
 function getMissionContinuationResponse(signal,ctx,question){
   var last=getLastMissionTopicTurn();
   if(!last||!last.intentRoute)return '';
@@ -16977,7 +17108,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
       var explainerLine=getMissionDecisionExplainerLineV1(visibleExplainer);
       if(explainerLine&&String(html||'').indexOf(explainerLine)<0)html=String(html||'')+'<br><br>'+explainerLine;
     }
-    var shaped=cleanMissionVisibleAnswerText(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)));
+    var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)),route,cleanQuestion||question||'',opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   var resultSignal=getMissionResultSignalV1(question||cleanQuestion||'');
@@ -17113,7 +17244,12 @@ function runMissionIntegritySelfCheck(){
   if(!dpcAction||dpcAction.type!=='log_dpc'||!dpcAction.requiresConfirmation)failures.push('action_composer_dpc');
   var productionAction=getMissionActionComposerV1(actionCtx,'production','bangin plus',{block:{phase:'maker',name:'Maker Time'}});
   if(!productionAction||productionAction.target!=='production')failures.push('action_composer_production');
-  return {passed:!failures.length,failures:failures,total:13};
+  var answerFirst=applyMissionResponseBeforeReasonV1('Because the data is light.<br><br>Open the Hit List.');
+  if(missionPlainTextV1(answerFirst).indexOf('Open the Hit List')!==0)failures.push('answer_before_reason');
+  var qualitySpacing=applyMissionReadabilityGuardV1('state.<strong>Current read:</strong>1) Money');
+  if(qualitySpacing.indexOf('<br><br><strong>Current read:</strong><br>1)')<0)failures.push('readability_guard');
+  if(!missionFirstSentenceNeedsFresheningV1('got it.',['got it.']))failures.push('first_sentence_rule_signal');
+  return {passed:!failures.length,failures:failures,total:16};
 }
 
 function runMissionCommandSelfCheck(){
