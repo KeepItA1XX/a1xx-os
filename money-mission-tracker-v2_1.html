@@ -9693,6 +9693,87 @@ MISSION_SKILL_PACKS.push({
   regressionTests:MISSION_SALES_DEEP_INPUT_PACK_V1.regressionTests
 });
 
+var MISSION_A1XX_EXECUTIVE_PRODUCER_INPUT_PACK_V1={
+  id:'mc_skill_a1xx_executive_producer_inputs_v1',
+  name:'A1XX Executive Producer Input Intelligence v1',
+  version:'1.0',
+  installMode:'additive_only',
+  purpose:'Teach Mission Command how A1XX naturally directs agents, reports tests, asks for plans, describes bugs, requests skill packs, and moves OS builds forward.',
+  categories:[
+    {id:'ep_build_directive',route:'sync',worker:'mission_command_strategist',responseDepth:'standard',responseShape:'team_handoff',confidence:0.88,requiresAgentContext:true,phrases:['go ahead and begin','go ahead and start','go ahead and build','go ahead and implement','start and build','let us begin implementation','lets begin implementation','begin implementation','implement this into the os','install this into the app','build this into the app','make those adjustments','fix that now','lets do it with precision','continue with the v2 implementation','continue with the build','move into the next pass','start the next pass','go into the next pass','build this out']},
+    {id:'ep_plan_before_build',route:'help',worker:'mission_command_strategist',responseDepth:'roadmap',responseShape:'plan_builder',confidence:0.9,phrases:['make a clear plan before beginning','create a plan before moving forward','come up with a plan before moving forward','plan this before implementation','map that out structurally','map this out structurally','before we implement','before making any commitments','plan before editing','review it create a plan','create a plan and then begin','what would that look like to implement','how would we implement this']},
+    {id:'ep_test_verification',route:'sync',worker:'notion_sync_auditor',responseDepth:'guided',responseShape:'diagnostic_steps',confidence:0.88,phrases:['how can we test it','how do i test this thing','lets test it','let us test it','run a chat check','chat check needs review','here are the results','here is what the chat did','everything passed','all prompts passed','everything seems good','double check everything','do a verification pass','do a stability check','look for errors','look for potential errors','check for bugs','see if anything breaks']},
+    {id:'ep_commit_push',route:'sync',worker:'mission_command_strategist',responseDepth:'quick',responseShape:'commit_handoff',confidence:0.86,phrases:['committed','pushed','that has been committed','that commit has been pushed','i pushed the commit','give me commit commands','stuff i need to do to commit','commit/push the html','commit and push','what do i need to commit','latest commit has been pushed','it has been committed']},
+    {id:'ep_team_chat_handoff',route:'sync',worker:'mission_command_strategist',responseDepth:'standard',responseShape:'team_handoff',confidence:0.9,phrases:['leave an update in the team chat','log this in team chat','send this to team chat','update the command hub','check the team chat','check latest updates in the team chat','check for the latest updates inside of the team chat','tell claude','give claude an update','directive for gpt','package this for gpt','what should i feed chatgpt','give me all the information i should feed it','make this implementation ready','create a handoff']},
+    {id:'ep_skill_pack_builder',route:'memory',worker:'ai_memory_curator',responseDepth:'deep',responseShape:'skill_pack_install',confidence:0.9,phrases:['skill pack','install a pack','install this skill','create your own skill pack','skill creation template','skill pack builder','input pack','output pack','deep pack','prompt library','train chatgpt','builder install framework','systemize this template','installing more prompts','make it install ready','pack them with prompts','uploading and installing into the app']},
+    {id:'ep_ui_direction',route:'help',worker:'mission_command_strategist',responseDepth:'guided',responseShape:'ui_instruction',confidence:0.84,phrases:['user interface update','ui update','interface update','clean up the interface','clean up the settings menu','make it centered','everything should be centered','flat look','matte finish','turn the glow down','too bubbly','remove that bubbly feeling','gradient overlays','legible text','make sure the words are readable','day bar','mission brief','brief tab','command tab','cards are showing too much','minimalist take','hide some of that into tabs','clean simplicity layer']},
+    {id:'ep_bug_report',route:'sync',worker:'notion_sync_auditor',responseDepth:'guided',responseShape:'diagnostic_steps',confidence:0.9,phrases:['i encountered a bug','bug i am finding','bug i found','it is stuck','its stuck','thinking bubbles never stop','never stop loading','not showing up','still not showing','it disappeared','everything disappeared','menu disappeared','buttons are glitching','old placement','wrong placement','not opening','not actually opening','not working correctly','that did not fix it','it almost fixed it','it reappears','it should not move that way']},
+    {id:'ep_learning_question',route:'help',worker:'mission_command_strategist',responseDepth:'deep',responseShape:'education_answer',confidence:0.82,phrases:['what do you mean by that','how does that work','what is possible with it','whats possible with it','how would i notice','how will i know if it is working','what kind of improvements','how should i be looking at this','how could i use it','what is the plan for getting the most out of this','how do i go forward']},
+    {id:'ep_context_update',route:'sync',worker:'mission_command_strategist',responseDepth:'standard',responseShape:'context_summary',confidence:0.84,phrases:['claude mentioned','gpt has been working','claude has posted','gpt posted','here is the link','here is claudes update','latest updates from claude','latest updates from gpt','based on what claude wrote','based on the document','review the latest updates','review this directive']},
+    {id:'ep_operating_preference',route:'memory',worker:'ai_memory_curator',responseDepth:'standard',responseShape:'memory_candidate',confidence:0.88,phrases:['i want you to keep in mind','i would like as much as possible','one thing i want to update','one thing i noticed','what i am really looking for','i prefer','i do not want','i want everything to remain stable','do not break anything','keep everything stable','always give me','make sure you','trust you to','use my language','the way that i speak','natural talking patterns']},
+    {id:'ep_os_next_move',route:'now',worker:'mission_command_strategist',responseDepth:'quick',responseShape:'quick_read',confidence:0.9,phrases:['what do i do now','what should i do now','what should i do today','what is the move','whats the move','what is next','whats next','what next','where do i start','where should i start','what should i focus on','where should i put my energy','where do we put the energy','where are we at','where we at','call the move','pick the move','decide for me','give me the move','give me the play','what is the play','what are we doing','what are we doing first','what should i attack first']},
+    {id:'ep_os_guided_help',route:'help',worker:'mission_command_strategist',responseDepth:'guided',responseShape:'app_walkthrough',confidence:0.86,phrases:['walk me through this','walk me through it','show me how to do this','show me where to go','where do i click','where do i go','what button do i press','tell me exactly what to do','take me step by step','guide me through this','guide me through it','how do i use this','how do i move through this','where is that in the app','how do i get there']},
+    {id:'ep_os_explain_depth',route:'help',worker:'mission_command_strategist',responseDepth:'deep',responseShape:'education_answer',confidence:0.84,phrases:['explain that','explain this','break that down','break this down','make that make sense','make this make sense','why does that matter','why is that the move','why should i care about that','what does that actually mean','what does that mean for the business','how should i think about that','what is the deeper reason','tell me the simple version','give me the simple version','run that back','run it back']},
+    {id:'ep_os_problem_reset',route:'now',worker:'mission_command_strategist',responseDepth:'guided',responseShape:'diagnostic_steps',confidence:0.86,phrases:['i am stuck','im stuck','i am lost','im lost','i am confused','im confused','this is not working','this isnt working','something is off','something feels off','i am scattered','im scattered','i am spinning','im spinning','too much going on','i do not know what to do','i dont know what to do','help me reset','reset me','get me back on track','help me lock in','lock me in']},
+    {id:'ep_os_business_read',route:'report',worker:'finance_goal_tracker',responseDepth:'standard',responseShape:'money_pressure',confidence:0.84,phrases:['how are we looking','how far off am i','where is the gap','what is the gap','what came in','what cam in','where the bag at','run the bag','show me the money','revenue report','what is the money read','how is the business looking','what is the business read','what moved today','what changed today','what is the condition of the business']},
+    {id:'ep_os_make_decision',route:'now',worker:'mission_command_strategist',responseDepth:'standard',responseShape:'decision_support',confidence:0.84,phrases:['should i do this or that','which one should i do','what should come first','what can wait','what matters most','what is priority','what should i ignore','what is actually important','what is the cleanest move','what is the simplest move','what is closest to money','what is closest to proof','do i work on content or sales','do i work on production or outreach','should i post or follow up']},
+    {id:'ep_os_creative_build',route:'content',worker:'content_coach',responseDepth:'guided',responseShape:'ideation_answer',confidence:0.82,phrases:['help me cook this up','help me build this out','what can this become','what should this turn into','give me some angles','give me a few angles','what is the content angle','what is the proof angle','what is the sales angle','what is the stream angle','turn this into content','turn this into a post','make this a post','what should i make from this','what can i make from today','give me content ideas from today']},
+    {id:'ep_os_context_mode',route:'now',worker:'mission_command_strategist',responseDepth:'standard',responseShape:'context_mode',confidence:0.8,phrases:['i am on my phone','i am on the phone','phone mode','i only have a few minutes','i got ten minutes','i got 10 minutes','i got twenty minutes','i got 20 minutes','i am between things','i am about to leave','i am in the studio','i am at the studio','i am in maker mode','i am doing outreach','i am on content','i am on production','i am in manager mode']}
+  ],
+  typoPairs:[
+    ['commited','committed'],['puhsed','pushed'],['pusheed','pushed'],['verificaiton','verification'],['implemnt','implement'],['impliment','implement'],['instal','install'],['buid','build'],['langauge','language'],['convo','conversation'],['convesation','conversation'],['interace','interface'],['interfce','interface'],['misson brief','mission brief'],['comand tab','command tab'],['chatgpt','ChatGPT'],['claud','Claude'],['clyde','Claude']
+  ],
+  regressionTests:[
+    {q:'make a clear plan before beginning',route:'help',category:'ep_plan_before_build'},
+    {q:'go ahead and implement',route:'sync',category:'ep_build_directive'},
+    {q:'chat check needs review',route:'sync',category:'ep_test_verification'},
+    {q:'that commit has been pushed',route:'sync',category:'ep_commit_push'},
+    {q:'leave an update in the team chat',route:'sync',category:'ep_team_chat_handoff'},
+    {q:'what should i feed chatgpt',route:'sync',category:'ep_team_chat_handoff'},
+    {q:'create your own skill pack',route:'memory',category:'ep_skill_pack_builder'},
+    {q:'user interface update',route:'help',category:'ep_ui_direction'},
+    {q:'i encountered a bug',route:'sync',category:'ep_bug_report'},
+    {q:'what do you mean by that',route:'help',category:'ep_learning_question'},
+    {q:'claude mentioned',route:'sync',category:'ep_context_update'},
+    {q:'i prefer a matte finish',route:'memory',category:'ep_operating_preference'},
+    {q:'what should i do today',route:'now',category:'ep_os_next_move'},
+    {q:'walk me through this',route:'help',category:'ep_os_guided_help'},
+    {q:'make this make sense',route:'help',category:'ep_os_explain_depth'},
+    {q:'i am stuck',route:'now',category:'ep_os_problem_reset'},
+    {q:'where the bag at',route:'report',category:'ep_os_business_read'},
+    {q:'what should come first',route:'now',category:'ep_os_make_decision'},
+    {q:'help me cook this up',route:'content',category:'ep_os_creative_build'},
+    {q:'i got 20 minutes',route:'now',category:'ep_os_context_mode'}
+  ]
+};
+
+MISSION_SKILL_PACKS.push({
+  id:'mc_skill_a1xx_executive_producer_inputs_v1',
+  name:'A1XX Executive Producer Input Intelligence v1',
+  version:MISSION_A1XX_EXECUTIVE_PRODUCER_INPUT_PACK_V1.version,
+  status:'active',
+  installMode:'additive_only',
+  route:'multi',
+  worker:'mission_command_strategist',
+  inputBanks:MISSION_A1XX_EXECUTIVE_PRODUCER_INPUT_PACK_V1.categories.map(function(cat){
+    return {
+      category:cat.id,
+      routeTarget:cat.route,
+      workerTarget:cat.worker,
+      responseShape:cat.responseShape,
+      confidenceBoost:6,
+      dataSources:['missionChat','app_state','team_chat'],
+      naturalPhrases:cat.phrases,
+      slangPhrases:[],
+      typoVariants:[],
+      voiceTranscriptPatterns:[],
+      signalWords:[cat.id.replace(/^ep_/,'').split('_')[0],cat.route,cat.responseShape]
+    };
+  }),
+  typoPairs:MISSION_A1XX_EXECUTIVE_PRODUCER_INPUT_PACK_V1.typoPairs,
+  regressionTests:MISSION_A1XX_EXECUTIVE_PRODUCER_INPUT_PACK_V1.regressionTests
+});
+
 var MISSION_RESPONSE_DEPTH={
   micro:{label:'Micro',description:'One short answer or one direct move.'},
   quick:{label:'Quick',description:'Short read plus next action.'},
@@ -10486,6 +10567,65 @@ function getRouteForWorkerMentionV2(worker){
   return map[w]||'';
 }
 
+function normalizeMissionExecutiveProducerInputV1(input){
+  var out=normalizeMissionQuestion(input||'');
+  var pack=typeof MISSION_A1XX_EXECUTIVE_PRODUCER_INPUT_PACK_V1!=='undefined'?MISSION_A1XX_EXECUTIVE_PRODUCER_INPUT_PACK_V1:null;
+  (pack&&pack.typoPairs||[]).forEach(function(pair){
+    var wrong=String(pair[0]||'');
+    var right=String(pair[1]||'');
+    if(!wrong||!right)return;
+    var re=new RegExp('\\b'+wrong.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi');
+    out=out.replace(re,right);
+  });
+  return normalizeMissionQuestion(out);
+}
+
+function missionExecutiveProducerPhraseHitV1(q,phrases){
+  q=String(q||'').toLowerCase();
+  return (phrases||[]).some(function(phrase){
+    phrase=String(phrase||'').toLowerCase().trim();
+    return phrase&&(q===phrase||q.indexOf(phrase)>=0);
+  });
+}
+
+function missionExecutiveProducerHasAgentContextV1(q){
+  return /\b(codex|claude|gpt|chatgpt|agent|team chat|command hub|notion|directive|spec|skill pack|input pack|output pack|deep pack|install|implementation|implement|build|fix|commit|push|html|os|app|ui|interface|bug|test|verify|verification|stability|safety|backend|frontend|version|v2|v2\.1)\b/.test(String(q||'').toLowerCase());
+}
+
+function resolveMissionA1XXExecutiveProducerInputV1(input,turn){
+  var pack=typeof MISSION_A1XX_EXECUTIVE_PRODUCER_INPUT_PACK_V1!=='undefined'?MISSION_A1XX_EXECUTIVE_PRODUCER_INPUT_PACK_V1:null;
+  if(!pack)return null;
+  var q=normalizeMissionExecutiveProducerInputV1(input||'');
+  if(!q)return null;
+  var best=null;
+  (pack.categories||[]).forEach(function(cat){
+    if(!cat||!missionExecutiveProducerPhraseHitV1(q,cat.phrases))return;
+    if(cat.requiresAgentContext&&!missionExecutiveProducerHasAgentContextV1(q))return;
+    if(!best||(cat.confidence||0)>(best.confidence||0))best=cat;
+  });
+  if(!best)return null;
+  var match={
+    packId:pack.id,
+    route:best.route||'now',
+    worker:best.worker||'mission_command_strategist',
+    category:best.id||'ep_input',
+    responseDepth:best.responseDepth||'standard',
+    responseShape:best.responseShape||'quick_read',
+    confidence:best.confidence||0.84,
+    renderDataBubble:false,
+    renderActionBubble:false,
+    normalizedInput:q
+  };
+  if(turn){
+    turn.a1xxExecutiveProducerInputMatch=match;
+    turn.skillPackResolution=Object.assign({},turn.skillPackResolution||{},match,{
+      selectedRoute:match.route,
+      workerId:match.worker
+    });
+  }
+  return match;
+}
+
 function scoreMissionRoutesV2(q,signals,turn){
   var routes=[];
   function add(route,score,reason,intentType){
@@ -10501,6 +10641,8 @@ function scoreMissionRoutesV2(q,signals,turn){
   }
   var singleMap={leads:'leads',pipeline:'leads',money:'report',revenue:'report',dpc:'dpc',content:'content',production:'production',calendar:'calendar',week:'weekly',review:'weekly',sync:'sync',resources:'resources',rolodex:'resources',memory:'memory',settings:'help',sales:'sales',closer:'sales',objection:'sales',discovery:'sales',roleplay:'sales'};
   if(singleMap[q])add(singleMap[q],0.92,'single_word_topic','data_request');
+  var epInput=typeof resolveMissionA1XXExecutiveProducerInputV1==='function'?resolveMissionA1XXExecutiveProducerInputV1(q,turn):null;
+  if(epInput)add(epInput.route,Math.max(0.86,epInput.confidence||0.86),'a1xx_executive_producer_'+(epInput.category||'input'),epInput.responseShape||'executive_producer_input');
   var salesDeepInput=typeof resolveMissionSalesDeepInputV1==='function'?resolveMissionSalesDeepInputV1(q,turn):null;
   if(salesDeepInput)add('sales',Math.max(0.9,salesDeepInput.confidence||0.9),'sales_deep_input_'+(salesDeepInput.subroute||'match'),'sales_'+(salesDeepInput.subroute||'input'));
   var contextMode=turn&&turn.liveContext&&turn.liveContext.contextMode||getMissionContextMode();
@@ -13093,6 +13235,8 @@ function getMissionCommandIntent(question){
   if(backlogIntent)return backlogIntent;
   var q=normalizeMissionQuestion(raw);
   if(/\b(remember this|save this as memory|save this as a rule|save this style|voice preference|that does not sound like me|that dont sound like me|make it sound more me|do not say it like that|say it more like me)\b/.test(q))return {route:'memory',score:32,label:'Memory',suggestions:[],cleanQuestion:raw};
+  var epInput=typeof resolveMissionA1XXExecutiveProducerInputV1==='function'?resolveMissionA1XXExecutiveProducerInputV1(raw):null;
+  if(epInput)return {route:epInput.route,score:31,label:getMissionRouteLabelV2(epInput.route),suggestions:[],cleanQuestion:raw,smartProfile:{best:{route:epInput.route,score:epInput.confidence*10,category:epInput.category,worker:epInput.worker,shape:epInput.responseShape,dataSources:['missionChat','team_chat']}}};
   if(/\b(what should i do today|what do i do today|what should i do next|whats the move today|what is the move today|where we at)\b/.test(q))return {route:'now',score:30,label:'Now',suggestions:[],cleanQuestion:raw};
   if(getMissionSalesSignal(raw))return {route:'sales',score:30,label:'Closer Coach',suggestions:[],cleanQuestion:raw};
   var diagnostic=getMissionDiagnosticIntent(q);
@@ -14393,6 +14537,70 @@ function getMissionSalesDeepOutputResponseV1(route,ctx,question,conv,brainState)
   if(/\{\{[a-zA-Z0-9_]+\}\}/.test(filled))return '';
   try{window.__missionLastSalesDeepTemplateV1=template;}catch(e){}
   return filled;
+}
+
+function getMissionExecutiveProducerInputResponseV1(route,ctx,question,conv,brainState){
+  var match=typeof resolveMissionA1XXExecutiveProducerInputV1==='function'?resolveMissionA1XXExecutiveProducerInputV1(question||''):null;
+  if(!match)return '';
+  var cat=match.category||'';
+  if(cat==='ep_plan_before_build'){
+    return 'Plan first.<br><br>1) Confirm the exact file and target behavior.<br>2) Make a timestamped backup.<br>3) Keep the change additive and scoped.<br>4) Run syntax, focused behavior checks, and route collision checks.<br>5) Log the update for the team.<br>6) Give A1XX the commit/push steps.';
+  }
+  if(cat==='ep_build_directive'){
+    return 'Build lane recognized.<br><br>I would run it like this: backup first, install the smallest stable layer, test the affected prompts, then log the result before the next pass.';
+  }
+  if(cat==='ep_test_verification'){
+    return 'Test it in this order:<br><br>1) One direct prompt.<br>2) One typo prompt.<br>3) One wrong-lane prompt.<br>4) One route override prompt.<br>5) One old regression prompt that should not change.<br><br>If those pass, the layer is probably stable enough for a real-use pass.';
+  }
+  if(cat==='ep_commit_push'){
+    return 'Commit lane recognized.<br><br>After the push, refresh the app, run the quick chat check, and keep an eye out for anything that changed outside the intended lane.';
+  }
+  if(cat==='ep_team_chat_handoff'){
+    return 'Team handoff shape:<br><br>Goal:<br>What changed and why.<br><br>Completed:<br>The exact file or skill layer updated.<br><br>Verified:<br>The checks that passed.<br><br>Next:<br>What GPT, Claude, Codex, or A1XX should do next.';
+  }
+  if(cat==='ep_skill_pack_builder'){
+    return 'Skill-pack intake recognized.<br><br>Best format:<br>1) Purpose<br>2) Routes affected<br>3) Input phrases, slang, typos, and voice-to-text variants<br>4) Output shapes<br>5) Safety rules<br>6) Regression tests<br>7) Install notes for Codex';
+  }
+  if(cat==='ep_ui_direction'){
+    return 'UI direction recognized.<br><br>Keep the useful thing visible first, hide secondary detail behind tabs or toggles, keep text readable, and make the surface feel flatter in the center with depth only around the edges.';
+  }
+  if(cat==='ep_bug_report'){
+    return 'Bug report mode.<br><br>First isolate it: what was clicked, what should have happened, what actually happened, and whether refresh changes it. Then patch the smallest owner function and add one regression check.';
+  }
+  if(cat==='ep_learning_question'){
+    return 'Here is the read.<br><br>This is asking for the operating model, not just an answer. I should explain what changed, how to notice it, how to test it, and what it unlocks next.';
+  }
+  if(cat==='ep_context_update'){
+    return 'Context update recognized.<br><br>Read the outside note, compare it against the current app state, translate it into an implementation plan, then only build the part that fits the current OS architecture.';
+  }
+  if(cat==='ep_operating_preference'){
+    return 'Preference signal recognized.<br><br>This may belong in memory if it is a lasting rule. If it is temporary, keep it session-level and do not let it override explicit route or data requests.';
+  }
+  if(cat==='ep_os_next_move'){
+    return 'Read the current block, day context, money pressure, and last open loop.<br><br>Answer with one clean move first. If the lane is unclear, ask one short narrowing question.';
+  }
+  if(cat==='ep_os_guided_help'){
+    return 'Guided mode.<br><br>Give the steps in order, keep each step short, and end with what to type back after the action is done.';
+  }
+  if(cat==='ep_os_explain_depth'){
+    return 'Teaching mode.<br><br>Explain the why, the business meaning, and the next move. Keep it plain enough to act on.';
+  }
+  if(cat==='ep_os_problem_reset'){
+    return 'Reset mode.<br><br>Do not dump the dashboard. Find the block, pick the smallest visible action, and get A1XX back into motion.';
+  }
+  if(cat==='ep_os_business_read'){
+    return 'Business read mode.<br><br>Read money, gap, pipeline, DPC, and current block. Turn the condition of the business into the next action.';
+  }
+  if(cat==='ep_os_make_decision'){
+    return 'Decision mode.<br><br>Pick the cleaner move, explain why in one line, then give the next action and what can wait.';
+  }
+  if(cat==='ep_os_creative_build'){
+    return 'Creative build mode.<br><br>Give a few lanes, then choose the best one for today’s money mission. Proof beats random ideas.';
+  }
+  if(cat==='ep_os_context_mode'){
+    return 'Context mode.<br><br>Fit the answer to the window, device, energy, and active day type. Smaller window means smaller action.';
+  }
+  return '';
 }
 
 function getMissionOutputPackResponseV1_1(route,ctx,question,conv,brainState,state,q){
