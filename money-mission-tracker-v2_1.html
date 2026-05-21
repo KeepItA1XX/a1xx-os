@@ -15498,6 +15498,12 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(!/Content pipeline read|Bottleneck|Do this next/i.test(contentPipeline))failures.push('qa_content_card_pipeline_read');
   var contentPerformance=getMissionContentCardIntelligenceResponseV11('content',{rev:999,wk:500,gap:0},'content not converting',{},null);
   if(!/Content performance read|job clarity|Do this next/i.test(contentPerformance))failures.push('qa_content_card_performance_read');
+  var productionPipeline=getMissionProductionCardIntelligenceResponseV11('production',{rev:999,wk:500,gap:0},'what beat needs work',{},null);
+  if(!/Production pipeline read|Bottleneck|Do this next/i.test(productionPipeline))failures.push('qa_production_card_pipeline_read');
+  var productionAssets=getMissionProductionCardIntelligenceResponseV11('production',{rev:999,wk:500,gap:0},'what needs metadata',{},null);
+  if(!/Production assets read|Do this next/i.test(productionAssets))failures.push('qa_production_card_assets_read');
+  var productionBangin=getMissionProductionCardIntelligenceResponseV11('production',{rev:999,wk:500,gap:0},'bangin plus',{},null);
+  if(!/BANGIN\+ consistency read|Do this next/i.test(productionBangin))failures.push('qa_production_card_bangin_read');
   var cardProduction=getMissionThisWeekCardResponseV1('production',{rev:999,wk:500,gap:0},'what should i do on the beat card',{},null);
   if(!/Production card|beat lane|Do this next/i.test(cardProduction))failures.push('qa_card_production_read');
   var cardManager=getMissionThisWeekCardResponseV1('calendar',{rev:999,wk:500,gap:0},'what should i check on the manager card',{},null);
@@ -15514,7 +15520,7 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:35};
+  return {passed:!failures.length,failures:failures,total:38};
 }
 
 function getMissionHandoffResponse(question){
@@ -17500,6 +17506,138 @@ function getMissionContentCardIntelligenceResponseV11(route,ctx,question,brainSt
   if(turn){
     turn.contentCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,pipelineCount:snap.pipelinePieces.length};
     if(typeof addMissionTrace==='function')addMissionTrace(turn,'content_card_intelligence_selected',turn.contentCardIntelligence);
+  }
+  return escapeHtml(answer).replace(/&lt;br&gt;/g,'<br>').replace(/&quot;/g,'"');
+}
+
+/* =========================================================
+   MISSION PRODUCTION / BEAT CARD INTELLIGENCE — v1.1
+========================================================= */
+var MISSION_PRODUCTION_CARD_INTELLIGENCE_V11={
+  id:'mission_production_beat_card_intelligence_v1_1',
+  version:'1.1',
+  installMode:'additive_read_only'
+};
+
+function getMissionProductionQuestionSignalV11(question,route){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return null;
+  var explicit=/\b(production card|beat card|production tab|beat tab|production tracker|production pipeline|production status|production stuck|beat stuck|what beat needs work|what beat should i finish|what beat should i work on|what project needs work|what project should i finish|what needs finishing|what needs metadata|metadata|artwork|cover art|visual assets|what needs uploading|upload beat|what needs exporting|export beat|what needs mixing|what needs mastering|mix master|mix\/master|soundee|catalog|production move|beat move|what is the production move|what is the beat move|what bangin plus drop is next|what is the catalog looking like|project closest to cash|beat closest to cash)\b/.test(q)||/bangin\+|bangin plus/.test(q);
+  var contextAsk=(route==='production'||getMissionActiveCardV1()==='beat'||getMissionActiveCardV1()==='production')&&/\b(what should i do|what next|what matters|where do i start|help me get started|read this|show me|what should i check|what should i make)\b/.test(q);
+  if(!explicit&&!contextAsk)return null;
+  var mode='today';
+  if(/\b(pipeline|status|stuck|bottleneck|stage|what needs work|what project needs work|what beat needs work)\b/.test(q))mode='pipeline';
+  if(/\b(soundee|catalog|weekly upload|consistency|inventory|stock)\b/.test(q)||/bangin\+|bangin plus/.test(q))mode='consistency';
+  if(/\b(metadata|artwork|cover art|visual assets|assets|uploading|upload|dsp|even)\b/.test(q))mode='metadata';
+  if(/\b(mix|master|mix\/master|session|delivery|client|paid delivery|deliver)\b/.test(q))mode='delivery';
+  if(/\b(today|what should i do|what next|beat move|production move)\b/.test(q)&&mode==='today')mode='today';
+  return {shouldAnswer:true,mode:mode,reason:explicit?'explicit_production_prompt':'production_context'};
+}
+
+function getMissionProductionSnapshotV11(ctx){
+  ctx=ctx||{};
+  var items=(window.__productionPieces||[]).filter(Boolean);
+  var prod=typeof getProductionData==='function'?getProductionData():{};
+  var beats=parseFloat((document.getElementById('w-beats-made')||{}).value)||0;
+  var soundee=parseFloat((document.getElementById('w-soundee')||{}).value)||0;
+  var sessions=parseFloat((document.getElementById('w-sessions')||{}).value)||0;
+  var closes=parseFloat((document.getElementById('w-closes')||{}).value)||0;
+  var banginDone=prod&&prod.banginThisWeek===1;
+  var stageCounts={start:0,exported:0,assets:0,upload:0,other:0};
+  items.forEach(function(item){
+    var key=typeof productionStageKey==='function'?productionStageKey(item.status||item.stage):'other';
+    if(stageCounts[key]===undefined)stageCounts[key]=0;
+    stageCounts[key]++;
+  });
+  var bottleneck='start';
+  if(items.length){
+    bottleneck=Object.keys(stageCounts).sort(function(a,b){return (stageCounts[b]||0)-(stageCounts[a]||0);})[0]||'start';
+  }else if(beats>0&&!banginDone){
+    bottleneck='upload';
+  }else if(banginDone&&soundee<2){
+    bottleneck='stock';
+  }
+  var filtered=typeof getFilteredProductions==='function'?getFilteredProductions():items;
+  var selectedIndex=typeof selectedProductionIdx!=='undefined'?Math.min(selectedProductionIdx,Math.max(0,filtered.length-1)):0;
+  var selected=(filtered&&filtered[selectedIndex])||items[0]||null;
+  var assetsNeeded=items.filter(function(item){
+    var key=typeof productionStageKey==='function'?productionStageKey(item.status||item.stage):'other';
+    return key==='assets'||key==='exported';
+  });
+  var uploadReady=items.filter(function(item){
+    var key=typeof productionStageKey==='function'?productionStageKey(item.status||item.stage):'other';
+    return key==='upload'||key==='assets'||key==='exported';
+  });
+  return {
+    items:items,
+    selected:selected,
+    beats:beats,
+    soundee:soundee,
+    sessions:sessions,
+    closes:closes,
+    banginDone:banginDone,
+    stageCounts:stageCounts,
+    bottleneck:bottleneck,
+    assetsNeeded:assetsNeeded,
+    uploadReady:uploadReady,
+    pipelineLimited:!!window.__productionPipelineLimited,
+    pipelineHint:window.__productionPipelineHint||''
+  };
+}
+
+function missionProductionItemTitleV11(item){
+  return item&&(item.title||item.name||item.beat)||'the highest-value active project';
+}
+
+function getMissionProductionNextMoveV11(mode,snap){
+  snap=snap||{};
+  var selected=snap.selected||snap.items&&snap.items[0]||null;
+  if(mode==='metadata'){
+    var asset=snap.assetsNeeded&&snap.assetsNeeded[0]||selected;
+    return asset?'finish visual assets, metadata, and upload path for "'+missionProductionItemTitleV11(asset)+'"':'open Production → Pipeline and choose one exported beat to package';
+  }
+  if(mode==='consistency'){
+    if(!snap.banginDone)return snap.uploadReady&&snap.uploadReady[0]?'ship "'+missionProductionItemTitleV11(snap.uploadReady[0])+'" through the BANGIN+ upload lane':'pick the strongest active beat and prep it for BANGIN+';
+    if(snap.soundee<2)return 'stock Soundee with one usable beat before opening a new production loop';
+    return 'bank the next beat idea so the production rhythm stays ahead of the week';
+  }
+  if(mode==='delivery'){
+    return 'clarify the paid deliverable, confirm the file status, then move the mix/master or session one step toward delivery';
+  }
+  if(mode==='pipeline'){
+    if(selected)return 'move "'+missionProductionItemTitleV11(selected)+'" one visible stage forward';
+    if(snap.beats>0)return 'choose one beat that can become an asset, upload, or offer today';
+    return 'start one beat or select one existing project before checking more tabs';
+  }
+  if(selected)return 'open Production → Today and move "'+missionProductionItemTitleV11(selected)+'" one status forward';
+  return 'open Production tracker and choose one asset that can ship, sell, or support proof';
+}
+
+function getMissionProductionCardIntelligenceResponseV11(route,ctx,question,brainState,turn){
+  if(window.__missionCommandSelfCheckActive)return '';
+  var signal=getMissionProductionQuestionSignalV11(question||'',route||'');
+  if(!signal)return '';
+  var snap=getMissionProductionSnapshotV11(ctx||{});
+  var mode=signal.mode;
+  var move=getMissionProductionNextMoveV11(mode,snap);
+  var selectedTitle=missionProductionItemTitleV11(snap.selected);
+  var answer='';
+  if(mode==='pipeline'){
+    var bottleneckLabel=typeof productionStageLabel==='function'?productionStageLabel(snap.bottleneck):snap.bottleneck;
+    answer='Production pipeline read:<br><br>'+snap.items.length+' active item'+(snap.items.length===1?'':'s')+' loaded. Bottleneck: '+bottleneckLabel+' · '+(snap.stageCounts[snap.bottleneck]||0)+' item'+((snap.stageCounts[snap.bottleneck]||0)===1?'':'s')+'.<br><br>Do this next: '+move+'.';
+  }else if(mode==='consistency'){
+    answer='BANGIN+ consistency read:<br><br>BANGIN+ this week: '+(snap.banginDone?'shipped':'not shipped yet')+'. Soundee stock: '+snap.soundee+'. Beats logged: '+snap.beats+'.<br><br>Do this next: '+move+'.';
+  }else if(mode==='metadata'){
+    answer='Production assets read:<br><br>'+snap.assetsNeeded.length+' item'+(snap.assetsNeeded.length===1?'':'s')+' look close to packaging, metadata, artwork, or upload prep.<br><br>Do this next: '+move+'.';
+  }else if(mode==='delivery'){
+    answer='Production delivery read:<br><br>Sessions logged: '+snap.sessions+' · closes logged: '+snap.closes+'. The paid-delivery lane wins when a client result is waiting.<br><br>Do this next: '+move+'.';
+  }else{
+    answer='Production card read:<br><br>Active projects: '+snap.items.length+'. Current focus: '+selectedTitle+'. BANGIN+ is '+(snap.banginDone?'handled':'still open')+' this week.<br><br>Do this next: '+move+'.';
+  }
+  if(snap.pipelineLimited)answer+='<br><br>Note: production sync looks limited, so this read is based on the loaded local view.';
+  if(turn){
+    turn.productionCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,pipelineCount:snap.items.length,bottleneck:snap.bottleneck};
+    if(typeof addMissionTrace==='function')addMissionTrace(turn,'production_card_intelligence_selected',turn.productionCardIntelligence);
   }
   return escapeHtml(answer).replace(/&lt;br&gt;/g,'<br>').replace(/&quot;/g,'"');
 }
@@ -19991,10 +20129,12 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     route=turnV2.route||route||'now';
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
   }
-  var rolodexIntel=getMissionRolodexIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
-  if(rolodexIntel)return finishMissionAnswer(rolodexIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   var contentIntel=getMissionContentCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(contentIntel)return finishMissionAnswer(contentIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
+  var productionIntel=getMissionProductionCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(productionIntel)return finishMissionAnswer(productionIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
+  var rolodexIntel=getMissionRolodexIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(rolodexIntel)return finishMissionAnswer(rolodexIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   if(isMissionExplicitCardPromptV1(cleanQuestion||question||'')){
     var explicitBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
     if(explicitBriefIntel)return finishMissionAnswer(explicitBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
