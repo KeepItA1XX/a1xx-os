@@ -15575,9 +15575,15 @@ function runMissionMasterIntelligenceQASweepV1(){
   var cardManager=getMissionThisWeekCardResponseV1('calendar',{rev:999,wk:500,gap:0},'what should i check on the manager card',{},null);
   if(!/Manager card|calendar|Do this next/i.test(cardManager))failures.push('qa_card_manager_read');
   var briefCondition=getMissionBriefIntelligenceResponseV1('now',{rev:999,wk:500,gap:0},'what is the business condition',{},null);
-  if(!/Business condition|Money:|DPC:|Do this next/i.test(briefCondition))failures.push('qa_brief_business_condition');
+  if(!/Business condition|Brief score|Money:|DPC:|Do this next/i.test(briefCondition))failures.push('qa_brief_business_condition');
   var briefSlide=getMissionBriefIntelligenceResponseV1('now',{rev:100,wk:500,gap:400},'what should i look at first in the brief',{},null);
   if(!/Money slide|Why:|Do this next/i.test(briefSlide))failures.push('qa_brief_best_slide');
+  var briefDashboard=getMissionBriefIntelligenceResponseV1('now',{rev:500,wk:500,gap:0,openTasks:[{content:'Prep event'}]},'read the brief card',{},null);
+  if(!/Mission Brief read|Brief score|Content\/Production|Watch first/i.test(briefDashboard))failures.push('qa_brief_dashboard_v12_read');
+  var briefDpcSlide=getMissionBriefIntelligenceResponseV1('now',{rev:500,wk:500,gap:0},'read the dpc slide',{},null);
+  if(!/DPC slide|Meaning|Do this next/i.test(briefDpcSlide))failures.push('qa_brief_slide_specific_read');
+  var briefMatters=getMissionBriefIntelligenceResponseV1('now',{rev:500,wk:500,gap:0},'what matters right now',{},null);
+  if(!/Business condition|Brief score|Do this next/i.test(briefMatters))failures.push('qa_brief_matters_first');
   var cardAccountability=getMissionActionAccountabilityV1({rawInput:'what should i do on the content card',route:'content'},{});
   if(cardAccountability.shouldAnswer)failures.push('qa_card_prompt_accountability_guard');
   var cardStack=getMissionArbitratedIntelligenceAnswerV1({rawInput:'what should i do on the content card',route:'content',actionAccountability:accountability,patternMemory:{shouldAnswer:true,reason:'qa',message:'Wrong'}},{rev:999,wk:500,gap:0});
@@ -15586,7 +15592,7 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:50};
+  return {passed:!failures.length,failures:failures,total:53};
 }
 
 /* =========================================================
@@ -18181,18 +18187,18 @@ function protectMissionExplicitCardAnswerOptionsV1(opts){
 }
 
 /* =========================================================
-   MISSION BRIEF INTELLIGENCE — v1
+   MISSION BRIEF INTELLIGENCE — v1.2
 ========================================================= */
 var MISSION_BRIEF_INTELLIGENCE_V1={
   id:'mission_brief_intelligence_v1',
-  version:'1.0',
+  version:'1.2',
   installMode:'additive_read_only'
 };
 
 function getMissionBriefQuestionSignalV1(question,route){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return null;
-  var direct=/\b(mission brief|brief card|brief tab|brief page|business read|business condition|dashboard read|read the dashboard|read the room|what is the brief saying|what does the brief say|what is the app showing|what should i look at first|what slide matters|which slide|best slide|what needs attention|where should i look first|overall condition|how is the business looking|how are we looking overall)\b/.test(q);
+  var direct=/\b(mission brief|brief card|brief tab|brief page|business read|business condition|dashboard read|read the dashboard|read the room|what is the brief saying|what does the brief say|what is the app showing|what should i look at first|what slide matters|which slide|best slide|what needs attention|where should i look first|overall condition|how is the business looking|how are we looking overall|what matters first|what matters right now|what is the business condition|brief dashboard|dashboard condition)\b/.test(q)||/\b(today|money|pipeline|dpc|next move|next)\s+slide\b/.test(q);
   if(direct)return {shouldAnswer:true,reason:'explicit_brief_phrase'};
   var mode=typeof getMissionContextMode==='function'?getMissionContextMode():'';
   var contextAsk=/\b(what should i do|what do i do|what next|what matters|read this|show me|explain this|what should i check|where do i start|help me get started|quick read)\b/.test(q);
@@ -18217,6 +18223,10 @@ function getMissionBriefSnapshotV1(ctx){
   var pct=target>0?Math.round((revenue/target)*100):0;
   var heat=typeof getMissionBriefLeadHeat==='function'?getMissionBriefLeadHeat():{hot:0,warm:0,cold:0,total:base.openLeads||0};
   var dpcTotal=Number(daily.dms||0)+Number(daily.callsMade||0)+Number(daily.booked||0)+Number(daily.closes||0)+Number(daily.money||0)+Number(daily.content||0)+Number(daily.replies||0);
+  var content=(window.__contentPipelinePieces||window.__contentPieces||[]).filter(Boolean);
+  var production=(window.__productionPieces||[]).filter(Boolean);
+  var calendar=(window.__calEvents||[]).filter(Boolean);
+  var tasks=Array.isArray(ctx.openTasks)?ctx.openTasks:[];
   var snap={
     revenue:revenue,
     target:target,
@@ -18227,8 +18237,10 @@ function getMissionBriefSnapshotV1(ctx){
     openLeads:Number(base.openLeads||heat.total||0),
     leadHeat:heat,
     topLead:base.topLead||'the warmest visible lead',
-    contentCount:Number(base.contentCount||0),
-    productionCount:Number(base.productionCount||0),
+    contentCount:Number(base.contentCount||content.length||0),
+    productionCount:Number(base.productionCount||production.length||0),
+    calendarCount:calendar.length,
+    openTaskCount:tasks.length,
     blockName:base.blockName||'Current block',
     minutesLeft:Number(base.minutesLeft||0),
     nextEvent:base.nextEvent||ctx.nextEvent||null,
@@ -18238,7 +18250,34 @@ function getMissionBriefSnapshotV1(ctx){
   snap.pressure=getMissionBriefPressureV1(snap);
   snap.bestSlide=getMissionBriefBestSlideV1(snap);
   snap.action=getMissionBriefActionV1(snap);
+  snap.dashboardScore=getMissionBriefDashboardScoreV12(snap);
+  snap.condition=getMissionBriefConditionV12(snap);
   return snap;
+}
+
+function getMissionBriefDashboardScoreV12(snap){
+  if(!snap)return 0;
+  var score=0;
+  if(snap.target&&snap.revenue>=snap.target)score+=25;
+  else if(snap.target&&snap.pct>=70)score+=18;
+  else if(snap.target&&snap.pct>0)score+=10;
+  if(snap.dpcTotal>0)score+=20;
+  if((snap.leadHeat.hot||0)+(snap.leadHeat.warm||0)>0)score+=20;
+  else if(snap.openLeads>0)score+=10;
+  if(snap.contentCount>0)score+=10;
+  if(snap.productionCount>0)score+=10;
+  if(snap.calendarCount>0||snap.openTaskCount>0)score+=5;
+  return Math.max(0,Math.min(100,score));
+}
+
+function getMissionBriefConditionV12(snap){
+  var score=snap&&snap.dashboardScore||0;
+  if(!snap)return {label:'Partial Read',line:'The brief is missing enough data to call the business condition.'};
+  if(snap.gap>0)return {label:'Money Pressure',line:'The business condition is usable, but the weekly money gap is still the loudest signal.'};
+  if(snap.dpcTotal<=0)return {label:'Covered But Invisible',line:'Money pressure is covered, but today has not left a measurable trail yet.'};
+  if(score>=75)return {label:'Operating Clean',line:'The loaded data shows money, motion, and enough context to choose from strength.'};
+  if(score>=50)return {label:'Usable Read',line:'The OS has enough signal to pick a move, but one lane still needs a cleaner log.'};
+  return {label:'Thin Signal',line:'The Brief can see pieces of the business, but the next move should create a cleaner signal.'};
 }
 
 function getMissionBriefPressureV1(snap){
@@ -18258,6 +18297,18 @@ function getMissionBriefBestSlideV1(snap){
   if(pressure==='pipeline')return {id:'pipeline',label:'Pipeline'};
   if(pressure==='content'||pressure==='production'||pressure==='protect')return {id:'next',label:'Next Move'};
   return {id:'today',label:'Today'};
+}
+
+function getMissionBriefSlideReadV12(snap,slide){
+  slide=slide||snap&&snap.bestSlide&&snap.bestSlide.id||snap&&snap.selectedSlide||'today';
+  var money=getMissionBriefMoneyLineV1(snap);
+  var dpc=getMissionBriefDpcLineV1(snap);
+  var pipeline=snap.openLeads+' open lead'+(snap.openLeads===1?'':'s')+' · '+(snap.leadHeat.hot||0)+' hot · '+(snap.leadHeat.warm||0)+' warm.';
+  if(slide==='money')return 'Money slide:<br><br>'+escapeHtml(money)+'<br><br>Meaning: '+escapeHtml(snap.gap>0?'the next move should reduce the gap':'target pressure is covered, so protect delivery and stack the next clean win')+'.';
+  if(slide==='dpc')return 'DPC slide:<br><br>'+escapeHtml(dpc)+'<br><br>Meaning: '+escapeHtml(snap.dpcTotal>0?'the day has measurable motion':'the day is still invisible until one action is logged')+'.';
+  if(slide==='pipeline')return 'Pipeline slide:<br><br>'+escapeHtml(pipeline)+'<br><br>Meaning: '+escapeHtml((snap.leadHeat.hot||0)+(snap.leadHeat.warm||0)>0?'start with the warmest visible signal':'volume is loaded, but heat needs qualification')+'.';
+  if(slide==='next')return 'Next Move slide:<br><br>Content: '+snap.contentCount+'. Production: '+snap.productionCount+'. Leads: '+snap.openLeads+'.<br><br>Meaning: '+escapeHtml(snap.action)+'.';
+  return 'Today slide:<br><br>Block: '+escapeHtml(snap.blockName+(snap.minutesLeft?' · '+snap.minutesLeft+' min left':''))+'. Calendar: '+snap.calendarCount+'. Tasks: '+snap.openTaskCount+'.<br><br>Meaning: use the current block to create one visible status change.';
 }
 
 function getMissionBriefActionV1(snap){
@@ -18291,13 +18342,20 @@ function getMissionBriefIntelligenceResponseV1(route,ctx,question,brainState,tur
   var dpc=getMissionBriefDpcLineV1(snap);
   var pipeline=snap.openLeads+' open lead'+(snap.openLeads===1?'':'s')+' · '+(snap.leadHeat.hot||0)+' hot · '+(snap.leadHeat.warm||0)+' warm.';
   var block=snap.blockName+(snap.minutesLeft?' · '+snap.minutesLeft+' min left':'');
+  var condition=snap.condition||getMissionBriefConditionV12(snap);
+  var scoreLine='Brief score: '+snap.dashboardScore+'/100 · '+condition.label+'.';
+  var slideMatch=q.match(/\b(today|money|pipeline|dpc|next move|next)\s+slide\b/);
+  if(slideMatch){
+    var slide=slideMatch[1]==='next move'?'next':slideMatch[1];
+    return getMissionBriefSlideReadV12(snap,slide)+'<br><br>'+escapeHtml(scoreLine)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
+  }
   if(/\b(which slide|what slide|best slide|look at first|where should i look first|what should i check first)\b/.test(q)){
-    return 'Start with the '+escapeHtml(snap.bestSlide.label)+' slide.<br><br>Why: '+escapeHtml(snap.pressure.line)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
+    return 'Start with the '+escapeHtml(snap.bestSlide.label)+' slide.<br><br>Why: '+escapeHtml(condition.line)+'<br><br>'+getMissionBriefSlideReadV12(snap,snap.bestSlide.id)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
   }
-  if(/\b(business condition|overall condition|how is the business looking|how are we looking overall|read the room)\b/.test(q)){
-    return 'Business condition: '+escapeHtml(snap.pressure.label)+'.<br><br>Money: '+escapeHtml(money)+'<br>DPC: '+escapeHtml(dpc)+'<br>Pipeline: '+escapeHtml(pipeline)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
+  if(/\b(business condition|overall condition|how is the business looking|how are we looking overall|read the room|what matters first|what matters right now|dashboard condition)\b/.test(q)){
+    return 'Business condition: '+escapeHtml(condition.label)+'.<br><br>'+escapeHtml(condition.line)+'<br><br>Money: '+escapeHtml(money)+'<br>DPC: '+escapeHtml(dpc)+'<br>Pipeline: '+escapeHtml(pipeline)+'<br>Content/Production: '+snap.contentCount+' / '+snap.productionCount+'.<br><br>'+escapeHtml(scoreLine)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
   }
-  return 'Mission Brief read:<br><br>'+escapeHtml(snap.pressure.label)+'.<br><br>Watch first: '+escapeHtml(snap.bestSlide.label)+' slide.<br>Current block: '+escapeHtml(block)+'.<br>Money: '+escapeHtml(money)+'<br>DPC: '+escapeHtml(dpc)+'<br>Pipeline: '+escapeHtml(pipeline)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
+  return 'Mission Brief read:<br><br>'+escapeHtml(condition.label)+'.<br><br>'+escapeHtml(condition.line)+'<br><br>Watch first: '+escapeHtml(snap.bestSlide.label)+' slide.<br>Current block: '+escapeHtml(block)+'.<br>Money: '+escapeHtml(money)+'<br>DPC: '+escapeHtml(dpc)+'<br>Pipeline: '+escapeHtml(pipeline)+'<br>Content/Production: '+snap.contentCount+' / '+snap.productionCount+'.<br><br>'+escapeHtml(scoreLine)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
 }
 
 function getMissionDiagnosticArea(question){
@@ -20643,6 +20701,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     shaped=cleanMissionCardRouteGarnishV1(shaped,opts);
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
+  var earlyBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(earlyBriefIntel)return finishMissionAnswer(earlyBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,cardAlignment:'brief'});
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(rawQ)||/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
     route='dpc';
     return finishMissionAnswer(getMissionBookedCallsCountAnswerV1(ctx),{sessionArc:false,closer:false,presence:false});
@@ -20683,8 +20743,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var rolodexIntel=getMissionRolodexIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(rolodexIntel)return finishMissionAnswer(rolodexIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   if(isMissionExplicitCardPromptV1(cleanQuestion||question||'')){
-    var explicitBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
-    if(explicitBriefIntel)return finishMissionAnswer(explicitBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,cardAlignment:'brief'});
     var explicitCardIntel=getMissionThisWeekCardResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
     if(explicitCardIntel)return finishMissionAnswer(explicitCardIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,cardAlignment:getMissionCardSignalV1(cleanQuestion||question||'',route||'')&&getMissionCardSignalV1(cleanQuestion||question||'',route||'').card});
   }
@@ -20695,8 +20753,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
   if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false,explainDecision:true});
-  var briefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
-  if(briefIntel)return finishMissionAnswer(briefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,cardAlignment:'brief'});
   var cardIntel=getMissionThisWeekCardResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(cardIntel)return finishMissionAnswer(cardIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,cardAlignment:getMissionCardSignalV1(cleanQuestion||question||'',route||'')&&getMissionCardSignalV1(cleanQuestion||question||'',route||'').card});
   var backlogSpecial=getMissionBacklogSpecialResponse(route,ctx,cleanQuestion||'',conv,brainState);
