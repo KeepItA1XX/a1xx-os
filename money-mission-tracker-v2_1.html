@@ -12555,12 +12555,16 @@ function getMissionBubblePlanV2(turn,depth,shape){
 
 function getMissionActionPlanV2(turn){
   var shape=turn.responseShape||'',route=turn.route||'',action=null;
-  if(shape==='pipeline_heat'||route==='leads')action={label:'Open Hit List',type:'open_card',target:'hit_list',requiresConfirmation:false};
-  if(route==='dpc')action={label:'Log DPC',type:'log_dpc',target:'dpc',requiresConfirmation:true};
-  if(route==='content')action={label:'Open Content Tracker',type:'open_card',target:'content_tracker',requiresConfirmation:false};
-  if(route==='production')action={label:'Open Production',type:'open_card',target:'production',requiresConfirmation:false};
-  if(route==='sync')action={label:'Run Sync Check',type:'sync_check',target:'system_hub',requiresConfirmation:false};
-  if(route==='sales')action={label:'Open Hit List',type:'open_card',target:'hit_list',requiresConfirmation:false};
+  var composed=typeof getMissionActionComposerV1==='function'?getMissionActionComposerV1(turn.options&&turn.options.ctx||{},route,turn.rawInput||turn.normalizedInput||'',turn.brainState||{}):null;
+  if(composed&&composed.action){
+    action={label:composed.label||'Do Next Move',type:composed.type||'next_best_move',target:composed.target||composed.action,requiresConfirmation:!!composed.requiresConfirmation,reason:composed.reason||'',action:composed.action};
+  }
+  if(!action&&(shape==='pipeline_heat'||route==='leads'))action={label:'Open Hit List',type:'open_card',target:'hit_list',requiresConfirmation:false};
+  if(!action&&route==='dpc')action={label:'Log DPC',type:'log_dpc',target:'dpc',requiresConfirmation:true};
+  if(!action&&route==='content')action={label:'Open Content Tracker',type:'open_card',target:'content_tracker',requiresConfirmation:false};
+  if(!action&&route==='production')action={label:'Open Production',type:'open_card',target:'production',requiresConfirmation:false};
+  if(!action&&route==='sync')action={label:'Run Sync Check',type:'sync_check',target:'system_hub',requiresConfirmation:false};
+  if(!action&&route==='sales')action={label:'Open Hit List',type:'open_card',target:'hit_list',requiresConfirmation:false};
   if(!action&&turn.brainState&&turn.brainState.nextBestMove)action={label:'Do Next Move',type:'next_best_move',target:turn.brainState.nextBestMove,requiresConfirmation:false};
   return action;
 }
@@ -14198,7 +14202,106 @@ function getMissionBrainTopLeadMove(){
   return 'Contact '+getMostUrgentLeadLine();
 }
 
+/* =========================================================
+   MISSION ACTION COMPOSER — v1
+========================================================= */
+function getMissionActionComposerRouteV1(route,question){
+  route=route||'now';
+  var q=normalizeMissionQuestion(question||'');
+  if(/\b(what should i say|what do i say|reply|objection|too expensive|payment plan|roleplay|call)\b/.test(q))return 'sales';
+  if(/\b(hit list|who hot|who warm|pipeline|lead|follow up|follow-up)\b/.test(q))return 'leads';
+  if(/\b(dpc|what did i log|log today|daily numbers)\b/.test(q))return 'dpc';
+  if(/\b(content|post|caption|clip|youtube|instagram)\b/.test(q))return 'content';
+  if(/\b(production|beat|bangin|mix|master|catalog)\b/.test(q))return 'production';
+  if(/\b(sync|health|notion|sheets|webhook|backup)\b/.test(q))return 'sync';
+  if(/\b(money|revenue|cash|gap|broke|paid|making)\b/.test(q))return 'report';
+  return route;
+}
+
+function getMissionActionComposerItemNameV1(items,keys,fallback){
+  items=Array.isArray(items)?items:[];
+  var item=items[0]||null;
+  if(!item)return fallback||'the next visible item';
+  for(var i=0;i<(keys||[]).length;i++){
+    if(item[keys[i]])return String(item[keys[i]]);
+  }
+  return fallback||'the next visible item';
+}
+
+function getMissionActionComposerV1(ctx,route,question,brainBase){
+  ctx=ctx||{};
+  var selectedRoute=getMissionActionComposerRouteV1(route||'now',question||'');
+  var mode=typeof getMissionContextMode==='function'?getMissionContextMode():'general';
+  var dayType=typeof getMissionFocusDayTypeV1==='function'?getMissionFocusDayTypeV1():'none';
+  var block=(brainBase&&brainBase.block)||getMissionBlockIntel();
+  var activeStep=brainBase&&brainBase.activeStep||getMissionBrainActiveStep(ctx);
+  var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var composer={
+    route:selectedRoute,
+    mode:mode,
+    dayType:dayType,
+    block:block&&block.name||'',
+    label:'Do Next Move',
+    action:'',
+    reason:'',
+    target:'',
+    type:'next_best_move',
+    confidence:0.72,
+    requiresConfirmation:false
+  };
+  function set(action,reason,label,type,target,confidence,requiresConfirmation){
+    composer.action=action;
+    composer.reason=reason||'closest_visible_signal';
+    composer.label=label||'Do Next Move';
+    composer.type=type||'next_best_move';
+    composer.target=target||action;
+    composer.confidence=confidence||composer.confidence;
+    composer.requiresConfirmation=!!requiresConfirmation;
+  }
+  if(selectedRoute==='sales'){
+    set('Ask one calm discovery question, then pause', 'sales_call_needs_signal', 'Open Sales Coach', 'open_card', 'sales_coach', 0.9);
+  }else if(selectedRoute==='leads'){
+    var leadMove=getMissionBrainTopLeadMove();
+    set(leadMove||'Open the Hit List and touch the warmest visible lead', 'pipeline_needs_one_touch', 'Open Hit List', 'open_card', 'hit_list', leadMove?0.9:0.78);
+  }else if(selectedRoute==='dpc'){
+    var activity=(daily.dms||0)+(daily.coldCalls||0)+(daily.calls||0)+(daily.closes||0);
+    set(activity?'Log the result from the latest DPC action':'Start DPC with one DM or cold call, then log it', 'dpc_needs_clean_number', 'Log DPC', 'log_dpc', 'dpc', 0.88, true);
+  }else if(selectedRoute==='content'){
+    var contentName=getMissionActionComposerItemNameV1(window.__contentPipelinePieces||window.__contentPieces||[],['title','name','topic'],'one proof asset');
+    set('Move content forward: '+contentName, 'content_needs_proof_asset', 'Open Content Tracker', 'open_card', 'content_tracker', 0.84);
+  }else if(selectedRoute==='production'){
+    var prodName=getMissionActionComposerItemNameV1(window.__productionPieces||[],['title','name','beat'],'the highest-value active asset');
+    set('Move production forward: '+prodName, 'production_needs_shippable_asset', 'Open Production', 'open_card', 'production', 0.84);
+  }else if(selectedRoute==='sync'){
+    set('Run System Hub health check and verify the first failing source only', 'sync_trust_check', 'Run Sync Check', 'sync_check', 'system_hub', 0.86);
+  }else if(selectedRoute==='report'||selectedRoute==='money'||selectedRoute==='cycle'){
+    var gap=ctx.gap||0;
+    set(gap>0?'Move the closest buyer toward payment':'Protect delivery, then create one clean buyer-facing follow-up', 'money_read_to_behavior', 'Open Report', 'open_tab', 'report', 0.82);
+  }else if(selectedRoute==='calendar'){
+    set('Define the one result this block should produce', 'calendar_blocks_need_outcome', 'Open Calendar', 'open_card', 'calendar', 0.78);
+  }else if(selectedRoute==='weekly'){
+    set('Capture what moved, what dragged, and tomorrow’s first move', 'weekly_review_needs_lesson', 'Open Weekly Review', 'open_card', 'weekly_review', 0.78);
+  }else if(activeStep&&block&&['money','maker','manager','finale'].indexOf(block.phase)>=0){
+    set('Complete the current block step: '+activeStep, 'current_block_has_active_step', 'Do Current Step', 'next_best_move', activeStep, 0.86);
+  }else if(mode==='outreach'){
+    set('Open the Hit List and touch one lead', 'outreach_mode_active', 'Open Hit List', 'open_card', 'hit_list', 0.82);
+  }else if(mode==='content'){
+    set('Open Content and move one proof asset', 'content_mode_active', 'Open Content Tracker', 'open_card', 'content_tracker', 0.82);
+  }else if(mode==='production'){
+    set('Open Production and move one asset one status forward', 'production_mode_active', 'Open Production', 'open_card', 'production', 0.82);
+  }else if(mode==='manager'){
+    set('Open Manager and clear one decision that unlocks action', 'manager_mode_active', 'Open Manager', 'open_card', 'manager', 0.78);
+  }else if(activeStep){
+    set(activeStep, 'mission_journey_active_step', 'Do Current Step', 'next_best_move', activeStep, 0.76);
+  }else{
+    set('Pick one lane, take one visible action, then log the result', 'general_mode_needs_lane', 'Open Mission Command', 'next_best_move', 'mission_command', 0.7);
+  }
+  return composer;
+}
+
 function getMissionBrainNextBestMove(ctx,brainBase){
+  var composed=getMissionActionComposerV1(ctx,brainBase&&brainBase.currentTopic||'',brainBase&&brainBase.rawQuestion||'',brainBase||{});
+  if(composed&&composed.action)return composed.action;
   var block=(brainBase&&brainBase.block)||getMissionBlockIntel();
   var activeStep=brainBase&&brainBase.activeStep;
   if(block&&block.phase&&['money','maker','manager','finale'].indexOf(block.phase)>=0&&activeStep)return 'Complete the current block step: '+activeStep;
@@ -14271,6 +14374,7 @@ function getMissionBrainState(ctx,question,route){
       hardRules:A1XX_PROFILE.hardRules
     },
     currentTopic:currentTopic,
+    rawQuestion:question||'',
     sessionIntent:'open',
     computedAt:nowIso
   };
@@ -16816,7 +16920,14 @@ function runMissionIntegritySelfCheck(){
   if(stale.b2.indexOf('Data confidence is low')<0)failures.push('stale_data_warning');
   var empty=runMissionResponseIntegrityCheck(fakeTurn({route:'now',responseShape:'quick_read'}),{b1:'',b2:'',b3:''});
   if(!empty.b1)failures.push('empty_fallback');
-  return {passed:!failures.length,failures:failures,total:6};
+  var actionCtx={gap:400,rev:100,wk:500,dpc:{dms:0,coldCalls:0,calls:0,closes:0,money:0}};
+  var salesAction=getMissionActionComposerV1(actionCtx,'sales','what should i say',{block:{phase:'money',name:'Money Time'},activeStep:'Follow up with warm leads'});
+  if(!salesAction||salesAction.action.indexOf('discovery')<0||salesAction.target!=='sales_coach')failures.push('action_composer_sales');
+  var dpcAction=getMissionActionComposerV1(actionCtx,'dpc','what did i log today',{block:{phase:'money',name:'Money Time'}});
+  if(!dpcAction||dpcAction.type!=='log_dpc'||!dpcAction.requiresConfirmation)failures.push('action_composer_dpc');
+  var productionAction=getMissionActionComposerV1(actionCtx,'production','bangin plus',{block:{phase:'maker',name:'Maker Time'}});
+  if(!productionAction||productionAction.target!=='production')failures.push('action_composer_production');
+  return {passed:!failures.length,failures:failures,total:9};
 }
 
 function runMissionCommandSelfCheck(){
