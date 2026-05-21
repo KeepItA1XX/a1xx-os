@@ -15332,7 +15332,14 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(stackIds[0]!=='decision_memory'||stackIds.indexOf('decision_intent')<0)failures.push('qa_arbiter_order_guard');
   var directSyncPattern=getMissionPatternBasedCoachingMemoryV1({rawInput:'sync check',route:'sync',inputSignals:{},dataConfidence:{level:'low'},syncStatus:{risk:'high'},sessionDataCache:{snapshot:{dpc:{dms:1,callsMade:0,booked:0,closes:0,money:0}},counts:{dpcTotal:1}}},{dpc:{dms:1}});
   if(directSyncPattern.shouldAnswer)failures.push('qa_direct_sync_pattern_guard');
-  return {passed:!failures.length,failures:failures,total:4};
+  var actionTurn={rawInput:'what next',route:'now',responsePlan:{actionPlan:{label:'Log DPC',action:'Log one measurable DPC action',reason:'qa_action_layer'}},brainState:{}};
+  var actionFirst=applyMissionActionLayerV1('The day is still invisible to the OS.',actionTurn,{},'what next',{});
+  if(actionFirst.indexOf('Do this now')<0||actionFirst.indexOf('Log one measurable DPC action')<0)failures.push('qa_action_layer_action_first');
+  var salesProtected=applyMissionActionLayerV1('Ask: "What made this worth taking a call about?"',{rawInput:'what should i say',route:'sales',responsePlan:{actionPlan:{label:'Open Sales Coach',action:'Open Sales Coach'}}},{},'what should i say',{});
+  if(salesProtected.indexOf('Next move')>=0||salesProtected.indexOf('Do this now')>=0)failures.push('qa_action_layer_sales_guard');
+  var alreadyActionable=applyMissionActionLayerV1('First move: log one measurable outreach action.',actionTurn,{},'what next',{});
+  if((alreadyActionable.match(/Log one measurable/gi)||[]).length>1)failures.push('qa_action_layer_duplicate_guard');
+  return {passed:!failures.length,failures:failures,total:7};
 }
 
 function getMissionHandoffResponse(question){
@@ -16259,6 +16266,86 @@ function getMissionActionComposerV1(ctx,route,question,brainBase){
     set('Pick one lane, take one visible action, then log the result', 'general_mode_needs_lane', 'Open Mission Command', 'next_best_move', 'mission_command', 0.7);
   }
   return composer;
+}
+
+/* =========================================================
+   MISSION ACTION LAYER — v1
+========================================================= */
+function missionActionLayerPlainTextV1(html){
+  return String(html||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function missionAnswerAlreadyActionableV1(html){
+  var text=missionActionLayerPlainTextV1(html).toLowerCase();
+  if(!text)return false;
+  if(/\b(do this now|first move|first action|next move|next:|start with|open |log |send:|ask:|pick one|finish |prep |update |run sync check)\b/.test(text))return true;
+  return /^(ask|send|open|log|pick|start|finish|move|check|call|post|book|prep|use|do|stop|keep|protect|choose|make|run|define)\b/.test(text);
+}
+
+function missionActionLayerShouldSkipV1(turn,question,opts){
+  opts=opts||{};
+  if(opts.actionLayer===false)return true;
+  var q=normalizeMissionQuestion(question||turn&&turn.rawInput||turn&&turn.normalizedInput||'');
+  var route=turn&&turn.route||'';
+  if(!q)return true;
+  if(/^(good morning|gm|morning|good afternoon|good evening)$/i.test(q))return true;
+  if(getMissionCloseSignal(q))return true;
+  if(getMissionCorrectionTargetRouteV2(q))return true;
+  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(q):null;
+  if(resultSignal&&['call_done','booked','paid','reply','no_reply','done','resource_mismatch'].indexOf(resultSignal.type)>=0)return true;
+  if(route==='sales'&&/\b(what should i say|what do i say|too expensive|cant afford|can't afford|he said|she said|they said|ghosted|payment plan|roleplay|score my answer)\b/.test(q))return true;
+  if(/^(why|why again|more|more again|run it back|tell me more)$/i.test(q))return true;
+  return false;
+}
+
+function getMissionActionLayerPlanV1(turn,ctx,question){
+  if(turn&&turn.responsePlan&&turn.responsePlan.actionPlan)return turn.responsePlan.actionPlan;
+  if(turn&&typeof getMissionActionPlanV2==='function'){
+    try{
+      var planned=getMissionActionPlanV2(turn);
+      if(planned)return planned;
+    }catch(e){}
+  }
+  if(typeof getMissionActionComposerV1==='function'){
+    try{
+      var route=turn&&turn.route||'now';
+      var brain=turn&&turn.brainState||{};
+      var composed=getMissionActionComposerV1(ctx||{},route,question||turn&&turn.rawInput||'',brain);
+      if(composed&&composed.action)return {label:composed.label||'Do Next Move',action:composed.action,type:composed.type||'next_best_move',target:composed.target||composed.action,reason:composed.reason||''};
+    }catch(e){}
+  }
+  return null;
+}
+
+function getMissionActionLayerTextV1(action){
+  if(!action)return '';
+  var text=String(action.action||action.target||action.label||'').replace(/\s+/g,' ').trim();
+  if(!text||/^(mission_command|now|leads|content|production|report|dpc|sales_coach)$/i.test(text))text=String(action.label||'Do the next move').trim();
+  return text;
+}
+
+function applyMissionActionLayerV1(html,turn,ctx,question,opts){
+  var out=String(html||'');
+  if(!out||missionActionLayerShouldSkipV1(turn,question,opts))return out;
+  var q=normalizeMissionQuestion(question||turn&&turn.rawInput||'');
+  var route=turn&&turn.route||'';
+  var action=getMissionActionLayerPlanV1(turn,ctx,q);
+  var actionText=getMissionActionLayerTextV1(action);
+  if(!actionText)return out;
+  var plain=missionActionLayerPlainTextV1(out).toLowerCase();
+  if(plain.indexOf(actionText.toLowerCase())>=0)return out;
+  var directAsk=/\b(what next|what now|what should i do|what do i do|what should i do today|help me get started|call the move|just tell me one thing|one thing|lock in)\b/.test(q);
+  var powerRoute=['now','dpc','leads','report','money','content','production','calendar','weekly'].indexOf(route)>=0;
+  var alreadyActionable=missionAnswerAlreadyActionableV1(out);
+  if(directAsk&&!alreadyActionable){
+    if(turn&&typeof addMissionTrace==='function')addMissionTrace(turn,'action_layer_applied',{mode:'action_first',action:actionText,reason:action&&action.reason||''});
+    return '<strong>Do this now:</strong> '+escapeHtml(actionText)+'.<br><br>'+out;
+  }
+  if((powerRoute||directAsk)&&!alreadyActionable&&out.length<900){
+    if(turn&&typeof addMissionTrace==='function')addMissionTrace(turn,'action_layer_applied',{mode:'next_move',action:actionText,reason:action&&action.reason||''});
+    return out+'<br><br><strong>Next move:</strong> '+escapeHtml(actionText)+'.';
+  }
+  return out;
 }
 
 function getMissionBrainNextBestMove(ctx,brainBase){
@@ -19027,6 +19114,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     }
     html=appendMissionConstraintGuidanceNudgeV1(html,turnV2,ctx,cleanQuestion||question||'');
     html=appendMissionUnsaidQuestionNudgeV1(html,turnV2,ctx,cleanQuestion||question||'');
+    html=applyMissionActionLayerV1(html,turnV2,ctx,cleanQuestion||question||'',opts);
     var styled=applyMissionStylePreferenceLearningV11(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)),route,cleanQuestion||question||'',opts);
     var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(styled,route,cleanQuestion||question||'',opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
