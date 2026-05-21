@@ -9680,7 +9680,7 @@ function shouldMissionIntegritySuppressBubbles(turn){
 function setMissionSalesModeFromTurn(turn){
   if(!turn)return;
   var q=String(turn.rawInput||turn.normalizedInput||'').toLowerCase();
-  if(/\b(call is done|got off|hung up|call ended|off the phone|just got off|debrief)\b/.test(q)){
+  if(isMissionSalesModeExitSignal(q)||/\b(debrief)\b/.test(q)){
     window.__missionCurrentSalesMode='normal';
     turn.integrityFlags=turn.integrityFlags||[];
     turn.integrityFlags.push('sales_mode_ended');
@@ -9690,6 +9690,11 @@ function setMissionSalesModeFromTurn(turn){
   else if(/\b(roleplay|role play|test me|skeptical prospect|busy prospect)\b/.test(q))window.__missionCurrentSalesMode='roleplay';
   else if(/\b(score my answer|scorecard|grade my call|review my answer)\b/.test(q))window.__missionCurrentSalesMode='scorecard';
   else if(/\b(stop roleplay|quit roleplay|end session|that's enough|that is enough)\b/.test(q))window.__missionCurrentSalesMode='normal';
+}
+
+function isMissionSalesModeExitSignal(q){
+  q=normalizeMissionQuestion(q||'');
+  return /\b(call is done|call done|got off|hung up|call ended|off the phone|just got off|done with the call|finished the call|end live call|stop live call)\b/.test(q);
 }
 
 function runMissionResponseIntegrityCheck(turn,bubblePacket){
@@ -11637,6 +11642,7 @@ var MISSION_SALES_OBJECTION_MAP={
 
 function getMissionSalesPhraseBridgeV1(q){
   q=normalizeMissionQuestion(q||'');
+  if(isMissionSalesModeExitSignal(q))return false;
   return /\b(closer|sales coach|what are sales|sales call|discovery call|call prep|prep me|perp me|prepare me|live call|on the phone|on phone|in a call|on a call|call right now|post call loss|post call stall|call was good|debrief this call|what should i say|what do i say|what should i text|what do i text|text back|dm back|help me reply|write.*(dm|text|reply|response|follow up|follow-up)|cold dm|warm follow|warm follow-up|atl studio|studio follow|studio dm|rappreneur.*(dm|qualifier|close|follow)|break even.*(dm|qualifier|close|follow)|bangin.*(dm|qualifier|close|follow)|mix.*master.*(dm|qualifier|close|follow)|beat license|objection|roleplay|role play|score my answer|scorecard|think about it|need to think|too expensive|price|costs too much|cant afford|can't afford|no budget|check budget|payment plan|discount|not ready|bad timing|maybe later|circle back|they said.*next week|he said.*next week|she said.*next week|send more info|send info|more information|talk to partner|talk to manager|decision maker|sign off|prove it works|proof first|guarantee|scam|what makes.*different|already tried|start smaller|just want beats|only need beats|they said.*no time|he said.*no time|she said.*no time|already has producer|already got a producer|youtube is free|ghosted|left me on read|bump)\b/.test(q);
 }
 
@@ -11647,6 +11653,7 @@ function getMissionSalesSignal(question){
 
 function getMissionSalesMode(question){
   var q=normalizeMissionQuestion(question||'');
+  if(isMissionSalesModeExitSignal(q))return 'normal';
   if(/^\/livecall\b/.test(q)||/\b(on the phone|right now|live call|what should i say|what do i say|he said|she said|they said)\b/.test(q))return 'live_call';
   if(/^\/callprep\b/.test(q)||/\b(prep me|call prep|before a call|in 10 minutes|discovery call)\b/.test(q))return 'call_prep';
   if(/^\/dm\b/.test(q)||/\b(write a dm|cold dm|warm follow up|warm follow-up|respond to someone|move them to a call|follow-up message)\b/.test(q))return 'dm_reply';
@@ -13671,6 +13678,7 @@ function getMissionSalesSubtypeV1_1(q){
 
 function getMissionOutputRouteOverrideV1_1(route,q){
   q=String(q||'').toLowerCase();
+  if(isMissionSalesModeExitSignal(q))return route||'now';
   if(typeof getMissionSalesPhraseBridgeV1==='function'&&getMissionSalesPhraseBridgeV1(q))return 'sales';
   if(/\b(data stale|source|where is this coming from|webhook|web hook|token|bridge|is this current|sync check|did this save|sheets|notion)\b/.test(q))return 'sync';
   if(/\b(that does not sound like me|doesn't sound like me|less hype|more direct|voice|style|remember this|save this style|dont say|don't say)\b/.test(q))return 'memory';
@@ -13910,6 +13918,11 @@ function updateMissionOutputLoopStateV1(route,q){
 function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return '';
+  if(isMissionSalesModeExitSignal(q)){
+    window.__missionCurrentSalesMode='normal';
+    return 'Call mode closed.<br><br>What happened: <strong>booked, no, follow-up, or paid?</strong><br><br>Give me the result and I will help log the next move.';
+  }
+  if(/\b(where do i|how do i get|what tab|what card|what button|where is)\b/.test(q)&&/\b(sync|system hub|health|backup|notion|sheets|connection)\b/.test(q))return '';
   var outputRoute=typeof getMissionOutputRouteOverrideV1_1==='function'?getMissionOutputRouteOverrideV1_1(route,q):route;
   var priorState=getMissionOutputStateV1();
   if(/^(why|why again|why tho again|run it back|explain more|make it make sense|final why|more|more again|more than that|tell me more|tell me more again|say more|go on|continue|framework it|ok what do i do)$/.test(q)&&outputRoute==='now'&&priorState.topic&&priorState.topic!=='now'){
@@ -14749,13 +14762,15 @@ function runMissionIntegritySelfCheck(){
   }
   var sales=runMissionResponseIntegrityCheck(fakeTurn(),{b1:'Send {{line}}',b2:'Data',b3:'Action'});
   if(sales.b2||sales.b3||sales.b1.indexOf('{{')>=0)failures.push('sales_script_suppression');
+  var exitSignal=isMissionSalesModeExitSignal('call is done')&&!getMissionSalesPhraseBridgeV1('call is done')&&getMissionSalesMode('call is done')==='normal';
+  if(!exitSignal)failures.push('sales_mode_exit_signal');
   var clarify=runMissionResponseIntegrityCheck(fakeTurn({route:'',routePlan:{clarify:true},responseShape:'quick_read'}),{b1:'Pick a lane',b2:'',b3:'Action'});
   if(clarify.b3)failures.push('clarify_action_suppression');
   var stale=runMissionResponseIntegrityCheck(fakeTurn({rawInput:'revenue report',normalizedInput:'revenue report',route:'report',responseShape:'money_pressure',dataConfidence:{level:'low'}}),{b1:'Money read',b2:'Revenue · $10',b3:''});
   if(stale.b2.indexOf('Data confidence is low')<0)failures.push('stale_data_warning');
   var empty=runMissionResponseIntegrityCheck(fakeTurn({route:'now',responseShape:'quick_read'}),{b1:'',b2:'',b3:''});
   if(!empty.b1)failures.push('empty_fallback');
-  return {passed:!failures.length,failures:failures,total:4};
+  return {passed:!failures.length,failures:failures,total:5};
 }
 
 function runMissionCommandSelfCheck(){
