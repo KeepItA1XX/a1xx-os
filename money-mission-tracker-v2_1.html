@@ -15541,6 +15541,86 @@ function runMissionMasterIntelligenceQASweepV1(){
   return {passed:!failures.length,failures:failures,total:47};
 }
 
+/* =========================================================
+   MISSION BROAD REGRESSION HARDENING — v1
+========================================================= */
+var MISSION_BROAD_REGRESSION_HARDENING_V1={
+  id:'mission_broad_regression_hardening_v1',
+  version:'1.0',
+  installMode:'qa_guard_only'
+};
+
+function runMissionBroadRegressionHardeningV1(){
+  var failures=[];
+  var priorIntegrity=window.__missionIntegritySelfCheckActive;
+  var priorSelfCheck=window.__missionCommandSelfCheckActive;
+  var priorCrm=window.__crmLeads;
+  var priorContent=window.__contentPieces;
+  var priorProduction=window.__productionPieces;
+  var priorCalendar=window.__calEvents;
+  var localKeys=[MISSION_CHAT_HISTORY_KEY,MISSION_CHAT_ACTIVE_SESSION_KEY,MISSION_CHAT_ACTIVE_ALIAS_KEY].filter(Boolean);
+  var sessionKeys=[MISSION_BRAIN_SESSION_V2_KEY,MISSION_CONTEXT_MODE_KEY].filter(Boolean);
+  var savedLocal={};
+  var savedSession={};
+  localKeys.forEach(function(key){try{savedLocal[key]=localStorage.getItem(key);}catch(e){savedLocal[key]=null;}});
+  sessionKeys.forEach(function(key){try{savedSession[key]=sessionStorage.getItem(key);}catch(e){savedSession[key]=null;}});
+  function restoreStorage(storage,key,value){
+    try{
+      if(value===null||value===undefined)storage.removeItem(key);
+      else storage.setItem(key,value);
+    }catch(e){}
+  }
+  window.__missionIntegritySelfCheckActive=true;
+  window.__missionCommandSelfCheckActive=false;
+  try{
+    window.__crmLeads=[{name:'QA HOT LEAD',stage:'active',hot:true,followUpDate:new Date().toISOString(),phone:'555'}];
+    window.__contentPieces=[{title:'QA Proof Post',status:'Idea'}];
+    window.__productionPieces=[{title:'QA Beat Upload',status:'DSP & EVEN Upload'}];
+    window.__calEvents=[{title:'QA Client Call',start:new Date(Date.now()+3600000).toISOString(),startTime:'3:00 PM'}];
+    var ctx={rev:999,wk:500,gap:0,nextEvent:window.__calEvents[0],openTasks:[{content:'Review calendar'}],dayType:'manager'};
+    var prompts=[
+      {name:'brief_card',q:'read the brief card',must:/Mission Brief read/i,card:'brief'},
+      {name:'outreach_card',q:'what should i do on the outreach card',must:/Outreach card read/i,card:'outreach'},
+      {name:'content_card',q:'what should i do on the content card',must:/Content card read/i,card:'content'},
+      {name:'production_card',q:'what should i do on the beat card',must:/Production card read/i,card:'production'},
+      {name:'manager_card',q:'what should i check on the manager card',must:/Manager card read/i,card:'manager'},
+      {name:'hit_list',q:'how is the hit list looking',must:/Hit List read/i,card:'outreach'},
+      {name:'dpc_card',q:'read the dpc card',must:/DPC read/i,card:'outreach'},
+      {name:'sync_navigation',q:'where do i check sync',must:/System Hub|sync check/i},
+      {name:'sales_correction',q:'i meant sales not pipeline',must:/Sales lane, not pipeline|Ask:/i},
+      {name:'changed_today',q:'what changed today',must:/Since the last saved checkpoint|Current read|changed/i},
+      {name:'booked_count',q:'how many booked calls do i have',must:/booked/i}
+    ];
+    prompts.forEach(function(test){
+      var answer='';
+      try{answer=String(getMissionCommandResponse('ask',ctx,test.q,{}));}
+      catch(e){failures.push(test.name+'_error_'+(e&&e.message?e.message:String(e)));return;}
+      var plain=answer.replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+      if(!test.must.test(plain))failures.push(test.name+'_route_drift');
+      if((plain.match(/Before switching:/g)||[]).length>1)failures.push(test.name+'_duplicate_handoff');
+      if(missionVisibleAnswerHasInternalLeakV1(answer))failures.push(test.name+'_internal_leak');
+    });
+    ['brief','outreach','content','production','manager'].forEach(function(card){
+      var aligned=applyMissionCrossCardAlignmentV1('QA card answer',{cardAlignment:card});
+      if(aligned.indexOf('Before switching:')<0)failures.push(card+'_alignment_missing');
+      var duplicate=applyMissionCrossCardAlignmentV1(aligned,{cardAlignment:card});
+      if((duplicate.match(/Before switching:/g)||[]).length!==1)failures.push(card+'_alignment_duplicate');
+    });
+  }catch(e){
+    failures.push(e&&e.message?e.message:String(e));
+  }finally{
+    window.__missionIntegritySelfCheckActive=priorIntegrity;
+    window.__missionCommandSelfCheckActive=priorSelfCheck;
+    window.__crmLeads=priorCrm;
+    window.__contentPieces=priorContent;
+    window.__productionPieces=priorProduction;
+    window.__calEvents=priorCalendar;
+    localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
+    sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
+  }
+  return {passed:!failures.length,failures:failures,total:11,meta:failures.length?failures.join(', '):'11 regression prompts · explicit cards · handoff duplicate guard · leak guard'};
+}
+
 function getMissionHandoffResponse(question){
   var q=normalizeMissionQuestion(question||'');
   if(!/\b(package this for codex|send this to team chat|make this a spec|turn this into directive|create a handoff|summarize for codex|log this for the team)\b/.test(q))return '';
@@ -21043,7 +21123,9 @@ function renderMissionQAPanelRows(rows){
 function runMissionThreadRouteGuardPanelCheckV1(){
   var key=MISSION_BRAIN_SESSION_V2_KEY;
   var prior=sessionStorage.getItem(key);
+  var priorIntegrityFlag=window.__missionIntegritySelfCheckActive;
   try{
+    window.__missionIntegritySelfCheckActive=true;
     sessionStorage.setItem(key,JSON.stringify({
       lastRoute:'sales',
       sessionTopic:'sales',
@@ -21059,6 +21141,7 @@ function runMissionThreadRouteGuardPanelCheckV1(){
   }catch(e){
     return {passed:false,meta:e&&e.message?e.message:String(e)};
   }finally{
+    window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
     if(prior===null)sessionStorage.removeItem(key);
     else sessionStorage.setItem(key,prior);
   }
@@ -21290,6 +21373,11 @@ function runMissionQAPanelCheck(){
     add('Master Intelligence QA',master,(master.total||0)+' checks'+(master.failures&&master.failures.length?' · '+master.failures.join(', '):''));
   }catch(e){
     add('Master Intelligence QA',{passed:false,meta:e&&e.message?e.message:String(e)});
+  }
+  try{
+    add('Broad Regression Hardening',runMissionBroadRegressionHardeningV1());
+  }catch(e){
+    add('Broad Regression Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});
   }
   add('Thread Memory Guard',runMissionThreadRouteGuardPanelCheckV1());
   add('Multi-Chat Memory',runMissionMultiChatMemoryPanelCheckV11());
