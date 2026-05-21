@@ -15490,6 +15490,12 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(!/Brief card|business read|Do this next/i.test(cardBrief))failures.push('qa_card_brief_read');
   var cardOutreach=getMissionThisWeekCardResponseV1('leads',{rev:999,wk:500,gap:0},'what should i do on the outreach card',{},null);
   if(!/Outreach card|open leads|Do this next/i.test(cardOutreach))failures.push('qa_card_outreach_read');
+  var outreachOverview=getMissionOutreachCardIntelligenceResponseV11('leads',{rev:999,wk:500,gap:0},'what should i do on the outreach card',{},null);
+  if(!/Outreach card read|Do this next/i.test(outreachOverview))failures.push('qa_outreach_card_overview_read');
+  var outreachDpc=getMissionOutreachCardIntelligenceResponseV11('dpc',{rev:999,wk:500,gap:0},'what did i log today',{},null);
+  if(!/DPC read|DMs|Do this next/i.test(outreachDpc))failures.push('qa_outreach_card_dpc_read');
+  var outreachFollow=getMissionOutreachCardIntelligenceResponseV11('leads',{rev:999,wk:500,gap:0},'who needs a bump',{},null);
+  if(!/Follow-up read|Do this next/i.test(outreachFollow))failures.push('qa_outreach_card_followup_read');
   var cardContent=getMissionThisWeekCardResponseV1('content',{rev:999,wk:500,gap:0},'what should i do on the content card',{},null);
   if(!/Content card|active item|Do this next/i.test(cardContent))failures.push('qa_card_content_read');
   var contentToday=getMissionContentCardIntelligenceResponseV11('content',{rev:999,wk:500,gap:0},'what should i post today',{},null);
@@ -15526,7 +15532,7 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:41};
+  return {passed:!failures.length,failures:failures,total:44};
 }
 
 function getMissionHandoffResponse(question){
@@ -17396,6 +17402,148 @@ function getMissionThisWeekCardResponseV1(route,ctx,question,brainState,turn){
   var contextLine=signal.reason==='context_mode'||signal.reason==='active_card'?'I am reading the '+read.title+' context first, then the rest of the OS behind it.':'This is the '+read.title+' read.';
   var journey=snap.journeyMove?'<br><br>Current loaded step: '+escapeHtml(snap.journeyMove)+'.':'';
   return escapeHtml(contextLine)+'<br><br>'+escapeHtml(read.read)+'<br><br>Do this next: '+escapeHtml(read.move)+'.'+journey;
+}
+
+/* =========================================================
+   MISSION OUTREACH / DPC CARD INTELLIGENCE — v1.1
+========================================================= */
+var MISSION_OUTREACH_CARD_INTELLIGENCE_V11={
+  id:'mission_outreach_dpc_card_intelligence_v1_1',
+  version:'1.1',
+  installMode:'additive_read_only'
+};
+
+function getMissionOutreachQuestionSignalV11(question,route){
+  var raw=String(question||'').toLowerCase();
+  var q=normalizeMissionQuestion(question||'');
+  var hay=(q+' '+raw).replace(/\s+/g,' ');
+  if(!q)return null;
+  var explicit=/\b(outreach card|outreach tab|dpc card|daily profit|daily profit campaign|hit list|pipeline card|follow up card|follow-up card|what should i do on outreach|what should i do on the outreach|read the dpc|read dpc|read the outreach|how is the hit list|hit list looking|who should i contact|who do i contact|who hot|who warm|who needs follow up|who needs a follow up|who needs a bump|what outreach move|what follow up is next|what follow-up is next|what did i log today|dpc today|what needs to happen before i switch lanes|before i switch lanes|pipeline stuck|why is pipeline stuck)\b/.test(hay);
+  var contextAsk=(route==='leads'||route==='dpc'||route==='sales'||getMissionActiveCardV1()==='outreach')&&/\b(what should i do|what next|what matters|where do i start|help me get started|read this|show me|what should i check|what does this mean)\b/.test(hay);
+  if(!explicit&&!contextAsk)return null;
+  var mode='overview';
+  if(/\b(what did i log|dpc card|read the dpc|read dpc|dpc today|daily profit|scoreboard|numbers|dms|calls|booked|closes|collected|log today)\b/.test(hay))mode='dpc';
+  if(/\b(hit list|hit list looking|how is the hit list|who hot|who warm|who should i contact|who do i contact|closest to money|pipeline card)\b/.test(hay))mode='hitlist';
+  if(/\b(follow up|follow-up|bump|ghosted|needs attention|who needs)\b/.test(hay))mode='followup';
+  if(/\b(stuck|bottleneck|not working|why is pipeline)\b/.test(hay))mode='diagnosis';
+  if(/\b(before i switch lanes|switch lanes|what needs to happen)\b/.test(hay))mode='handoff';
+  return {shouldAnswer:true,mode:mode,reason:explicit?'explicit_outreach_prompt':'outreach_context'};
+}
+
+function getMissionOutreachLeadScoreV11(lead){
+  lead=lead||{};
+  var score=0;
+  if(lead.hot)score+=100;
+  if(lead.warm)score+=60;
+  if(lead.phone)score+=35;
+  if(isATLLead(lead))score+=20;
+  if(lead.followUpDate){
+    var due=new Date(lead.followUpDate);due.setHours(23,59,59,999);
+    if(!isNaN(due.getTime())&&due<=new Date())score+=80;
+  }
+  var touched=new Date(lead.optInDate||lead.lastContact||0);
+  if(!isNaN(touched.getTime()))score+=Math.max(0,30-Math.floor((Date.now()-touched.getTime())/86400000));
+  return score;
+}
+
+function getMissionOutreachLeadLabelV11(lead){
+  if(!lead)return 'No urgent lead loaded';
+  var heat=lead.hot?'HOT':lead.warm?'WARM':'COLD';
+  var name=typeof getLeadDisplayName==='function'?getLeadDisplayName(lead):(lead.name||'Unnamed lead');
+  var recency=typeof getRecencyLabel==='function'?getRecencyLabel(lead.optInDate||lead.lastContact||''):'';
+  var status=lead.followUpDate?'follow-up due':lead.phone?'call ready':lead.stage||lead.status||'active';
+  return '['+heat+'] '+name+(recency?' · '+recency:'')+' · '+status;
+}
+
+function getMissionOutreachSnapshotV11(ctx){
+  ctx=ctx||{};
+  var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var leads=(window.__crmLeads||[]).filter(function(lead){try{return !isClosedCRMLead(lead);}catch(e){return true;}});
+  var now=new Date();
+  var hot=leads.filter(function(lead){return !!lead.hot;});
+  var warm=leads.filter(function(lead){return !!lead.warm;});
+  var callReady=leads.filter(function(lead){return !!lead.phone;});
+  var due=leads.filter(function(lead){
+    if(!lead.followUpDate)return false;
+    var d=new Date(lead.followUpDate);d.setHours(23,59,59,999);
+    return !isNaN(d.getTime())&&d<=now;
+  });
+  var ranked=leads.slice().sort(function(a,b){return getMissionOutreachLeadScoreV11(b)-getMissionOutreachLeadScoreV11(a);});
+  var totalActivity=Number(daily.dms||0)+Number(daily.coldCalls||0)+Number(daily.calls||0)+Number(daily.closes||0);
+  return {
+    daily:daily,
+    leads:leads,
+    hot:hot,
+    warm:warm,
+    callReady:callReady,
+    due:due,
+    ranked:ranked,
+    topLead:ranked[0]||null,
+    totalActivity:totalActivity,
+    revenue:Number(ctx.rev||0),
+    target:Number(ctx.wk||0),
+    gap:Number(ctx.gap||0)
+  };
+}
+
+function getMissionOutreachNextMoveV11(mode,snap){
+  snap=snap||{};
+  var lead=snap.topLead;
+  var leadName=lead?(typeof getLeadDisplayName==='function'?getLeadDisplayName(lead):(lead.name||'the warmest visible lead')):'the warmest visible lead';
+  if(mode==='dpc'){
+    if(!snap.totalActivity)return 'start the DPC with one DM, cold call, or follow-up, then log it';
+    if((snap.daily.calls||0)>0||(snap.daily.closes||0)>0)return 'move the best conversation toward payment or delivery and log the result';
+    return 'turn today’s activity into one reply, booked call, or direct offer';
+  }
+  if(mode==='hitlist'){
+    return lead?'open Hit List and move '+leadName+' one step forward':'refresh CRM, then open Hit List and pick the first call-ready lead';
+  }
+  if(mode==='followup'){
+    var follow=(snap.due&&snap.due[0])||lead;
+    var followName=follow?(typeof getLeadDisplayName==='function'?getLeadDisplayName(follow):(follow.name||'the due follow-up')):'the next visible follow-up';
+    return follow?'send one clean follow-up to '+followName+' and log the reply status':'create one follow-up from the warmest visible conversation';
+  }
+  if(mode==='diagnosis'){
+    if(!snap.leads.length)return 'refresh CRM or create one new lead from today’s outreach';
+    if(!snap.hot.length&&!snap.warm.length)return 'qualify one cold lead until they become warm or a clean no';
+    if(snap.callReady.length)return 'call or directly ask the first call-ready lead';
+    return 'pick the warmest lead and ask the next qualifying question';
+  }
+  if(mode==='handoff'){
+    return 'log the outreach result first: no reply, reply, booked, paid, or wrong lane';
+  }
+  return lead?'contact '+leadName+', qualify intent, then log what happened':'start with one measurable outreach action and log it before switching cards';
+}
+
+function getMissionOutreachCardIntelligenceResponseV11(route,ctx,question,brainState,turn){
+  if(window.__missionCommandSelfCheckActive)return '';
+  var signal=getMissionOutreachQuestionSignalV11(question||'',route||'');
+  if(!signal)return '';
+  var snap=getMissionOutreachSnapshotV11(ctx||{});
+  var mode=signal.mode;
+  var move=getMissionOutreachNextMoveV11(mode,snap);
+  var d=snap.daily||{};
+  var answer='';
+  if(mode==='dpc'){
+    answer='DPC read:<br><br>'+Number(d.dms||0)+' DMs · '+Number(d.coldCalls||0)+' calls made · '+Number(d.calls||0)+' booked · '+Number(d.closes||0)+' closes · '+fmt(d.money||0)+' collected.<br><br>Do this next: '+move+'.';
+  }else if(mode==='hitlist'){
+    var top=snap.ranked.slice(0,3).map(getMissionOutreachLeadLabelV11).join('<br>');
+    answer='Hit List read:<br><br>'+(snap.leads.length?snap.leads.length+' open lead'+(snap.leads.length===1?'':'s')+'.<br>'+top:'No open CRM leads are loaded right now.')+'<br><br>Do this next: '+move+'.';
+  }else if(mode==='followup'){
+    var followList=(snap.due.length?snap.due:snap.ranked).slice(0,3).map(getMissionOutreachLeadLabelV11).join('<br>');
+    answer='Follow-up read:<br><br>'+(followList||'No due follow-up is visible in the loaded packet.')+'<br><br>Do this next: '+move+'.';
+  }else if(mode==='diagnosis'){
+    answer='Outreach diagnosis:<br><br>'+snap.leads.length+' open lead'+(snap.leads.length===1?'':'s')+' · '+snap.hot.length+' hot · '+snap.warm.length+' warm · '+snap.callReady.length+' call-ready · '+snap.due.length+' due follow-up'+(snap.due.length===1?'':'s')+'.<br><br>Do this next: '+move+'.';
+  }else if(mode==='handoff'){
+    answer='Outreach handoff read:<br><br>The lane is not closed until the result is logged. Current DPC: '+Number(d.dms||0)+' DMs · '+Number(d.coldCalls||0)+' calls · '+Number(d.calls||0)+' booked · '+Number(d.closes||0)+' closes.<br><br>Do this next: '+move+'.';
+  }else{
+    answer='Outreach card read:<br><br>'+snap.leads.length+' open lead'+(snap.leads.length===1?'':'s')+' loaded. Today: '+Number(d.dms||0)+' DMs · '+Number(d.coldCalls||0)+' calls · '+Number(d.calls||0)+' booked · '+Number(d.closes||0)+' closes.<br><br>Top move: '+getMissionOutreachLeadLabelV11(snap.topLead)+'.<br><br>Do this next: '+move+'.';
+  }
+  if(turn){
+    turn.outreachCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,leadCount:snap.leads.length,dpcTotal:snap.totalActivity};
+    if(typeof addMissionTrace==='function')addMissionTrace(turn,'outreach_card_intelligence_selected',turn.outreachCardIntelligence);
+  }
+  return escapeHtml(answer).replace(/&lt;br&gt;/g,'<br>').replace(/&quot;/g,'"');
 }
 
 /* =========================================================
@@ -20255,6 +20403,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     route=turnV2.route||route||'now';
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
   }
+  var outreachIntel=getMissionOutreachCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(outreachIntel)return finishMissionAnswer(outreachIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   var contentIntel=getMissionContentCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(contentIntel)return finishMissionAnswer(contentIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   var productionIntel=getMissionProductionCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
