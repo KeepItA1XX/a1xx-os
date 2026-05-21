@@ -15189,6 +15189,14 @@ function buildMissionMentorResponseV1(turn,ctx){
   else if(domain.id==='content_brand'&&window.__contentPieces)dataLine='Content read: '+(window.__contentPieces.length||0)+' loaded items.';
   else if(domain.id==='business_os'&&turn&&turn.brainState&&turn.brainState.nextBestMove)dataLine='OS read: '+turn.brainState.nextBestMove+'.';
   var nextAction=getMissionMentorActionTextV1(item);
+  var voiceResponse=buildMissionMentorVoiceResponseV1(domain,item,turn,ctx,nextAction,dataLine);
+  if(voiceResponse){
+    if(turn){
+      turn.mentorDomain={id:domain.id,name:domain.name,itemId:item.id||'',itemTitle:item.title||'',score:match.score,route:route,voicePack:'mc_skill_voice_tone_v1'};
+      addMissionTrace(turn,'mentor_domain_selected',turn.mentorDomain);
+    }
+    return voiceResponse;
+  }
   var blocks=[];
   if(highLoad){
     blocks.push(formatMissionMentorSectionV1(domain.name,item.truth||item.title||'Simplify the lane.'));
@@ -15392,11 +15400,17 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(/^Same sales lane/i.test(correctionRepeat))failures.push('qa_correction_repeat_guard');
   var nextSpacing=applyMissionReadabilityGuardV1('3) Pipeline: 32 open leads<strong>Next:</strong><br>Create one visible move.');
   if(/leads<strong>Next/.test(nextSpacing)||nextSpacing.indexOf('leads<br><br><strong>Next')<0)failures.push('qa_next_section_spacing_guard');
+  var voiceMentor=applyMissionB1ProseGuard('<strong>Money & Finance</strong><br><br><strong>Know Your Number:</strong><br>A clear target changes behavior.<br><br><strong>How it applies:</strong><br>Without a number, the day has no financial direction.<br><br><strong>Next:</strong><br>Use the gap.',{route:'report',question:'why am i not making money'});
+  if(/Money & Finance|How it applies|<strong>Next:<\/strong>/i.test(voiceMentor))failures.push('qa_voice_domain_header_guard');
+  var voiceResult=applyMissionB1ProseGuard('Good.<br><br>Conversation moved to calendar.<br><br>Result read: <strong>Booked Call</strong>.<br><br>Next: add the call, update the lead, and prep one opening question.',{route:'sales',question:'booked'});
+  if(/Result read|^Good\.(?:<br|$)|<strong>Next:<\/strong>/i.test(voiceResult))failures.push('qa_voice_result_read_guard');
+  var voiceBooked=applyMissionB1ProseGuard('Booked-call read.<br><br>DPC logged today: 0 booked.<br>CRM booked/session signals: 0.<br>Calendar call/session events loaded: 0.<br>I do not see a booked call loaded yet. If one happened, log it in DPC and update the lead.',{route:'dpc',question:'how many booked calls do i have'});
+  if(/Booked-call read|DPC logged today|CRM booked\/session signals|Calendar call\/session events loaded/i.test(voiceBooked))failures.push('qa_voice_booked_data_guard');
   var accountabilityProtected=getMissionActionAccountabilityV1({rawInput:'/pipeline',route:'leads'},{});
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:18};
+  return {passed:!failures.length,failures:failures,total:21};
 }
 
 function getMissionHandoffResponse(question){
@@ -17788,6 +17802,183 @@ function applyMissionAnswerQualityGuardsV1(html,route,question,opts){
   return out;
 }
 
+/* =========================================================
+   MISSION CONVERSATIONAL VOICE & TONE PACK — v1
+========================================================= */
+var MISSION_VOICE_TONE_PACK_V1={
+  id:'mc_skill_voice_tone_v1',
+  name:'Mission Command Conversational Voice & Tone Pack v1',
+  version:'1.0',
+  installMode:'additive_only',
+  renderOrder:'final_b1_pass_after_answer_quality_guards'
+};
+
+var MISSION_VOICE_DOMAIN_NAMES=[
+  'Money & Finance','Content & Brand','Outreach & Sales','Lead Generation & Funnels',
+  'Business Operating System','Business OS','Offer & Positioning','Mindset & Performance'
+];
+
+var MISSION_VOICE_ANTI_PATTERNS=[
+  {id:'result_booked',pattern:/Result read:\s*(?:<strong>)?\s*Booked Call\s*(?:<\/strong>)?\.?/gi,replacement:'Booked call logged.'},
+  {id:'result_paid',pattern:/Result read:\s*(?:<strong>)?\s*Collected Money\s*(?:<\/strong>)?\.?/gi,replacement:'Money collected.'},
+  {id:'booked_read',pattern:/Booked-call read\.\s*(?:<br\s*\/?>\s*)?/gi,replacement:''},
+  {id:'next_label',pattern:/(?:^|<br\s*\/?>\s*)<strong>Next:<\/strong>\s*(?:<br\s*\/?>)?/gi,replacement:'<br><br>Next move is '},
+  {id:'next_plain',pattern:/(?:^|<br\s*\/?>\s*)Next:\s*/gi,replacement:'<br><br>Next move is '},
+  {id:'current_label',pattern:/(?:^|<br\s*\/?>\s*)<strong>Current read:<\/strong>\s*(?:<br\s*\/?>)?/gi,replacement:'<br><br>Right now, '},
+  {id:'current_plain',pattern:/(?:^|<br\s*\/?>\s*)Current read:\s*/gi,replacement:'<br><br>Right now, '},
+  {id:'how_applies',pattern:/(?:^|<br\s*\/?>\s*)<strong>How it applies:<\/strong>\s*(?:<br\s*\/?>)?/gi,replacement:'<br><br>'},
+  {id:'framework_label',pattern:/(?:^|<br\s*\/?>\s*)<strong>Framework:<\/strong>\s*(?:<br\s*\/?>)?/gi,replacement:'<br><br>Use this frame:<br>'},
+  {id:'standalone_good',pattern:/^Good\.(?:<br\s*\/?>\s*)+/i,replacement:'Good, '}
+];
+
+var MISSION_MENTOR_VOICE_TEMPLATES={
+  outreach_sales:[
+    'The money usually shows up after the first touch. If the pipeline has open signals, follow-up matters more than another cold start right now.',
+    'Do not pitch before the prospect owns the problem. Ask one question that makes them explain it in their own words.',
+    'An objection is not a wall. It is a signal that price, timing, trust, or fit is still unclear.'
+  ],
+  lead_gen_funnels:[
+    'Lead flow is traffic times conversion. Find whether the weak side is attention, capture, booking, or follow-up.',
+    'Every funnel has one main leak at a time. Do not rebuild everything until you know where people are dropping.',
+    'Attention is rented until it turns into a relationship. Give the right person a simple way to reply.'
+  ],
+  business_os:[
+    'If it is not measured, it turns into a mood. Track the input and the result before judging the day.',
+    'Systems beat willpower when energy drops. The OS should make the next action obvious before motivation has to.',
+    'Review is where the business gets smarter. Name what moved, what dragged, and what repeats tomorrow.'
+  ],
+  offer_positioning:[
+    'The offer is the result packaged clearly enough to believe. Say who it is for, what it fixes, and what changes after.',
+    'Price works when the value is clear. Before discounting, isolate whether the issue is money, timing, fit, or belief.',
+    'Specific beats broad. Tighten the buyer, pain, promise, and proof before pitching harder.'
+  ],
+  content_brand:[
+    'Every post needs a job or it becomes noise. It should teach, prove, shift belief, or invite action.',
+    'Documenting the work beats inventing content. If something moved today, that is the post.',
+    'Proof beats advice because it shows the mechanism working. Lead with the receipt, then explain the lesson.'
+  ],
+  money_finance:[
+    'Cash is the cleanest truth in the business. Count what actually came in, then choose the closest buyer-facing move.',
+    'Without a clear number, the day has no financial direction. Use the gap to choose the next money-facing action.',
+    'Protect delivery before chasing more revenue. More sales only help if the promise can still be kept.'
+  ],
+  mindset_performance:[
+    'Momentum is a skill, not a mood. Complete one action that creates proof, then log the win.',
+    'Too many options drain execution. One move, one timer, one result.',
+    'Recovery protects tomorrow output. If quality is dropping, close the loop cleanly instead of forcing noise.'
+  ]
+};
+
+var MISSION_DATA_VOICE_TEMPLATES={
+  booked_none:[
+    'I am not seeing a booked call in the system yet. If one happened, log it in DPC and update the lead so I can track it going forward.',
+    'No booked call is showing right now. If it happened outside the tracker, add it so it does not disappear.'
+  ],
+  booked_present:[
+    'I am seeing {{count}} booked call{{plural}} in the system right now.',
+    'The current read shows {{count}} booked call{{plural}} loaded.'
+  ],
+  changed_none:[
+    'I am not seeing a meaningful change logged today yet. Create one visible move, then log it so the next comparison has something real to read.',
+    'Nothing major is showing as changed today. The next move should leave a trackable result.'
+  ],
+  sync:[
+    'The system check is only here to clear trust. Once the sources look clean, get back to the move.',
+    'Sync is the trust check, not the mission. Check it once, then use the clean read.'
+  ]
+};
+
+function missionVoicePlainTextV1(html){
+  return String(html||'')
+    .replace(/<br\s*\/?>/gi,'\n')
+    .replace(/<[^>]+>/g,'')
+    .replace(/&nbsp;/g,' ')
+    .replace(/&amp;/g,'&')
+    .replace(/&lt;/g,'<')
+    .replace(/&gt;/g,'>')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function pickMissionVoiceTemplateV1(pool,key){
+  pool=pool||[];
+  if(!pool.length)return '';
+  key=String(key||'');
+  var idx=0;
+  for(var i=0;i<key.length;i++)idx=(idx+key.charCodeAt(i))%pool.length;
+  return pool[idx];
+}
+
+function getMissionMentorVoiceTemplateV1(domainId,key){
+  return pickMissionVoiceTemplateV1(MISSION_MENTOR_VOICE_TEMPLATES[domainId]||[],key||domainId);
+}
+
+function buildMissionMentorVoiceResponseV1(domain,item,turn,ctx,nextAction,dataLine){
+  var base=getMissionMentorVoiceTemplateV1(domain&&domain.id,turn&&turn.rawInput||item&&item.id||'');
+  if(!base)base=String(item&&item.truth||item&&item.title||'Use the business principle before adding more motion.').replace(/\s+/g,' ').trim();
+  var apply=String(item&&item.apply||'').replace(/\s+/g,' ').trim();
+  var parts=[base];
+  if(apply&&base.indexOf(apply)<0)parts.push(apply);
+  if(dataLine)parts.push(dataLine.replace(/^Current read:\s*/i,'Right now, ').replace(/^Pipeline read:\s*/i,'Pipeline shows ').replace(/^Content read:\s*/i,'Content shows ').replace(/^OS read:\s*/i,'The OS is pointing at '));
+  if(nextAction)parts.push('Next move is '+String(nextAction).replace(/[.]+$/,'')+'.');
+  return parts.filter(Boolean).map(escapeHtml).join('<br><br>');
+}
+
+function applyMissionVoiceAntiPatternsV1(html){
+  var out=String(html||'');
+  MISSION_VOICE_ANTI_PATTERNS.forEach(function(rule){
+    out=out.replace(rule.pattern,rule.replacement);
+  });
+  MISSION_VOICE_DOMAIN_NAMES.forEach(function(name){
+    var re=new RegExp('(?:^|<br\\s*\\/?>\\s*)<strong>'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'<\\/strong>\\s*(?:<br\\s*\\/?>\\s*)?','gi');
+    out=out.replace(re,'');
+    var re2=new RegExp('(?:^|<br\\s*\\/?>\\s*)'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s+([^:<]+):\\s*','gi');
+    out=out.replace(re2,function(match,title){return escapeHtml(String(title||'').replace(/\s+/g,' ').trim())+'. ';});
+  });
+  return out;
+}
+
+function applyMissionVoiceContractionsV1(html){
+  return String(html||'')
+    .replace(/\bI am not\b/g,"I'm not")
+    .replace(/\bI am\b/g,"I'm")
+    .replace(/\byou are\b/gi,"you're")
+    .replace(/\bit is\b/gi,"it's")
+    .replace(/\bdo not\b/gi,"don't")
+    .replace(/\bI do not\b/g,"I don't")
+    .replace(/\bI will\b/g,"I'll")
+    .replace(/\bthat is\b/gi,"that's");
+}
+
+function applyMissionB1ProseGuard(html,routeContext){
+  try{
+    routeContext=routeContext||{};
+    if(routeContext&&routeContext.b1ProseGuard===false)return html;
+    var out=String(html||'');
+    if(!out)return out;
+    var route=routeContext.route||'';
+    var q=normalizeMissionQuestion(routeContext.question||'');
+    var plain=missionVoicePlainTextV1(out);
+    if(/Booked-call read/i.test(plain)){
+      var nums=plain.match(/DPC logged today:\s*(\d+)\s*booked/i);
+      var count=nums?Number(nums[1]||0):0;
+      var pool=count>0?MISSION_DATA_VOICE_TEMPLATES.booked_present:MISSION_DATA_VOICE_TEMPLATES.booked_none;
+      out=pickMissionVoiceTemplateV1(pool,q||plain).replace('{{count}}',String(count)).replace('{{plural}}',count===1?'':'s');
+    }else if(/\bwhat changed|what moved|what happened today\b/.test(q)&&/Since the last saved checkpoint, I do not see/i.test(plain)){
+      out=pickMissionVoiceTemplateV1(MISSION_DATA_VOICE_TEMPLATES.changed_none,q);
+    }else{
+      out=applyMissionVoiceAntiPatternsV1(out);
+    }
+    out=applyMissionVoiceContractionsV1(out);
+    out=out.replace(/\bNext move is\s+([a-z])/g,function(match,ch){return 'Next move is '+ch;});
+    out=out.replace(/\s+([.,!?;:])/g,'$1');
+    out=out.replace(/(<br\s*\/?>\s*){3,}/gi,'<br><br>').trim();
+    return out||html;
+  }catch(e){
+    return html;
+  }
+}
+
 function getMissionContinuationResponse(signal,ctx,question){
   var last=getLastMissionTopicTurn();
   if(!last||!last.intentRoute)return '';
@@ -19233,6 +19424,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     html=applyMissionActionLayerV1(html,turnV2,ctx,cleanQuestion||question||'',opts);
     var styled=applyMissionStylePreferenceLearningV11(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)),route,cleanQuestion||question||'',opts);
     var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(styled,route,cleanQuestion||question||'',opts));
+    shaped=cleanMissionVisibleAnswerText(applyMissionB1ProseGuard(shaped,{route:route,question:cleanQuestion||question||'',turn:turnV2,opts:opts}));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(rawQ)||/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
@@ -19371,9 +19563,10 @@ function runMissionIntegritySelfCheck(){
   var staleSalesPendingThread=getMissionThreadMemoryV1({rawInput:'why',route:'now',inputSignals:{}},actionCtx);
   if(staleSalesPendingThread.pendingAction||(staleSalesPendingThread.message||'').indexOf('Prep Call')>=0)failures.push('thread_memory_stale_sales_pending_guard');
   var bookedCountAnswer=getMissionCommandResponse('ask',actionCtx,'how many booked calls do i have',{});
-  if(bookedCountAnswer.indexOf('Booked-call read')<0||bookedCountAnswer.indexOf('Start the DPC')>=0)failures.push('booked_call_count_answer');
+  if(!/booked call/i.test(bookedCountAnswer)||/Booked-call read|DPC logged today|CRM booked\/session signals|Calendar call\/session events loaded|Start the DPC/i.test(bookedCountAnswer))failures.push('booked_call_count_answer');
   var bookedCountBubble=buildMissionBubblePacket('dpc',{type:'CONV_DATA_REQUEST',route:'dpc'},actionCtx,'how many booked calls do i have','Booked-call read.','','',{});
-  if(bookedCountBubble.b1.indexOf('Booked-call read')<0||bookedCountBubble.b1.indexOf('Start the DPC')>=0)failures.push('booked_call_count_bubble_protect');
+  var bookedCountBubbleVoice=applyMissionB1ProseGuard(bookedCountBubble.b1,{route:'dpc',question:'how many booked calls do i have'});
+  if(!/booked call/i.test(bookedCountBubbleVoice)||/Booked-call read|DPC logged today|CRM booked\/session signals|Calendar call\/session events loaded|Start the DPC/i.test(bookedCountBubbleVoice))failures.push('booked_call_count_bubble_protect');
   var longTrace=[];for(var traceIdx=0;traceIdx<40;traceIdx++)longTrace.push({timestamp:'t'+traceIdx,message:'message '+traceIdx,data:{text:'x'.repeat(400),list:[1,2,3,4,5,6,7,8,9,10]}});
   var compactTrace=summarizeMissionDecisionTraceForCheckpointV1(longTrace);
   if(compactTrace.length!==30||compactTrace[0].message!=='message 10'||compactTrace[0].data.text.length>240||compactTrace[0].data.list.length>8)failures.push('checkpoint_trace_compaction');
@@ -19871,8 +20064,9 @@ function runMissionMentorPanelCheckV1(){
       var answer=buildMissionMentorResponseV1(turn,window.__missionCommandContext||{});
       var plain=String(answer||'').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'');
       if(!answer||!turn.mentorDomain||turn.mentorDomain.id!==test.domain)failures.push(test.q+' -> '+(turn.mentorDomain&&turn.mentorDomain.id||'none'));
-      else if(answer.indexOf('<strong>Next:</strong><br>')<0)failures.push(test.q+' -> missing Next section');
-      else if(answer.indexOf('<strong>How it applies:</strong><br>')<0&&answer.indexOf('<strong>Framework:</strong><br>')<0)failures.push(test.q+' -> missing teaching section');
+      else if(/Money & Finance|Content & Brand|Business Operating System|Offer & Positioning|Outreach & Sales|Lead Generation & Funnels|Mindset & Performance/.test(plain))failures.push(test.q+' -> visible domain label');
+      else if(/Next:|How it applies:|Framework:/.test(plain))failures.push(test.q+' -> robotic mentor label');
+      else if(!/(next move|start with|use|pick|ask|track|create|choose|tighten|make)/i.test(plain))failures.push(test.q+' -> missing action language');
       else if(/[a-z]\.(How it applies|Next):/.test(plain))failures.push(test.q+' -> joined mentor labels');
     }catch(e){
       failures.push(test.q+' -> '+(e&&e.message?e.message:String(e)));
