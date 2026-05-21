@@ -11426,6 +11426,32 @@ function getMissionDecisionExplainerLineV1(explainer){
   return '<span style="color:#8f9aa3">Why this move: '+escapeHtml(explainer.reason)+'.'+escapeHtml(confidence)+'</span>';
 }
 
+function getMissionBookedCallsCountAnswerV1(ctx){
+  var d={};
+  try{d=typeof getDailyCoach==='function'?getDailyCoach()||{}:{};}catch(e){d={};}
+  var dpcBooked=Number(d.calls||d.booked||0)||0;
+  var crm=[];
+  try{crm=typeof getCRMLeads==='function'?getCRMLeads()||[]:window.__crmLeads||[];}catch(e){crm=window.__crmLeads||[];}
+  crm=Array.isArray(crm)?crm:[];
+  var bookedLeads=crm.filter(function(lead){
+    return /book|schedul|call/i.test([lead&&lead.stage,lead&&lead.status,lead&&lead.bookingPriority,lead&&lead.conversionEvent,lead&&lead.recentActivity].join(' '));
+  });
+  var calendarEvents=Array.isArray(window.__calEvents)?window.__calEvents:[];
+  var callEvents=calendarEvents.filter(function(event){
+    return /call|session|consult|meeting/i.test([event&&event.title,event&&event.summary,event&&event.description].join(' '));
+  });
+  var lines=[
+    'Booked-call read.',
+    '',
+    'DPC logged today: '+dpcBooked+' booked.',
+    'CRM booked/session signals: '+bookedLeads.length+'.',
+    'Calendar call/session events loaded: '+callEvents.length+'.'
+  ];
+  if(!dpcBooked&&!bookedLeads.length&&!callEvents.length)lines.push('I do not see a booked call loaded yet. If one happened, log it in DPC and update the lead.');
+  else lines.push('Use the freshest source first: calendar for schedule, CRM for lead status, DPC for today’s logged result.');
+  return lines.map(escapeHtml).join('<br>');
+}
+
 /* =========================================================
    MISSION RESULT LOOP — v1
 ========================================================= */
@@ -11813,14 +11839,14 @@ function buildMissionPatternCoachingResponseV1(turn,ctx){
 function getMissionThreadExplicitRouteFromQuestionV1(q){
   q=normalizeMissionQuestion(q||'');
   if(!q)return '';
-  if(/^\/(pipeline|leads|lead|crm|hit_list|hitlist)\b/.test(q)||/\b(who hot|who warm|who should i hit|who do i hit)\b/.test(q))return 'leads';
-  if(/^\/(sales|closer|call|coach)\b/.test(q)||/\b(i meant sales not pipeline|sales not pipeline|what should i say|what do i say|too expensive|payment plan|call is done|prep me for a call|roleplay|score my answer)\b/.test(q))return 'sales';
-  if(/^\/(sync|health)\b/.test(q)||/\b(sync check|where do i check sync|data stale|is this data current)\b/.test(q))return 'sync';
-  if(/^\/(dpc|daily)\b/.test(q)||/\b(what did i log today|show dpc|daily log)\b/.test(q))return 'dpc';
-  if(/^\/(money|report|revenue)\b/.test(q)||/\b(how much money|revenue|weekly target|how far off)\b/.test(q))return 'report';
-  if(/^\/(content|post)\b/.test(q)||/\b(what should i post|content tracker)\b/.test(q))return 'content';
-  if(/^\/(production|beats|beat)\b/.test(q)||/\b(bangin plus|production tracker|mix master)\b/.test(q))return 'production';
-  if(/^\/(calendar|schedule)\b/.test(q)||/\b(what block|calendar|schedule)\b/.test(q))return 'calendar';
+  if(/^(\/)?(pipeline|leads|lead|crm|hit_list|hitlist)\b/.test(q)||/\b(who hot|who warm|who should i hit|who do i hit)\b/.test(q))return 'leads';
+  if(/^(\/)?(sales|closer|call|coach)\b/.test(q)||/\b(i meant sales not pipeline|sales not pipeline|what should i say|what do i say|too expensive|payment plan|call is done|prep me for a call|roleplay|score my answer)\b/.test(q))return 'sales';
+  if(/^(\/)?(sync|health)\b/.test(q)||/\b(sync check|where do i check sync|data stale|is this data current)\b/.test(q))return 'sync';
+  if(/^(\/)?(dpc|daily)\b/.test(q)||/\b(what did i log today|show dpc|daily log)\b/.test(q))return 'dpc';
+  if(/^(\/)?(money|report|revenue)\b/.test(q)||/\b(how much money|revenue|weekly target|how far off)\b/.test(q))return 'report';
+  if(/^(\/)?(content|post)\b/.test(q)||/\b(what should i post|content tracker)\b/.test(q))return 'content';
+  if(/^(\/)?(production|beats|beat)\b/.test(q)||/\b(bangin plus|production tracker|mix master)\b/.test(q))return 'production';
+  if(/^(\/)?(calendar|schedule)\b/.test(q)||/\b(what block|calendar|schedule)\b/.test(q))return 'calendar';
   return '';
 }
 
@@ -18288,7 +18314,8 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   var protectedCorrectionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(question||''):'';
   var protectedResultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(question||''):null;
   var protectedResultTypes=/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/;
-  if(protectedCorrectionRoute||protectedResultSignal&&protectedResultTypes.test(protectedResultSignal.type||'')){
+  var protectedCountQuestion=/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(normalizeMissionQuestion(question||''));
+  if(protectedCorrectionRoute||protectedCountQuestion||protectedResultSignal&&protectedResultTypes.test(protectedResultSignal.type||'')){
     if(protectedCorrectionRoute)route=protectedCorrectionRoute;
     return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false})),b2:'',b3:''};
   }
@@ -18435,6 +18462,10 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(styled,route,cleanQuestion||question||'',opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
+  if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(rawQ)||/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
+    route='dpc';
+    return finishMissionAnswer(getMissionBookedCallsCountAnswerV1(ctx),{sessionArc:false,closer:false,presence:false});
+  }
   var resultSignal=preflightResultSignal||getMissionResultSignalV1(question||cleanQuestion||'');
   if(resultSignal&&resultSignal.type!=='call_done'&&missionResultLoopShouldAnswerV1(resultSignal,question||cleanQuestion||'',turnV2)){
     route=(turnV2&&turnV2.route)||route||'now';
@@ -18558,6 +18589,14 @@ function runMissionIntegritySelfCheck(){
   if(bookedBubble.b1.indexOf('Conversation moved to calendar')<0||bookedBubble.b1.indexOf('DPC lane')>=0)failures.push('bubble_protect_result_answer');
   if(getMissionRenderRoute('i meant sales not pipeline',{})!=='sales')failures.push('render_route_correction_sales');
   if(getMissionRenderRoute('booked',{})!=='sales')failures.push('render_route_booked_sales');
+  if(getMissionThreadExplicitRouteFromQuestionV1('/pipeline')!=='leads'||getMissionThreadExplicitRouteFromQuestionV1('pipeline')!=='leads')failures.push('thread_explicit_pipeline_normalized');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'sales',turns:[{question:'/pipeline',route:'sales',timestamp:new Date().toISOString()}]},resultLoop:{history:[]}}));
+  var normalizedPipelineThread=getMissionThreadMemoryV1({rawInput:'why',route:'now',inputSignals:{}},actionCtx);
+  if(normalizedPipelineThread.activeRoute!=='leads'||(normalizedPipelineThread.message||'').indexOf('Closer Coach')>=0)failures.push('thread_memory_normalized_pipeline_guard');
+  var bookedCountAnswer=getMissionCommandResponse('ask',actionCtx,'how many booked calls do i have',{});
+  if(bookedCountAnswer.indexOf('Booked-call read')<0||bookedCountAnswer.indexOf('Start the DPC')>=0)failures.push('booked_call_count_answer');
+  var bookedCountBubble=buildMissionBubblePacket('dpc',{type:'CONV_DATA_REQUEST',route:'dpc'},actionCtx,'how many booked calls do i have','Booked-call read.','','',{});
+  if(bookedCountBubble.b1.indexOf('Booked-call read')<0||bookedCountBubble.b1.indexOf('Start the DPC')>=0)failures.push('booked_call_count_bubble_protect');
   var longTrace=[];for(var traceIdx=0;traceIdx<40;traceIdx++)longTrace.push({timestamp:'t'+traceIdx,message:'message '+traceIdx,data:{text:'x'.repeat(400),list:[1,2,3,4,5,6,7,8,9,10]}});
   var compactTrace=summarizeMissionDecisionTraceForCheckpointV1(longTrace);
   if(compactTrace.length!==30||compactTrace[0].message!=='message 10'||compactTrace[0].data.text.length>240||compactTrace[0].data.list.length>8)failures.push('checkpoint_trace_compaction');
@@ -18767,7 +18806,7 @@ function runMissionIntegritySelfCheck(){
   var masterQASweep=runMissionMasterIntelligenceQASweepV1();
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:88};
+  return {passed:!failures.length,failures:failures,total:92};
 }
 
 function runMissionCommandSelfCheck(){
