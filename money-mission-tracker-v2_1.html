@@ -12130,6 +12130,54 @@ function buildMissionThreadMemoryResponseV1(turn,ctx){
   return memory.message||'';
 }
 
+function missionIsWhyRequestV1(input){
+  var q=normalizeMissionQuestion(input||'');
+  return /^(why|y tho|why tho|why that|why this|why not|why now|why would i|what'?s the reason|whats the reason|explain that|why are you saying that|why that move|how come|what'?s the logic|whats the logic)$/i.test(q);
+}
+
+function getMissionWhyResponseV1(turn,ctx){
+  if(!missionIsWhyRequestV1(turn&&turn.rawInput||turn&&turn.normalizedInput||''))return '';
+  var memory=turn&&turn.threadMemory||{};
+  var lastResult=memory.lastResult||(getMissionBrainSessionV2().resultLoop||{}).lastResult||null;
+  var pending=memory.pendingAction||(getMissionBrainSessionV2().resultLoop||{}).pendingAction||getMissionBrainSessionV2().lastActionPlan||null;
+  var lastTurn=memory.lastTurn||null;
+  var route=(memory.activeRoute||memory.lastRoute||lastTurn&&lastTurn.route||turn&&turn.route||'now');
+  var routeLabel=getMissionRouteLabelV2(route);
+  var leadCount=(ctx&&ctx.crm&&ctx.crm.length)||0;
+  var contentCount=(window.__contentPieces&&window.__contentPieces.length)||0;
+  var productionCount=(window.__productionItems&&window.__productionItems.length)||(window.__beats&&window.__beats.length)||0;
+  var nextMove=pending&&pending.label||turn&&turn.brainState&&turn.brainState.nextBestMove||lastTurn&&lastTurn.actionLabel||'the next visible move';
+  var lastResultMatchesRoute=!lastResult||!lastResult.route||!route||route==='now'||lastResult.route===route;
+  if(lastResult&&lastResultMatchesRoute){
+    if(lastResult.type==='booked')return 'Because the conversation already moved to a booked call.<br><br>The next useful move is prep, calendar detail, and one clean opening question.';
+    if(lastResult.type==='paid')return 'Because the sale already happened.<br><br>The next useful move is logging the money, updating the lead, and protecting delivery.';
+    if(lastResult.type==='reply')return 'Because there is live buying signal now.<br><br>The next useful move is one qualifying question before any pitch.';
+    if(lastResult.type==='no_reply')return 'Because no reply is still useful signal.<br><br>Log the touch, avoid chasing the same person too hard, then move to the next warm signal.';
+  }
+  if(route==='leads'){
+    return 'Because pipeline is the closest visible path to a money conversation right now.'+(leadCount?'<br><br>The OS can see '+leadCount+' open leads, so the useful move is not more thinking. It is one qualified touch, then a logged result.':'<br><br>The useful move is opening the Hit List, finding the warmest visible signal, then logging what happened.');
+  }
+  if(route==='sales'){
+    return 'Because this is a sales moment, not a dashboard moment.<br><br>The useful move is getting the prospect to name the problem before you explain the offer.';
+  }
+  if(route==='report'||route==='money'){
+    return 'Because the number is supposed to drive behavior.<br><br>Revenue tells us whether to protect delivery, follow up, or create one more buyer-facing action.';
+  }
+  if(route==='content'){
+    return 'Because content should turn today’s work into proof.'+(contentCount?'<br><br>The OS can see '+contentCount+' content item'+(contentCount===1?'':'s')+', so the next move is choosing the one closest to proof or money.':'<br><br>The next move is making the smallest proof piece tied to the current mission.');
+  }
+  if(route==='production'){
+    return 'Because production only helps when the asset moves closer to shipping, selling, or proof.'+(productionCount?'<br><br>The OS can see active production work, so the move is '+escapeHtml(nextMove)+'.':'<br><br>The move is to pick one asset and create the next visible status change.');
+  }
+  if(route==='sync'){
+    return 'Because sync is the trust check, not the mission.<br><br>Clear the data blocker once, then use the clean read to choose the next action.';
+  }
+  if(lastTurn||pending){
+    return 'Because the last useful thread was '+escapeHtml(routeLabel)+'.<br><br>The OS was pointing at '+escapeHtml(nextMove)+' so the next answer has a real result to learn from.';
+  }
+  return 'Nothing has been logged yet this session, so there is no decision to explain.<br><br>Give me a move and I will tell you why it matters.';
+}
+
 function updateMissionThreadMemoryV1(turn){
   if(!turn)return;
   try{
@@ -12238,17 +12286,25 @@ function getMissionTooMuchAdviceV1(turn,ctx){
   var directNext=/\b(what next|what now|what should i do|what do i do|call the move|pick one|just tell me one thing|same thing|again|more)\b/.test(q);
   var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|report|pipeline|who hot|content|production|calendar)\b/.test(q);
   var salesAsk=/\b(what should i say|what do i say|too expensive|he said|she said|they said|ghosted|payment plan|roleplay|score my answer)\b/.test(q);
+  var mentorAsk=/\b(how do i|how can i|teach me|explain|break down|why am i|why is|why does|what does|what should .+ look like|framework|principle|get more|make my offer better|not converting|keeping me broke|not making money)\b/.test(q);
+  var currentRoute=turn&&turn.route||getMissionThreadExplicitRouteFromQuestionV1(q)||'now';
+  var pendingRoute=(pending&&pending.route)||getMissionThreadExplicitRouteFromQuestionV1([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '))||currentRoute;
+  var sameDomain=!pending||!pendingRoute||!currentRoute||currentRoute==='now'||pendingRoute===currentRoute||(pendingRoute==='leads'&&currentRoute==='sales')||(pendingRoute==='sales'&&currentRoute==='leads');
   var pendingAge=getMissionAgeMinutes(pending&&pending.suggestedAt||'');
   var repeatedAdvice=(session.lastActionStatus==='suggested'&&pending&&pendingAge!==null&&pendingAge<=90);
   var noMovement=!lastResult||!lastResult.type||lastResult.type==='done';
   var recentNoResult=history.slice(0,3).filter(function(r){return r&&(['done','no_reply'].indexOf(r.type)>=0);}).length;
-  var shouldAnswer=!!(directNext&&repeatedAdvice&&noMovement&&!explicitData&&!salesAsk);
-  if(!shouldAnswer&&directNext&&recentNoResult>=2&&!explicitData&&!salesAsk)shouldAnswer=true;
+  var shouldAnswer=!!(directNext&&sameDomain&&repeatedAdvice&&noMovement&&!explicitData&&!salesAsk&&!mentorAsk);
+  if(!shouldAnswer&&directNext&&sameDomain&&recentNoResult>=2&&!explicitData&&!salesAsk&&!mentorAsk)shouldAnswer=true;
   return {
     shouldAnswer:shouldAnswer,
     repeatedAdvice:!!repeatedAdvice,
     pendingAction:pending,
     pendingAgeMinutes:pendingAge,
+    currentRoute:currentRoute,
+    pendingRoute:pendingRoute,
+    sameDomain:sameDomain,
+    mentorAsk:mentorAsk,
     recentNoResultCount:recentNoResult,
     reason:shouldAnswer?(repeatedAdvice?'pending_action_not_resolved':'repeated_no_result'):'',
     suppressBubbles:shouldAnswer
@@ -12259,7 +12315,7 @@ function buildMissionTooMuchAdviceResponseV1(turn,ctx){
   var read=turn&&turn.tooMuchAdvice||null;
   if(!read||!read.shouldAnswer)return '';
   var action=read.pendingAction&&read.pendingAction.label||read.pendingAction&&read.pendingAction.action||'the last move';
-  return 'I do not want to stack more advice on top of the same open loop.<br><br>Last move: '+escapeHtml(action)+'.<br><br>What is blocking it right now: time, confidence, the lead, the offer, or the app?';
+  return 'We have covered this move a few times now.<br><br>Last move: '+escapeHtml(action)+'.<br><br>Before I say it again, what is actually blocking it: time, confidence, the lead, the offer, or the app?';
 }
 
 /* =========================================================
@@ -15158,6 +15214,7 @@ function getMissionIntelligenceAnswerStackV1(turn,ctx){
   add('decision_memory',buildMissionDecisionMemoryResponseV1(turn,ctx));
   add('pattern_memory',buildMissionPatternCoachingResponseV1(turn,ctx));
   add('silence_intelligence',buildMissionSilenceIntelligenceResponseV1(turn,ctx));
+  add('why_response',getMissionWhyResponseV1(turn,ctx));
   add('thread_memory',buildMissionThreadMemoryResponseV1(turn,ctx));
   add('too_much_advice',buildMissionTooMuchAdviceResponseV1(turn,ctx));
   add('constraint_guidance',buildMissionConstraintAwareGuidanceResponseV1(turn,ctx));
@@ -15198,12 +15255,15 @@ function scoreMissionArbiterCandidateV1(item,signal){
     silence_intelligence:78,
     thread_memory:80,
     too_much_advice:72,
+    why_response:84,
     constraint_guidance:70,
     mission_mentor:76,
     decision_intent:62
   }[id]||40;
   if(signal.overwhelmed&&id==='cognitive_load')score=130;
   if(signal.shortFollowup&&id==='thread_memory')score=118;
+  if(signal.shortFollowup&&id==='why_response'&&/^why|^y tho|^how come|^explain that|^what'?s the reason|^whats the reason|^what'?s the logic|^whats the logic/.test(signal.q))score=128;
+  if(signal.shortFollowup&&id==='thread_memory'&&/^why|^y tho|^how come|^explain that|^what'?s the reason|^whats the reason|^what'?s the logic|^whats the logic/.test(signal.q))score-=45;
   if(signal.shortFollowup&&id==='mission_mentor')score-=35;
   if(signal.directNext&&signal.hasResultMemory&&id==='decision_memory')score=116;
   if(signal.directNext&&signal.hasResultMemory&&id==='pattern_memory')score-=18;
@@ -17416,6 +17476,69 @@ function applyMissionFirstSentenceRuleV1(html,route){
   return replaceMissionFirstSentenceV1(out,getMissionFreshOpeningV1(route,recent));
 }
 
+function normalizeMissionFullAnswerForRepeatV1(html){
+  return missionPlainTextV1(html).toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function getMissionAnswerSimilarityV1(a,b){
+  a=normalizeMissionFullAnswerForRepeatV1(a);
+  b=normalizeMissionFullAnswerForRepeatV1(b);
+  if(!a||!b)return 0;
+  if(a===b)return 1;
+  var aw=a.split(/\s+/).filter(Boolean);
+  var bw=b.split(/\s+/).filter(Boolean);
+  var seen={};
+  aw.forEach(function(word){seen[word]=(seen[word]||0)+1;});
+  var overlap=0;
+  bw.forEach(function(word){
+    if(seen[word]>0){overlap++;seen[word]--;}
+  });
+  return overlap/Math.max(aw.length,bw.length,1);
+}
+
+function getMissionRecentAssistantAnswersV1(limit){
+  try{
+    return getMissionChatHistory().slice(-(limit||5)).map(function(turn){return turn&&turn.answer||'';}).filter(Boolean);
+  }catch(e){
+    return [];
+  }
+}
+
+function getMissionRepeatCarryLineV1(route,recent){
+  var pool={
+    sales:['Same sales read, tighter:','Still the same objection lane:','Same move, cleaner:'],
+    leads:['Same pipeline read, sharper:','Still the lead lane:','Same money map, tighter:'],
+    dpc:['Same DPC read, cleaner:','Still the daily campaign lane:','Same scoreboard move:'],
+    report:['Same money read, tighter:','Still the number talking:','Same financial signal:'],
+    content:['Same content read, cleaner:','Still the proof lane:','Same proof move:'],
+    production:['Same production read, tighter:','Still the asset lane:','Same delivery signal:'],
+    sync:['Same sync read, cleaner:','Still the trust check:','Same system signal:'],
+    now:['Same read, tighter:','Still on this, cleaner:','Same move, sharper:']
+  }[route]||['Same read, tighter:','Still on this, cleaner:','Same move, sharper:'];
+  recent=recent||[];
+  for(var i=0;i<pool.length;i++){
+    if(recent.indexOf(pool[i].toLowerCase())<0)return pool[i];
+  }
+  return pool[0];
+}
+
+function applyMissionIdenticalResponseGuardV1(html,route,question){
+  var out=String(html||'');
+  if(!out||window.__missionCommandSelfCheckActive)return out;
+  var normalized=normalizeMissionFullAnswerForRepeatV1(out);
+  if(!normalized)return out;
+  var recentAnswers=getMissionRecentAssistantAnswersV1(5);
+  var repeated=recentAnswers.some(function(answer){return getMissionAnswerSimilarityV1(out,answer)>=0.9;});
+  if(!repeated)return out;
+  var recentFirst=getMissionRecentAssistantSentences(8);
+  var carry=getMissionRepeatCarryLineV1(route||'now',recentFirst);
+  try{
+    var turn=window.__missionLastTurnObjectV2||null;
+    if(turn&&typeof addMissionTrace==='function')addMissionTrace(turn,'identical_response_guard_applied',{route:route||'',question:question||'',similarityThreshold:0.9});
+  }catch(e){}
+  return carry+'<br><br>'+out;
+}
+
 function applyMissionReadabilityGuardV1(html){
   var out=String(html||'');
   if(!out)return out;
@@ -17446,6 +17569,7 @@ function applyMissionAnswerQualityGuardsV1(html,route,question,opts){
   out=stripMissionInternalSourceLinesV1(out,opts);
   if(opts.responseBeforeReason!==false)out=applyMissionResponseBeforeReasonV1(out);
   if(opts.firstSentenceRule!==false)out=applyMissionFirstSentenceRuleV1(out,route||'now',question||'');
+  if(opts.identicalResponseGuard!==false)out=applyMissionIdenticalResponseGuardV1(out,route||'now',question||'');
   out=stripMissionInternalSourceLinesV1(out,opts);
   out=applyMissionReadabilityGuardV1(out);
   return out;
@@ -19076,6 +19200,12 @@ function runMissionIntegritySelfCheck(){
   var qualitySpacing=applyMissionReadabilityGuardV1('state.<strong>Current read:</strong>1) Money');
   if(qualitySpacing.indexOf('<br><br><strong>Current read:</strong><br>1)')<0)failures.push('readability_guard');
   if(!missionFirstSentenceNeedsFresheningV1('got it.',['got it.']))failures.push('first_sentence_rule_signal');
+  var priorRepeatHist=getStore(MISSION_CHAT_HISTORY_KEY);
+  setStore(MISSION_CHAT_HISTORY_KEY,[{question:'booked',answer:'Good.<br><br>Conversation moved to calendar.<br><br>Result read: Booked Call.'}]);
+  var repeatGuarded=applyMissionIdenticalResponseGuardV1('Good.<br><br>Conversation moved to calendar.<br><br>Result read: Booked Call.','sales','booked');
+  if(normalizeMissionFullAnswerForRepeatV1(repeatGuarded)===normalizeMissionFullAnswerForRepeatV1('Good.<br><br>Conversation moved to calendar.<br><br>Result read: Booked Call.'))failures.push('identical_response_guard');
+  if(priorRepeatHist===undefined||priorRepeatHist===null)setStore(MISSION_CHAT_HISTORY_KEY,[]);
+  else setStore(MISSION_CHAT_HISTORY_KEY,priorRepeatHist);
   var cognitiveLoad=getMissionCognitiveLoadV1('I am tired',[],{});
   if(!cognitiveLoad.shouldForceFocus||!cognitiveLoad.simplifyMode)failures.push('cognitive_load_fatigue');
   var cognitivePrompt=buildMissionCognitiveLoadResponseV1({rawInput:'I am tired',cognitiveLoad:cognitiveLoad,brainState:{nextBestMove:'Open the current work card'}},{});
@@ -19135,12 +19265,19 @@ function runMissionIntegritySelfCheck(){
   if(!bookedThread.shouldAnswer||bookedThread.reason!=='last_result_thread')failures.push('thread_memory_booked_signal');
   var bookedThreadPrompt=buildMissionThreadMemoryResponseV1({threadMemory:bookedThread},actionCtx);
   if(bookedThreadPrompt.indexOf('booked-call thread')<0||bookedThreadPrompt.indexOf('opening question')<0)failures.push('thread_memory_booked_prompt');
+  var whyBooked=getMissionWhyResponseV1({rawInput:'why',route:'sales',threadMemory:bookedThread},{crm:[{},{}]});
+  if(whyBooked.indexOf('booked call')<0||whyBooked.indexOf('opening question')<0)failures.push('why_response_booked');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'leads',turns:[{question:'/pipeline',route:'leads',timestamp:new Date().toISOString()}]},resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',actionLabel:'Open Hit List',recordedAt:new Date().toISOString()},history:[]}}));
   var newerRouteThread=getMissionThreadMemoryV1({rawInput:'why',route:'leads',inputSignals:{}},actionCtx);
   if(newerRouteThread.reason==='last_result_thread'||(newerRouteThread.message||'').indexOf('past the sale')>=0)failures.push('thread_memory_newer_route_guard');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'dpc',turns:[{question:'/pipeline',route:'dpc',timestamp:new Date().toISOString()}]},resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',actionLabel:'Open Hit List',recordedAt:new Date().toISOString()},history:[]}}));
   var slashRouteThread=getMissionThreadMemoryV1({rawInput:'why',route:'now',inputSignals:{}},actionCtx);
   if(slashRouteThread.activeRoute!=='leads'||(slashRouteThread.message||'').indexOf('Daily Profit Campaign')>=0)failures.push('thread_memory_slash_route_guard');
+  var whyPipeline=getMissionWhyResponseV1({rawInput:'why',route:'leads',threadMemory:slashRouteThread},{crm:[{},{},{}]});
+  if(whyPipeline.indexOf('pipeline')<0||whyPipeline.indexOf('3 open leads')<0)failures.push('why_response_pipeline');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{turns:[]},resultLoop:{history:[]}}));
+  var whyFresh=getMissionWhyResponseV1({rawInput:'y tho',route:'now',threadMemory:{}},{});
+  if(whyFresh.indexOf('no decision to explain')<0)failures.push('why_response_fresh');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'leads',turns:[{question:'/pipeline',route:'leads',timestamp:new Date().toISOString()}]},lastActionPlan:{label:'Open Hit List',action:'Contact GARY RAOGUY',type:'open_card',target:'hit_list',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact GARY RAOGUY',type:'open_card',target:'hit_list',route:'leads',suggestedAt:new Date().toISOString()},history:[]}}));
   var pendingThread=getMissionThreadMemoryV1({rawInput:'more',route:'leads',inputSignals:{}},actionCtx);
   if(!pendingThread.shouldAnswer||pendingThread.reason!=='pending_action_thread')failures.push('thread_memory_pending');
@@ -19224,7 +19361,11 @@ function runMissionIntegritySelfCheck(){
   var tooMuch=getMissionTooMuchAdviceV1({rawInput:'what next',route:'now'},actionCtx);
   if(!tooMuch.shouldAnswer||tooMuch.reason!=='pending_action_not_resolved')failures.push('too_much_advice_signal');
   var tooMuchPrompt=buildMissionTooMuchAdviceResponseV1({rawInput:'what next',tooMuchAdvice:tooMuch},actionCtx);
-  if(tooMuchPrompt.indexOf('stack more advice')<0||tooMuchPrompt.indexOf('What is blocking')<0)failures.push('too_much_advice_prompt');
+  if(tooMuchPrompt.indexOf('covered this move')<0||tooMuchPrompt.indexOf('what is actually blocking')<0)failures.push('too_much_advice_prompt');
+  var tooMuchMentor=getMissionTooMuchAdviceV1({rawInput:'how do I get more leads',route:'leads'},actionCtx);
+  if(tooMuchMentor.shouldAnswer||!tooMuchMentor.mentorAsk)failures.push('too_much_advice_mentor_guard');
+  var tooMuchDomain=getMissionTooMuchAdviceV1({rawInput:'what should i post',route:'content'},actionCtx);
+  if(tooMuchDomain.shouldAnswer)failures.push('too_much_advice_domain_guard');
   var arbiterTurn=fakeTurn({
     rawInput:'what next',
     route:'now',
@@ -19265,7 +19406,7 @@ function runMissionIntegritySelfCheck(){
     decisionIntent:{shouldAnswer:false}
   });
   var followupPriority=getMissionArbitratedIntelligenceAnswerV1(followupPriorityTurn,actionCtx);
-  if(!followupPriority||followupPriority.id!=='thread_memory')failures.push('arbiter_short_followup_thread_priority');
+  if(!followupPriority||followupPriority.id!=='why_response')failures.push('arbiter_short_followup_why_priority');
   var cognitivePriorityTurn=fakeTurn({
     rawInput:'I am overwhelmed and need a reset',
     normalizedInput:'i am overwhelmed and need a reset',
@@ -19293,7 +19434,7 @@ function runMissionIntegritySelfCheck(){
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
   window.__missionIntegritySelfCheckActive=false;
-  return {passed:!failures.length,failures:failures,total:97};
+  return {passed:!failures.length,failures:failures,total:104};
 }
 
 function runMissionCommandSelfCheck(){
