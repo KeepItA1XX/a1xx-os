@@ -9514,6 +9514,11 @@ var MISSION_ROUTER_V2_PRIMARY=true;
 var MISSION_TURN_CHECKPOINTS_KEY='a1xx_mc_turn_checkpoints_v1';
 var MISSION_BRAIN_SESSION_V2_KEY='a1xx_mc_brain_session_v2';
 var MISSION_PRESENCE_LOG_KEY='a1xx_mc_presence_log';
+window.__missionActiveCard=window.__missionActiveCard||'command';
+window.__missionLastUserAction=window.__missionLastUserAction||null;
+window.__missionLastUserActionTimestamp=window.__missionLastUserActionTimestamp||0;
+window.__missionLastSyncTimes=window.__missionLastSyncTimes||{};
+window.__missionCurrentSalesMode=window.__missionCurrentSalesMode||'normal';
 
 function createMissionTurn(rawInput,kind,options){
   var now=new Date();
@@ -9534,6 +9539,7 @@ function createMissionTurn(rawInput,kind,options){
     route:'',
     workerId:'',
     conversationType:'',
+    liveContext:null,
     brainState:null,
     contextPacket:null,
     contextSlices:null,
@@ -9551,6 +9557,8 @@ function createMissionTurn(rawInput,kind,options){
     workerPlan:null,
     responsePlan:null,
     bubblePacket:null,
+    integrityFlags:[],
+    integrityOverrides:[],
     decisionTrace:[],
     warnings:[],
     errors:[],
@@ -9568,6 +9576,188 @@ function addMissionWarning(turn,message,data){
   if(!turn)return;
   if(!turn.warnings)turn.warnings=[];
   turn.warnings.push({timestamp:new Date().toISOString(),message:String(message||''),data:data||null});
+}
+
+/* =========================================================
+   MISSION CONTEXTUAL INTELLIGENCE LAYER — v1
+========================================================= */
+function getMissionDataFreshnessFlag(key){
+  try{
+    var mapped={leads:'crm',revenue:'report',sync:'syncQueue'};
+    var sourceKey=mapped[key]||key;
+    var status=typeof getMissionSourceStatus==='function'?getMissionSourceStatus(sourceKey):null;
+    if(status){
+      if(!status.loaded)return 'missing';
+      if(status.confidence==='low')return 'stale';
+      if(status.confidence==='high')return 'fresh';
+      return 'fresh';
+    }
+  }catch(e){}
+  try{
+    var lastSync=window.__missionLastSyncTimes&&window.__missionLastSyncTimes[key]||0;
+    if(!lastSync)return 'missing';
+    return Date.now()-lastSync<1800000?'fresh':'stale';
+  }catch(err){
+    return 'missing';
+  }
+}
+
+function getMissionLiveContextSnapshot(){
+  var session={};
+  try{session=getMissionBrainSessionV2();}catch(e){}
+  var rhythm={name:'',focus:'',action:''};
+  try{rhythm=typeof getDayRhythm==='function'?getDayRhythm(new Date().getDay())||rhythm:rhythm;}catch(err){}
+  return {
+    activeCard:window.__missionActiveCard||'command',
+    lastUserAction:window.__missionLastUserAction||null,
+    lastUserActionTimestamp:window.__missionLastUserActionTimestamp||0,
+    dataFreshness:{
+      dpc:getMissionDataFreshnessFlag('dpc'),
+      leads:getMissionDataFreshnessFlag('leads'),
+      revenue:getMissionDataFreshnessFlag('revenue'),
+      calendar:getMissionDataFreshnessFlag('calendar'),
+      sync:getMissionDataFreshnessFlag('sync')
+    },
+    currentDayBlock:{
+      name:rhythm.name||'',
+      focus:rhythm.focus||rhythm.name||'',
+      action:rhythm.action||''
+    },
+    lastTurnRoute:window.__missionLastTurnObjectV2&&window.__missionLastTurnObjectV2.route||session.lastRoute||null,
+    lastTurnWorker:window.__missionLastTurnObjectV2&&window.__missionLastTurnObjectV2.workerId||session.selectedWorkerId||null,
+    lastTurnTopic:window.__missionLastTurnObjectV2&&window.__missionLastTurnObjectV2.normalizedInput||session.sessionTopic||null,
+    sessionTurnCount:session.turnCount||0,
+    currentSalesMode:window.__missionCurrentSalesMode||'normal'
+  };
+}
+
+function normalizeMissionIntegrityText(html){
+  return String(html||'').replace(/<br\s*\/?>/gi,'. ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function stripMissionLiteralVariables(html){
+  return String(html||'').replace(/\{\{[^}]+\}\}/g,'').replace(/\s{2,}/g,' ').trim();
+}
+
+function hasMissionDuplicateSentence(html){
+  var text=normalizeMissionIntegrityText(html).toLowerCase();
+  var sentences=text.split(/[.!?]+/).map(function(s){return s.trim();}).filter(function(s){return s.length>12;});
+  var seen={};
+  for(var i=0;i<sentences.length;i++){
+    if(seen[sentences[i]])return true;
+    seen[sentences[i]]=true;
+  }
+  return false;
+}
+
+function compactMissionDuplicateParagraphs(html){
+  var blocks=String(html||'').split(/(?:<br\s*\/?>\s*){2,}/i);
+  var seen={};
+  var out=[];
+  blocks.forEach(function(block){
+    var key=normalizeMissionIntegrityText(block).toLowerCase();
+    if(!key||seen[key])return;
+    seen[key]=true;
+    out.push(block);
+  });
+  return out.join('<br><br>');
+}
+
+function shouldMissionIntegritySuppressBubbles(turn){
+  if(!turn)return false;
+  var q=String(turn.rawInput||turn.normalizedInput||'').toLowerCase();
+  var route=turn.route||'';
+  var shape=turn.responseShape||'';
+  var conv=turn.conversationType||'';
+  if(turn.liveContext&&turn.liveContext.currentSalesMode==='live_call')return true;
+  if(route==='sales')return true;
+  if(/script_request|live_call|roleplay|scorecard/.test(shape))return true;
+  if(/CONV_CORRECTION|CONV_ACTION_COMPLETE/.test(conv))return true;
+  if(/\b(what should i say|what do i say|write .*dm|warm follow|too expensive|cant afford|can't afford|roleplay|score my answer|on the phone)\b/.test(q))return true;
+  return false;
+}
+
+function setMissionSalesModeFromTurn(turn){
+  if(!turn)return;
+  var q=String(turn.rawInput||turn.normalizedInput||'').toLowerCase();
+  if(/\b(call is done|got off|hung up|call ended|off the phone|just got off|debrief)\b/.test(q)){
+    window.__missionCurrentSalesMode='normal';
+    turn.integrityFlags=turn.integrityFlags||[];
+    turn.integrityFlags.push('sales_mode_ended');
+    return;
+  }
+  if(/\b(on the phone|live call|in a call|on a call|call right now)\b/.test(q))window.__missionCurrentSalesMode='live_call';
+  else if(/\b(roleplay|role play|test me|skeptical prospect|busy prospect)\b/.test(q))window.__missionCurrentSalesMode='roleplay';
+  else if(/\b(score my answer|scorecard|grade my call|review my answer)\b/.test(q))window.__missionCurrentSalesMode='scorecard';
+  else if(/\b(stop roleplay|quit roleplay|end session|that's enough|that is enough)\b/.test(q))window.__missionCurrentSalesMode='normal';
+}
+
+function runMissionResponseIntegrityCheck(turn,bubblePacket){
+  var flags=[],overrides=[];
+  var packet=Object.assign({b1:'',b2:'',b3:''},bubblePacket||{});
+  var b1=String(packet.b1||''),b2=String(packet.b2||''),b3=String(packet.b3||'');
+  if(turn&&(!turn.liveContext||!turn.liveContext.currentSalesMode))turn.liveContext=getMissionLiveContextSnapshot();
+  setMissionSalesModeFromTurn(turn);
+  if(turn&&turn.liveContext)turn.liveContext.currentSalesMode=window.__missionCurrentSalesMode||turn.liveContext.currentSalesMode||'normal';
+
+  if(/\{\{[^}]+\}\}/.test(b1)){
+    b1=stripMissionLiteralVariables(b1);
+    flags.push('literal_variable_stripped');
+  }
+  if(hasMissionDuplicateSentence(b1)){
+    b1=compactMissionDuplicateParagraphs(b1);
+    flags.push('duplicate_sentence_detected');
+  }
+  if(!normalizeMissionIntegrityText(b1)||normalizeMissionIntegrityText(b1).length<5){
+    b1=escapeHtml(getMissionGracefulFallback(turn)||'I need one cleaner lane before I call the move.');
+    flags.push('b1_was_empty_fallback_used');
+  }
+  if(turn&&turn.routePlan&&turn.routePlan.clarify){
+    b3='';
+    flags.push('b3_suppressed_on_clarify');
+  }
+  if(shouldMissionIntegritySuppressBubbles(turn)){
+    if(b2){b2='';flags.push('b2_suppressed_by_mode');}
+    if(b3){b3='';flags.push('b3_suppressed_by_mode');}
+  }
+  if(b2&&turn&&turn.dataConfidence){
+    var level=turn.dataConfidence.level||'medium';
+    var risk=turn.syncStatus&&turn.syncStatus.risk||'none';
+    if((level==='low'||risk==='high')&&!/data confidence|stale|partial/i.test(b2)){
+      b2='<em>Data confidence is low. Treat this as a partial read until sync is checked.</em><br><br>'+b2;
+      flags.push('stale_data_warning_prepended');
+    }
+  }
+  if(turn){
+    turn.integrityFlags=(turn.integrityFlags||[]).concat(flags);
+    turn.integrityOverrides=(turn.integrityOverrides||[]).concat(overrides);
+    if(flags.length)addMissionTrace(turn,'response_integrity_checked',{flags:flags,overrides:overrides});
+  }
+  packet.b1=b1;
+  packet.b2=b2;
+  packet.b3=b3;
+  packet.integrityFlags=flags;
+  packet.integrityOverrides=overrides;
+  return packet;
+}
+
+function updateMissionTurnCheckpointIntegrity(turn){
+  if(!turn||!turn.id)return;
+  try{
+    var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
+    if(!Array.isArray(list))return;
+    for(var i=0;i<list.length;i++){
+      if(list[i]&&list[i].turnId===turn.id){
+        list[i].integrityFlags=turn.integrityFlags||[];
+        list[i].integrityOverrides=turn.integrityOverrides||[];
+        list[i].liveContext=turn.liveContext||null;
+        list[i].decisionTrace=turn.decisionTrace||list[i].decisionTrace||[];
+        break;
+      }
+    }
+    if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
+    else localStorage.setItem(MISSION_TURN_CHECKPOINTS_KEY,JSON.stringify(list));
+  }catch(e){}
 }
 
 /* =========================================================
@@ -10460,6 +10650,9 @@ function getMissionBrainStateV2(turn){
     possibleRoutes:routePlan.possibleRoutes||[],
     selectedRoute:routePlan.selectedRoute||turn.route||'',
     selectedWorkerId:turn.workerId||'',
+    liveContext:turn.liveContext||null,
+    activeCard:turn.liveContext&&turn.liveContext.activeCard||'',
+    currentSalesMode:turn.liveContext&&turn.liveContext.currentSalesMode||'normal',
     inputEnergy:turn.inputEnergy||'',
     responseDepth:turn.responseDepth||'',
     responseShape:turn.responseShape||'',
@@ -10789,7 +10982,7 @@ function updateMissionBrainSessionV2(turn){
 function saveMissionTurnCheckpoint(turn){
   try{
     var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
     list.unshift(checkpoint);
     list=list.slice(0,100);
     if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
@@ -10869,6 +11062,8 @@ function runMissionTurn(kind,rawInput,options){
   var turn=createMissionTurn(rawInput,kind,options||{});
   try{
     addMissionTrace(turn,'turn_created');
+    turn.liveContext=getMissionLiveContextSnapshot();
+    addMissionTrace(turn,'live_context_snapshot',turn.liveContext);
     turn.normalizedInput=normalizeMissionInputV2(turn.rawInput);
     addMissionTrace(turn,'input_normalized',{rawInput:turn.rawInput,normalizedInput:turn.normalizedInput});
     turn.inputEnergy=getMissionInputEnergy(turn.rawInput);
@@ -14533,6 +14728,36 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   return finishMissionAnswer(getMissionNowAnswer(ctx));
 }
 
+function runMissionIntegritySelfCheck(){
+  var failures=[];
+  function fakeTurn(overrides){
+    return Object.assign({
+      id:'mcil_test_'+Math.random().toString(36).slice(2,7),
+      rawInput:'what should i say',
+      normalizedInput:'what should i say',
+      route:'sales',
+      conversationType:'CONV_DATA_REQUEST',
+      responseShape:'script_request',
+      routePlan:{clarify:false},
+      dataConfidence:{level:'medium'},
+      syncStatus:{risk:'none'},
+      liveContext:{currentSalesMode:'normal'},
+      decisionTrace:[],
+      integrityFlags:[],
+      integrityOverrides:[]
+    },overrides||{});
+  }
+  var sales=runMissionResponseIntegrityCheck(fakeTurn(),{b1:'Send {{line}}',b2:'Data',b3:'Action'});
+  if(sales.b2||sales.b3||sales.b1.indexOf('{{')>=0)failures.push('sales_script_suppression');
+  var clarify=runMissionResponseIntegrityCheck(fakeTurn({route:'',routePlan:{clarify:true},responseShape:'quick_read'}),{b1:'Pick a lane',b2:'',b3:'Action'});
+  if(clarify.b3)failures.push('clarify_action_suppression');
+  var stale=runMissionResponseIntegrityCheck(fakeTurn({rawInput:'revenue report',normalizedInput:'revenue report',route:'report',responseShape:'money_pressure',dataConfidence:{level:'low'}}),{b1:'Money read',b2:'Revenue · $10',b3:''});
+  if(stale.b2.indexOf('Data confidence is low')<0)failures.push('stale_data_warning');
+  var empty=runMissionResponseIntegrityCheck(fakeTurn({route:'now',responseShape:'quick_read'}),{b1:'',b2:'',b3:''});
+  if(!empty.b1)failures.push('empty_fallback');
+  return {passed:!failures.length,failures:failures,total:4};
+}
+
 function runMissionCommandSelfCheck(){
   var el=document.getElementById('mission-command-test-status');
   if(el){el.textContent='Checking Mission Command routes...';el.className='reset-status';}
@@ -14644,6 +14869,10 @@ function runMissionCommandSelfCheck(){
   if(priorBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_KEY,priorBrain);
   if(priorPresence===null)sessionStorage.removeItem(MISSION_PRESENCE_LOG_KEY);else sessionStorage.setItem(MISSION_PRESENCE_LOG_KEY,priorPresence);
   window.__missionCommandSelfCheckActive=false;
+  var integrityCheck=runMissionIntegritySelfCheck();
+  if(!integrityCheck.passed){
+    failures=failures.concat(integrityCheck.failures.map(function(f){return 'MCIL -> '+f;}));
+  }
   if(el){
     if(failures.length){
       el.textContent='Chat check needs review: '+failures.join(' | ');
@@ -15530,6 +15759,8 @@ function renderMissionCommand(kind,question,forceCurrent){
     followUp=mergeMissionSuggestionBubble(followUp,actionLinks,route,question||'');
   }
   var bubblePacket=buildMissionBubblePacket(route,conv,ctx,question||'',answer,followUp,actionLinks,brainState);
+  bubblePacket=runMissionResponseIntegrityCheck(window.__missionLastTurnObjectV2||null,bubblePacket);
+  updateMissionTurnCheckpointIntegrity(window.__missionLastTurnObjectV2||null);
   answer=bubblePacket.b1||'';
   followUp=bubblePacket.b3||'';
   packet.followUp=followUp;
@@ -15812,6 +16043,9 @@ function updateMissionToolState(tool,locked){
 
 function openMissionTool(tool,shouldScroll,options){
   options=options||{};
+  window.__missionActiveCard=tool||'command';
+  window.__missionLastUserAction='opened_'+(tool||'command');
+  window.__missionLastUserActionTimestamp=Date.now();
   var ids={command:'mission-command-card',brief:'mission-brief',campaign:'dpc-card',content:'content-tracker-card',production:'production-card',calendar:'manager-split-wrapper',tasks:'manager-split-wrapper',manager:'manager-split-wrapper'};
   var activeId=ids[tool]||ids.campaign;
   var cardIds=Array.from(new Set(Object.keys(ids).map(function(k){return ids[k];})));
