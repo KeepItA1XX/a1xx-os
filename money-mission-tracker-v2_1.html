@@ -11874,7 +11874,10 @@ function getMissionThreadMemoryV1(turn,ctx){
   var lastRoute=explicitLastRoute||thread.activeRoute||lastTurn&&lastTurn.route||session.lastRoute||'';
   var followup=/^(why|why again|more|more again|tell me more|run it back|what next|what now|what about that|that one|this one|same thing|continue|and then what)$/i.test(q);
   var activeRoute=(followup&&lastRoute&&(!(turn&&turn.route)||turn.route==='now'||turn.route==='dpc'))?lastRoute:(getMissionThreadExplicitRouteFromQuestionV1(turn&&turn.rawInput||turn&&turn.normalizedInput||'')||turn&&turn.route||thread.activeRoute||session.lastRoute||session.sessionTopic||'now');
-  if(pending&&activeRoute&&((pending.route&&pending.route!==activeRoute)||/decision_memory_paid|thread_memory_paid/.test(pending.reason||'')))pending=null;
+  var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
+  var pendingLooksSales=/\b(prep call|sales coach|sales|closer|call prep|booked call|opening question|discovery)\b/.test(pendingText);
+  var pendingLooksPipeline=/\b(hit list|pipeline|lead|crm|follow up|contact)\b/.test(pendingText);
+  if(pending&&activeRoute&&((pending.route&&pending.route!==activeRoute)||/decision_memory_paid|thread_memory_paid/.test(pending.reason||'')||(activeRoute==='leads'&&pendingLooksSales&&!pendingLooksPipeline)||(activeRoute==='sales'&&pendingLooksPipeline&&!pendingLooksSales)))pending=null;
   var correction=!!(turn&&turn.inputSignals&&turn.inputSignals.isCorrection)||/\b(nah not that|not that|wrong lane|i meant)\b/.test(q);
   var lastWasCorrection=!!(lastTurn&&/\b(nah not that|not that|wrong lane|i meant)\b/.test(normalizeMissionQuestion(lastTurn.question||lastTurn.normalizedInput||'')));
   var resultRoute=lastResult&&lastResult.route||'';
@@ -18593,6 +18596,9 @@ function runMissionIntegritySelfCheck(){
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'sales',turns:[{question:'/pipeline',route:'sales',timestamp:new Date().toISOString()}]},resultLoop:{history:[]}}));
   var normalizedPipelineThread=getMissionThreadMemoryV1({rawInput:'why',route:'now',inputSignals:{}},actionCtx);
   if(normalizedPipelineThread.activeRoute!=='leads'||(normalizedPipelineThread.message||'').indexOf('Closer Coach')>=0)failures.push('thread_memory_normalized_pipeline_guard');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'leads',turns:[{question:'/pipeline',route:'leads',timestamp:new Date().toISOString()}]},lastActionPlan:{label:'Prep Call',target:'sales_coach',reason:'thread_memory_booked',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Prep Call',target:'sales_coach',reason:'thread_memory_booked',suggestedAt:new Date().toISOString()},history:[]}}));
+  var staleSalesPendingThread=getMissionThreadMemoryV1({rawInput:'why',route:'now',inputSignals:{}},actionCtx);
+  if(staleSalesPendingThread.pendingAction||(staleSalesPendingThread.message||'').indexOf('Prep Call')>=0)failures.push('thread_memory_stale_sales_pending_guard');
   var bookedCountAnswer=getMissionCommandResponse('ask',actionCtx,'how many booked calls do i have',{});
   if(bookedCountAnswer.indexOf('Booked-call read')<0||bookedCountAnswer.indexOf('Start the DPC')>=0)failures.push('booked_call_count_answer');
   var bookedCountBubble=buildMissionBubblePacket('dpc',{type:'CONV_DATA_REQUEST',route:'dpc'},actionCtx,'how many booked calls do i have','Booked-call read.','','',{});
@@ -18806,7 +18812,7 @@ function runMissionIntegritySelfCheck(){
   var masterQASweep=runMissionMasterIntelligenceQASweepV1();
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:92};
+  return {passed:!failures.length,failures:failures,total:93};
 }
 
 function runMissionCommandSelfCheck(){
