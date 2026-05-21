@@ -3881,6 +3881,7 @@ function totalDays(ci){return Math.ceil((pd(CYCLES[ci].end)-pd(CYCLES[ci].start)
    TABS
 ══════════════════════════════════════════════════════════ */
 function showTab(name,el){
+  window.__missionActiveMainTab=name||'today';
   ['today','week','report','rolodex'].forEach(function(t){
     document.getElementById('pane-'+t).style.display='none';
     document.getElementById('tab-'+t).classList.remove('active');
@@ -10376,6 +10377,7 @@ function getMissionLiveContextSnapshot(){
   try{rhythm=typeof getDayRhythm==='function'?getDayRhythm(new Date().getDay())||rhythm:rhythm;}catch(err){}
   return {
     activeCard:window.__missionActiveCard||'command',
+    activeTab:typeof getMissionActiveTab==='function'?getMissionActiveTab():'unknown',
     contextMode:getMissionContextMode(),
     contextRoute:getMissionContextRouteForMode(getMissionContextMode()),
     lastUserAction:window.__missionLastUserAction||null,
@@ -10757,6 +10759,312 @@ function applyMissionPresenceLayer(html,route,question,opts){
     setMissionPresenceLog(log);
   }
   return out;
+}
+
+/* =========================================================
+   MISSION FOCUS GUARD + DAY INTELLIGENCE — v1
+========================================================= */
+var MISSION_FOCUS_GUARD_SESSION_KEY='a1xx_mc_focus_guard_day_intel_v1';
+var MISSION_FOCUS_GUARD_DAY_INTEL_V1={
+  id:'mc_skill_focus_guard_day_intelligence_v1',
+  name:'Mission Command Focus Guard + Day Intelligence v1',
+  version:'1.0',
+  installMode:'additive_only',
+  routes:['now','calendar','report','activities','sync','diagnostic','memory','weekly','focus'],
+  workers:['calendar_focus_guard','mission_command_strategist','weekly_review_assistant','ai_memory_curator'],
+  dayTypes:['beat_day','outreach_day','content_day','manager_day','briefing','none'],
+  timeBlocks:['morning_block','midday_block','afternoon_block','end_of_day_block','late_block'],
+  tabStates:['report','activities','rolodex','system_health','main','unknown'],
+  sessionOpenPools:{
+    beat_day:[
+      {id:'fg_open_beat_01',text:'{{dayTypeLabel}} — {{timeBlockLabel}}. Studio window first.<br><br>Start with {{primaryAction}}.'},
+      {id:'fg_open_beat_02',text:'Maker mode is active.<br><br>Open Production and move one asset before you check another lane.'},
+      {id:'fg_open_beat_03',text:'{{timeBlockLabel}} on a {{dayTypeLabel}}.<br><br>The OS wants one finished production move, not a full dashboard tour.'}
+    ],
+    outreach_day:[
+      {id:'fg_open_outreach_01',text:'{{dayTypeLabel}} — {{timeBlockLabel}}. Money window is open.<br><br>Start with {{topLead}} or the first DPC touch.'},
+      {id:'fg_open_outreach_02',text:'Outreach mode is active.<br><br>First move: one buyer-facing touch, then log the result.'},
+      {id:'fg_open_outreach_03',text:'{{timeBlockLabel}}. This is a lead-and-DPC lane.<br><br>Open the Hit List and move one person.'}
+    ],
+    content_day:[
+      {id:'fg_open_content_01',text:'{{dayTypeLabel}} — {{timeBlockLabel}}. Proof first.<br><br>Open Content and turn today’s work into one asset.'},
+      {id:'fg_open_content_02',text:'Content mode is active.<br><br>Make the piece that supports the Money Mission, then log what shipped.'},
+      {id:'fg_open_content_03',text:'{{timeBlockLabel}} on Content Day.<br><br>Pick one proof angle and move it forward.'}
+    ],
+    manager_day:[
+      {id:'fg_open_manager_01',text:'{{dayTypeLabel}} — {{timeBlockLabel}}. Decision work first.<br><br>Clear the admin item that unlocks the next money or delivery move.'},
+      {id:'fg_open_manager_02',text:'Manager mode is active.<br><br>Check the board, make one decision, then get back to execution.'},
+      {id:'fg_open_manager_03',text:'{{timeBlockLabel}}. Manager Day means clean the system just enough to make the next move obvious.'}
+    ],
+    briefing:[
+      {id:'fg_open_brief_01',text:'Briefing mode — {{timeBlockLabel}}.<br><br>Start with the business read, then choose the lane that needs action.'},
+      {id:'fg_open_brief_02',text:'Strategic review is open.<br><br>Check money, pipeline, content, production, then pick the next adjustment.'}
+    ],
+    none:[
+      {id:'fg_open_none_01',text:'General mode. No day type is selected yet.<br><br>Tell me the lane or pick one from the Day Bar.'},
+      {id:'fg_open_none_02',text:'Ready. The OS is reading the full board.<br><br>What are we running first: money, outreach, content, production, or manager work?'}
+    ]
+  },
+  dayTypePools:{
+    read:[
+      {id:'fg_day_read_01',text:'Day type: {{dayTypeLabel}}.<br><br>Time block: {{timeBlockLabel}}.<br><br>Posture: {{dayPosture}}'},
+      {id:'fg_day_read_02',text:'You are in {{dayTypeLabel}} mode right now.<br><br>That means I will weight answers toward {{primaryLane}} unless you ask directly for another lane.'},
+      {id:'fg_day_read_03',text:'Current mode is {{dayTypeLabel}}. The first useful move is {{primaryAction}}.'}
+    ],
+    time:[
+      {id:'fg_time_read_01',text:'Time block: {{timeBlockLabel}}.<br><br>{{timeBlockAdvice}}'},
+      {id:'fg_time_read_02',text:'The app reads this as {{timeBlockLabel}}.<br><br>Keep the move sized to that window.'}
+    ]
+  },
+  focusGuardPools:{
+    beat_day:[
+      {id:'fg_redirect_beat_01',text:'Quick read: {{dataAnswer}}<br><br>{{dayTypeLabel}} is running, so I would finish the production move before digging deeper.'},
+      {id:'fg_redirect_beat_02',text:'I can answer that, but this is {{dayTypeLabel}}.<br><br>Fast read: {{dataAnswer}}<br><br>Stay in maker mode unless this is urgent.'}
+    ],
+    outreach_day:[
+      {id:'fg_redirect_outreach_01',text:'Quick read: {{dataAnswer}}<br><br>{{dayTypeLabel}} is active. Bring it back to one buyer-facing action.'},
+      {id:'fg_redirect_outreach_02',text:'That is a different lane.<br><br>Fast read: {{dataAnswer}}<br><br>Outreach Day still wants the next lead touch.'}
+    ],
+    content_day:[
+      {id:'fg_redirect_content_01',text:'Quick read: {{dataAnswer}}<br><br>{{dayTypeLabel}} is active. If it does not turn into proof, park it.'},
+      {id:'fg_redirect_content_02',text:'I have the read: {{dataAnswer}}<br><br>Content Day still wants one asset moved forward.'}
+    ],
+    manager_day:[
+      {id:'fg_redirect_manager_01',text:'Quick read: {{dataAnswer}}<br><br>{{dayTypeLabel}} is active. Make the decision, then return to the board.'},
+      {id:'fg_redirect_manager_02',text:'Fast answer: {{dataAnswer}}<br><br>Manager mode means keep this tied to a decision or cleanup move.'}
+    ],
+    briefing:[
+      {id:'fg_redirect_brief_01',text:'Quick read: {{dataAnswer}}<br><br>Briefing mode is active, so turn this into a decision for the next lane.'}
+    ]
+  },
+  tabNarrationPools:{
+    report:[
+      {id:'fg_tab_report_01',text:'Report tab is open. You are at {{rev}} of {{wk}} with {{gap}} left.<br><br>The useful read is {{moneyCondition}}.'},
+      {id:'fg_tab_report_02',text:'Looking at the report, the score is {{pct}}% of target.<br><br>Next action should come from the closest buyer-facing move.'}
+    ],
+    activities:[
+      {id:'fg_tab_activities_01',text:'Activities tab is the receipt for the day.<br><br>Today shows {{dmsCount}} DMs, {{callsCount}} calls, {{closesCount}} closes, and {{todayMoney}} collected.'},
+      {id:'fg_tab_activities_02',text:'From Activities, I am checking what actually moved today.<br><br>If the action is not logged, the OS cannot learn from it.'}
+    ],
+    rolodex:[
+      {id:'fg_tab_rolodex_01',text:'Rolodex is open. Use it like a tool shelf, not a reading list.<br><br>Pull one script or contact that supports the current move.'},
+      {id:'fg_tab_rolodex_02',text:'Rolodex read: find the resource or lead tied to this lane, use it once, then log the result.'}
+    ],
+    system_health:[
+      {id:'fg_tab_health_01',text:'System Health is open.<br><br>Check local save, bridge, Sheets, then Notion. Do not change data until the break is clear.'},
+      {id:'fg_tab_health_02',text:'Health tab read: this is a trust check, not the mission.<br><br>Clear the blocker, then get back to the active lane.'}
+    ],
+    main:[
+      {id:'fg_tab_main_01',text:'Main workspace is open.<br><br>Use Mission Command for the move, then open the day-bar card that matches it.'}
+    ]
+  },
+  ambientNudgePools:{
+    beat_day:{morning_block:'Beat Day — morning block. What are we building first?',midday_block:'Midday maker check. What asset moved?',afternoon_block:'Production window. Finish one visible asset.',end_of_day_block:'End block. Log what moved in production.',late_block:'Late block. Do the smallest production closeout.'},
+    outreach_day:{morning_block:'Outreach Day — who is first on the list?',midday_block:'Midday DPC check. What is the count?',afternoon_block:'Follow-up window. Move one lead.',end_of_day_block:'End block. Log the touches and results.',late_block:'Late block. One clean follow-up or close it down.'},
+    content_day:{morning_block:'Content Day — proof angle first.',midday_block:'Midday content check. What is moving?',afternoon_block:'Ship or schedule one piece.',end_of_day_block:'End block. Capture what today proved.',late_block:'Late block. Park ideas and save the next action.'},
+    manager_day:{morning_block:'Manager Day — make the first decision.',midday_block:'Midday manager check. What is still open?',afternoon_block:'Clear one admin blocker.',end_of_day_block:'End block. Set tomorrow’s first move.',late_block:'Late block. Close the loop, do not open more.'},
+    briefing:{morning_block:'Briefing mode. Start with the business read.',midday_block:'Briefing check. What changed?',afternoon_block:'Turn the read into the next action.',end_of_day_block:'Wrap the review and set tomorrow.',late_block:'Late briefing. Capture the takeaway.'},
+    none:{morning_block:'General mode. Pick a lane.',midday_block:'General midday check. What moved?',afternoon_block:'Pick one action before the day slips.',end_of_day_block:'End block. Log what happened.',late_block:'Late block. Keep it small.'}
+  },
+  actionSuggestions:[
+    {label:'Set Day Type',type:'context_mode',target:'day_bar',requiresConfirmation:false},
+    {label:'Run Report',type:'open_tab',target:'report',requiresConfirmation:false},
+    {label:'Open Rolodex',type:'open_tab',target:'rolodex',requiresConfirmation:false},
+    {label:'Log DPC',type:'log_dpc',target:'dpc',requiresConfirmation:true},
+    {label:'Check System Health',type:'sync_check',target:'system_hub',requiresConfirmation:false},
+    {label:'Stay In Block',type:'focus_guard',target:'current_context',requiresConfirmation:false},
+    {label:'Switch Mode',type:'context_mode',target:'day_bar',requiresConfirmation:false},
+    {label:'End Session',type:'session_wrap',target:'mission_command',requiresConfirmation:true}
+  ],
+  regressionTests:[
+    {q:'good morning',route:'now',mustAny:['Day','mode','block','General','Start']},
+    {q:'what day is it',route:'calendar',mustAny:['Day type','Time block','mode']},
+    {q:'what block we in',route:'calendar',mustAny:['Time block','window','block']},
+    {q:'what does this mean',route:'report',tab:'report',mustAny:['Report tab','target','score']},
+    {q:'what did I log today',route:'activities',tab:'activities',mustAny:['Activities','DMs','collected']},
+    {q:'who hot',route:'leads',dayType:'content_day',mustAny:['Quick read','Content Day','asset','proof']},
+    {q:'wrap it',route:'now',mustAny:['End','log','tomorrow','moved']}
+  ]
+};
+
+MISSION_SKILL_PACKS.push({
+  id:'mc_skill_focus_guard_day_intelligence_v1',
+  name:'Mission Command Focus Guard + Day Intelligence v1',
+  version:'1.0',
+  status:'active',
+  purpose:'Add day-type, time-block, active-tab, session-open, focus-guard, and ambient nudge intelligence to Mission Command.',
+  routesAffected:['now','calendar','report','activities','sync','diagnostic','memory','weekly','focus'],
+  workersAffected:['calendar_focus_guard','mission_command_strategist','weekly_review_assistant','ai_memory_curator'],
+  responsePools:{focusGuardDayIntelligence:['active']},
+  regressionTests:MISSION_FOCUS_GUARD_DAY_INTEL_V1.regressionTests
+});
+
+function getMissionFocusGuardSessionV1(){
+  try{return JSON.parse(sessionStorage.getItem(MISSION_FOCUS_GUARD_SESSION_KEY)||'{}')||{};}catch(e){return {};}
+}
+
+function setMissionFocusGuardSessionV1(session){
+  try{sessionStorage.setItem(MISSION_FOCUS_GUARD_SESSION_KEY,JSON.stringify(session||{}));}catch(e){}
+}
+
+function getMissionFocusDayTypeV1(){
+  var mode=typeof getMissionContextMode==='function'?getMissionContextMode():'general';
+  var map={production:'beat_day',outreach:'outreach_day',content:'content_day',manager:'manager_day',brief:'briefing',general:'none'};
+  return map[mode]||'none';
+}
+
+function getMissionTimeBlock(date){
+  var h=(date||new Date()).getHours();
+  if(h>=5&&h<11)return 'morning_block';
+  if(h>=11&&h<15)return 'midday_block';
+  if(h>=15&&h<18)return 'afternoon_block';
+  if(h>=18&&h<22)return 'end_of_day_block';
+  return 'late_block';
+}
+
+function getMissionActiveTab(){
+  try{
+    if(window.__missionActiveMainTab==='report')return 'report';
+    if(window.__missionActiveMainTab==='week')return 'activities';
+    if(window.__missionActiveMainTab==='rolodex')return 'rolodex';
+    var active=document.querySelector&&document.querySelector('.tab.active');
+    if(active&&active.id==='tab-report')return 'report';
+    if(active&&active.id==='tab-week')return 'activities';
+    if(active&&active.id==='tab-rolodex')return 'rolodex';
+    if(document.body&&document.body.classList&&document.body.classList.contains('settings-open'))return 'system_health';
+  }catch(e){}
+  return window.__missionActiveMainTab==='today'?'main':'unknown';
+}
+
+function getMissionFocusGuardLabelsV1(dayType,timeBlock){
+  var dayLabels={beat_day:'Production Day',outreach_day:'Outreach Day',content_day:'Content Day',manager_day:'Manager Day',briefing:'Briefing Mode',none:'General Mode'};
+  var timeLabels={morning_block:'Morning Block',midday_block:'Midday Block',afternoon_block:'Afternoon Block',end_of_day_block:'End Of Day Block',late_block:'Late Block'};
+  var lanes={beat_day:'production',outreach_day:'outreach and DPC',content_day:'content and proof',manager_day:'manager/admin decisions',briefing:'business review',none:'the full OS'};
+  var posture={beat_day:'finish one asset',outreach_day:'move one buyer-facing conversation',content_day:'turn today’s work into proof',manager_day:'clear the decision that unlocks action',briefing:'read the business and choose the next adjustment',none:'pick one lane and move it'};
+  var advice={morning_block:'Start with the main lane before checking side quests.',midday_block:'Check what moved, then push the gap.',afternoon_block:'Finish one visible move before the day fragments.',end_of_day_block:'Wrap, log, and set the first move for tomorrow.',late_block:'Keep it small and avoid opening new loops.'};
+  return {dayTypeLabel:dayLabels[dayType]||'General Mode',timeBlockLabel:timeLabels[timeBlock]||'Current Block',primaryLane:lanes[dayType]||'the full OS',dayPosture:posture[dayType]||'pick one lane and move it',timeBlockAdvice:advice[timeBlock]||'Keep the move sized to the window.'};
+}
+
+function getMissionFocusGuardVarsV1(dayType,timeBlock,tabState,ctx,route,question,brainState){
+  var base=typeof getMissionOutputContextV1_1==='function'?getMissionOutputContextV1_1(route||'now',ctx||{},question||'',brainState||{}):{};
+  var labels=getMissionFocusGuardLabelsV1(dayType,timeBlock);
+  var actionByDay={beat_day:'open Production and move one asset',outreach_day:'open the Hit List and touch one lead',content_day:'open Content and move one proof asset',manager_day:'open Manager and clear one decision',briefing:'open Brief and read the business picture',none:base.move||'pick one lane and move it'};
+  var dataByRoute={report:'money is the active read',money:'money is the active read',leads:'pipeline is the active read',content:'content is the active read',production:'production is the active read',sync:'system health is the active read',diagnostic:'system health is the active read',calendar:'schedule is the active read',now:base.move||'current move is the active read'};
+  return Object.assign({},base,labels,{
+    dayType:dayType,
+    timeBlock:timeBlock,
+    tabState:tabState||'unknown',
+    primaryAction:actionByDay[dayType]||actionByDay.none,
+    dataAnswer:dataByRoute[route]||base.move||'the requested lane has a quick read',
+    reportSummary:base.revenueLine||'the report is loaded',
+    activitySummary:(base.dmsCount||0)+' DMs, '+(base.callsCount||0)+' calls, '+(base.closesCount||0)+' closes',
+    syncStatus:base.confidence||'partial',
+    topLead:base.lead||base.topLead||'the warmest visible lead'
+  });
+}
+
+function fillMissionFocusGuardTemplateV1(pool,route,q,vars){
+  var template=typeof pickMissionTemplateFromPoolV1_1==='function'?pickMissionTemplateFromPoolV1_1(pool,route,q,vars):null;
+  if(!template)return '';
+  var filled=typeof fillMissionTemplateV1==='function'?fillMissionTemplateV1(template.text,vars):template.text;
+  return /\{\{[a-zA-Z0-9_]+\}\}/.test(filled)?'':filled;
+}
+
+function missionFocusGuardIsSessionOpenPromptV1(q){
+  return /\b(good morning|godo morning|start session|start the day|i'?m on|im on|lock in|lokc in|let'?s start|let'?s go|ready to go|brief me|what are we doing today|what we doing today|what should i do first|what should i do today|what'?s the plan for today|what'?s the mission for today)\b/.test(q);
+}
+
+function missionFocusGuardIsDayTypePromptV1(q){
+  return /\b(what day is it|waht day is it|wht day|what day we on|what kind of day|day type|today'?s mode|what mode|mode am i in|what did i set|beat day|content day|outreach day|maker day|money day)\b/.test(q);
+}
+
+function missionFocusGuardIsTimePromptV1(q){
+  return /\b(what block|block we in|time block|morning block|midday|mdiday|afternoon block|end of day|late block|how much day is left|what'?s left in the day|is it too late|should i still start)\b/.test(q);
+}
+
+function missionFocusGuardIsTabNarrationPromptV1(q){
+  return /\b(what does this mean|what am i looking at|explain this|what'?s this telling me|is this good or bad|read this for me|break this down|what do these numbers mean|what did i log|what happened today|review what i did|any errors|what'?s wrong)\b/.test(q);
+}
+
+function missionFocusGuardIsWrapPromptV1(q){
+  return /\b(wrap it|done for today|end session|close the day|end of day|session close|call it for today)\b/.test(q);
+}
+
+function getMissionFocusSessionOpenLineV1(dayType,timeBlock,ctx){
+  var pack=MISSION_FOCUS_GUARD_DAY_INTEL_V1;
+  var session=getMissionFocusGuardSessionV1();
+  if(session.sessionOpenFired)return '';
+  var vars=getMissionFocusGuardVarsV1(dayType,timeBlock,getMissionActiveTab(),ctx||{},'now','',{});
+  var pool=pack.sessionOpenPools[dayType]||pack.sessionOpenPools.none;
+  var out=fillMissionFocusGuardTemplateV1(pool,'now','session_open_'+dayType,vars);
+  if(out){
+    session.sessionOpenFired=true;
+    session.openDayType=dayType;
+    session.openTimeBlock=timeBlock;
+    setMissionFocusGuardSessionV1(session);
+  }
+  return out;
+}
+
+function getMissionFocusGuardNudge(dayType,timeBlock,ctx){
+  var pools=MISSION_FOCUS_GUARD_DAY_INTEL_V1.ambientNudgePools||{};
+  var dayPool=pools[dayType]||pools.none||{};
+  return dayPool[timeBlock]||'Pick one lane and move it.';
+}
+
+function getMissionFocusGuardOutputV1(subtype,dayType,timeBlock,tabState,ctx,route,question,brainState){
+  var pack=MISSION_FOCUS_GUARD_DAY_INTEL_V1;
+  var q=normalizeMissionQuestion(question||'');
+  var vars=getMissionFocusGuardVarsV1(dayType,timeBlock,tabState,ctx||{},route||'now',question||'',brainState||{});
+  if(subtype==='session_open')return getMissionFocusSessionOpenLineV1(dayType,timeBlock,ctx||{});
+  if(subtype==='day_type_read')return fillMissionFocusGuardTemplateV1(pack.dayTypePools.read,route||'calendar',q,vars);
+  if(subtype==='time_block_read')return fillMissionFocusGuardTemplateV1(pack.dayTypePools.time,route||'calendar',q,vars);
+  if(subtype==='tab_narration')return fillMissionFocusGuardTemplateV1(pack.tabNarrationPools[tabState]||pack.tabNarrationPools.main,route||tabState,q,vars);
+  if(subtype==='focus_redirect')return fillMissionFocusGuardTemplateV1(pack.focusGuardPools[dayType]||pack.focusGuardPools.briefing,route||'focus',q,vars);
+  if(subtype==='end_of_day')return 'End of day read.<br><br>What moved today: money, DPC, pipeline, content, or production?<br><br>Give me the result and I will help set tomorrow’s first move.';
+  return '';
+}
+
+function resolveMissionFocusGuardV1(turn,brainState,contextMode){
+  var q=String(turn&&turn.normalizedInput||'').toLowerCase();
+  var route=turn&&turn.route||'now';
+  var dayType=getMissionFocusDayTypeV1();
+  var timeBlock=getMissionTimeBlock();
+  var tabState=getMissionActiveTab();
+  var explicitSlash=turn&&turn.inputSignals&&turn.inputSignals.isSlashCommand;
+  var mode=contextMode||getMissionContextMode();
+  if(missionFocusGuardIsWrapPromptV1(q))return {subtype:'end_of_day',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'wrap_prompt'};
+  if(missionFocusGuardIsDayTypePromptV1(q))return {subtype:'day_type_read',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'day_type_prompt'};
+  if(missionFocusGuardIsTimePromptV1(q))return {subtype:'time_block_read',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'time_block_prompt'};
+  if(tabState!=='unknown'&&missionFocusGuardIsTabNarrationPromptV1(q))return {subtype:'tab_narration',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'tab_narration'};
+  if(!explicitSlash&&missionFocusGuardIsSessionOpenPromptV1(q)){
+    var session=getMissionFocusGuardSessionV1();
+    if(!session.sessionOpenFired)return {subtype:'session_open',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'session_open'};
+  }
+  if(mode&&mode!=='general'&&!explicitSlash){
+    var dayRoutes={beat_day:['production','content'],outreach_day:['leads','dpc','sales','report'],content_day:['content','community','live'],manager_day:['calendar','weekly','sync','report','resources'],briefing:['now','report','weekly','sync']};
+    var allowed=dayRoutes[dayType]||[];
+    if(route&&allowed.length&&allowed.indexOf(route)<0&&['help','memory','profile'].indexOf(route)<0){
+      var session2=getMissionFocusGuardSessionV1();
+      session2.redirectCounts=session2.redirectCounts||{};
+      var key=dayType+'_'+route;
+      if((session2.redirectCounts[key]||0)<2){
+        session2.redirectCounts[key]=(session2.redirectCounts[key]||0)+1;
+        setMissionFocusGuardSessionV1(session2);
+        return {subtype:'focus_redirect',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'off_day_route'};
+      }
+    }
+  }
+  return null;
+}
+
+function getMissionFocusGuardResponseV1(route,ctx,question,conv,brainState){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q||window.__missionCommandSelfCheckActive)return '';
+  var pseudoTurn={normalizedInput:q,route:route||'now',inputSignals:analyzeMissionInputV2?analyzeMissionInputV2(q,{rawInput:question||''}):{}};
+  var plan=resolveMissionFocusGuardV1(pseudoTurn,brainState||{},getMissionContextMode());
+  if(!plan)return '';
+  return getMissionFocusGuardOutputV1(plan.subtype,plan.dayType,plan.timeBlock,plan.tabState,ctx||{},route||'now',question||'',brainState||{});
 }
 
 /* =========================================================
@@ -15065,6 +15373,8 @@ function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
   var conversationType=conv&&conv.type||'';
   var salesDeepResponse=typeof getMissionSalesDeepOutputResponseV1==='function'?getMissionSalesDeepOutputResponseV1(outputRoute,ctx,question,conv,brainState):'';
   if(salesDeepResponse)return salesDeepResponse;
+  var focusGuardResponse=typeof getMissionFocusGuardResponseV1==='function'?getMissionFocusGuardResponseV1(outputRoute,ctx,question,conv,brainState):'';
+  if(focusGuardResponse)return focusGuardResponse;
   var osAwareResponse=typeof getMissionOsAwareOutputResponseV1==='function'?getMissionOsAwareOutputResponseV1(outputRoute,ctx,question,conv,brainState,state,q):'';
   if(osAwareResponse)return osAwareResponse;
   var v11Response=typeof getMissionOutputPackResponseV1_1==='function'?getMissionOutputPackResponseV1_1(outputRoute,ctx,question,conv,brainState,state,q):'';
