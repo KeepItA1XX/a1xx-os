@@ -15256,6 +15256,7 @@ function getMissionArbiterPrioritySignalV1(turn,ctx){
   var explicitStrategy=/\b(how do i|get more|not converting|convert|improve|better|make my offer better|audit|diagnose|framework|principle|teach me|what should i track|what should we track|what is keeping me broke|what's keeping me broke|why am i not making money|why ain'?t i making|need a reset)\b/.test(q);
   var explicitSales=/\b(what should i say|what do i say|too expensive|he said|she said|they said|ghosted|payment plan|roleplay|score my answer|prep me for a call|call is done|booked|paid)\b/.test(q);
   var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|how many booked|report|pipeline|who hot|content|production|calendar|data stale)\b/.test(q);
+  var explicitCard=typeof isMissionExplicitCardPromptV1==='function'?isMissionExplicitCardPromptV1(q):false;
   var overwhelmed=!!(turn&&turn.cognitiveLoad&&(turn.cognitiveLoad.shouldForceFocus||turn.cognitiveLoad.oneThingMode||turn.cognitiveLoad.simplifyMode));
   var hasResultMemory=!!(turn&&turn.decisionMemory&&turn.decisionMemory.lastResult&&turn.decisionMemory.shouldAnswer);
   return {
@@ -15265,6 +15266,7 @@ function getMissionArbiterPrioritySignalV1(turn,ctx){
     explicitStrategy:explicitStrategy,
     explicitSales:explicitSales,
     explicitData:explicitData,
+    explicitCard:explicitCard,
     overwhelmed:overwhelmed,
     hasResultMemory:hasResultMemory,
     route:turn&&turn.route||''
@@ -15305,6 +15307,7 @@ function scoreMissionArbiterCandidateV1(item,signal){
   if(/\b(what changed|whats changed|what'?s changed|what moved|what happened today|what happened since|since last time|since yesterday|since last session|what is different|what'?s different)\b/.test(signal.q)&&id==='mission_mentor')score-=80;
   if(signal.explicitData&&id==='mission_mentor')score-=12;
   if(signal.explicitData&&id==='action_accountability')score-=45;
+  if(signal.explicitCard)score-=90;
   if(signal.explicitSales&&id==='mission_mentor'&&signal.route==='sales')score-=30;
   if(signal.explicitSales&&id==='action_accountability')score-=45;
   if(signal.explicitStrategy&&id==='action_accountability')score-=30;
