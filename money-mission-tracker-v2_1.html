@@ -10808,7 +10808,7 @@ var MISSION_FOCUS_GUARD_DAY_INTEL_V1={
   dayTypePools:{
     read:[
       {id:'fg_day_read_01',text:'Day type: {{dayTypeLabel}}.<br><br>Time block: {{timeBlockLabel}}.<br><br>Posture: {{dayPosture}}'},
-      {id:'fg_day_read_02',text:'You are in {{dayTypeLabel}} mode right now.<br><br>That means I will weight answers toward {{primaryLane}} unless you ask directly for another lane.'},
+      {id:'fg_day_read_02',text:'You are in {{dayTypeLabel}} right now.<br><br>That means I will weight answers toward {{primaryLane}} unless you ask directly for another lane.'},
       {id:'fg_day_read_03',text:'Current mode is {{dayTypeLabel}}. The first useful move is {{primaryAction}}.'}
     ],
     time:[
@@ -11040,6 +11040,7 @@ function resolveMissionFocusGuardV1(turn,brainState,contextMode){
   if(!explicitSlash&&missionFocusGuardIsSessionOpenPromptV1(q)){
     var session=getMissionFocusGuardSessionV1();
     if(!session.sessionOpenFired)return {subtype:'session_open',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'session_open'};
+    return {subtype:'day_type_read',dayType:dayType,timeBlock:timeBlock,tabState:tabState,reason:'session_open_repeat'};
   }
   if(mode&&mode!=='general'&&!explicitSlash){
     var dayRoutes={beat_day:['production','content'],outreach_day:['leads','dpc','sales','report'],content_day:['content','community','live'],manager_day:['calendar','weekly','sync','report','resources'],briefing:['now','report','weekly','sync']};
@@ -13509,10 +13510,12 @@ function getMissionTimeOfDay(){
 
 function getMissionDpcMomentum(ctx){
   var d=typeof getDailyCoach==='function'?getDailyCoach():{};
-  var money=d.money||ctx&&ctx.rev||0;
+  var money=d.money||0;
   var dms=d.dms||0;
-  if(money>0||dms>=40)return 'ahead';
-  if(dms>0)return 'onTrack';
+  var calls=(d.coldCalls||0)+(d.calls||0);
+  var totalActivity=dms+calls+(d.closes||0);
+  if(money>0||d.closes>0||dms>=40)return 'ahead';
+  if(totalActivity>0)return 'onTrack';
   if(ctx&&ctx.gap>0)return 'behind';
   return 'notStarted';
 }
