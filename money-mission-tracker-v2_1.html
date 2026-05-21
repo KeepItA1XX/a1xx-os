@@ -3540,6 +3540,8 @@ var MISSION_MEMORY_NOTES_KEY='a1xx_mc_notes_v1';
 var MISSION_MEMORY_ARCHIVE_KEY='a1xx_mc_archive_v1';
 var MISSION_APP_MEMORY_KEY='MISSION_APP_MEMORY';
 var MISSION_MULTI_CHAT_MEMORY_MIGRATION_KEY='a1xx_mc_multi_chat_memory_v1_1_migrated';
+var MISSION_LONG_MEMORY_KEY='a1xx_mission_long_memory_v1';
+var MISSION_LONG_MEMORY_LIMIT=50;
 var MISSION_COMMAND_INPUT_LIMIT=600;
 var MISSION_COMMAND_RATE_MS=900;
 
@@ -16283,6 +16285,7 @@ function getMissionBrainBlockingFactor(brainBase){
 function getMissionBrainState(ctx,question,route){
   ctx=ctx||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var state=getMissionBrainSession();
+  var longMemorySummary=typeof getMissionLongMemorySummaryObjectV1==='function'?getMissionLongMemorySummaryObjectV1():null;
   var nowIso=new Date().toISOString();
   var currentTopic=getMissionBrainTopic(route||(getMissionCommandIntent(question||'').route||''),question||'');
   var previewHistory=(state.topicHistory||[]).concat(currentTopic?[currentTopic]:[]).slice(-8);
@@ -16315,6 +16318,10 @@ function getMissionBrainState(ctx,question,route){
     engagementLevel:'checking_in',
     nextBestMove:'',
     blockingFactor:null,
+    longMemory:longMemorySummary,
+    crossSessionPattern:longMemorySummary&&longMemorySummary.repeatedIntent||null,
+    lastSessionCarryForward:longMemorySummary&&longMemorySummary.lastNextBestMove||'',
+    longMemoryNudge:'',
     dataConfidence:'medium',
     lastSyncAge:0,
     renderB2:true,
@@ -16347,6 +16354,7 @@ function getMissionBrainState(ctx,question,route){
   base.momentumSignal=/\b(i did it|done|logged it|finished it|sent it|called them|booked one|closed|posted it|got paid|paid|won|win|good news)\b/i.test(String(question||''));
   base.engagementLevel=base.sessionArc==='opening'?'checking_in':(String(question||'').split(/\s+/).filter(Boolean).length>20||/\b(deeper|break down|explain|tell me more)\b/i.test(String(question||''))?'deep':'scanning');
   base.nextBestMove=getMissionBrainNextBestMove(ctx,base);
+  if(typeof getMissionLongMemoryOpeningNudgeV1==='function')base.longMemoryNudge=getMissionLongMemoryOpeningNudgeV1(base,longMemorySummary,question||'');
   base.blockingFactor=getMissionBrainBlockingFactor(base);
   if(base.frustrationSignal)base.forcedResponseMode='empathy';
   else if(base.momentumSignal)base.forcedResponseMode='celebration';
@@ -17342,6 +17350,8 @@ function applyMissionSessionArc(html,route,ctx,question,brainState,opts){
   if(opts.sessionArc===false)return html;
   if(['help','time','day'].indexOf(route)>=0)return html;
   var parts=[];
+  var longNudge=brainState&&brainState.longMemoryNudge;
+  if(longNudge&&String(html||'').indexOf(longNudge)<0)parts.push('<span style="color:#8f9aa3">'+escapeHtml(longNudge)+'</span>');
   var openLine=getMissionSessionOpenLine(ctx);
   if(openLine)parts.push('<span style="color:#8f9aa3">'+escapeHtml(openLine)+'</span>');
   var callback=getMissionCallbackLine(route,ctx);
@@ -19796,6 +19806,42 @@ function runMissionMultiChatMemoryPanelCheckV11(){
   return {passed:!failures.length,meta:failures.length?failures.join(' | '):'isolated memory, app memory safety, live-call guard, migration smoke'};
 }
 
+function runMissionLongMemoryPanelCheckV1(){
+  var failures=[];
+  var prior=getStore(MISSION_LONG_MEMORY_KEY);
+  var priorChat=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY);
+  try{
+    setStore(MISSION_LONG_MEMORY_KEY,{records:[],updatedAt:''});
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_long_memory_chat');
+    for(var i=0;i<55;i++){
+      captureMissionLongMemoryRecordV1(
+        {question:'what should i do next with GARY RAOGUY '+i,answer:'Open Hit List',kind:'leads',intentRoute:'leads'},
+        {intent:{route:'leads'},brainState:{sessionIntent:'leads',sessionTopic:'leads',sessionArc:'mid',nextBestMove:'Contact GARY RAOGUY',frustrationSignal:false,momentumSignal:false,turnsWithoutAction:i%4}}
+      );
+    }
+    var store=getMissionLongMemoryStoreV1();
+    if(store.records.length!==MISSION_LONG_MEMORY_LIMIT)failures.push('limit not enforced');
+    var raw=JSON.stringify(store.records);
+    if(/GARY RAOGUY/i.test(raw))failures.push('lead name stored');
+    var summary=getMissionLongMemorySummaryObjectV1();
+    if(!summary.hasMemory||summary.recordCount!==MISSION_LONG_MEMORY_LIMIT)failures.push('summary missing records');
+    if(summary.repeatedIntent!=='leads'||summary.repeatedIntentCount<3)failures.push('repeated intent not detected');
+    if((summary.lastNextBestMove||'').indexOf('GARY')>=0)failures.push('next move not sanitized');
+    var formatted=formatMissionLongMemorySummaryV1(summary);
+    if(formatted.indexOf('Pipeline / Leads')<0||formatted.indexOf('Carry-forward')<0)failures.push('formatted summary incomplete');
+    var nudge=getMissionLongMemoryOpeningNudgeV1({sessionArc:'opening'},summary,'good morning');
+    if(nudge.indexOf('Pattern read')<0)failures.push('opening nudge missing');
+  }catch(e){
+    failures.push(e&&e.message?e.message:String(e));
+  }finally{
+    if(prior===undefined||prior===null)setStore(MISSION_LONG_MEMORY_KEY,{records:[],updatedAt:''});
+    else setStore(MISSION_LONG_MEMORY_KEY,prior);
+    if(priorChat===null)localStorage.removeItem(MISSION_CHAT_ACTIVE_SESSION_KEY);
+    else localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,priorChat);
+  }
+  return {passed:!failures.length,meta:failures.length?failures.join(' | '):'50-record cap, sanitized lead names, repeated-intent nudge'};
+}
+
 function runMissionQAPanelCheck(){
   var status=document.getElementById('mission-command-test-status');
   if(status){status.textContent='Running Mission QA...';status.className='reset-status';}
@@ -19827,6 +19873,7 @@ function runMissionQAPanelCheck(){
   }
   add('Thread Memory Guard',runMissionThreadRouteGuardPanelCheckV1());
   add('Multi-Chat Memory',runMissionMultiChatMemoryPanelCheckV11());
+  add('Long Memory Rollup',runMissionLongMemoryPanelCheckV1());
   add('Mentor Domains',runMissionMentorPanelCheckV1());
   try{
     var spacing=applyMissionReadabilityGuardV1('3) Pipeline: 32 open leads.<strong>Next:</strong><br>Create one visible move');
@@ -20678,7 +20725,7 @@ function getMissionChatMemorySummary(){
   }).join('\n');
 }
 
-function getMissionLongMemorySummary(){
+function getMissionLegacyMemorySummaryV1(){
   var goals=(getStore(MISSION_MEMORY_GOALS_KEY)||[]).slice(-2);
   var wins=(getStore(MISSION_MEMORY_WINS_KEY)||[]).slice(-2);
   var struggles=(getStore(MISSION_MEMORY_STRUGGLES_KEY)||[]).slice(-2);
@@ -20689,6 +20736,174 @@ function getMissionLongMemorySummary(){
   if(struggles.length)parts.push('Patterns: '+struggles.map(function(s){return s.text+' x'+(s.count||1);}).join(' | '));
   if(prefs.length)parts.push('Prefs: '+prefs.map(function(p){return p.text;}).join(' | '));
   return parts.join('\n')||'No long-term Mission Command memory yet.';
+}
+
+function getMissionLongMemoryStoreV1(){
+  var store=getStore(MISSION_LONG_MEMORY_KEY)||{};
+  if(!store||typeof store!=='object')store={};
+  store.records=Array.isArray(store.records)?store.records:[];
+  store.records=store.records.filter(Boolean).slice(-MISSION_LONG_MEMORY_LIMIT);
+  store.updatedAt=store.updatedAt||'';
+  return store;
+}
+
+function setMissionLongMemoryStoreV1(store){
+  try{
+    store=store&&typeof store==='object'?store:{};
+    store.records=Array.isArray(store.records)?store.records:[];
+    store.records=store.records.filter(Boolean).slice(-MISSION_LONG_MEMORY_LIMIT);
+    store.updatedAt=new Date().toISOString();
+    setStore(MISSION_LONG_MEMORY_KEY,store);
+  }catch(e){}
+}
+
+function sanitizeMissionLongMemoryTextV1(text){
+  var out=missionMemorySafeText(text||'');
+  if(!out)return '';
+  out=out.replace(/\b[A-Z]{2,}(?:\s+[A-Z]{2,})+\b/g,'[lead]');
+  out=out.replace(/\b(?:with|for|from|called|texted|dm(?:ed)?|messaged)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g,function(match){
+    return match.split(/\s+/)[0]+' [lead]';
+  });
+  out=out.replace(/\b[0-9]{3}[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b/g,'[phone]');
+  out=out.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email]');
+  return out.slice(0,120);
+}
+
+function missionLongMemoryMoveSummaryV1(route,move){
+  var safe=sanitizeMissionLongMemoryTextV1(move||'');
+  route=route||'now';
+  if(route==='leads')return 'move one visible lead or open Hit List';
+  if(route==='sales')return 'prep or close the next sales conversation';
+  if(route==='report'||route==='money')return 'check the money read and choose the closest buyer-facing move';
+  if(route==='content')return 'move one proof piece forward';
+  if(route==='production')return 'move the highest-value asset to its next status';
+  if(route==='sync')return 'run one sync check, then return to the mission';
+  if(route==='dpc')return 'log one measurable DPC action';
+  return safe||'make one visible status change';
+}
+
+function missionLongMemoryRecordFromTurnV1(turn,packet){
+  turn=turn||{};
+  packet=packet||{};
+  var brain=packet.brainState||turn.brainState||{};
+  var route=(packet.intent&&packet.intent.route)||turn.intentRoute||turn.kind||brain.currentTopic||'now';
+  var q=String(turn.question||'');
+  var a=String(turn.answer||'');
+  var combined=(q+' '+a).toLowerCase();
+  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(q):null;
+  var win=!!(resultSignal&&['booked','paid','closed','finished'].indexOf(resultSignal.type)>=0)||/\b(won|win|closed|paid|booked|hit target|it worked|finished|posted)\b/i.test(combined);
+  var close=!!(resultSignal&&['paid','closed'].indexOf(resultSignal.type)>=0)||/\b(closed|paid|collected money|got paid)\b/i.test(combined);
+  var frustration=!!brain.frustrationSignal||/\b(stuck|overwhelmed|not working|wrong|broke|broken|nothing works|tired)\b/i.test(combined);
+  var momentum=!!brain.momentumSignal||win||/\b(done|sent it|logged it|finished|booked|paid)\b/i.test(combined);
+  var nextMove=missionLongMemoryMoveSummaryV1(route,brain.nextBestMove||turn.nextBestMove||'');
+  return {
+    id:'mlm_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    ts:new Date().toISOString(),
+    chatId:localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'',
+    route:route,
+    sessionIntent:brain.sessionIntent||route||'open',
+    sessionTopic:brain.sessionTopic||route||'mission',
+    sessionArc:brain.sessionArc||'',
+    userEnergy:brain.userEnergy||'',
+    turnsWithoutAction:brain.turnsWithoutAction||0,
+    momentumSignal:momentum?'momentum':'neutral',
+    frustrationSignal:frustration,
+    resultType:resultSignal&&resultSignal.type||'',
+    win:win,
+    close:close,
+    nextBestMove:nextMove
+  };
+}
+
+function shouldCaptureMissionLongMemoryV1(turn,packet){
+  var q=String(turn&&turn.question||'').trim();
+  if(!q||/^(ok|cool|got it|thanks|yep|sure)$/i.test(q)||/^\/[a-z]+$/i.test(q))return false;
+  var brain=packet&&packet.brainState||turn&&turn.brainState||{};
+  var route=packet&&packet.intent&&packet.intent.route||turn&&turn.intentRoute||'';
+  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(q):null;
+  return !!(resultSignal||brain.nextBestMove||brain.frustrationSignal||brain.momentumSignal||route||/\b(stuck|overwhelmed|paid|booked|closed|done|what next|what should i do|help me get started)\b/i.test(q));
+}
+
+function captureMissionLongMemoryRecordV1(turn,packet){
+  if(!shouldCaptureMissionLongMemoryV1(turn,packet))return null;
+  var record=missionLongMemoryRecordFromTurnV1(turn,packet);
+  var store=getMissionLongMemoryStoreV1();
+  store.records.push(record);
+  setMissionLongMemoryStoreV1(store);
+  return record;
+}
+
+function getMissionLongMemorySummaryObjectV1(){
+  var store=getMissionLongMemoryStoreV1();
+  var records=store.records||[];
+  var recent=records.slice(-12);
+  function uniqueLast(values,limit){
+    var out=[];
+    (values||[]).slice().reverse().forEach(function(value){
+      value=String(value||'').trim();
+      if(value&&out.indexOf(value)<0)out.push(value);
+    });
+    return out.slice(0,limit||5);
+  }
+  var intents=uniqueLast(recent.map(function(r){return r.sessionIntent||r.route;}),5);
+  var topics=uniqueLast(recent.map(function(r){return r.sessionTopic||r.route;}),5);
+  var last=recent[recent.length-1]||null;
+  var sameTail=[];
+  for(var i=recent.length-1;i>=0;i--){
+    var label=recent[i].sessionIntent||recent[i].route||'';
+    if(!sameTail.length||label===sameTail[0])sameTail.unshift(label);
+    else break;
+  }
+  var repeatedIntent=sameTail.length>=3?sameTail[0]:'';
+  var currentCycleWindow=Date.now()-(56*24*3600000);
+  var cycleRecords=records.filter(function(r){return new Date(r.ts||0).getTime()>=currentCycleWindow;});
+  return {
+    hasMemory:!!records.length,
+    recordCount:records.length,
+    updatedAt:store.updatedAt||'',
+    lastFiveSessionIntents:intents,
+    lastFiveDominantTopics:topics,
+    winsThisCycle:cycleRecords.filter(function(r){return !!r.win;}).length,
+    closesThisCycle:cycleRecords.filter(function(r){return !!r.close;}).length,
+    lastNextBestMove:last&&last.nextBestMove||'',
+    endedOnFrustration:!!(last&&last.frustrationSignal),
+    endedOnMomentum:!!(last&&last.momentumSignal==='momentum'),
+    repeatedIntent:repeatedIntent,
+    repeatedIntentCount:sameTail.length,
+    lastRoute:last&&last.route||'',
+    lastSessionIntent:last&&last.sessionIntent||'',
+    lastSessionTopic:last&&last.sessionTopic||''
+  };
+}
+
+function formatMissionLongMemorySummaryV1(summary){
+  summary=summary||getMissionLongMemorySummaryObjectV1();
+  if(!summary.hasMemory)return getMissionLegacyMemorySummaryV1();
+  var parts=[];
+  if(summary.lastFiveSessionIntents&&summary.lastFiveSessionIntents.length)parts.push('Recent intents: '+summary.lastFiveSessionIntents.map(getMissionRouteLabelV2).join(' | '));
+  if(summary.repeatedIntent)parts.push('Pattern: '+getMissionRouteLabelV2(summary.repeatedIntent)+' x'+summary.repeatedIntentCount);
+  if(summary.winsThisCycle||summary.closesThisCycle)parts.push('Cycle signal: '+summary.winsThisCycle+' win(s), '+summary.closesThisCycle+' close(s)');
+  if(summary.lastNextBestMove)parts.push('Carry-forward: '+summary.lastNextBestMove);
+  if(summary.endedOnFrustration)parts.push('Tone: simplify next answer');
+  else if(summary.endedOnMomentum)parts.push('Tone: keep momentum moving');
+  return parts.join('\n')||getMissionLegacyMemorySummaryV1();
+}
+
+function getMissionLongMemorySummary(){
+  return formatMissionLongMemorySummaryV1(getMissionLongMemorySummaryObjectV1());
+}
+
+function getMissionLongMemoryOpeningNudgeV1(brainState,summary,question){
+  summary=summary||getMissionLongMemorySummaryObjectV1();
+  if(!summary||!summary.hasMemory)return '';
+  var q=String(question||'').toLowerCase();
+  var opening=brainState&&brainState.sessionArc==='opening';
+  var askedForCarry=/\b(good morning|what should i do|what next|help me get started|where were we|pick it back up|start|let'?s go|lock in)\b/.test(q);
+  if(!opening&&!askedForCarry)return '';
+  if(summary.repeatedIntent)return 'Pattern read: you keep coming back to '+getMissionRouteLabelV2(summary.repeatedIntent)+'. Pick one result before opening a new lane.';
+  if(summary.endedOnFrustration)return 'Carry-forward: last session ended with friction, so I will keep this tighter.';
+  if(summary.lastNextBestMove)return 'Carry-forward: last useful move was '+summary.lastNextBestMove+'.';
+  return '';
 }
 
 function missionMemorySafeText(text){
@@ -20793,6 +21008,7 @@ function captureMissionLongMemory(turn,packet){
   if(/\b(heads up|i have a call with|meeting tomorrow|trying something new|i am testing|i'm testing)\b/.test(lower)){
     addMissionMemoryItem(MISSION_MEMORY_NOTES_KEY,{ts:now,text:q,expiresAt:new Date(Date.now()+48*3600000).toISOString()},30);
   }
+  captureMissionLongMemoryRecordV1(turn,packet);
 }
 
 function summarizeMissionPacket(packet){
