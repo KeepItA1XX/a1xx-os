@@ -19536,7 +19536,8 @@ function runMissionMultiChatMemoryPanelCheckV11(){
     MISSION_CHAT_ACTIVE_ALIAS_KEY,
     MISSION_APP_MEMORY_KEY,
     MISSION_MULTI_CHAT_MEMORY_MIGRATION_KEY,
-    MISSION_TURN_CHECKPOINTS_KEY
+    MISSION_TURN_CHECKPOINTS_KEY,
+    MISSION_CHAT_HISTORY_KEY
   ];
   var sessionKeys=[
     MISSION_BRAIN_SESSION_V2_KEY,
@@ -19570,6 +19571,7 @@ function runMissionMultiChatMemoryPanelCheckV11(){
     setStore(MISSION_CHAT_SESSIONS_KEY,sessions);
     setStore(MISSION_CHAT_HISTORY_ALIAS_KEY,sessions);
     setStore(MISSION_CHAT_ARCHIVE_KEY,[]);
+    setMissionAppMemoryValue('wins',[{label:'QA app win'}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_chat_memory_1');
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_chat_memory_1');
     localStorage.setItem(MISSION_MULTI_CHAT_MEMORY_MIGRATION_KEY,'done');
@@ -19602,8 +19604,47 @@ function runMissionMultiChatMemoryPanelCheckV11(){
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_chat_memory_2');
     var removed=deleteMissionSession('qa_chat_memory_2');
     if(!removed||!removed.ok)failures.push('delete did not remove a secondary chat');
+    var appAfterDelete=getMissionAppMemoryBundle();
+    if(!appAfterDelete.wins||!appAfterDelete.wins.length)failures.push('delete erased app memory');
     var blocked=deleteMissionSession('qa_chat_memory_1');
     if(!blocked||blocked.ok||blocked.reason!=='cannot_delete_only_chat')failures.push('delete did not protect the last active chat');
+    var archiveSessions=[
+      ensureMissionChatMemoryShapeV11({id:'qa_archive_1',title:'QA Archive 1',project:'QA',createdAt:now,updatedAt:now,tags:['qa'],messages:[]}),
+      ensureMissionChatMemoryShapeV11({id:'qa_archive_2',title:'QA Archive 2',project:'QA',createdAt:now,updatedAt:now,tags:['qa'],messages:[]})
+    ];
+    setStore(MISSION_CHAT_SESSIONS_KEY,archiveSessions);
+    setStore(MISSION_CHAT_ARCHIVE_KEY,[]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_archive_1');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_archive_1');
+    archiveMissionSession('qa_archive_2');
+    var archived=getMissionArchivedSessions();
+    var appAfterArchive=getMissionAppMemoryBundle();
+    if(!archived.some(function(s){return s&&s.id==='qa_archive_2';}))failures.push('archive did not preserve archived chat');
+    if(!appAfterArchive.wins||!appAfterArchive.wins.length)failures.push('archive erased app memory');
+    window.__missionCurrentSalesMode='live_call';
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_archive_1');
+    setActiveMissionSession('qa_archive_2');
+    if(localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)!=='qa_archive_1')failures.push('live call did not block chat switch');
+    var liveArchive=archiveMissionSession('qa_archive_2');
+    if(!liveArchive||liveArchive.ok!==false||liveArchive.reason!=='live_call_active')failures.push('live call did not block archive');
+    var liveDelete=deleteMissionSession('qa_archive_2');
+    if(!liveDelete||liveDelete.ok!==false||liveDelete.reason!=='live_call_active')failures.push('live call did not block delete');
+    window.__missionCurrentSalesMode='normal';
+    setStore(MISSION_CHAT_SESSIONS_KEY,[]);
+    setStore(MISSION_CHAT_HISTORY_ALIAS_KEY,[]);
+    setStore(MISSION_CHAT_ARCHIVE_KEY,[]);
+    setStore(MISSION_CHAT_HISTORY_KEY,[{question:'legacy question',answer:'legacy answer',ts:now}]);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({lastRoute:'legacy'}));
+    localStorage.removeItem(MISSION_CHAT_ACTIVE_SESSION_KEY);
+    localStorage.removeItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);
+    localStorage.removeItem(MISSION_MULTI_CHAT_MEMORY_MIGRATION_KEY);
+    var migration=migrateMissionChatMemoryV11();
+    var migratedSessions=getMissionChatSessions();
+    var migrated=migratedSessions[0]||{};
+    var migratedTurns=missionSessionMessagesToTurnsV11(migrated.messages||[]);
+    if(!migration||!migration.ok||!migratedSessions.length)failures.push('migration did not create imported chat');
+    if(!migratedTurns.length||migratedTurns[0].question!=='legacy question')failures.push('migration did not preserve legacy history');
+    if(!migrated.memory||!migrated.memory.brainSession||migrated.memory.brainSession.lastRoute!=='legacy')failures.push('migration did not copy legacy brain session');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -19611,7 +19652,7 @@ function runMissionMultiChatMemoryPanelCheckV11(){
     sessionKeys.forEach(function(key){restoreOne(sessionStorage,key,savedSession[key]);});
     window.__missionCurrentSalesMode=savedMode;
   }
-  return {passed:!failures.length,meta:failures.length?failures.join(' | '):'isolated chat memory + shared app preferences'};
+  return {passed:!failures.length,meta:failures.length?failures.join(' | '):'isolated memory, app memory safety, live-call guard, migration smoke'};
 }
 
 function runMissionQAPanelCheck(){
