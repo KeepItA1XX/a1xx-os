@@ -15504,6 +15504,12 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(!/Production assets read|Do this next/i.test(productionAssets))failures.push('qa_production_card_assets_read');
   var productionBangin=getMissionProductionCardIntelligenceResponseV11('production',{rev:999,wk:500,gap:0},'bangin plus',{},null);
   if(!/BANGIN\+ consistency read|Do this next/i.test(productionBangin))failures.push('qa_production_card_bangin_read');
+  var managerCalendar=getMissionManagerCardIntelligenceResponseV11('calendar',{rev:999,wk:500,gap:0},'what should i check on the manager card',{},null);
+  if(!/Manager card read|Calendar events loaded|Do this next/i.test(managerCalendar))failures.push('qa_manager_card_overview_read');
+  var managerBlock=getMissionManagerCardIntelligenceResponseV11('calendar',{rev:999,wk:500,gap:0},'what block we in',{},null);
+  if(!/Manager block read|Do this next/i.test(managerBlock))failures.push('qa_manager_card_block_read');
+  var managerTasks=getMissionManagerCardIntelligenceResponseV11('calendar',{rev:999,wk:500,gap:0,openTasks:[{content:'Review calendar'}]},'what admin loop matters',{},null);
+  if(!/Admin task read|Review calendar|Do this next/i.test(managerTasks))failures.push('qa_manager_card_task_read');
   var cardProduction=getMissionThisWeekCardResponseV1('production',{rev:999,wk:500,gap:0},'what should i do on the beat card',{},null);
   if(!/Production card|beat lane|Do this next/i.test(cardProduction))failures.push('qa_card_production_read');
   var cardManager=getMissionThisWeekCardResponseV1('calendar',{rev:999,wk:500,gap:0},'what should i check on the manager card',{},null);
@@ -15520,7 +15526,7 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:38};
+  return {passed:!failures.length,failures:failures,total:41};
 }
 
 function getMissionHandoffResponse(question){
@@ -17638,6 +17644,126 @@ function getMissionProductionCardIntelligenceResponseV11(route,ctx,question,brai
   if(turn){
     turn.productionCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,pipelineCount:snap.items.length,bottleneck:snap.bottleneck};
     if(typeof addMissionTrace==='function')addMissionTrace(turn,'production_card_intelligence_selected',turn.productionCardIntelligence);
+  }
+  return escapeHtml(answer).replace(/&lt;br&gt;/g,'<br>').replace(/&quot;/g,'"');
+}
+
+/* =========================================================
+   MISSION MANAGER / CALENDAR CARD INTELLIGENCE — v1.1
+========================================================= */
+var MISSION_MANAGER_CARD_INTELLIGENCE_V11={
+  id:'mission_manager_calendar_card_intelligence_v1_1',
+  version:'1.1',
+  installMode:'additive_read_only'
+};
+
+function getMissionManagerQuestionSignalV11(question,route){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return null;
+  var explicit=/\b(manager card|manager tab|admin card|admin lane|calendar card|calendar tab|schedule card|tasks card|task card|what should i check on the manager|what should i check on manager|what is on my calendar|what's on my calendar|whats on my calendar|what do i have today|what is my schedule|what's my schedule|what block|what block we in|what time block|how much time|how much runway|what day is it|what should i prep|what needs prep|what needs reviewing|what admin|admin loop|open task|open tasks|calendar prep|meeting prep|event prep)\b/.test(q);
+  var contextAsk=(route==='calendar'||getMissionActiveCardV1()==='manager')&&/\b(what should i do|what next|what matters|where do i start|help me get started|read this|show me|what should i check|what does this mean)\b/.test(q);
+  if(!explicit&&!contextAsk)return null;
+  var mode='overview';
+  if(/\b(block|time block|how much time|runway|window|minutes)\b/.test(q))mode='block';
+  if(/\b(calendar|schedule|event|meeting|call|today)\b/.test(q))mode='calendar';
+  if(/\b(prep|prepare|ready|before|meeting prep|event prep)\b/.test(q))mode='prep';
+  if(/\b(task|tasks|admin|admin loop|open loop|open tasks|todo|todoist)\b/.test(q))mode='tasks';
+  if(/\b(review|weekly|numbers|wrap|what needs reviewing)\b/.test(q))mode='review';
+  if(/\b(what day is it|day type|mode)\b/.test(q))mode='day';
+  return {shouldAnswer:true,mode:mode,reason:explicit?'explicit_manager_prompt':'manager_context'};
+}
+
+function getMissionManagerSnapshotV11(ctx){
+  ctx=ctx||{};
+  var block=typeof getMissionBlockIntel==='function'?getMissionBlockIntel():{};
+  var events=(window.__calEvents||[]).filter(function(event){
+    if(!event)return false;
+    var d=event.start?new Date(event.start):null;
+    return !d||isNaN(d.getTime())||d>=new Date(Date.now()-15*60000);
+  }).sort(function(a,b){
+    return new Date(a.start||0)-new Date(b.start||0);
+  });
+  var nextEvent=ctx.nextEvent||events[0]||null;
+  var openTasks=(ctx.openTasks||[]).filter(Boolean);
+  var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var dayType=typeof getMissionContextMode==='function'?getMissionContextMode():(ctx.dayType||'general');
+  if(!dayType||dayType==='command'||dayType==='general')dayType=ctx.dayType||'General Mode';
+  var dpcTotal=Number(daily.dms||0)+Number(daily.coldCalls||0)+Number(daily.calls||0)+Number(daily.closes||0);
+  return {
+    block:block,
+    events:events,
+    nextEvent:nextEvent,
+    openTasks:openTasks,
+    dayType:dayType,
+    dpcTotal:dpcTotal,
+    revenue:Number(ctx.rev||0),
+    target:Number(ctx.wk||0),
+    gap:Number(ctx.gap||0)
+  };
+}
+
+function missionManagerEventLabelV11(event){
+  if(!event)return 'no upcoming event loaded';
+  return (event.startTime||formatCalTime(event.start)||'time TBD')+' · '+(event.title||'Untitled event');
+}
+
+function missionManagerTaskLabelV11(task){
+  if(!task)return 'one open admin loop';
+  return task.content||task.title||task.name||String(task);
+}
+
+function getMissionManagerNextMoveV11(mode,snap){
+  snap=snap||{};
+  if(mode==='block'){
+    if(snap.block&&snap.block.minutesLeft)return 'define one outcome for '+snap.block.name+' and keep it inside the '+snap.block.minutesLeft+' minute window';
+    return 'choose one outcome for the current block before opening another lane';
+  }
+  if(mode==='calendar'){
+    return snap.nextEvent?'prep the one result you want from '+missionManagerEventLabelV11(snap.nextEvent):'use the clear calendar window for the highest-value open loop';
+  }
+  if(mode==='prep'){
+    return snap.nextEvent?'write the outcome, opening question, and follow-up needed for '+missionManagerEventLabelV11(snap.nextEvent):'prep the next block by naming the result before the work starts';
+  }
+  if(mode==='tasks'){
+    return snap.openTasks.length?'clear or reschedule "'+missionManagerTaskLabelV11(snap.openTasks[0])+'"':'review calendar, weekly numbers, and one admin loop';
+  }
+  if(mode==='review'){
+    return 'check revenue, DPC, pipeline, content, production, and the next calendar commitment';
+  }
+  if(mode==='day'){
+    return 'use the current day mode as the filter, then pick one card that needs action';
+  }
+  return snap.nextEvent?'prep '+missionManagerEventLabelV11(snap.nextEvent)+' and clear one task around it':'review the calendar, weekly numbers, and one open admin loop';
+}
+
+function getMissionManagerCardIntelligenceResponseV11(route,ctx,question,brainState,turn){
+  if(window.__missionCommandSelfCheckActive)return '';
+  var signal=getMissionManagerQuestionSignalV11(question||'',route||'');
+  if(!signal)return '';
+  var snap=getMissionManagerSnapshotV11(ctx||{});
+  var mode=signal.mode;
+  var move=getMissionManagerNextMoveV11(mode,snap);
+  var blockName=snap.block&&snap.block.name||'Current Block';
+  var minutes=Number(snap.block&&snap.block.minutesLeft||0);
+  var answer='';
+  if(mode==='block'){
+    answer='Manager block read:<br><br>'+blockName+(minutes?' has '+minutes+' minutes left.':' is the active window.')+'<br><br>Do this next: '+move+'.';
+  }else if(mode==='calendar'){
+    answer='Calendar read:<br><br>'+(snap.events.length?snap.events.slice(0,3).map(missionManagerEventLabelV11).join('<br>'):'No upcoming business event is loaded right now.')+'<br><br>Do this next: '+move+'.';
+  }else if(mode==='prep'){
+    answer='Prep read:<br><br>Next event: '+missionManagerEventLabelV11(snap.nextEvent)+'.<br><br>Do this next: '+move+'.';
+  }else if(mode==='tasks'){
+    answer='Admin task read:<br><br>'+snap.openTasks.length+' open task'+(snap.openTasks.length===1?'':'s')+' visible in the current packet.'+(snap.openTasks.length?'<br>Top task: '+missionManagerTaskLabelV11(snap.openTasks[0])+'.':'')+'<br><br>Do this next: '+move+'.';
+  }else if(mode==='review'){
+    answer='Manager review read:<br><br>Money: '+fmt(snap.revenue)+' of '+fmt(snap.target)+' · gap '+fmt(snap.gap)+'. DPC activity today: '+snap.dpcTotal+'. Calendar events loaded: '+snap.events.length+'.<br><br>Do this next: '+move+'.';
+  }else if(mode==='day'){
+    answer='Day mode read:<br><br>Current mode: '+String(snap.dayType||'General Mode')+'. Block: '+blockName+(minutes?' · '+minutes+' minutes left':'')+'.<br><br>Do this next: '+move+'.';
+  }else{
+    answer='Manager card read:<br><br>Calendar events loaded: '+snap.events.length+'. Open tasks: '+snap.openTasks.length+'. Next event: '+missionManagerEventLabelV11(snap.nextEvent)+'.<br><br>Do this next: '+move+'.';
+  }
+  if(turn){
+    turn.managerCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,eventCount:snap.events.length,taskCount:snap.openTasks.length};
+    if(typeof addMissionTrace==='function')addMissionTrace(turn,'manager_card_intelligence_selected',turn.managerCardIntelligence);
   }
   return escapeHtml(answer).replace(/&lt;br&gt;/g,'<br>').replace(/&quot;/g,'"');
 }
@@ -20133,6 +20259,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   if(contentIntel)return finishMissionAnswer(contentIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   var productionIntel=getMissionProductionCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(productionIntel)return finishMissionAnswer(productionIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
+  var managerIntel=getMissionManagerCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(managerIntel)return finishMissionAnswer(managerIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   var rolodexIntel=getMissionRolodexIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(rolodexIntel)return finishMissionAnswer(rolodexIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false});
   if(isMissionExplicitCardPromptV1(cleanQuestion||question||'')){
