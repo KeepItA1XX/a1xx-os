@@ -13429,6 +13429,7 @@ function getMissionActionPlanV2(turn){
     action={label:composed.label||'Do Next Move',type:composed.type||'next_best_move',target:composed.target||composed.action,requiresConfirmation:!!composed.requiresConfirmation,reason:composed.reason||'',action:composed.action};
   }
   if(!action&&(shape==='pipeline_heat'||route==='leads'))action={label:'Open Hit List',type:'open_card',target:'hit_list',requiresConfirmation:false};
+  if(!action&&turn&&turn.resourceRecommendation&&turn.resourceRecommendation.action)action=turn.resourceRecommendation.action;
   if(!action&&route==='dpc')action={label:'Log DPC',type:'log_dpc',target:'dpc',requiresConfirmation:true};
   if(!action&&route==='content')action={label:'Open Content Tracker',type:'open_card',target:'content_tracker',requiresConfirmation:false};
   if(!action&&route==='production')action={label:'Open Production',type:'open_card',target:'production',requiresConfirmation:false};
@@ -13463,6 +13464,7 @@ function buildMissionResponseContract(turn){
     threadMemory:turn.threadMemory||null,
     silenceIntelligence:turn.silenceIntelligence||null,
     unsaidQuestion:turn.unsaidQuestion||null,
+    resourceRecommendation:turn.resourceRecommendation||null,
     tooMuchAdvice:turn.tooMuchAdvice||null,
     responseMode:turn.responseMode,
     responseDepth:turn.responseDepth,
@@ -13620,7 +13622,7 @@ function saveMissionTurnCheckpoint(turn){
     var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
     var sessionCache=turn.sessionDataCache||getMissionSessionDataCacheV1(turn.options&&turn.options.ctx,{reason:'checkpoint'});
     var snapshot=turn.changeSnapshot||(sessionCache&&sessionCache.snapshot)||(typeof getMissionCurrentAppSnapshotV1==='function'?getMissionCurrentAppSnapshotV1(turn.options&&turn.options.ctx):null);
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,decisionIntent:turn.decisionIntent||null,decisionMemory:turn.decisionMemory||null,threadMemory:turn.threadMemory||null,silenceIntelligence:turn.silenceIntelligence||null,unsaidQuestion:turn.unsaidQuestion||null,tooMuchAdvice:turn.tooMuchAdvice||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,decisionIntent:turn.decisionIntent||null,decisionMemory:turn.decisionMemory||null,threadMemory:turn.threadMemory||null,silenceIntelligence:turn.silenceIntelligence||null,unsaidQuestion:turn.unsaidQuestion||null,resourceRecommendation:turn.resourceRecommendation||null,tooMuchAdvice:turn.tooMuchAdvice||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
     list.unshift(checkpoint);
     list=list.slice(0,100);
     if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
@@ -13652,7 +13654,7 @@ function summarizeMissionContextPacket(packet){
 
 function summarizeMissionBubblePacket(packet){
   if(!packet)return {};
-  return {workerId:packet.workerId,route:packet.route,inputEnergy:packet.inputEnergy,executionMode:packet.executionMode&&packet.executionMode.mode||'',decisionIntent:packet.decisionIntent&&packet.decisionIntent.kind||'',decisionMemory:packet.decisionMemory&&packet.decisionMemory.reason||'',threadMemory:packet.threadMemory&&packet.threadMemory.reason||'',silenceIntelligence:packet.silenceIntelligence&&packet.silenceIntelligence.reason||'',unsaidQuestion:packet.unsaidQuestion&&packet.unsaidQuestion.reason||'',tooMuchAdvice:packet.tooMuchAdvice&&packet.tooMuchAdvice.reason||'',responseDepth:packet.responseDepth,responseShape:packet.responseShape,hasB2:packet.b2&&packet.b2.shouldRender,hasB3:packet.b3&&packet.b3.shouldRender};
+  return {workerId:packet.workerId,route:packet.route,inputEnergy:packet.inputEnergy,executionMode:packet.executionMode&&packet.executionMode.mode||'',decisionIntent:packet.decisionIntent&&packet.decisionIntent.kind||'',decisionMemory:packet.decisionMemory&&packet.decisionMemory.reason||'',threadMemory:packet.threadMemory&&packet.threadMemory.reason||'',silenceIntelligence:packet.silenceIntelligence&&packet.silenceIntelligence.reason||'',unsaidQuestion:packet.unsaidQuestion&&packet.unsaidQuestion.reason||'',resourceRecommendation:packet.resourceRecommendation&&packet.resourceRecommendation.title||'',tooMuchAdvice:packet.tooMuchAdvice&&packet.tooMuchAdvice.reason||'',responseDepth:packet.responseDepth,responseShape:packet.responseShape,hasB2:packet.b2&&packet.b2.shouldRender,hasB3:packet.b3&&packet.b3.shouldRender};
 }
 
 function buildMissionFallbackBubblePacket(turn,err){
@@ -13739,6 +13741,8 @@ function runMissionTurn(kind,rawInput,options){
     addMissionTrace(turn,'too_much_advice_read',{shouldAnswer:turn.tooMuchAdvice&&turn.tooMuchAdvice.shouldAnswer,reason:turn.tooMuchAdvice&&turn.tooMuchAdvice.reason,repeatedAdvice:turn.tooMuchAdvice&&turn.tooMuchAdvice.repeatedAdvice});
     turn.unsaidQuestion=getMissionUnsaidQuestionV1(turn,options&&options.ctx||{});
     addMissionTrace(turn,'unsaid_question_read',{shouldNudge:turn.unsaidQuestion&&turn.unsaidQuestion.shouldNudge,reason:turn.unsaidQuestion&&turn.unsaidQuestion.reason,route:turn.unsaidQuestion&&turn.unsaidQuestion.route});
+    turn.resourceRecommendation=getMissionResourceRecommendationV1(turn.route,options&&options.ctx||{},turn.rawInput||turn.normalizedInput||'');
+    addMissionTrace(turn,'resource_recommendation_read',{shouldRecommend:turn.resourceRecommendation&&turn.resourceRecommendation.shouldRecommend,title:turn.resourceRecommendation&&turn.resourceRecommendation.title,source:turn.resourceRecommendation&&turn.resourceRecommendation.source});
     turn.contextSlices=resolveMissionContextSlices(turn.route);
     addMissionTrace(turn,'context_slices_resolved',summarizeMissionContextSlices(turn.contextSlices));
     turn.hasData=missionPresenceHasData(turn);
@@ -14371,14 +14375,75 @@ function getMissionDecisionResponse(route,ctx,question){
   return '<p><strong>Decision:</strong><br>'+escapeHtml(choice)+'.</p><p><strong>Why:</strong><br>'+escapeHtml(why)+'</p><p><strong>Do this:</strong><br>'+escapeHtml(action)+'</p><p><strong>Then:</strong><br>'+escapeHtml(then)+'</p>';
 }
 
-function getMissionResourceRecommendationResponse(route,ctx,question){
+/* =========================================================
+   MISSION RESOURCE RECOMMENDATION INTELLIGENCE — v1
+========================================================= */
+function getMissionFallbackResourceCatalogV1(){
+  return [
+    {title:'Cold DM Opener Script',tags:'sales dm opener lead outreach cold'},
+    {title:'Warm Follow-Up Script',tags:'sales follow up reply lead bump ghosted'},
+    {title:'Objection Isolator Script',tags:'sales objection too expensive think budget concern'},
+    {title:'Call Prep Checklist',tags:'sales call prep discovery closer live call'},
+    {title:'Rappreneur OS DM Script',tags:'rappreneur artist dm sales offer'},
+    {title:'ATL Studio Follow-Up Script',tags:'atl studio session follow up dm booking'},
+    {title:'Content Proof Template',tags:'content post proof hook caption'},
+    {title:'BANGIN+ Upload Checklist',tags:'production bangin upload metadata cover art dsp'},
+    {title:'Mix/Master Qualifier',tags:'mix master recording release ready qualifier'},
+    {title:'DPC Logging Checklist',tags:'dpc log daily progress campaign activity'}
+  ];
+}
+
+function scoreMissionResourceCandidateV1(resource,q,route){
+  var hay=[resource.title,resource.name,resource.resource,resource.type,resource.category,resource.stage,resource.tags,resource.summary,resource.description,resource.notes].filter(Boolean).join(' ').toLowerCase();
+  var score=0;
+  q.split(/\s+/).forEach(function(term){
+    if(term.length>3&&hay.indexOf(term)>=0)score+=2;
+  });
+  if(route==='sales'||/\b(sales|sell|offer|close|dm|call|lead|pipeline|reply|follow|ghost|bump|expensive|payment)\b/.test(q)){
+    if(/\b(sales|dm|call|lead|follow|objection|closer|reply|bump|ghost|studio|rappreneur)\b/.test(hay))score+=8;
+  }
+  if(route==='content'||/\b(content|post|hook|caption|proof)\b/.test(q)){
+    if(/\b(content|post|hook|caption|proof)\b/.test(hay))score+=7;
+  }
+  if(route==='production'||/\b(production|beat|bangin|metadata|mix|master|upload)\b/.test(q)){
+    if(/\b(production|beat|bangin|metadata|mix|master|upload)\b/.test(hay))score+=7;
+  }
+  if(/\b(too expensive|price|budget)\b/.test(q)&&/\b(objection|expensive|price|budget)\b/.test(hay))score+=10;
+  if(/\b(ghosted|bump|no reply)\b/.test(q)&&/\b(ghost|bump|follow)\b/.test(hay))score+=10;
+  if(/\b(prep me|call prep|live call)\b/.test(q)&&/\b(call prep|discovery|closer)\b/.test(hay))score+=10;
+  if(/\batl studio\b/.test(q)&&/\batl|studio\b/.test(hay))score+=10;
+  if(/\brappreneur\b/.test(q)&&/\brappreneur|artist\b/.test(hay))score+=10;
+  return score;
+}
+
+function getMissionResourceRecommendationV1(route,ctx,question){
   var q=normalizeMissionQuestion(question||'');
-  if(!/\b(what should i say|script|template|playbook|resource|guide|pull up|send me|find the)\b/.test(q))return '';
-  var resource='Cold DM Opener Script';
-  if(/\b(follow|reply|lead)\b/.test(q))resource='Follow-up script';
-  if(/\b(license|bangin)\b/.test(q))resource='BANGIN+ License Call Sheet';
-  if(/\b(content|post|hook)\b/.test(q))resource='Content proof template';
-  return '<p><strong>You need a resource, not another answer.</strong></p><p>Open Rolodex and pull: '+escapeHtml(resource)+'.</p><p>Use the short version first, then come back with what happened.</p>';
+  var asksForResource=/\b(script|template|playbook|resource|guide|pull up|send me|find the|checklist|qualifier)\b/.test(q);
+  var resourceHelpful=/\b(warm follow up|follow up|bump|ghosted|too expensive|payment plan|prep me for a call|call prep|atl studio|rappreneur|bangin plus|metadata|mix master|what should i say)\b/.test(q);
+  if(!asksForResource&&!resourceHelpful)return null;
+  var loaded=Array.isArray(window.__resources)?window.__resources:[];
+  var fallback=getMissionFallbackResourceCatalogV1();
+  var all=loaded.length?loaded.concat(fallback):fallback;
+  var scored=all.map(function(resource){
+    return {resource:resource,score:scoreMissionResourceCandidateV1(resource,q,route)};
+  }).sort(function(a,b){return b.score-a.score;});
+  var best=scored[0]||{resource:fallback[0],score:0};
+  if(best.score<=0)best={resource:fallback[0],score:1};
+  var title=best.resource.title||best.resource.name||best.resource.resource||'Cold DM Opener Script';
+  return {
+    shouldRecommend:true,
+    title:title,
+    score:best.score,
+    source:loaded.indexOf(best.resource)>=0?'loaded_resource_library':'fallback_catalog',
+    route:route||'resources',
+    action:{label:'Open Rolodex',type:'open_card',target:'rolodex',requiresConfirmation:false,resourceTitle:title,reason:'resource_recommendation'}
+  };
+}
+
+function getMissionResourceRecommendationResponse(route,ctx,question){
+  var rec=getMissionResourceRecommendationV1(route,ctx,question);
+  if(!rec||!rec.shouldRecommend)return '';
+  return '<strong>Use the right support piece.</strong><br><br>Open Rolodex and pull: '+escapeHtml(rec.title)+'.<br><br>Use one resource, apply it once, then come back with what happened.';
 }
 
 function getMissionHandoffResponse(question){
@@ -18196,13 +18261,23 @@ function runMissionIntegritySelfCheck(){
   if(unsaidSyncGuard.shouldNudge)failures.push('unsaid_sync_guard');
   var unsaidResultGuard=getMissionUnsaidQuestionV1({rawInput:'paid',route:'sales',inputSignals:{}},{gap:400});
   if(unsaidResultGuard.shouldNudge)failures.push('unsaid_result_guard');
+  var coldResource=getMissionResourceRecommendationV1('resources',actionCtx,'pull up a cold dm script');
+  if(!coldResource||coldResource.title!=='Cold DM Opener Script'||coldResource.action.target!=='rolodex')failures.push('resource_cold_dm');
+  var studioResource=getMissionResourceRecommendationV1('sales',actionCtx,'write an ATL studio follow up');
+  if(!studioResource||studioResource.title!=='ATL Studio Follow-Up Script')failures.push('resource_atl_studio');
+  var objectionResource=getMissionResourceRecommendationV1('sales',actionCtx,'he said too expensive send me a guide');
+  if(!objectionResource||objectionResource.title!=='Objection Isolator Script')failures.push('resource_objection');
+  var productionResource=getMissionResourceRecommendationV1('production',actionCtx,'bangin plus metadata checklist');
+  if(!productionResource||productionResource.title!=='BANGIN+ Upload Checklist')failures.push('resource_production');
+  var resourceResponse=getMissionResourceRecommendationResponse('resources',actionCtx,'send me a follow up script');
+  if(resourceResponse.indexOf('Open Rolodex')<0||resourceResponse.indexOf('Warm Follow-Up Script')<0)failures.push('resource_response');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({lastActionStatus:'suggested',lastActionPlan:{label:'Open Hit List',action:'Contact GARY RAOGUY',type:'open_card',target:'hit_list',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact GARY RAOGUY',type:'open_card',target:'hit_list',route:'leads',suggestedAt:new Date().toISOString()},history:[]}}));
   var tooMuch=getMissionTooMuchAdviceV1({rawInput:'what next',route:'now'},actionCtx);
   if(!tooMuch.shouldAnswer||tooMuch.reason!=='pending_action_not_resolved')failures.push('too_much_advice_signal');
   var tooMuchPrompt=buildMissionTooMuchAdviceResponseV1({rawInput:'what next',tooMuchAdvice:tooMuch},actionCtx);
   if(tooMuchPrompt.indexOf('stack more advice')<0||tooMuchPrompt.indexOf('What is blocking')<0)failures.push('too_much_advice_prompt');
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:51};
+  return {passed:!failures.length,failures:failures,total:56};
 }
 
 function runMissionCommandSelfCheck(){
