@@ -14144,7 +14144,116 @@ function getMissionStylePreferenceResponse(question){
   if(!msg)return '';
   pref.updatedAt=new Date().toISOString();
   setMissionStylePreference(pref);
+  learnMissionStylePreferenceV11(question,{source:'style_response'});
   return escapeHtml(msg);
+}
+
+/* =========================================================
+   MISSION STYLE PREFERENCE LEARNING — v1.1
+========================================================= */
+function inferMissionStylePreferenceV11(text){
+  var q=normalizeMissionQuestion(text||'');
+  var pref={};
+  if(!q)return pref;
+  if(/\b(sales answers?|sales replies?|what should i say|objections?)\b/.test(q)&&/\b(more direct|direct|short|shorter|less words|less detail|less hype|straight|action first)\b/.test(q)){
+    pref.salesDirect=true;
+    pref.tone='direct';
+    pref.length='short';
+  }
+  if(/\b(less hype|no hype|less motivational|less corny|less generic|more direct|straight to it|action first|operator voice)\b/.test(q)){
+    pref.tone='direct';
+  }
+  if(/\b(shorter|less words|just the action|action only|keep it simple|quick answer)\b/.test(q)){
+    pref.length='short';
+  }
+  if(/\b(more detail|more steps|walk me through|explain why|go deeper)\b/.test(q)){
+    pref.length='guided';
+  }
+  if(/\b(sound like me|my voice|a1xx-specific|operator voice|less generic)\b/.test(q)){
+    pref.voice='a1xx_operator';
+  }
+  return pref;
+}
+
+function mergeMissionStylePreferenceV11(base,next){
+  base=base||{};
+  next=next||{};
+  Object.keys(next).forEach(function(k){
+    if(next[k]!==undefined&&next[k]!==null&&next[k]!=='')base[k]=next[k];
+  });
+  return base;
+}
+
+function learnMissionStylePreferenceV11(text,meta){
+  var inferred=inferMissionStylePreferenceV11(text||'');
+  if(!Object.keys(inferred).length)return null;
+  var pref=mergeMissionStylePreferenceV11(getMissionStylePreference(),inferred);
+  pref.updatedAt=new Date().toISOString();
+  pref.source=meta&&meta.source||'local_memory';
+  setMissionStylePreference(pref);
+  try{
+    var item={ts:new Date().toISOString(),text:missionMemorySafeText(text||''),metric:'style_preference',style:inferred,source:pref.source};
+    if(item.text)addMissionMemoryItem(MISSION_MEMORY_PREFS_KEY,item,30);
+  }catch(e){}
+  return pref;
+}
+
+function getMissionLearnedStylePreferenceV11(route,question){
+  var pref=getMissionStylePreference();
+  try{
+    var list=[];
+    var prefs=typeof getStore==='function'?(getStore(MISSION_MEMORY_PREFS_KEY)||[]):[];
+    var notes=typeof getStore==='function'?(getStore(MISSION_MEMORY_NOTES_KEY)||[]):[];
+    list=prefs.concat(notes).slice(-12);
+    list.forEach(function(item){
+      pref=mergeMissionStylePreferenceV11(pref,inferMissionStylePreferenceV11(item&&item.text||''));
+      if(item&&item.style)pref=mergeMissionStylePreferenceV11(pref,item.style);
+    });
+  }catch(e){}
+  pref=mergeMissionStylePreferenceV11(pref,inferMissionStylePreferenceV11(question||''));
+  pref.active=!!(pref.tone||pref.length||pref.voice||pref.salesDirect);
+  if(route==='sales'&&pref.salesDirect)pref.length='short';
+  return pref;
+}
+
+function stripMissionGenericOpenersV11(html){
+  var out=String(html||'');
+  out=out.replace(/^(Got it|On it|Say less|Straight to it|Picking it back up|Still on this|Let us dig in)\.?(<br><br>|\s*)/i,'');
+  out=out.replace(/^Back on this\.?(<br><br>|\s*)/i,'');
+  return out;
+}
+
+function stripMissionOptionalClosersV11(html){
+  var blocks=missionSplitAnswerBlocksV1(html);
+  if(blocks.length<=1)return String(html||'');
+  blocks=blocks.filter(function(block){
+    var text=missionPlainTextV1(block).toLowerCase();
+    return !/^(want to|you need anything else|anything else|what do you want to do with that|want me to|should i)\b/.test(text);
+  });
+  return missionJoinAnswerBlocksV1(blocks);
+}
+
+function limitMissionAnswerBlocksV11(html,maxBlocks){
+  var blocks=missionSplitAnswerBlocksV1(html);
+  if(blocks.length<=maxBlocks)return String(html||'');
+  return missionJoinAnswerBlocksV1(blocks.slice(0,maxBlocks));
+}
+
+function applyMissionStylePreferenceLearningV11(html,route,question,opts){
+  var out=String(html||'');
+  if(!out)return out;
+  opts=opts||{};
+  if(opts.stylePreference===false)return out;
+  var pref=getMissionLearnedStylePreferenceV11(route||'now',question||'');
+  if(!pref.active)return out;
+  if(pref.tone==='direct'||pref.voice==='a1xx_operator')out=stripMissionGenericOpenersV11(out);
+  if(route==='sales'&&pref.salesDirect){
+    out=stripMissionOptionalClosersV11(out);
+    if(!/\b(roleplay|score|practice|walk me through|prep me)\b/.test(normalizeMissionQuestion(question||'')))out=limitMissionAnswerBlocksV11(out,3);
+  }else if(pref.length==='short'&&!/\b(walk me through|make a plan|teach|explain|why|more detail)\b/.test(normalizeMissionQuestion(question||''))){
+    out=limitMissionAnswerBlocksV11(out,3);
+  }
+  return applyMissionReadabilityGuardV1(out);
 }
 
 function getMissionCorrectionRoute(question){
@@ -17606,6 +17715,7 @@ function addMissionLocalNote(text,route){
   var clean=missionMemorySafeText(text||'');
   if(!clean)clean='Manual Mission Command note';
   addMissionMemoryItem(MISSION_MEMORY_NOTES_KEY,{ts:new Date().toISOString(),text:clean,route:route||'note',expiresAt:new Date(Date.now()+7*86400000).toISOString()},60);
+  if(route==='memory'||/\b(style|voice|direct|short|hype|generic|sales answers?)\b/i.test(clean))learnMissionStylePreferenceV11(clean,{source:'confirmed_memory_note'});
 }
 
 function mcConfirmAction(actionId,encodedData){
@@ -17793,7 +17903,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
       var explainerLine=getMissionDecisionExplainerLineV1(visibleExplainer);
       if(explainerLine&&String(html||'').indexOf(explainerLine)<0)html=String(html||'')+'<br><br>'+explainerLine;
     }
-    var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)),route,cleanQuestion||question||'',opts));
+    var styled=applyMissionStylePreferenceLearningV11(applyMissionProseRules(applyMissionSessionArc(cleanMissionVisibleAnswerText(html),route,ctx,question||'',brainState,opts)),route,cleanQuestion||question||'',opts);
+    var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(styled,route,cleanQuestion||question||'',opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   var resultSignal=getMissionResultSignalV1(question||cleanQuestion||'');
@@ -18008,13 +18119,25 @@ function runMissionIntegritySelfCheck(){
   if(salesSilenceGuard.shouldAnswer)failures.push('silence_sales_guard');
   var syncSilenceGuard=getMissionSilenceIntelligenceV1({rawInput:'sync check',route:'sync',inputSignals:{}},actionCtx);
   if(syncSilenceGuard.shouldAnswer)failures.push('silence_sync_guard');
+  var priorStylePref=sessionStorage.getItem(MISSION_STYLE_PREFERENCE_SESSION_KEY);
+  sessionStorage.removeItem(MISSION_STYLE_PREFERENCE_SESSION_KEY);
+  var inferredStyle=inferMissionStylePreferenceV11('remember this: keep sales answers more direct');
+  if(!inferredStyle.salesDirect||inferredStyle.length!=='short'||inferredStyle.tone!=='direct')failures.push('style_pref_infer_sales_direct');
+  learnMissionStylePreferenceV11('remember this: keep sales answers more direct',{source:'integrity'});
+  var learnedStyle=getMissionLearnedStylePreferenceV11('sales','what should i say');
+  if(!learnedStyle.salesDirect||learnedStyle.length!=='short')failures.push('style_pref_learned');
+  var styledSales=applyMissionStylePreferenceLearningV11('Got it.<br><br>Ask: "What is the biggest thing you want fixed?"<br><br>Want to practice the next line?', 'sales','what should i say',{});
+  if(styledSales.indexOf('Got it')>=0||styledSales.indexOf('Want to practice')>=0||styledSales.indexOf('Ask:')<0)failures.push('style_pref_sales_shaping');
+  var styledRoleplay=applyMissionStylePreferenceLearningV11('I will play the skeptical prospect.<br><br>Prospect: "I am not sure."<br><br>Your move.', 'sales','roleplay a skeptical artist',{});
+  if(styledRoleplay.indexOf('Your move')<0)failures.push('style_pref_roleplay_guard');
+  if(priorStylePref===null)sessionStorage.removeItem(MISSION_STYLE_PREFERENCE_SESSION_KEY);else sessionStorage.setItem(MISSION_STYLE_PREFERENCE_SESSION_KEY,priorStylePref);
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({lastActionStatus:'suggested',lastActionPlan:{label:'Open Hit List',action:'Contact GARY RAOGUY',type:'open_card',target:'hit_list',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact GARY RAOGUY',type:'open_card',target:'hit_list',route:'leads',suggestedAt:new Date().toISOString()},history:[]}}));
   var tooMuch=getMissionTooMuchAdviceV1({rawInput:'what next',route:'now'},actionCtx);
   if(!tooMuch.shouldAnswer||tooMuch.reason!=='pending_action_not_resolved')failures.push('too_much_advice_signal');
   var tooMuchPrompt=buildMissionTooMuchAdviceResponseV1({rawInput:'what next',tooMuchAdvice:tooMuch},actionCtx);
   if(tooMuchPrompt.indexOf('stack more advice')<0||tooMuchPrompt.indexOf('What is blocking')<0)failures.push('too_much_advice_prompt');
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:42};
+  return {passed:!failures.length,failures:failures,total:46};
 }
 
 function runMissionCommandSelfCheck(){
