@@ -15406,11 +15406,15 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(/Result read|^Good\.(?:<br|$)|<strong>Next:<\/strong>/i.test(voiceResult))failures.push('qa_voice_result_read_guard');
   var voiceBooked=applyMissionB1ProseGuard('Booked-call read.<br><br>DPC logged today: 0 booked.<br>CRM booked/session signals: 0.<br>Calendar call/session events loaded: 0.<br>I do not see a booked call loaded yet. If one happened, log it in DPC and update the lead.',{route:'dpc',question:'how many booked calls do i have'});
   if(/Booked-call read|DPC logged today|CRM booked\/session signals|Calendar call\/session events loaded/i.test(voiceBooked))failures.push('qa_voice_booked_data_guard');
+  var weeklyPlan=getMissionWeeklyReviewAnswerV1({rev:999,wk:500,gap:0,cycle:{name:'Foundation'}},'make a plan for the week');
+  if(!/Phase 1/i.test(weeklyPlan)||!/Phase 2/i.test(weeklyPlan)||!/Start here/i.test(weeklyPlan))failures.push('qa_weekly_review_plan_shape');
+  var weeklyChanged=getMissionWeeklyReviewAnswerV1({rev:999,wk:500,gap:0,cycle:{name:'Foundation'}},'what changed this week');
+  if(!/Weekly review read/i.test(weeklyChanged)||!/Lesson:/i.test(weeklyChanged)||!/Next move/i.test(weeklyChanged))failures.push('qa_weekly_review_read_shape');
   var accountabilityProtected=getMissionActionAccountabilityV1({rawInput:'/pipeline',route:'leads'},{});
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:21};
+  return {passed:!failures.length,failures:failures,total:23};
 }
 
 function getMissionHandoffResponse(question){
@@ -17087,6 +17091,92 @@ function getMissionSyncAnswer(){
   return '<strong>Sync:</strong><br>'+names.map(function(n){var s=services[n]||{};return escapeHtml(n+': '+(s.status||'checked')+(s.msg?' · '+s.msg:''));}).join('<br>');
 }
 
+/* =========================================================
+   MISSION WEEKLY REVIEW INTELLIGENCE — v1
+========================================================= */
+var MISSION_WEEKLY_REVIEW_INTELLIGENCE_V1={
+  id:'mission_weekly_review_intelligence_v1',
+  version:'1.0',
+  installMode:'additive_read_only'
+};
+
+function getMissionWeeklyReviewSnapshotV1(ctx){
+  ctx=ctx||{};
+  var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var leads=(window.__crmLeads||[]).filter(function(lead){
+    try{return !isClosedCRMLead(lead);}catch(e){return true;}
+  });
+  var content=(window.__contentPipelinePieces||window.__contentPieces||[]).filter(Boolean);
+  var production=(window.__productionPieces||[]).filter(Boolean);
+  var cycle=ctx.cycle||{};
+  var weekTarget=Number(ctx.wk||0);
+  var revenue=Number(ctx.rev||0);
+  var gap=Number(ctx.gap||Math.max(0,weekTarget-revenue)||0);
+  var pct=weekTarget?Math.round((revenue/weekTarget)*100):0;
+  return {
+    revenue:revenue,
+    weekTarget:weekTarget,
+    gap:gap,
+    pct:pct,
+    dpc:{
+      dms:Number(d.dms||0),
+      callsMade:Number(d.coldCalls||0),
+      booked:Number(d.calls||0),
+      closes:Number(d.closes||0),
+      collected:Number(d.money||0),
+      content:Number(d.content||0),
+      replies:Number(d.leads||0)
+    },
+    openLeads:leads.length,
+    contentCount:content.length,
+    productionCount:production.length,
+    cycleName:cycle.name||'Current cycle',
+    cycleNum:cycle.num||'',
+    daysLeft:typeof daysLeft==='function'?daysLeft(getCycleIdx()):null
+  };
+}
+
+function getMissionWeeklyReviewConstraintV1(snap){
+  var d=snap.dpc||{};
+  if((d.dms+d.callsMade+d.booked+d.closes+d.collected)===0)return 'the week needs a logged DPC signal before the OS can learn from it';
+  if(snap.gap>0)return 'money is still the loudest constraint';
+  if(!snap.openLeads)return 'pipeline visibility is thin, so the next review should confirm lead source data';
+  if(!snap.contentCount)return 'content proof is thin, so the next cycle needs more visible proof';
+  if(!snap.productionCount)return 'production inventory is thin, so the next cycle needs one shippable asset';
+  return 'the target is protected, so the next review should turn the wins into a repeatable system';
+}
+
+function getMissionWeeklyReviewNextMoveV1(snap){
+  var constraint=getMissionWeeklyReviewConstraintV1(snap);
+  if(/DPC signal/.test(constraint))return 'log one measurable outreach, sales, content, or delivery action';
+  if(snap.gap>0)return 'choose the closest buyer-facing move and log the result';
+  if(!snap.openLeads)return 'refresh the pipeline read before planning more outreach';
+  if(!snap.contentCount)return 'turn the strongest lesson from the week into one proof post';
+  if(!snap.productionCount)return 'move one production item to the next visible status';
+  return 'pick the top three repeats for next week and protect the first block';
+}
+
+function getMissionWeeklyReviewAnswerV1(ctx,question){
+  var q=normalizeMissionQuestion(question||'');
+  var snap=getMissionWeeklyReviewSnapshotV1(ctx||{});
+  var d=snap.dpc||{};
+  var moneyLine=snap.weekTarget?fmt(snap.revenue)+' of '+fmt(snap.weekTarget)+' this week, '+snap.pct+'% complete, '+fmt(snap.gap)+' gap.':'Weekly money target is not loaded yet.';
+  var activityLine=d.dms+' DMs, '+d.callsMade+' calls made, '+d.booked+' booked, '+d.closes+' closes, '+fmt(d.collected)+' collected in DPC today.';
+  var loadedLine=snap.openLeads+' open leads, '+snap.contentCount+' content item'+(snap.contentCount===1?'':'s')+', '+snap.productionCount+' production item'+(snap.productionCount===1?'':'s')+' loaded.';
+  var constraint=getMissionWeeklyReviewConstraintV1(snap);
+  var move=getMissionWeeklyReviewNextMoveV1(snap);
+  if(/\b(plan|prep|next week|make a plan|top 3)\b/.test(q)){
+    return 'Weekly plan from the loaded read:<br><br>Phase 1: close the open loop. '+escapeHtml(constraint)+'.<br><br>Phase 2: protect the money path. '+escapeHtml(move)+'.<br><br>Phase 3: turn the lesson into a system. Pick what repeats, what gets cut, and what gets scheduled first.<br><br>Start here: '+escapeHtml(move)+'.';
+  }
+  if(/\b(wrap|close out|end of day|done for the day|close the day)\b/.test(q)){
+    return 'End-of-day read starts with what changed, not how busy it felt.<br><br>'+escapeHtml(activityLine)+'<br><br>Before you shut it down, name one result: money moved, lead moved, content moved, production moved, or nothing moved yet.<br><br>Then tomorrow starts with '+escapeHtml(move)+'.';
+  }
+  if(/\b(changed|moved|worked|dragged|lesson|learn)\b/.test(q)){
+    return 'Weekly review read:<br><br>'+escapeHtml(moneyLine)+'<br>'+escapeHtml(activityLine)+'<br>'+escapeHtml(loadedLine)+'<br><br>Lesson: '+escapeHtml(constraint)+'.<br><br>Next move is '+escapeHtml(move)+'.';
+  }
+  return 'Weekly review should turn the week into one decision.<br><br>'+escapeHtml(moneyLine)+'<br>'+escapeHtml(loadedLine)+'<br><br>The read is simple: '+escapeHtml(constraint)+'.<br><br>Next move is '+escapeHtml(move)+'.';
+}
+
 function getMissionDiagnosticArea(question){
   var q=normalizeMissionQuestion(question||'');
   if(/\b(pipeline|lead|leads|crm|follow|followup|contact|dm|call)\b/.test(q))return 'leads';
@@ -17273,7 +17363,7 @@ function getMissionCommandRouteAnswer(route,ctx,question){
   if(route==='sync')return continuity+getMissionSyncAnswer()+getMissionContextNudge('sync',ctx)+getMissionIntentLinks('sync');
   if(route==='memory')return getMissionMemoryAnswer(question)+getMissionIntentLinks('memory');
   if(route==='archive')return '<strong>Archive:</strong> Backup and archive tools are read-only in Phase 1. Use the existing buttons for manual backup or cycle archive until write actions are confirmation-gated.';
-  if(route==='weekly')return continuity+getMissionSpecialLaneAnswer('weeklyReview',ctx,question)+getMissionIntentLinks('weekly');
+  if(route==='weekly')return continuity+getMissionWeeklyReviewAnswerV1(ctx,question)+getMissionIntentLinks('weekly');
   return '';
 }
 
