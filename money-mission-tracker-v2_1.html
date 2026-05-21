@@ -9729,6 +9729,19 @@ function updateMissionLiveCallToggleUI(){
   btn.textContent=active?'Call On':'Live Call';
 }
 
+function missionIsLiveCallModeActive(turn){
+  return window.__missionCurrentSalesMode==='live_call'||!!(turn&&turn.liveContext&&turn.liveContext.currentSalesMode==='live_call');
+}
+
+function trimMissionLiveCallAnswer(html){
+  var text=normalizeMissionIntegrityText(html);
+  if(!text)return html;
+  var parts=text.split(/(?<=[.!?])\s+/).filter(Boolean);
+  var firstQuestion=parts.filter(function(part){return /\?/.test(part);})[0]||'';
+  var first=firstQuestion||parts[0]||text;
+  return escapeHtml(first.replace(/\s+/g,' ').trim());
+}
+
 function runMissionResponseIntegrityCheck(turn,bubblePacket){
   var flags=[],overrides=[];
   var packet=Object.assign({b1:'',b2:'',b3:''},bubblePacket||{});
@@ -9736,6 +9749,13 @@ function runMissionResponseIntegrityCheck(turn,bubblePacket){
   if(turn&&(!turn.liveContext||!turn.liveContext.currentSalesMode))turn.liveContext=getMissionLiveContextSnapshot();
   setMissionSalesModeFromTurn(turn);
   if(turn&&turn.liveContext)turn.liveContext.currentSalesMode=window.__missionCurrentSalesMode||turn.liveContext.currentSalesMode||'normal';
+
+  if(missionIsLiveCallModeActive(turn)){
+    b1=trimMissionLiveCallAnswer(b1);
+    b2='';
+    b3='';
+    flags.push('live_call_one_line_guard');
+  }
 
   if(/\{\{[^}]+\}\}/.test(b1)){
     b1=stripMissionLiteralVariables(b1);
@@ -9900,6 +9920,7 @@ function getMissionPresenceTurn(question,route){
 
 function getMissionAcknowledgment(turn,log){
   if(!turn)return null;
+  if(missionIsLiveCallModeActive(turn))return null;
   log=log||{};
   var turnCount=turn.turnCount||1;
   if((turnCount-(log.lastAckTurn||-99))<3)return null;
@@ -9918,6 +9939,7 @@ function getMissionAcknowledgment(turn,log){
 
 function getMissionTurnCloser(turn,log){
   if(!turn||turn.inputEnergy==='punchy')return null;
+  if(missionIsLiveCallModeActive(turn))return null;
   log=log||{};
   if(turn.routePlan&&turn.routePlan.clarify)return null;
   var turnCount=turn.turnCount||1;
@@ -13835,13 +13857,15 @@ function pickMissionSalesDeepTemplateV1(pool,q){
 
 function getMissionSalesDeepOutputResponseV1(route,ctx,question,conv,brainState){
   var q=normalizeMissionQuestion(question||'');
-  var isSalesRoute=route==='sales'||(conv&&conv.route==='sales')||getMissionSalesSignal(question||'');
+  var liveMode=window.__missionCurrentSalesMode==='live_call';
+  var isSalesRoute=liveMode||route==='sales'||(conv&&conv.route==='sales')||getMissionSalesSignal(question||'');
   if(!q||!isSalesRoute)return '';
   var pack=MISSION_SALES_DEEP_OUTPUT_PACK_V1||null;
   var offerKey=getMissionSalesDeepOfferKeyV1(q);
   var objectionKey=getMissionSalesDeepObjectionKeyV1(q);
   var subtype=getMissionSalesDeepSubtypeV1(q);
   var offerIntent=getMissionSalesOfferIntentV1(q);
+  if(liveMode&&!subtype)subtype='live_call';
   if(offerKey&&!subtype)subtype='offer_specific_dm';
   if(objectionKey&&!subtype)subtype=objectionKey;
   var pool=getMissionSalesDeepPoolV1(pack,subtype,objectionKey,offerKey);
@@ -14794,6 +14818,10 @@ function runMissionIntegritySelfCheck(){
   }
   var sales=runMissionResponseIntegrityCheck(fakeTurn(),{b1:'Send {{line}}',b2:'Data',b3:'Action'});
   if(sales.b2||sales.b3||sales.b1.indexOf('{{')>=0)failures.push('sales_script_suppression');
+  window.__missionCurrentSalesMode='live_call';
+  var live=runMissionResponseIntegrityCheck(fakeTurn({liveContext:{currentSalesMode:'live_call'}}),{b1:'Ask: "What is the biggest thing you want fixed?"<br><br><span>What did they say back?</span>',b2:'Data',b3:'Action'});
+  if(live.b2||live.b3||normalizeMissionIntegrityText(live.b1).indexOf('What did they say back')>=0)failures.push('live_call_one_line_guard');
+  window.__missionCurrentSalesMode='normal';
   var exitSignal=isMissionSalesModeExitSignal('call is done')&&!getMissionSalesPhraseBridgeV1('call is done')&&getMissionSalesMode('call is done')==='normal';
   if(!exitSignal)failures.push('sales_mode_exit_signal');
   var clarify=runMissionResponseIntegrityCheck(fakeTurn({route:'',routePlan:{clarify:true},responseShape:'quick_read'}),{b1:'Pick a lane',b2:'',b3:'Action'});
@@ -14802,7 +14830,7 @@ function runMissionIntegritySelfCheck(){
   if(stale.b2.indexOf('Data confidence is low')<0)failures.push('stale_data_warning');
   var empty=runMissionResponseIntegrityCheck(fakeTurn({route:'now',responseShape:'quick_read'}),{b1:'',b2:'',b3:''});
   if(!empty.b1)failures.push('empty_fallback');
-  return {passed:!failures.length,failures:failures,total:5};
+  return {passed:!failures.length,failures:failures,total:6};
 }
 
 function runMissionCommandSelfCheck(){
