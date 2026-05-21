@@ -11410,6 +11410,7 @@ function getMissionResultSignalV1(question){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return null;
   if(isMissionSalesModeExitSignal(q))return {type:'call_done',label:'Call Done',confidence:0.95};
+  if(/\b(wrong resource|wrong script|not the right resource|not the right script|didn'?t fit|did not fit|that resource missed|that script missed)\b/.test(q))return {type:'resource_mismatch',label:'Resource Did Not Fit',confidence:0.82};
   if(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/.test(q))return {type:'booked',label:'Booked Call',confidence:0.9};
   if(/\b(paid|got paid|collected|collected money|invoice paid|closed|closed one|sale made|sold)\b/.test(q))return {type:'paid',label:'Collected Money',confidence:0.9};
   if(/\b(got a reply|they replied|he replied|she replied|reply came in|got replies|they responded|responded)\b/.test(q))return {type:'reply',label:'Got Reply',confidence:0.88};
@@ -11437,6 +11438,9 @@ function rememberMissionSuggestedActionV1(turn,action){
     route:turn.route||'',
     workerId:turn.workerId||'',
     reason:action.reason||'',
+    resourceTitle:action.resourceTitle||'',
+    resourceSource:action.resourceSource||'',
+    followthroughType:action.followthroughType||'',
     suggestedAt:new Date().toISOString(),
     turnId:turn.id||''
   };
@@ -11516,6 +11520,40 @@ function buildMissionMicroWinResultPromptV1(turn,signal,completed){
   return escapeHtml(ack.acknowledgment)+'<br><br>Result read: <strong>'+escapeHtml(ack.resultRead)+'</strong>.<br><br>Next: '+escapeHtml(ack.next)+'.';
 }
 
+/* =========================================================
+   MISSION RESOURCE-TO-ACTION FOLLOWTHROUGH — v1
+========================================================= */
+function isMissionResourcePendingActionV1(pending){
+  return !!(pending&&(pending.followthroughType==='resource'||pending.reason==='resource_recommendation'||pending.resourceTitle));
+}
+
+function buildMissionResourceFollowthroughPromptV1(turn,signal,pending){
+  if(!signal||!isMissionResourcePendingActionV1(pending))return '';
+  var title=pending.resourceTitle||pending.action||pending.label||'the resource';
+  if(signal.type==='done'){
+    return 'Clean.<br><br>Did <strong>'+escapeHtml(title)+'</strong> create a result?<br><br>1) No reply yet<br>2) Got a reply<br>3) Booked a call<br>4) Collected money<br>5) Resource did not fit<br><br>Pick the result so I can close the loop.';
+  }
+  if(signal.type==='resource_mismatch'){
+    return 'Good catch.<br><br>Do not force that resource.<br><br>Tell me the lane again: cold DM, warm follow-up, objection, call prep, offer, content, or production checklist.';
+  }
+  if(signal.type==='no_reply'){
+    return 'Useful signal.<br><br>'+escapeHtml(title)+' went out, but no reply yet.<br><br>Next: mark the touch, then bump once later instead of chasing it right now.';
+  }
+  if(signal.type==='reply'){
+    return 'Good. The resource created signal.<br><br>'+escapeHtml(title)+' got a reply.<br><br>Next: ask one clarifying question before pitching.';
+  }
+  if(signal.type==='booked'){
+    return 'Good. The resource moved the conversation.<br><br>'+escapeHtml(title)+' helped book the call.<br><br>Next: add the call, update the lead, and prep one opening question.';
+  }
+  if(signal.type==='paid'){
+    return 'That is the result.<br><br>'+escapeHtml(title)+' helped create money.<br><br>Next: log the money, update the lead status, and save the resource as proven.';
+  }
+  if(signal.type==='follow_up'){
+    return 'Still alive.<br><br>'+escapeHtml(title)+' created a follow-up loop.<br><br>Next: isolate what is unresolved: money, timing, trust, or fit.';
+  }
+  return '';
+}
+
 function completeMissionResultLoopV1(signal,turn){
   if(!signal)return null;
   var session=getMissionResultLoopSessionV1();
@@ -11526,6 +11564,8 @@ function completeMissionResultLoopV1(signal,turn){
     route:turn&&turn.route||pending&&pending.route||session.lastRoute||'',
     actionLabel:pending&&pending.label||session.lastActionSuggested||'the last move',
     action:pending&&pending.action||'',
+    resourceTitle:pending&&pending.resourceTitle||'',
+    followthroughType:pending&&pending.followthroughType||'',
     recordedAt:new Date().toISOString()
   };
   result.microWin=getMissionMicroWinAcknowledgmentV1(signal,{result:result,pending:pending},turn);
@@ -11547,10 +11587,14 @@ function buildMissionResultLoopPromptV1(turn,signal){
     return 'Call mode closed.<br><br>What happened: <strong>booked, no, follow-up, or paid?</strong><br><br>Give me the result and I will help log the next move.';
   }
   if(signal&&signal.type==='done'){
+    var resourceDone=buildMissionResourceFollowthroughPromptV1(turn,signal,pending);
+    if(resourceDone)return resourceDone;
     var doneAck=getMissionMicroWinAcknowledgmentV1(signal,{result:{type:'done',label:signal.label||'Action Done'}},turn);
     return escapeHtml(doneAck.acknowledgment)+' Did '+escapeHtml(actionLabel)+' create a result?<br><br>1) No reply yet<br>2) Got a reply<br>3) Booked a call<br>4) Collected money<br>5) Finished the asset<br><br>Pick the result so the OS can close the loop.';
   }
   var completed=completeMissionResultLoopV1(signal,turn);
+  var resourcePrompt=buildMissionResourceFollowthroughPromptV1(turn,signal,completed&&completed.pending);
+  if(resourcePrompt)return resourcePrompt;
   var microWinPrompt=buildMissionMicroWinResultPromptV1(turn,signal,completed);
   if(microWinPrompt)return microWinPrompt;
   return '';
@@ -11559,7 +11603,7 @@ function buildMissionResultLoopPromptV1(turn,signal){
 function missionResultLoopShouldAnswerV1(signal,question,turn){
   if(!signal)return false;
   var q=normalizeMissionQuestion(question||'');
-  if(signal.type==='call_done'||signal.type==='done'||signal.type==='booked'||signal.type==='paid'||signal.type==='reply')return true;
+  if(signal.type==='call_done'||signal.type==='done'||signal.type==='booked'||signal.type==='paid'||signal.type==='reply'||signal.type==='resource_mismatch')return true;
   if(signal.type==='no_reply')return /\b(no reply|no replies|no answer|nothing yet|did not respond|didn'?t respond)\b/.test(q);
   if(signal.type==='follow_up')return /\b(call|done|result|after that|they said|he said|she said)\b/.test(q);
   return !!(turn&&turn.inputSignals&&turn.inputSignals.isCompletion);
@@ -13428,6 +13472,7 @@ function getMissionBubblePlanV2(turn,depth,shape){
 function getMissionActionPlanV2(turn){
   var shape=turn.responseShape||'',route=turn.route||'',action=null;
   if(turn&&turn.decisionMemory&&turn.decisionMemory.action)action=turn.decisionMemory.action;
+  if(!action&&route==='resources'&&turn&&turn.resourceRecommendation&&turn.resourceRecommendation.action)action=turn.resourceRecommendation.action;
   var composed=typeof getMissionActionComposerV1==='function'?getMissionActionComposerV1(turn.options&&turn.options.ctx||{},route,turn.rawInput||turn.normalizedInput||'',turn.brainState||{}):null;
   if(!action&&composed&&composed.action){
     action={label:composed.label||'Do Next Move',type:composed.type||'next_best_move',target:composed.target||composed.action,requiresConfirmation:!!composed.requiresConfirmation,reason:composed.reason||'',action:composed.action};
@@ -14437,20 +14482,21 @@ function getMissionResourceRecommendationV1(route,ctx,question){
   var best=scored[0]||{resource:fallback[0],score:0};
   if(best.score<=0)best={resource:fallback[0],score:1};
   var title=best.resource.title||best.resource.name||best.resource.resource||'Cold DM Opener Script';
+  var source=loaded.indexOf(best.resource)>=0?'loaded_resource_library':'fallback_catalog';
   return {
     shouldRecommend:true,
     title:title,
     score:best.score,
-    source:loaded.indexOf(best.resource)>=0?'loaded_resource_library':'fallback_catalog',
+    source:source,
     route:route||'resources',
-    action:{label:'Open Rolodex',type:'open_card',target:'rolodex',requiresConfirmation:false,resourceTitle:title,reason:'resource_recommendation'}
+    action:{label:'Open Rolodex',type:'open_card',target:'rolodex',requiresConfirmation:false,resourceTitle:title,resourceSource:source,followthroughType:'resource',reason:'resource_recommendation'}
   };
 }
 
 function getMissionResourceRecommendationResponse(route,ctx,question){
   var rec=getMissionResourceRecommendationV1(route,ctx,question);
   if(!rec||!rec.shouldRecommend)return '';
-  return '<strong>Use the right support piece.</strong><br><br>Open Rolodex and pull: '+escapeHtml(rec.title)+'.<br><br>Use one resource, apply it once, then come back with what happened.';
+  return '<strong>Use the right support piece.</strong><br><br>Open Rolodex and pull: '+escapeHtml(rec.title)+'.<br><br>Use one resource, apply it once, then come back with what happened: sent, reply, booked, paid, or wrong resource.';
 }
 
 /* =========================================================
@@ -18389,6 +18435,16 @@ function runMissionIntegritySelfCheck(){
   if(!productionResource||productionResource.title!=='BANGIN+ Upload Checklist')failures.push('resource_production');
   var resourceResponse=getMissionResourceRecommendationResponse('resources',actionCtx,'send me a follow up script');
   if(resourceResponse.indexOf('Open Rolodex')<0||resourceResponse.indexOf('Warm Follow-Up Script')<0)failures.push('resource_response');
+  var resourceActionPlan=getMissionActionPlanV2({route:'resources',responseShape:'quick_read',resourceRecommendation:coldResource,options:{ctx:actionCtx},brainState:{}});
+  if(!resourceActionPlan||resourceActionPlan.target!=='rolodex'||resourceActionPlan.followthroughType!=='resource')failures.push('resource_action_priority');
+  var resourceTurn=fakeTurn({route:'resources',workerId:'mission_command_strategist'});
+  rememberMissionSuggestedActionV1(resourceTurn,coldResource.action);
+  var resourceSession=getMissionBrainSessionV2();
+  if(!resourceSession.resultLoop||!resourceSession.resultLoop.pendingAction||resourceSession.resultLoop.pendingAction.resourceTitle!=='Cold DM Opener Script')failures.push('resource_followthrough_memory');
+  var resourceDonePrompt=buildMissionResultLoopPromptV1(resourceTurn,{type:'done',label:'Action Done'});
+  if(resourceDonePrompt.indexOf('Cold DM Opener Script')<0||resourceDonePrompt.indexOf('Resource did not fit')<0)failures.push('resource_followthrough_done_prompt');
+  var resourceNoReplyPrompt=buildMissionResultLoopPromptV1(resourceTurn,{type:'no_reply',label:'No Reply Yet'});
+  if(resourceNoReplyPrompt.indexOf('Cold DM Opener Script')<0||resourceNoReplyPrompt.indexOf('no reply yet')<0)failures.push('resource_followthrough_result_prompt');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({lastActionPlan:{label:'Open Hit List',action:'Contact GARY RAOGUY',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact GARY RAOGUY',route:'leads',suggestedAt:new Date().toISOString()}}}));
   var constraintPending=getMissionConstraintAwareGuidanceV1({rawInput:'what next',route:'now',liveContext:{currentSalesMode:'normal'},dataConfidence:{level:'medium'},syncStatus:{risk:'none'},sessionDataCache:{snapshot:{gap:400,revenue:100,weekTarget:500}}},actionCtx);
   if(!constraintPending.shouldAnswer||constraintPending.reason!=='pending_action_constraint')failures.push('constraint_pending_action');
@@ -18405,7 +18461,7 @@ function runMissionIntegritySelfCheck(){
   var tooMuchPrompt=buildMissionTooMuchAdviceResponseV1({rawInput:'what next',tooMuchAdvice:tooMuch},actionCtx);
   if(tooMuchPrompt.indexOf('stack more advice')<0||tooMuchPrompt.indexOf('What is blocking')<0)failures.push('too_much_advice_prompt');
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:59};
+  return {passed:!failures.length,failures:failures,total:63};
 }
 
 function runMissionCommandSelfCheck(){
