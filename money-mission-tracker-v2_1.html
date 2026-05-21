@@ -10709,6 +10709,26 @@ function runMissionResponseIntegrityCheck(turn,bubblePacket){
   return packet;
 }
 
+function summarizeMissionDecisionTraceForCheckpointV1(trace){
+  return (Array.isArray(trace)?trace:[]).slice(-30).map(function(item){
+    var data=null;
+    try{
+      data=item&&item.data?JSON.parse(JSON.stringify(item.data,function(key,value){
+        if(typeof value==='string')return value.slice(0,240);
+        if(Array.isArray(value))return value.slice(0,8);
+        return value;
+      })):null;
+    }catch(e){
+      data={summary:'trace_data_not_serializable'};
+    }
+    return {
+      timestamp:item&&item.timestamp||'',
+      message:String(item&&item.message||'').slice(0,120),
+      data:data
+    };
+  });
+}
+
 function updateMissionTurnCheckpointIntegrity(turn){
   if(!turn||!turn.id)return;
   try{
@@ -10723,7 +10743,7 @@ function updateMissionTurnCheckpointIntegrity(turn){
         list[i].appSnapshot=turn.changeSnapshot||list[i].appSnapshot||null;
         list[i].scratchpadSummary=summarizeMissionScratchpadV1(turn.scratchpad);
         list[i].decisionSummary=turn.decisionSummary||list[i].decisionSummary||null;
-        list[i].decisionTrace=turn.decisionTrace||list[i].decisionTrace||[];
+        list[i].decisionTrace=summarizeMissionDecisionTraceForCheckpointV1(turn.decisionTrace||list[i].decisionTrace||[]);
         break;
       }
     }
@@ -11412,6 +11432,7 @@ function getMissionDecisionExplainerLineV1(explainer){
 function getMissionResultSignalV1(question){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return null;
+  if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|replies|responses)\b/.test(q))return null;
   if(isMissionSalesModeExitSignal(q))return {type:'call_done',label:'Call Done',confidence:0.95};
   if(/\b(wrong resource|wrong script|not the right resource|not the right script|didn'?t fit|did not fit|that resource missed|that script missed)\b/.test(q))return {type:'resource_mismatch',label:'Resource Did Not Fit',confidence:0.82};
   if(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/.test(q))return {type:'booked',label:'Booked Call',confidence:0.9};
@@ -13804,9 +13825,9 @@ function saveMissionTurnCheckpoint(turn){
     var list=typeof getStore==='function'?(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[]):JSON.parse(localStorage.getItem(MISSION_TURN_CHECKPOINTS_KEY)||'[]');
     var sessionCache=turn.sessionDataCache||getMissionSessionDataCacheV1(turn.options&&turn.options.ctx,{reason:'checkpoint'});
     var snapshot=turn.changeSnapshot||(sessionCache&&sessionCache.snapshot)||(typeof getMissionCurrentAppSnapshotV1==='function'?getMissionCurrentAppSnapshotV1(turn.options&&turn.options.ctx):null);
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,decisionIntent:turn.decisionIntent||null,decisionMemory:turn.decisionMemory||null,patternMemory:turn.patternMemory||null,threadMemory:turn.threadMemory||null,silenceIntelligence:turn.silenceIntelligence||null,unsaidQuestion:turn.unsaidQuestion||null,resourceRecommendation:turn.resourceRecommendation||null,constraintGuidance:turn.constraintGuidance||null,tooMuchAdvice:turn.tooMuchAdvice||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:turn.decisionTrace||[]};
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,decisionIntent:turn.decisionIntent||null,decisionMemory:turn.decisionMemory||null,patternMemory:turn.patternMemory||null,threadMemory:turn.threadMemory||null,silenceIntelligence:turn.silenceIntelligence||null,unsaidQuestion:turn.unsaidQuestion||null,resourceRecommendation:turn.resourceRecommendation||null,constraintGuidance:turn.constraintGuidance||null,tooMuchAdvice:turn.tooMuchAdvice||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:summarizeMissionDecisionTraceForCheckpointV1(turn.decisionTrace||[])};
     list.unshift(checkpoint);
-    list=list.slice(0,100);
+    list=list.slice(0,80);
     if(typeof setStore==='function')setStore(MISSION_TURN_CHECKPOINTS_KEY,list);
     else localStorage.setItem(MISSION_TURN_CHECKPOINTS_KEY,JSON.stringify(list));
   }catch(e){}
@@ -16672,6 +16693,10 @@ function setMissionCommandActiveTopic(route,question){
 function getMissionRenderRoute(question,brainState){
   var mention=parseMissionAtMention(question||'');
   if(mention&&mention.route)return mention.route;
+  var correctionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(question||''):'';
+  if(correctionRoute)return correctionRoute;
+  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(question||''):null;
+  if(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done)$/.test(resultSignal.type||''))return 'sales';
   var v2CommandRoute=getMissionCommandRoute(question||'');
   if(v2CommandRoute==='production'&&/\bbangin\b/i.test(question||''))return 'production';
   var directIntent=getMissionCommandIntent(question||'');
@@ -18524,12 +18549,18 @@ function runMissionIntegritySelfCheck(){
   if(!correctionRoutes[0]||correctionRoutes[0].route!=='sales')failures.push('route_score_correction_sales');
   var bookedSignal=getMissionResultSignalV1('booked');
   if(!bookedSignal||bookedSignal.type!=='booked')failures.push('result_signal_booked_preflight');
+  if(getMissionResultSignalV1('how many booked calls do i have'))failures.push('result_signal_booked_count_guard');
   var bookedRoutes=scoreMissionRoutesV2('booked',{}, {rawInput:'booked'});
   if(!bookedRoutes[0]||bookedRoutes[0].route!=='sales')failures.push('route_score_booked_sales');
   var correctionBubble=buildMissionBubblePacket('leads',{type:'CONV_DATA_REQUEST',route:'leads'},actionCtx,'i meant sales not pipeline','Got it. Sales lane, not pipeline.','','',{});
   if(correctionBubble.b1.indexOf('Sales lane')<0||correctionBubble.b1.indexOf('Pipeline read')>=0)failures.push('bubble_protect_correction_answer');
   var bookedBubble=buildMissionBubblePacket('dpc',{type:'CONV_ACTION_COMPLETE',route:'dpc'},actionCtx,'booked','Good. Conversation moved to calendar.','','',{});
   if(bookedBubble.b1.indexOf('Conversation moved to calendar')<0||bookedBubble.b1.indexOf('DPC lane')>=0)failures.push('bubble_protect_result_answer');
+  if(getMissionRenderRoute('i meant sales not pipeline',{})!=='sales')failures.push('render_route_correction_sales');
+  if(getMissionRenderRoute('booked',{})!=='sales')failures.push('render_route_booked_sales');
+  var longTrace=[];for(var traceIdx=0;traceIdx<40;traceIdx++)longTrace.push({timestamp:'t'+traceIdx,message:'message '+traceIdx,data:{text:'x'.repeat(400),list:[1,2,3,4,5,6,7,8,9,10]}});
+  var compactTrace=summarizeMissionDecisionTraceForCheckpointV1(longTrace);
+  if(compactTrace.length!==30||compactTrace[0].message!=='message 10'||compactTrace[0].data.text.length>240||compactTrace[0].data.list.length>8)failures.push('checkpoint_trace_compaction');
   var clarify=runMissionResponseIntegrityCheck(fakeTurn({route:'',routePlan:{clarify:true},responseShape:'quick_read'}),{b1:'Pick a lane',b2:'',b3:'Action'});
   if(clarify.b3)failures.push('clarify_action_suppression');
   var stale=runMissionResponseIntegrityCheck(fakeTurn({rawInput:'revenue report',normalizedInput:'revenue report',route:'report',responseShape:'money_pressure',dataConfidence:{level:'low'}}),{b1:'Money read',b2:'Revenue · $10',b3:''});
@@ -18736,7 +18767,7 @@ function runMissionIntegritySelfCheck(){
   var masterQASweep=runMissionMasterIntelligenceQASweepV1();
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:84};
+  return {passed:!failures.length,failures:failures,total:88};
 }
 
 function runMissionCommandSelfCheck(){
