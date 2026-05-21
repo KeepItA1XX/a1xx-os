@@ -11388,6 +11388,29 @@ function buildMissionChangeListV1(prev,current){
   return lines;
 }
 
+function getMissionSnapshotLoadSignalV1(prev,current){
+  var prevLoaded=getMissionNumberV1(prev.pipeline&&prev.pipeline.open)+getMissionNumberV1(prev.content&&prev.content.count)+getMissionNumberV1(prev.production&&prev.production.count)+getMissionNumberV1(prev.calendar&&prev.calendar.count);
+  var currentLoaded=getMissionNumberV1(current.pipeline&&current.pipeline.open)+getMissionNumberV1(current.content&&current.content.count)+getMissionNumberV1(current.production&&current.production.count)+getMissionNumberV1(current.calendar&&current.calendar.count);
+  if(prevLoaded===0&&currentLoaded>0)return 'first_loaded_snapshot';
+  return '';
+}
+
+function getMissionVisibleChangeLinesV1(changes,loadSignal){
+  if(loadSignal!=='first_loaded_snapshot')return changes.slice(0,6);
+  var preferred=['Money:','Weekly gap:','Open leads:','Content items loaded:','Production items loaded:','Calendar events loaded:'];
+  var out=[];
+  preferred.forEach(function(prefix){
+    var hit=changes.find(function(line){return line.indexOf(prefix)===0;});
+    if(hit)out.push(hit);
+  });
+  if(out.length<6){
+    changes.forEach(function(line){
+      if(out.length<6&&out.indexOf(line)<0)out.push(line);
+    });
+  }
+  return out.slice(0,6);
+}
+
 function getMissionWhatChangedEngineResponseV1(route,ctx,question,brainState){
   var q=normalizeMissionQuestion(question||'');
   if(!/\b(what changed|whats changed|what'?s changed|what moved|what happened today|what happened since|since last time|since yesterday|since last session|what is different|what'?s different)\b/.test(q))return '';
@@ -11406,10 +11429,14 @@ function getMissionWhatChangedEngineResponseV1(route,ctx,question,brainState){
   if(!changes.length){
     return 'Since the last saved checkpoint, I do not see a number or status change in the loaded app state.<br><br>Current read:<br>1) Money: '+fmt(current.revenue)+' of '+fmt(current.weekTarget)+' · gap '+fmt(current.gap)+'<br>2) DPC: '+current.dpc.dms+' DMs · '+current.dpc.callsMade+' calls made · '+current.dpc.booked+' booked · '+current.dpc.closes+' closes · '+fmt(current.dpc.money)+' collected<br>3) Pipeline: '+current.pipeline.open+' open leads<br><br>Next: create one visible move, then log it so the next comparison has something real to read.';
   }
-  return 'Since the last saved checkpoint:<br><br>'+changes.slice(0,6).map(function(line,i){return (i+1)+') '+escapeHtml(line);}).join('<br>')+'<br><br>What it means:<br>'+escapeHtml(getMissionWhatChangedMeaningV1(changes,current))+'<br><br>Next:<br>'+escapeHtml(getMissionWhatChangedNextV1(changes,current));
+  var loadSignal=getMissionSnapshotLoadSignalV1(prior.snapshot,current);
+  var intro=loadSignal==='first_loaded_snapshot'?'Since the last saved checkpoint, the app has a fuller loaded read:':'Since the last saved checkpoint:';
+  var visibleChanges=getMissionVisibleChangeLinesV1(changes,loadSignal);
+  return intro+'<br><br>'+visibleChanges.map(function(line,i){return (i+1)+') '+escapeHtml(line);}).join('<br>')+'<br><br>What it means:<br>'+escapeHtml(getMissionWhatChangedMeaningV1(changes,current,loadSignal))+'<br><br>Next:<br>'+escapeHtml(getMissionWhatChangedNextV1(changes,current,loadSignal));
 }
 
-function getMissionWhatChangedMeaningV1(changes,current){
+function getMissionWhatChangedMeaningV1(changes,current,loadSignal){
+  if(loadSignal==='first_loaded_snapshot')return 'This looks like the OS loading a cleaner business picture, not necessarily all-new activity today.';
   var text=changes.join(' | ').toLowerCase();
   if(/money|cash collected|closes/.test(text))return 'Money moved. Protect the buyer-facing lane and log the next result.';
   if(/dpc|calls made|booked calls/.test(text))return 'Activity moved. Now turn the best signal into a reply, call, offer, or close.';
@@ -11419,7 +11446,8 @@ function getMissionWhatChangedMeaningV1(changes,current){
   return 'The app state changed enough to choose the next move from the loaded data.';
 }
 
-function getMissionWhatChangedNextV1(changes,current){
+function getMissionWhatChangedNextV1(changes,current,loadSignal){
+  if(loadSignal==='first_loaded_snapshot'&&current.gap<=0)return 'Use the clean read to choose the next logged move.';
   if(current.gap>0)return 'Move the closest buyer toward payment.';
   if(current.dpc.dms+current.dpc.callsMade+current.dpc.booked+current.dpc.closes===0)return 'Start the DPC with one clean outreach action.';
   if(current.pipeline.callReady>0)return 'Touch one call-ready lead and log the result.';
