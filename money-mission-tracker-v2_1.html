@@ -9151,89 +9151,249 @@ MISSION_SKILL_PACKS.push({
 
 var MISSION_OS_AWARE_OUTPUT_PACK_V1={
   id:'mc_skill_os_aware_output_pack_v1',
-  version:'1.0',
+  version:'1.1',
   installMode:'additive_only',
-  purpose:'Make Mission Command answer as the app itself: aware of current route, app state, data confidence, active context, and the job it is doing for A1XX.',
+  purpose:'Make Mission Command answer as the app itself: aware of current route, app state, data confidence, active context, app position, and the job it is doing for A1XX.',
   routePools:{
     now:[
-      {id:'os_now_01',text:'I am reading the current block, active context, and next saved move.<br><br>Right now, my job is to get you into motion, not open another dashboard.<br><br>Move: {{move}}'},
-      {id:'os_now_02',text:'From inside the OS, this is the cleanest read: {{move}}.<br><br>I am using the current block first, then the mission data second.'},
-      {id:'os_now_03',text:'I can see enough to call the next step.<br><br>Do this first: {{move}}<br><br>Then come back with what changed.'},
-      {id:'os_now_04',text:'The app is trying to reduce the decision load here.<br><br>One lane. One action. One logged result.<br><br>Start with {{move}}.'}
+      {id:'os_now_01',text:'I checked the current block, the active context, and the next saved move.<br><br>Right now the OS is pointing at: {{move}}.'},
+      {id:'os_now_02',text:'The clean read is {{move}}.<br><br>I am using {{contextModeLabel}} context first, then the full OS behind it.'},
+      {id:'os_now_03',text:'I can see enough to call the first step.<br><br>Do this: {{move}}<br><br>Then come back with what changed.'},
+      {id:'os_now_04',text:'The app is trying to reduce the decision load here.<br><br>One lane. One action. One logged result.<br><br>Start with {{move}}.'},
+      {id:'os_now_05',text:'You are in {{blockName}} with {{blockMinutes}} minutes left.<br><br>That means the move should be small enough to finish: {{move}}.'},
+      {id:'os_now_06',text:'I am reading today as {{contextModeLabel}} mode right now.<br><br>The useful thing is not another menu. It is {{move}}.'},
+      {id:'os_now_07',text:'From the app view, the next button is simple: {{buttonLabel}}.<br><br>Open that, move the lane, then log the result.'},
+      {id:'os_now_08',text:'I looked at the current mission position.<br><br>You are at {{journeyStep}}: {{journeyMove}}.<br><br>Do the smallest version of that.'},
+      {id:'os_now_09',text:'This is a {{contextModeLabel}} read.<br><br>Best move: {{move}}<br><br>Where to go: {{whereToGo}}'},
+      {id:'os_now_10',text:'If you are trying to get started, do not open the whole dashboard.<br><br>Open {{buttonLabel}} and make one visible status change.'},
+      {id:'os_now_11',text:'I am looking at the OS like an assistant, not a report screen.<br><br>The thing that needs your hand next is: {{move}}'},
+      {id:'os_now_12',text:'The current block says do not drift.<br><br>One move from here: {{move}}'}
     ],
     report:[
-      {id:'os_money_01',text:'I am reading the money layer: weekly target, current gap, and the next cash path.<br><br>Read: {{moneyRead}}<br><br>Move: {{move}}'},
-      {id:'os_money_02',text:'The number is already in the OS. My job is to turn it into behavior.<br><br>Gap: {{gap}}<br>Best cash-facing move: {{move}}'},
-      {id:'os_money_03',text:'If you are trying to make money today, I am looking for the closest buyer-facing action.<br><br>That points to: {{move}}'},
-      {id:'os_money_04',text:'I am not judging the number. I am reading pressure.<br><br>Pressure says: {{move}}'}
+      {id:'os_money_01',text:'I checked the money layer.<br><br>So far this week: {{rev}} of {{wk}}.<br>Today logged: {{todayMoney}}.<br>{{moneyFeeling}}<br><br>Next cash move: {{move}}'},
+      {id:'os_money_02',text:'Money read: {{revenueLine}}<br><br>{{targetState}}.<br><br>The next dollar probably comes from: {{move}}'},
+      {id:'os_money_03',text:'If you are trying to make money today, I am looking for the closest buyer-facing action.<br><br>Today is at {{todayMoney}} logged. The clean move is {{move}}.'},
+      {id:'os_money_04',text:'I am not judging the number. I am reading pressure.<br><br>{{moneyPressureLine}}<br><br>Do this next: {{move}}'},
+      {id:'os_money_05',text:'Oh, I see the money picture.<br><br>Weekly: {{rev}} / {{wk}}.<br>Gap: {{gap}}.<br><br>{{moneyFeeling}}'},
+      {id:'os_money_06',text:'You are not asking for a report. You are asking what to do with the number.<br><br>The number says: {{move}}'},
+      {id:'os_money_07',text:'Today logged money: {{todayMoney}}.<br><br>Daily target estimate: {{dailyTarget}}.<br><br>{{dailyMoneyLine}}'},
+      {id:'os_money_08',text:'The money tab would show the score. Mission Command turns it into action.<br><br>Action: {{move}}'},
+      {id:'os_money_09',text:'I am reading revenue, gap, DPC, and pipeline pressure together.<br><br>Best cash-facing move: {{move}}'},
+      {id:'os_money_10',text:'If the question is "how do I get to the money," the answer is not another setup step.<br><br>Move the closest buyer toward payment.'},
+      {id:'os_money_11',text:'The OS sees {{rev}} collected against {{wk}}.<br><br>{{targetState}}.<br><br>Protect the next money action: {{move}}'},
+      {id:'os_money_12',text:'Money condition: {{moneyCondition}}.<br><br>Behavior condition: one buyer-facing action needs to happen next.'},
+      {id:'os_money_13',text:'You are at {{pct}}% of the weekly target.<br><br>{{moneyFeeling}}<br><br>Next: {{move}}'},
+      {id:'os_money_14',text:'The fastest path is not hidden.<br><br>It is one follow-up, one direct offer, or one close attempt with the person closest to payment.'},
+      {id:'os_money_15',text:'From the app data I can see, {{targetState}}.<br><br>If you still want more money today, do not relax into admin. Push the next buyer-facing move.'},
+      {id:'os_money_16',text:'This is the cash read: {{revenueLine}}<br><br>Do not stare at the score. Change the next status.'}
     ],
     leads:[
       {id:'os_leads_01',text:'I am reading the CRM like a movement map, not storage.<br><br>Best lead signal: {{lead}}<br><br>Move: {{move}}'},
       {id:'os_leads_02',text:'Pipeline only helps if it creates a status change.<br><br>I am looking for reply, call, offer, paid, or clean no.<br><br>Start with {{lead}}.'},
       {id:'os_leads_03',text:'The OS is using lead heat, last touch, and call-ready status here.<br><br>Next move: {{move}}'},
-      {id:'os_leads_04',text:'I can see the pipeline lane.<br><br>Do not chase volume yet. Move one person to the next decision.'}
+      {id:'os_leads_04',text:'I can see the pipeline lane.<br><br>Do not chase volume yet. Move one person to the next decision.'},
+      {id:'os_leads_05',text:'Open the Hit List when you want the screen.<br><br>For the move, start here: {{lead}}.'},
+      {id:'os_leads_06',text:'This is an Outreach read.<br><br>The question is not "who exists?" It is "who can move today?"<br><br>Answer: {{lead}}.'},
+      {id:'os_leads_07',text:'The CRM is giving me names, but the OS is looking for motion.<br><br>Touch one lead, ask one clear question, log the result.'},
+      {id:'os_leads_08',text:'Pipeline is useful when it tells us who gets touched next.<br><br>Use {{lead}}, then update the status.'},
+      {id:'os_leads_09',text:'If you are trying to make money, lead work beats app cleanup right now.<br><br>Move: {{move}}'},
+      {id:'os_leads_10',text:'I am reading heat, recency, and call-ready status.<br><br>One clean touch first: {{lead}}'}
     ],
     sales:[
       {id:'os_sales_01',text:'Sales Coach is active.<br><br>I am listening for the stage of the conversation, not trying to give a speech.<br><br>Say: "{{script}}"'},
       {id:'os_sales_02',text:'This is a call/conversation moment.<br><br>I am keeping you in question mode so you do not pitch too early.<br><br>Ask: "{{question}}"'},
       {id:'os_sales_03',text:'I am reading this as sales pressure, not pipeline storage.<br><br>Use one clean line: "{{message}}"'},
-      {id:'os_sales_04',text:'The app is helping you keep control of the conversation.<br><br>Ask, pause, then let them give you the real objection.'}
+      {id:'os_sales_04',text:'The app is helping you keep control of the conversation.<br><br>Ask, pause, then let them give you the real objection.'},
+      {id:'os_sales_05',text:'I am in Sales Coach mode.<br><br>That means short line, real question, no over-explaining.'},
+      {id:'os_sales_06',text:'For sales, the OS is not trying to sound smart. It is trying to keep you from pitching too early.<br><br>Ask: "{{question}}"'},
+      {id:'os_sales_07',text:'Use the line, then be quiet.<br><br>"{{script}}"'},
+      {id:'os_sales_08',text:'This sounds like the conversation needs one clarifying question.<br><br>Ask: "{{question}}"'},
+      {id:'os_sales_09',text:'The goal is to get them to name the real block.<br><br>Line: "{{message}}"'},
+      {id:'os_sales_10',text:'If this is live, keep it even shorter.<br><br>Ask: "{{question}}"'}
     ],
     content:[
       {id:'os_content_01',text:'I am reading the content lane against the Money Mission, not random ideas.<br><br>Best angle: {{angle}}<br><br>Hook: "{{hook}}"'},
       {id:'os_content_02',text:'Content should come from today’s proof.<br><br>The app is trying to turn work into a visible asset.<br><br>Make: {{angle}}.'},
       {id:'os_content_03',text:'I am checking whether this supports trust, sales, or proof.<br><br>Use the version that points back to the offer.'},
-      {id:'os_content_04',text:'From the OS view, this is not a content dump.<br><br>It is proof capture. Make one piece and log it.'}
+      {id:'os_content_04',text:'From the OS view, this is not a content dump.<br><br>It is proof capture. Make one piece and log it.'},
+      {id:'os_content_05',text:'Open Content Tracker if you want the card.<br><br>The mission read is: turn today’s work into proof.'},
+      {id:'os_content_06',text:'I am reading Content Day as proof, not volume.<br><br>Best next piece: {{contentTitle}}.'},
+      {id:'os_content_07',text:'The OS is asking: what did today prove?<br><br>Make the post from that answer.'},
+      {id:'os_content_08',text:'If you need content, do not start from a blank page.<br><br>Start from the work already happening today.'},
+      {id:'os_content_09',text:'Content lane active.<br><br>Make one thing that supports trust, an offer, or a follow-up.'},
+      {id:'os_content_10',text:'The cleanest content move is {{angle}}.<br><br>Use the hook: "{{hook}}"'}
     ],
     production:[
       {id:'os_prod_01',text:'I am reading production by what can ship, sell, or support proof.<br><br>First asset: {{asset}}<br><br>Move: {{move}}'},
       {id:'os_prod_02',text:'Production is active when the asset changes status.<br><br>The app wants one visible movement, not five open ideas.'},
       {id:'os_prod_03',text:'I am looking for the highest-value active project.<br><br>Finish: {{asset}}'},
-      {id:'os_prod_04',text:'The production lane is not just creative work. It is delivery, proof, or sales leverage.<br><br>Next: {{move}}'}
+      {id:'os_prod_04',text:'The production lane is not just creative work. It is delivery, proof, or sales leverage.<br><br>Next: {{move}}'},
+      {id:'os_prod_05',text:'This is a Production Day read.<br><br>The card is there to help you finish, not browse the catalog.'},
+      {id:'os_prod_06',text:'Open Production when you want the list.<br><br>The OS is already pointing at {{asset}}.'},
+      {id:'os_prod_07',text:'Beat work counts when it becomes delivery, upload, offer, or proof.<br><br>Move: {{move}}'},
+      {id:'os_prod_08',text:'The production question is simple: what leaves the folder next?<br><br>Answer: {{asset}}.'},
+      {id:'os_prod_09',text:'Do not make the beat card a museum.<br><br>Pick the asset that can ship and move its status.'},
+      {id:'os_prod_10',text:'The app is reading production as output.<br><br>Finish {{asset}} before opening a new loop.'}
     ],
     sync:[
       {id:'os_sync_01',text:'System read.<br><br>I am checking whether the answer should trust local state, connected sources, or the last sync.<br><br>Confidence: {{confidence}}'},
       {id:'os_sync_02',text:'I can answer from the current packet, but I will not fake live data.<br><br>Source path: {{sourceA}} → {{sourceB}} → Mission Command.'},
       {id:'os_sync_03',text:'This is a data-confidence question.<br><br>If the read feels stale, run the sync check before making a decision from it.'},
-      {id:'os_sync_04',text:'The OS is protecting the data chain here.<br><br>Local save first. Connected source second. Mission Command read after that.'}
+      {id:'os_sync_04',text:'The OS is protecting the data chain here.<br><br>Local save first. Connected source second. Mission Command read after that.'},
+      {id:'os_sync_05',text:'Go to System Hub, then Health, then run the sync check.<br><br>That tells the OS which numbers it can trust.'},
+      {id:'os_sync_06',text:'I am reading {{dataLine}}.<br><br>If you need certainty, run sync before acting on the number.'},
+      {id:'os_sync_07',text:'Current confidence: {{confidence}}.<br><br>That means I can guide the move, but I should qualify the data.'},
+      {id:'os_sync_08',text:'Sync is not the mission. It is the trust check.<br><br>Check it, clear the blocker, then get back to the move.'}
     ],
     memory:[
       {id:'os_mem_01',text:'I am treating that as a possible operating rule, not just a chat line.<br><br>Rule candidate: {{rule}}'},
       {id:'os_mem_02',text:'This sounds like voice or workflow memory.<br><br>I can use it for this session, but saving it long-term needs confirmation.'},
-      {id:'os_mem_03',text:'Memory lane is active.<br><br>The app should only save rules that will still matter later.'}
+      {id:'os_mem_03',text:'Memory lane is active.<br><br>The app should only save rules that will still matter later.'},
+      {id:'os_mem_04',text:'I can remember a rule, a voice preference, or a workflow preference.<br><br>Give me the exact line if you want it saved.'},
+      {id:'os_mem_05',text:'That sounds like it belongs in memory only if you want the OS to use it later.'},
+      {id:'os_mem_06',text:'Session preference recognized.<br><br>I can use it now without making it permanent.'}
     ],
     help:[
       {id:'os_help_01',text:'Mission Command is the operating layer of the app.<br><br>I read the current route, the active context, and the available data, then turn that into the next move.'},
-      {id:'os_help_02',text:'The app is not trying to answer everything at once.<br><br>It is trying to answer the thing you need next: money, leads, content, production, sync, or guidance.'}
+      {id:'os_help_02',text:'The app is not trying to answer everything at once.<br><br>It is trying to answer the thing you need next: money, leads, content, production, sync, or guidance.'},
+      {id:'os_help_03',text:'Use Mission Command like the front desk for the OS.<br><br>Ask what to do, where to go, what the money says, who to contact, or what to make.'},
+      {id:'os_help_04',text:'The day bar sets the working context. Mission Command stays the command layer.<br><br>Pick a card when you want a lane. Clear context when you want the full OS.'},
+      {id:'os_help_05',text:'The main buttons are simple:<br><br>Mission Command for the answer.<br>Brief for the business read.<br>Outreach for leads.<br>Content for proof.<br>Production for assets.<br>Manager for admin and schedule.'},
+      {id:'os_help_06',text:'If you ask "show me," I need the lane.<br><br>If you ask "what should I do," I use the current block and context.'}
+    ],
+    dpc:[
+      {id:'os_dpc_01',text:'DPC is the day’s money-motion log.<br><br>Today: {{dmsCount}} DMs, {{callsCount}} calls, {{closesCount}} closes, {{todayMoney}} collected.'},
+      {id:'os_dpc_02',text:'The DPC card is where the app learns what actually happened today.<br><br>Log the action after the block, not at the end of the week.'},
+      {id:'os_dpc_03',text:'Activity is useful, but result is the signal.<br><br>Log DMs, replies, calls, closes, cash, and posts.'},
+      {id:'os_dpc_04',text:'If you sent messages or got replies, this counts.<br><br>That should hit DPC before you move on.'},
+      {id:'os_dpc_05',text:'Today’s scoreboard says {{dmsCount}} DMs and {{todayMoney}} collected.<br><br>If that is wrong, log the update now.'},
+      {id:'os_dpc_06',text:'The OS cannot learn from effort it cannot see.<br><br>Open DPC and log the result.'}
+    ],
+    calendar:[
+      {id:'os_calendar_01',text:'Calendar read: {{blockName}} has {{blockMinutes}} minutes left.<br><br>Choose a move that fits the window.'},
+      {id:'os_calendar_02',text:'This is a time-window question.<br><br>Small window means follow-up, log, or quick decision. Deep window means finish the asset.'},
+      {id:'os_calendar_03',text:'The schedule is here to protect the block.<br><br>Do {{move}} before switching lanes.'},
+      {id:'os_calendar_04',text:'If the block is short, do not open production unless it is already in motion.<br><br>Use the window on one clean action.'}
+    ],
+    weekly:[
+      {id:'os_weekly_01',text:'Weekly read: {{rev}} of {{wk}}, {{pct}}% complete.<br><br>What matters now is what created that number and what needs repeating.'},
+      {id:'os_weekly_02',text:'For the week, I am looking for patterns: money created, motion logged, delays repeated, and the next three priorities.'},
+      {id:'os_weekly_03',text:'Weekly review should not become a diary.<br><br>Find what created money, what only felt productive, and what gets fixed next.'},
+      {id:'os_weekly_04',text:'The week is telling us this: {{moneyCondition}}.<br><br>Next week should protect the moves that created signal.'}
+    ],
+    resources:[
+      {id:'os_resources_01',text:'This sounds like a resource moment, not another explanation.<br><br>Open Rolodex and pull the closest script or guide.'},
+      {id:'os_resources_02',text:'The OS has resources so you do not rewrite the play every time.<br><br>Use the template, then come back with the result.'},
+      {id:'os_resources_03',text:'Go to Rolodex, search the script, send the short version first, then log what happened.'},
+      {id:'os_resources_04',text:'If you need wording, use the saved script. If you need direction, ask Mission Command.'}
+    ],
+    community:[
+      {id:'os_community_01',text:'Community read: start with the lightest real touch.<br><br>Reply, ask, or invite one person toward the mission.'},
+      {id:'os_community_02',text:'Do not make community a broadcast.<br><br>Start one real conversation and log the signal.'},
+      {id:'os_community_03',text:'Use community to test language before turning it into content.'}
+    ],
+    live:[
+      {id:'os_live_01',text:'Live mode should be simple: one topic, one proof point, one CTA.'},
+      {id:'os_live_02',text:'If you go live, use today’s mission as the angle.<br><br>Show the work, then point back to the offer.'},
+      {id:'os_live_03',text:'A live session works when it creates proof, trust, or a follow-up. Pick one.'}
     ]
   },
   conversationPools:{
     open_energy:[
       {id:'os_energy_01',text:'I hear the lock-in energy.<br><br>I am checking the current block and the Money Mission before I call the move.<br><br>Win condition: cash, content, production, or follow-up?'},
-      {id:'os_energy_02',text:'Bet. I am reading the OS before giving you motion.<br><br>If you want me to decide, I will bias toward the closest money-facing move.'}
+      {id:'os_energy_02',text:'Bet. I am reading the OS before giving you motion.<br><br>If you want me to decide, I will bias toward the closest money-facing move.'},
+      {id:'os_energy_03',text:'You sound ready.<br><br>I am checking {{contextModeLabel}} context and money pressure. If you want speed, say "call the move."'},
+      {id:'os_energy_04',text:'Ready is useful if it lands somewhere.<br><br>Pick the win: cash, follow-up, content, production, or delivery.'},
+      {id:'os_energy_05',text:'I hear the energy.<br><br>The OS can either call the move or narrow the lane. Which one do you want?'}
     ],
     stuck:[
       {id:'os_stuck_01',text:'I am not going to dump the whole OS on you.<br><br>When you are stuck, my job is to shrink the field.<br><br>Smallest useful move: {{move}}'},
-      {id:'os_stuck_02',text:'Stuck means we need less screen, not more screen.<br><br>I am reading the active context and giving you one move: {{move}}'}
+      {id:'os_stuck_02',text:'Stuck means we need less screen, not more screen.<br><br>I am reading the active context and giving you one move: {{move}}'},
+      {id:'os_stuck_03',text:'If you are spinning, do not open another tab.<br><br>Open {{buttonLabel}}, do the next visible step, and come back with the result.'},
+      {id:'os_stuck_04',text:'I can help you reset.<br><br>The field is too wide. The next move is {{move}}.'},
+      {id:'os_stuck_05',text:'You do not need the whole system right now.<br><br>You need one clean action: {{move}}'}
     ],
     decision:[
       {id:'os_decision_01',text:'Decision read.<br><br>I am comparing what is closest to money, proof, and delivery.<br><br>Pick: {{choice}}'},
-      {id:'os_decision_02',text:'The OS is sorting this by leverage.<br><br>Do first: {{choice}}<br><br>Everything else can wait until that moves.'}
+      {id:'os_decision_02',text:'The OS is sorting this by leverage.<br><br>Do first: {{choice}}<br><br>Everything else can wait until that moves.'},
+      {id:'os_decision_03',text:'I would choose {{choice}}.<br><br>Reason: it creates the next decision faster than the other option.'},
+      {id:'os_decision_04',text:'Pick {{choice}} first.<br><br>Not because the other option is bad. Because this one moves the mission sooner.'}
     ],
     explain:[
       {id:'os_explain_01',text:'Here is what I am doing behind the scenes:<br><br>1) Reading the route.<br>2) Checking the context I can trust.<br>3) Picking the response depth.<br>4) Turning it into the next action.'},
-      {id:'os_explain_02',text:'The deeper reason is simple: the app is trying to turn scattered business context into one useful action.'}
+      {id:'os_explain_02',text:'The deeper reason is simple: the app is trying to turn scattered business context into one useful action.'},
+      {id:'os_explain_03',text:'The OS is not just matching words.<br><br>It is checking the route, the active card, the current block, the data confidence, and the last open loop.'},
+      {id:'os_explain_04',text:'Think of Mission Command as the layer that turns the app from storage into direction.'}
     ],
     test_check:[
       {id:'os_test_01',text:'Test it like this:<br><br>1) Ask one money question.<br>2) Ask one route question.<br>3) Ask one typo/slang version.<br>4) Ask one guard prompt like /pipeline or sync check.<br><br>If those route cleanly, the layer is working.'}
+    ],
+    money_gap:[
+      {id:'os_gap_01',text:'Oh, I checked it.<br><br>You have {{gap}} left against the weekly target.<br><br>Let’s get practical: {{move}}.'},
+      {id:'os_gap_02',text:'You are not far because the app says so. You are far only if the next buyer-facing move does not happen.<br><br>Move: {{move}}'},
+      {id:'os_gap_03',text:'The gap is {{gap}}.<br><br>That means we need a plan for the next dollars, not a bigger dashboard.'},
+      {id:'os_gap_04',text:'You need {{gap}} more to cover the target.<br><br>Start with the person closest to payment.'},
+      {id:'os_gap_05',text:'The money read says there is still pressure.<br><br>Fastest plan: follow up, make the direct offer, log the result.'}
+    ],
+    money_covered:[
+      {id:'os_covered_01',text:'Oh, you are covered on the weekly target: {{rev}} of {{wk}}.<br><br>You are doing good there. Now protect delivery and stack the next cycle.'},
+      {id:'os_covered_02',text:'The target pressure is covered.<br><br>That does not mean stop. It means move smart: delivery, proof, and next-cycle pipeline.'},
+      {id:'os_covered_03',text:'You have {{rev}} against a {{wk}} target.<br><br>The app reads that as covered. Next move: protect the work that keeps the money coming.'},
+      {id:'os_covered_04',text:'Money target is handled for the week.<br><br>If you want more today, push one clean buyer-facing action without breaking delivery.'},
+      {id:'os_covered_05',text:'So far, the cycle looks good: {{pct}}% of the weekly target.<br><br>Now the OS wants delivery and repeatable proof.'}
+    ],
+    today_money:[
+      {id:'os_today_money_01',text:'Today’s logged money is {{todayMoney}}.<br><br>Daily target estimate: {{dailyTarget}}.<br><br>{{dailyMoneyLine}}'},
+      {id:'os_today_money_02',text:'Today, the app has {{todayMoney}} logged.<br><br>If that is not right, update DPC. If it is right, the next move is {{move}}.'},
+      {id:'os_today_money_03',text:'I checked today’s score.<br><br>{{todayMoney}} is logged right now.<br><br>Next: create or log the next cash-facing move.'},
+      {id:'os_today_money_04',text:'For today specifically: {{todayMoney}} collected.<br><br>{{dailyMoneyLine}}'}
+    ],
+    app_navigation:[
+      {id:'os_nav_01',text:'Go here: {{whereToGo}}<br><br>That is the card that matches this question.'},
+      {id:'os_nav_02',text:'Open {{buttonLabel}}.<br><br>That is where the OS keeps this lane.'},
+      {id:'os_nav_03',text:'For this, use the day bar.<br><br>{{whereToGo}}'},
+      {id:'os_nav_04',text:'The button you want is {{buttonLabel}}.<br><br>Open it, read the top signal, then come back if you want the next move.'}
+    ],
+    how_to_use:[
+      {id:'os_use_01',text:'Use the app in this order:<br><br>1) Ask Mission Command for the move.<br>2) Open the matching day-bar card.<br>3) Do the action.<br>4) Log what happened.'},
+      {id:'os_use_02',text:'The app works best when you do not browse it.<br><br>Ask the move, open the right card, create one result, then log it.'},
+      {id:'os_use_03',text:'Mission Command is the brain. The day bar is the work surface. DPC is the receipt.'},
+      {id:'os_use_04',text:'If you feel lost, start here: Mission Command for direction, Brief for the business picture, Outreach for leads, Content for proof, Production for assets.'}
+    ],
+    time_window:[
+      {id:'os_time_01',text:'You have {{blockMinutes}} minutes in {{blockName}}.<br><br>That window fits: {{move}}'},
+      {id:'os_time_02',text:'Time read: {{blockName}}, {{blockMinutes}} minutes left.<br><br>Keep the move small enough to finish.'},
+      {id:'os_time_03',text:'This block has {{blockMinutes}} minutes left, so it is not for opening every lane.<br><br>It is for finishing one visible move: {{move}}'}
+    ],
+    day_context:[
+      {id:'os_day_01',text:'The selected context is {{contextModeLabel}}.<br><br>I will weight the answer toward that lane unless you clear context.'},
+      {id:'os_day_02',text:'Context mode is {{contextModeLabel}}.<br><br>That is why I am reading this through {{routeLabel}} first.'},
+      {id:'os_day_03',text:'You can switch cards without losing the OS, but the selected context tells Mission Command what lens to use.'}
+    ],
+    data_confidence:[
+      {id:'os_data_01',text:'Source: {{dataLine}}.<br><br>Confidence: {{confidence}}.<br><br>If this needs to be current-current, run the sync check.'},
+      {id:'os_data_02',text:'I can answer from the loaded app state, but I will qualify the read when sync is not confirmed.'},
+      {id:'os_data_03',text:'The data is useful enough for a safe move.<br><br>For exact numbers, check System Hub → Health.'}
+    ],
+    what_changed:[
+      {id:'os_changed_01',text:'What changed should come from the last saved state, not chat echo.<br><br>Check: money, DPC, pipeline status, content moved, production moved.'},
+      {id:'os_changed_02',text:'Since the last turn, I am looking for status changes: reply, call, paid, posted, shipped, synced, or logged.'},
+      {id:'os_changed_03',text:'The useful change is the one that moved a number, a status, or a next action.'}
     ]
   },
   regressionTests:[
     {q:'how much money are we making',route:'report',mustAny:['money','target','gap','move','cash']},
+    {q:'how much money have i made today',route:'report',mustAny:['today','logged','daily','collected']},
     {q:'what do i need to do today',route:'now',mustAny:['current block','move','action','OS']},
     {q:'what is keeping me broke',route:'report',mustAny:['money','pressure','cash','move']},
+    {q:'what can i do to make some money today',route:'report',mustAny:['buyer','cash','money','payment']},
     {q:'help me get started',route:'now',mustAny:['decision','move','action','OS']},
     {q:'walk me through this app',route:'help',mustAny:['Mission Command','operating','app']},
+    {q:'where do i check sync',route:'sync',mustAny:['System Hub','Health','sync']},
+    {q:'where do i find the hit list',route:'leads',mustAny:['Hit List','button','Open','go']},
+    {q:'i got 20 minutes',route:'calendar',mustAny:['minutes','window','block']},
+    {q:'what changed today',route:'now',mustAny:['changed','status','money','logged']},
+    {q:'what should i do on content day',route:'content',mustAny:['content','proof','Content']},
     {q:'sync check',route:'sync',mustAny:['source','sync','data','confidence']}
   ]
 };
@@ -9245,10 +9405,22 @@ function getMissionOsAwareOutputResponseV1(route,ctx,question,conv,brainState,st
   var routeAlias={pipeline:'leads',money:'report',diagnostic:'sync'};
   var r=routeAlias[route]||route||'now';
   if(r==='money')r='report';
+  var rawQ=String(question||'').toLowerCase();
   var profile=typeof getMissionInputProfile==='function'?getMissionInputProfile(question||'',q):null;
   var smartCategory=profile&&profile.best&&profile.best.category||'';
   var pool=null;
-  if(smartCategory==='open_energy_work_start')pool=pack.conversationPools.open_energy;
+  if(/\b(how much money have i made|how much have i made|made today|made so far today|collected today|earned today)\b/.test(q)||/\bmade\b.*\btoday\b/.test(q)||/\b(how much money have i made|how much have i made|made today|collected today|earned today)\b/.test(rawQ)||/\bmade\b.*\btoday\b/.test(rawQ))pool=pack.conversationPools.today_money;
+  else if((r==='report'||r==='money')&&(/\b(how much money|money are we making|what have we made|revenue|target|goal|gap|keeping me broke|make some money|get to the money|trying to make money)\b/.test(q)||/\b(how much money|money are we making|what have we made|target|goal|gap|keeping me broke|make some money|get to the money|trying to make money)\b/.test(rawQ))){
+    var rawGap=Number(ctx&&ctx.gap||0);
+    pool=rawGap>0?pack.conversationPools.money_gap:pack.conversationPools.money_covered;
+  }
+  else if(/\b(where do i|where is|what button|what tab|what card|how do i get|show me where|open)\b/.test(q))pool=pack.conversationPools.app_navigation;
+  else if(/\b(how to use|how do i use|walk me through this app|use this app|what is this app|how does this app work)\b/.test(q))pool=pack.conversationPools.how_to_use;
+  else if(/\b(\d+\s*(min|mins|minutes)|short window|quick window|on my phone|phone mode|before i leave)\b/.test(q))pool=pack.conversationPools.time_window;
+  else if(/\b(context|mode|day type|content day|production day|outreach day|manager day|brief mode)\b/.test(q))pool=pack.conversationPools.day_context;
+  else if(/\b(data stale|is this current|source|confidence|where is this coming from|current-current|sync confirmed)\b/.test(q))pool=pack.conversationPools.data_confidence;
+  else if(/\b(what changed|what moved|since last|since yesterday|since this morning|changed today)\b/.test(q))pool=pack.conversationPools.what_changed;
+  else if(smartCategory==='open_energy_work_start')pool=pack.conversationPools.open_energy;
   else if(['frustration_overwhelm','ep_os_problem_reset'].indexOf(smartCategory)>=0)pool=pack.conversationPools.stuck;
   else if(['ep_os_make_decision'].indexOf(smartCategory)>=0||/\b(which|should i|what first|what should come first|what can wait)\b/.test(q))pool=pack.conversationPools.decision;
   else if(['ep_os_explain_depth','ep_learning_question'].indexOf(smartCategory)>=0||/\b(what do you mean|how does that work|explain|make this make sense)\b/.test(q))pool=pack.conversationPools.explain;
@@ -14412,6 +14584,26 @@ function getMissionOutputContextV1_1(route,ctx,question,brainState){
   var q=normalizeMissionQuestion(question||'');
   var r=route==='pipeline'?'leads':route;
   var topic=r==='leads'?'pipeline':r==='report'||r==='money'?'money':r||'mission';
+  var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var revRaw=Number(ctx&&ctx.rev||0);
+  var wkRaw=Number(ctx&&ctx.wk||0);
+  var gapRaw=Math.max(0,Number(ctx&&ctx.gap||0));
+  var todayRaw=Number(d&&d.money||0);
+  var dailyTargetRaw=wkRaw?Math.round(wkRaw/5):0;
+  var extraNeededToday=Math.max(0,dailyTargetRaw-todayRaw);
+  var pctRaw=wkRaw?Math.round((revRaw/Math.max(1,wkRaw))*100):0;
+  var contextMode=typeof getMissionContextMode==='function'?getMissionContextMode():'general';
+  var contextModeLabel=(typeof MISSION_CONTEXT_MODE_LABELS!=='undefined'&&MISSION_CONTEXT_MODE_LABELS[contextMode])||'General';
+  var routeLabels={now:'Mission Command',leads:'Outreach',sales:'Sales Coach',report:'Money',money:'Money',content:'Content',production:'Production',sync:'System Hub',memory:'Memory',help:'Command Guide',dpc:'DPC',calendar:'Calendar',weekly:'Weekly Review',resources:'Rolodex',community:'Community',live:'Live'};
+  var buttonLabels={now:'Mission Command',leads:'Open Hit List',sales:'Sales Coach',report:'Open Report',money:'Open Report',content:'Open Content Tracker',production:'Open Production',sync:'Open System Hub',memory:'Open Memory',help:'Open Command Guide',dpc:'Open DPC',calendar:'Open Calendar',weekly:'Open Weekly Review',resources:'Open Rolodex',community:'Open Community',live:'Open Live'};
+  var whereMap={now:'Mission Command tab',leads:'Day Bar → Outreach → Hit List',sales:'Mission Command → Sales Coach',report:'Report tab or Mission Brief money slide',money:'Report tab or Mission Brief money slide',content:'Day Bar → Content',production:'Day Bar → Production',sync:'System Hub → Health → Sync Check',memory:'Mission Command → Memory',help:'Mission Command → Command Guide',dpc:'This Week → Daily Profit Campaign',calendar:'Manager → Calendar',weekly:'Activities → Weekly Review',resources:'Rolodex',community:'Community lane',live:'Live lane'};
+  var moneyFeeling=gapRaw<=0?'You are doing good on the weekly target. Now protect delivery and stack the next cycle.':pctRaw>=70?'You are close enough that one clean buyer-facing move matters.':'You still have pressure on the target, so admin can wait.';
+  var targetState=gapRaw<=0?'Weekly target is covered':'You still have '+fmt(gapRaw)+' left';
+  var dailyMoneyLine=extraNeededToday<=0?'Today is covered against the simple daily pace. Protect the next real opportunity.':'You need about '+fmt(extraNeededToday)+' more to cover a simple daily pace.';
+  var moneyCondition=gapRaw<=0?'covered weekly target':'open money gap';
+  var moneyPressureLine=gapRaw<=0?'Target pressure is covered; protect delivery and the next cycle.':'There is still '+fmt(gapRaw)+' left, so prioritize the closest buyer-facing move.';
+  var revenueLine='You are at '+fmt(revRaw)+' of '+fmt(wkRaw)+' this week';
+  var dataLine='local app state plus connected sources';
   var expanded='stay on '+topic+' long enough to create a visible result, then log what changed';
   var diagnosis='the answer is not missing; the next status change is missing';
   var root='the action loop is open';
@@ -14477,7 +14669,25 @@ function getMissionOutputContextV1_1(route,ctx,question,brainState){
     style:'less generic, more direct, more operator voice',
     sourceA:'local app state',
     sourceB:'connected source',
-    lastSeen:'latest loaded packet'
+    lastSeen:'latest loaded packet',
+    todayMoney:fmt(todayRaw),
+    dailyTarget:fmt(dailyTargetRaw),
+    extraNeededToday:fmt(extraNeededToday),
+    pct:String(pctRaw),
+    revenueLine:revenueLine,
+    targetState:targetState,
+    moneyFeeling:moneyFeeling,
+    moneyCondition:moneyCondition,
+    moneyPressureLine:moneyPressureLine,
+    dailyMoneyLine:dailyMoneyLine,
+    contextMode:contextMode,
+    contextModeLabel:contextModeLabel,
+    routeLabel:routeLabels[r]||routeLabels[route]||'Mission Command',
+    buttonLabel:buttonLabels[r]||buttonLabels[route]||'Mission Command',
+    whereToGo:whereMap[r]||whereMap[route]||'Mission Command',
+    dateLine:new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}),
+    timeLine:(base.blockName||'current block')+' · '+(base.blockMinutes||0)+' min left',
+    dataLine:dataLine
   });
 }
 
