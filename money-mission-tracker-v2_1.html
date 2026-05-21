@@ -9165,7 +9165,7 @@ var MISSION_OS_AWARE_OUTPUT_PACK_V1={
       {id:'os_now_07',text:'From the app view, the next button is simple: {{buttonLabel}}.<br><br>Open that, move the lane, then log the result.'},
       {id:'os_now_08',text:'I looked at the current mission position.<br><br>You are at {{journeyStep}}: {{journeyMove}}.<br><br>Do the smallest version of that.'},
       {id:'os_now_09',text:'This is a {{contextModeLabel}} read.<br><br>Best move: {{move}}<br><br>Where to go: {{whereToGo}}'},
-      {id:'os_now_10',text:'If you are trying to get started, do not open the whole dashboard.<br><br>Open {{buttonLabel}} and make one visible status change.'},
+      {id:'os_now_10',text:'If you are trying to get started, do not open the whole dashboard.<br><br>Go to {{whereToGo}} and make one visible status change.'},
       {id:'os_now_11',text:'I am looking at the OS like an assistant, not a report screen.<br><br>The thing that needs your hand next is: {{move}}'},
       {id:'os_now_12',text:'The current block says do not drift.<br><br>One move from here: {{move}}'}
     ],
@@ -9340,7 +9340,9 @@ var MISSION_OS_AWARE_OUTPUT_PACK_V1={
       {id:'os_covered_02',text:'The target pressure is covered.<br><br>That does not mean stop. It means move smart: delivery, proof, and next-cycle pipeline.'},
       {id:'os_covered_03',text:'You have {{rev}} against a {{wk}} target.<br><br>The app reads that as covered. Next move: protect the work that keeps the money coming.'},
       {id:'os_covered_04',text:'Money target is handled for the week.<br><br>If you want more today, push one clean buyer-facing action without breaking delivery.'},
-      {id:'os_covered_05',text:'So far, the cycle looks good: {{pct}}% of the weekly target.<br><br>Now the OS wants delivery and repeatable proof.'}
+      {id:'os_covered_05',text:'So far, the cycle looks good: {{pct}}% of the weekly target.<br><br>Now the OS wants delivery and repeatable proof.'},
+      {id:'os_covered_06',text:'If the real question is how to make more today, the weekly target is already covered.<br><br>Next money move: push one buyer-facing action and protect delivery.'},
+      {id:'os_covered_07',text:'You are covered for the week, but not done building momentum.<br><br>Use one clean follow-up or direct offer, then log what happens.'}
     ],
     today_money:[
       {id:'os_today_money_01',text:'Today’s logged money is {{todayMoney}}.<br><br>Daily target estimate: {{dailyTarget}}.<br><br>{{dailyMoneyLine}}'},
@@ -9361,9 +9363,9 @@ var MISSION_OS_AWARE_OUTPUT_PACK_V1={
       {id:'os_use_04',text:'If you feel lost, start here: Mission Command for direction, Brief for the business picture, Outreach for leads, Content for proof, Production for assets.'}
     ],
     time_window:[
-      {id:'os_time_01',text:'You have {{blockMinutes}} minutes in {{blockName}}.<br><br>That window fits: {{move}}'},
-      {id:'os_time_02',text:'Time read: {{blockName}}, {{blockMinutes}} minutes left.<br><br>Keep the move small enough to finish.'},
-      {id:'os_time_03',text:'This block has {{blockMinutes}} minutes left, so it is not for opening every lane.<br><br>It is for finishing one visible move: {{move}}'}
+      {id:'os_time_01',text:'{{timeWindowLine}}<br><br>That window fits: {{move}}'},
+      {id:'os_time_02',text:'Time read: {{timeWindowLine}}<br><br>Keep the move small enough to finish.'},
+      {id:'os_time_03',text:'{{timeWindowLine}}.<br><br>Do not open every lane. Finish one visible move: {{move}}'}
     ],
     day_context:[
       {id:'os_day_01',text:'The selected context is {{contextModeLabel}}.<br><br>I will weight the answer toward that lane unless you clear context.'},
@@ -10591,8 +10593,8 @@ var MISSION_PRESENCE_PHRASES={
   },
   closer:{
     leads:['Want to go through one lead at a time?','Which lead do you want to move first?','Who is closest to a real decision?'],
-    report:['Want to map the fastest path to close that gap?','Where does the money come from first?','What is the closest cash move?'],
-    money:['Want to map the fastest path to close that gap?','Where does the money come from first?','What is the closest cash move?'],
+    report:['Want to map the next money move?','Where does the next dollar come from first?','What is the closest buyer-facing action?'],
+    money:['Want to map the next money move?','Where does the next dollar come from first?','What is the closest buyer-facing action?'],
     dpc:['Want to log the activity before moving on?','What changed after that move?'],
     content:['Want to block the next piece now?','What post needs to go out first?','What proof can you show today?'],
     production:['What deliverable needs to move next?','What can you finish today?'],
@@ -10701,6 +10703,7 @@ function getMissionTurnCloser(turn,log){
   if(turn.routePlan&&turn.routePlan.clarify)return null;
   var turnCount=turn.turnCount||1;
   if(['help','profile'].indexOf(turn.route)>=0)return null;
+  if((turn.route==='report'||turn.route==='money')&&turn.dataConfidence&&turn.dataConfidence.level!=='low')return null;
   if((turnCount-(log.lastCloserTurn||-99))<2)return null;
   var pool=null;
   if(turn.winDetected)pool=MISSION_PRESENCE_PHRASES.closer.win;
@@ -10733,7 +10736,7 @@ function applyMissionPresenceLayer(html,route,question,opts){
   var plain=missionPresencePlainText(html);
   var ack=null,closer=null;
   if(plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
-  if(plain&&plain.length>35&&opts.closer!==false)closer=getMissionTurnCloser(turn,log);
+  if(plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
   var out=String(html||'');
   if(ack){
     out=escapeHtml(ack)+'<br><br>'+out;
@@ -14595,8 +14598,8 @@ function getMissionOutputContextV1_1(route,ctx,question,brainState){
   var contextMode=typeof getMissionContextMode==='function'?getMissionContextMode():'general';
   var contextModeLabel=(typeof MISSION_CONTEXT_MODE_LABELS!=='undefined'&&MISSION_CONTEXT_MODE_LABELS[contextMode])||'General';
   var routeLabels={now:'Mission Command',leads:'Outreach',sales:'Sales Coach',report:'Money',money:'Money',content:'Content',production:'Production',sync:'System Hub',memory:'Memory',help:'Command Guide',dpc:'DPC',calendar:'Calendar',weekly:'Weekly Review',resources:'Rolodex',community:'Community',live:'Live'};
-  var buttonLabels={now:'Mission Command',leads:'Open Hit List',sales:'Sales Coach',report:'Open Report',money:'Open Report',content:'Open Content Tracker',production:'Open Production',sync:'Open System Hub',memory:'Open Memory',help:'Open Command Guide',dpc:'Open DPC',calendar:'Open Calendar',weekly:'Open Weekly Review',resources:'Open Rolodex',community:'Open Community',live:'Open Live'};
-  var whereMap={now:'Mission Command tab',leads:'Day Bar → Outreach → Hit List',sales:'Mission Command → Sales Coach',report:'Report tab or Mission Brief money slide',money:'Report tab or Mission Brief money slide',content:'Day Bar → Content',production:'Day Bar → Production',sync:'System Hub → Health → Sync Check',memory:'Mission Command → Memory',help:'Mission Command → Command Guide',dpc:'This Week → Daily Profit Campaign',calendar:'Manager → Calendar',weekly:'Activities → Weekly Review',resources:'Rolodex',community:'Community lane',live:'Live lane'};
+  var buttonLabels={now:'Open The Current Work Card',leads:'Open Hit List',sales:'Sales Coach',report:'Open Report',money:'Open Report',content:'Open Content Tracker',production:'Open Production',sync:'Open System Hub',memory:'Open Memory',help:'Open Command Guide',dpc:'Open DPC',calendar:'Open Calendar',weekly:'Open Weekly Review',resources:'Open Rolodex',community:'Open Community',live:'Open Live'};
+  var whereMap={now:'the day-bar card tied to the move',leads:'Day Bar → Outreach → Hit List',sales:'Mission Command → Sales Coach',report:'Report tab or Mission Brief money slide',money:'Report tab or Mission Brief money slide',content:'Day Bar → Content',production:'Day Bar → Production',sync:'System Hub → Health → Sync Check',memory:'Mission Command → Memory',help:'Mission Command → Command Guide',dpc:'This Week → Daily Profit Campaign',calendar:'Manager → Calendar',weekly:'Activities → Weekly Review',resources:'Rolodex',community:'Community lane',live:'Live lane'};
   var moneyFeeling=gapRaw<=0?'You are doing good on the weekly target. Now protect delivery and stack the next cycle.':pctRaw>=70?'You are close enough that one clean buyer-facing move matters.':'You still have pressure on the target, so admin can wait.';
   var targetState=gapRaw<=0?'Weekly target is covered':'You still have '+fmt(gapRaw)+' left';
   var dailyMoneyLine=extraNeededToday<=0?'Today is covered against the simple daily pace. Protect the next real opportunity.':'You need about '+fmt(extraNeededToday)+' more to cover a simple daily pace.';
@@ -14604,6 +14607,8 @@ function getMissionOutputContextV1_1(route,ctx,question,brainState){
   var moneyPressureLine=gapRaw<=0?'Target pressure is covered; protect delivery and the next cycle.':'There is still '+fmt(gapRaw)+' left, so prioritize the closest buyer-facing move.';
   var revenueLine='You are at '+fmt(revRaw)+' of '+fmt(wkRaw)+' this week';
   var dataLine='local app state plus connected sources';
+  var blockMinutesNum=Number(base.blockMinutes||0);
+  var timeWindowLine=blockMinutesNum>0?(base.blockName+' has '+blockMinutesNum+' minutes left'):'The current block timer is not giving a clean window, so treat this like a short action window';
   var expanded='stay on '+topic+' long enough to create a visible result, then log what changed';
   var diagnosis='the answer is not missing; the next status change is missing';
   var root='the action loop is open';
@@ -14687,7 +14692,8 @@ function getMissionOutputContextV1_1(route,ctx,question,brainState){
     whereToGo:whereMap[r]||whereMap[route]||'Mission Command',
     dateLine:new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}),
     timeLine:(base.blockName||'current block')+' · '+(base.blockMinutes||0)+' min left',
-    dataLine:dataLine
+    dataLine:dataLine,
+    timeWindowLine:timeWindowLine
   });
 }
 
