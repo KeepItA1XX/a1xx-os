@@ -14926,16 +14926,18 @@ function getMissionDecisionResponse(route,ctx,question){
 ========================================================= */
 function getMissionFallbackResourceCatalogV1(){
   return [
-    {title:'Cold DM Opener Script',tags:'sales dm opener lead outreach cold'},
-    {title:'Warm Follow-Up Script',tags:'sales follow up reply lead bump ghosted'},
-    {title:'Objection Isolator Script',tags:'sales objection too expensive think budget concern'},
-    {title:'Call Prep Checklist',tags:'sales call prep discovery closer live call'},
-    {title:'Rappreneur OS DM Script',tags:'rappreneur artist dm sales offer'},
-    {title:'ATL Studio Follow-Up Script',tags:'atl studio session follow up dm booking'},
-    {title:'Content Proof Template',tags:'content post proof hook caption'},
-    {title:'BANGIN+ Upload Checklist',tags:'production bangin upload metadata cover art dsp'},
-    {title:'Mix/Master Qualifier',tags:'mix master recording release ready qualifier'},
-    {title:'DPC Logging Checklist',tags:'dpc log daily progress campaign activity'}
+    {title:'Cold DM Opener Script',category:'Sales',type:'Script',tags:'sales dm opener lead outreach cold first message',summary:'Use when starting a cold conversation without overexplaining.'},
+    {title:'Warm Follow-Up Script',category:'Sales',type:'Script',tags:'sales follow up reply lead bump ghosted warm check in',summary:'Use when the lead already knows you and needs a clean next touch.'},
+    {title:'Objection Isolator Script',category:'Sales',type:'Script',tags:'sales objection too expensive think budget concern price stall',summary:'Use when the prospect raises money, timing, or uncertainty.'},
+    {title:'Call Prep Checklist',category:'Sales',type:'Checklist',tags:'sales call prep discovery closer live call booked calendar',summary:'Use before a booked call so the opening question and outcome are clear.'},
+    {title:'Rappreneur OS DM Script',category:'Offer',type:'Script',tags:'rappreneur artist dm sales offer rollout fans content money music',summary:'Use for artists who need rollout, fanbase, content, or music money help.'},
+    {title:'ATL Studio Follow-Up Script',category:'Offer',type:'Script',tags:'atl studio session follow up dm booking record studio time',summary:'Use for studio-session follow-up and booking momentum.'},
+    {title:'Content Proof Template',category:'Content',type:'Template',tags:'content post proof hook caption case study result',summary:'Use when today’s work needs to become visible proof.'},
+    {title:'Content Hook Builder',category:'Content',type:'Template',tags:'content hook ideas caption post reel short angle',summary:'Use when the content lane needs a stronger first line.'},
+    {title:'BANGIN+ Upload Checklist',category:'Production',type:'Checklist',tags:'production bangin upload metadata cover art dsp even release',summary:'Use before shipping or uploading a BANGIN+ asset.'},
+    {title:'Mix/Master Qualifier',category:'Production',type:'Qualifier',tags:'mix master recording release ready qualifier song studio',summary:'Use to qualify whether the song is ready for mix/master work.'},
+    {title:'DPC Logging Checklist',category:'DPC',type:'Checklist',tags:'dpc log daily progress campaign activity dm call booked close collected',summary:'Use when activity happened but the OS has not learned from it yet.'},
+    {title:'Sync Health Checklist',category:'System',type:'Checklist',tags:'sync health notion sheets calendar backup apps script webhook data stale',summary:'Use when the data trust question is blocking the next move.'}
   ];
 }
 
@@ -14959,6 +14961,13 @@ function scoreMissionResourceCandidateV1(resource,q,route){
   if(/\b(prep me|call prep|live call)\b/.test(q)&&/\b(call prep|discovery|closer)\b/.test(hay))score+=10;
   if(/\batl studio\b/.test(q)&&/\batl|studio\b/.test(hay))score+=10;
   if(/\brappreneur\b/.test(q)&&/\brappreneur|artist\b/.test(hay))score+=10;
+  if(/\b(bangin|bangin plus|banging|metadata|upload|cover art|dsp|even)\b/.test(q)&&/\b(bangin|metadata|upload|cover art|dsp|even)\b/.test(hay))score+=16;
+  if(/\b(mix master|mix\/master|mixing|mastering|recorded|recording|release ready)\b/.test(q)&&/\b(mix|master|recording|release ready)\b/.test(hay))score+=14;
+  if(/\b(cold dm|cold message|first dm|opener)\b/.test(q)&&/\b(cold|opener|first message)\b/.test(hay))score+=12;
+  if(/\b(warm follow|warm lead|check in|checking in)\b/.test(q)&&/\b(warm|follow|check in)\b/.test(hay))score+=12;
+  if(/\b(proof|case study|turn.*work.*proof)\b/.test(q)&&/\b(proof|case study|result)\b/.test(hay))score+=10;
+  if(/\b(hook|caption|content idea|post idea)\b/.test(q)&&/\b(hook|caption|content|angle)\b/.test(hay))score+=10;
+  if(/\b(sync|data stale|webhook|apps script|backup)\b/.test(q)&&/\b(sync|health|webhook|apps script|backup)\b/.test(hay))score+=10;
   return score;
 }
 
@@ -14991,6 +15000,68 @@ function getMissionResourceRecommendationResponse(route,ctx,question){
   var rec=getMissionResourceRecommendationV1(route,ctx,question);
   if(!rec||!rec.shouldRecommend)return '';
   return '<strong>Use the right support piece.</strong><br><br>Open Rolodex and pull: '+escapeHtml(rec.title)+'.<br><br>Use one resource, apply it once, then come back with what happened: sent, reply, booked, paid, or wrong resource.';
+}
+
+/* =========================================================
+   MISSION RESOURCES / ROLODEX INTELLIGENCE — v1
+========================================================= */
+var MISSION_ROLODEX_INTELLIGENCE_V1={
+  id:'mission_rolodex_intelligence_v1',
+  version:'1.0',
+  installMode:'additive_read_only'
+};
+
+function getMissionRolodexQuestionSignalV1(question,route){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return null;
+  var explicit=/\b(rolodex|resource library|resource|resources|script|template|playbook|guide|checklist|qualifier|pull up|send me|find the|where is|where do i find|what should i use|what tool should i use|what guide helps|open the thing)\b/.test(q);
+  var supportNeed=/\b(cold dm|warm follow|follow up|bump|ghosted|too expensive|payment plan|prep me for a call|call prep|atl studio|rappreneur|bangin plus|metadata|mix master|content proof|hook builder|sync health|data stale)\b/.test(q);
+  if(explicit||route==='resources')return {shouldAnswer:true,reason:explicit?'explicit_resource_prompt':'resources_route',supportNeed:supportNeed};
+  if(supportNeed&&/\b(give me|send me|pull|use|need|where|what)\b/.test(q))return {shouldAnswer:true,reason:'support_need_resource_prompt',supportNeed:true};
+  return null;
+}
+
+function getMissionRolodexResourceMetaV1(rec){
+  if(!rec)return {};
+  var catalog=(Array.isArray(window.__resources)?window.__resources:[]).concat(getMissionFallbackResourceCatalogV1());
+  var title=String(rec.title||'').toLowerCase();
+  for(var i=0;i<catalog.length;i++){
+    var item=catalog[i]||{};
+    var name=String(item.title||item.name||item.resource||'').toLowerCase();
+    if(name&&name===title)return item;
+  }
+  return {title:rec.title||'Resource',category:'Rolodex',type:'Resource',summary:'Use this as the support piece for the current move.'};
+}
+
+function getMissionRolodexUseCaseV1(question,route,meta){
+  var q=normalizeMissionQuestion(question||'');
+  if(/\b(too expensive|price|budget|payment plan|think about it|need to think)\b/.test(q))return 'This fits because the problem is not more pitching. It is isolating the real concern.';
+  if(/\b(ghosted|bump|no reply|follow up|follow-up|warm)\b/.test(q))return 'This fits because the next move is one clean touch, not chasing.';
+  if(/\b(call prep|prep me|booked|on the phone|live call)\b/.test(q))return 'This fits because the call needs a clear opening question before the offer.';
+  if(/\b(content|post|hook|caption|proof)\b/.test(q)||route==='content')return 'This fits because the work needs to become proof, not another brainstorm.';
+  if(/\b(production|beat|bangin|metadata|mix|master|upload)\b/.test(q)||route==='production')return 'This fits because the asset needs a shipping checklist, not more guessing.';
+  if(/\b(sync|data stale|webhook|backup|apps script)\b/.test(q)||route==='sync')return 'This fits because the blocker is data trust, not another business decision.';
+  return (meta&&meta.summary)||'This fits because it supports the move you are already trying to make.';
+}
+
+function buildMissionRolodexResponseV1(rec,meta,question,route){
+  var category=meta.category||'Rolodex';
+  var type=meta.type||'Resource';
+  var why=getMissionRolodexUseCaseV1(question,route,meta);
+  return 'Open Rolodex and pull: '+escapeHtml(rec.title)+'.<br><br>Use it for: '+escapeHtml(category+' · '+type)+'.<br><br>'+escapeHtml(why)+'<br><br>Next: use the short version once, then come back with the result: sent, reply, booked, paid, or wrong resource.';
+}
+
+function getMissionRolodexIntelligenceResponseV1(route,ctx,question,brainState,turn){
+  if(window.__missionCommandSelfCheckActive)return '';
+  var signal=getMissionRolodexQuestionSignalV1(question||'',route||'');
+  if(!signal)return '';
+  var rec=getMissionResourceRecommendationV1(route||'resources',ctx||{},question||'');
+  if(!rec||!rec.shouldRecommend)return getMissionResourcesAnswer(question||'');
+  if(turn){
+    turn.resourceRecommendation=rec;
+    if(typeof addMissionTrace==='function')addMissionTrace(turn,'rolodex_intelligence_selected',{title:rec.title,source:rec.source,reason:signal.reason});
+  }
+  return buildMissionRolodexResponseV1(rec,getMissionRolodexResourceMetaV1(rec),question||'',route||'resources');
 }
 
 /* =========================================================
@@ -19794,6 +19865,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     route=turnV2.route||route||'now';
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
   }
+  var rolodexIntel=getMissionRolodexIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(rolodexIntel)return finishMissionAnswer(rolodexIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false});
   if(isMissionExplicitCardPromptV1(cleanQuestion||question||'')){
     var explicitBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
     if(explicitBriefIntel)return finishMissionAnswer(explicitBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false});
@@ -20104,6 +20177,12 @@ function runMissionIntegritySelfCheck(){
   if(resourceDonePrompt.indexOf('Cold DM Opener Script')<0||resourceDonePrompt.indexOf('Resource did not fit')<0)failures.push('resource_followthrough_done_prompt');
   var resourceNoReplyPrompt=buildMissionResultLoopPromptV1(resourceTurn,{type:'no_reply',label:'No Reply Yet'});
   if(resourceNoReplyPrompt.indexOf('Cold DM Opener Script')<0||resourceNoReplyPrompt.indexOf('no reply yet')<0)failures.push('resource_followthrough_result_prompt');
+  var rolodexWarm=getMissionRolodexIntelligenceResponseV1('resources',actionCtx,'where do i find the warm follow up template',{},null);
+  if(rolodexWarm.indexOf('Warm Follow-Up Script')<0||rolodexWarm.indexOf('Open Rolodex')<0)failures.push('rolodex_warm_followup');
+  var rolodexSync=getMissionRolodexIntelligenceResponseV1('sync',actionCtx,'what guide helps with data stale',{},null);
+  if(rolodexSync.indexOf('Sync Health Checklist')<0||rolodexSync.indexOf('data trust')<0)failures.push('rolodex_sync_health');
+  var rolodexProduction=getMissionRolodexIntelligenceResponseV1('production',actionCtx,'what checklist do i use for bangin plus metadata',{},null);
+  if(rolodexProduction.indexOf('BANGIN+ Upload Checklist')<0||rolodexProduction.indexOf('shipping checklist')<0)failures.push('rolodex_production_checklist');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({lastActionPlan:{label:'Open Hit List',action:'Contact GARY RAOGUY',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact GARY RAOGUY',route:'leads',suggestedAt:new Date().toISOString()}}}));
   var constraintPending=getMissionConstraintAwareGuidanceV1({rawInput:'what next',route:'now',liveContext:{currentSalesMode:'normal'},dataConfidence:{level:'medium'},syncStatus:{risk:'none'},sessionDataCache:{snapshot:{gap:400,revenue:100,weekTarget:500}}},actionCtx);
   if(!constraintPending.shouldAnswer||constraintPending.reason!=='pending_action_constraint')failures.push('constraint_pending_action');
