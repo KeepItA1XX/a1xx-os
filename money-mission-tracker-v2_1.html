@@ -10581,7 +10581,30 @@ function setMissionSalesModeFromTurn(turn){
 
 function isMissionSalesModeExitSignal(q){
   q=normalizeMissionQuestion(q||'');
-  return /\b(call is done|call done|got off|hung up|call ended|off the phone|just got off|done with the call|finished the call|end live call|stop live call)\b/.test(q);
+  return /\b(call is done|call done|call finished|call is finished|call ended|call over|ended the call|got off|hung up|off the phone|out of the call|not on the call|just got off|done with the call|finished the call|end live call|stop live call)\b/.test(q);
+}
+
+function isMissionWrongLaneCorrectionSignal(q){
+  q=normalizeMissionQuestion(q||'');
+  return /\b(nah|not that|wrong lane|wrong one|other one|no i mean|nah i mean|i meant|try again|cleaner read|that aint it|you missed it|im talking about|i am talking about)\b/.test(q)||/\bno\b.*\bi mean\b/.test(q)||/\bnot (sales|pipeline|leads|content|money|report|production|sync|calendar|dpc)\b/.test(q);
+}
+
+function getMissionCorrectionTargetRouteV2(q){
+  q=normalizeMissionQuestion(q||'');
+  if(!isMissionWrongLaneCorrectionSignal(q))return '';
+  if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say|not sales.*pipeline|pipeline.*not sales)\b/.test(q))return 'leads';
+  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who|not pipeline.*sales|sales.*not pipeline)\b/.test(q))return 'sales';
+  if(/\b(i meant production not content|production not content|not content.*production|production.*not content)\b/.test(q))return 'production';
+  if(/\b(i meant content not production|content not production|not production.*content|content.*not production)\b/.test(q))return 'content';
+  if(/\b(sales|closer|call|objection|discovery|what should i say|what do i say|reply|dm|follow up|follow-up|script)\b/.test(q))return 'sales';
+  if(/\b(pipeline|lead|leads|crm|hit list|who hot|who warm)\b/.test(q))return 'leads';
+  if(/\b(production|beat|beats|catalog|mix|master|bangin)\b/.test(q))return 'production';
+  if(/\b(content|post|caption|clip|live|youtube|instagram)\b/.test(q))return 'content';
+  if(/\b(money|revenue|report|gap|cash|paid|sales total|numbers)\b/.test(q))return 'report';
+  if(/\b(sync|health|notion|sheets|backup|webhook|token)\b/.test(q))return 'sync';
+  if(/\b(calendar|schedule|time block|block)\b/.test(q))return 'calendar';
+  if(/\b(dpc|log|daily activity|daily numbers)\b/.test(q))return 'dpc';
+  return '';
 }
 
 function setMissionLiveCallMode(active,announce){
@@ -13267,10 +13290,13 @@ function getMissionStylePreferenceResponse(question){
 
 function getMissionCorrectionRoute(question){
   var q=normalizeMissionQuestion(question||'');
-  if(!(/\b(no i mean|not that|wrong one|other one|i meant|try again|cleaner read|im talking about|i am talking about)\b/.test(q)||/\bno\b.*\bi mean\b/.test(q)||/\bnot (content|pipeline|money|production|sync)\b/.test(q)))return '';
+  var targeted=getMissionCorrectionTargetRouteV2(q);
+  if(targeted)return targeted;
+  if(!isMissionWrongLaneCorrectionSignal(q))return '';
   if(/\b(production|beat|catalog|mix|master)\b/.test(q))return 'production';
   if(/\b(content|post|script|clip|live)\b/.test(q))return 'content';
-  if(/\b(money|revenue|report|sales|gap)\b/.test(q))return 'report';
+  if(/\b(sales|closer|objection|discovery|reply)\b/.test(q))return 'sales';
+  if(/\b(money|revenue|report|gap)\b/.test(q))return 'report';
   if(/\b(pipeline|lead|crm|follow)\b/.test(q))return 'leads';
   if(/\b(sync|health|notion|sheets)\b/.test(q))return 'sync';
   return 'now';
@@ -14469,6 +14495,9 @@ function getMissionMultiIntent(question){
 
 function getMissionCommandRoute(question){
   var q=normalizeMissionQuestion(question||'');
+  if(isMissionSalesModeExitSignal(q))return 'sales';
+  var correctionTarget=getMissionCorrectionTargetRouteV2(q);
+  if(correctionTarget)return correctionTarget;
   if(/\b(who is a1xx|who am i|my profile|a1xx profile)\b/.test(q))return 'profile';
   if(/\b(waht should i say|wht should i say|wat should i say|what should i say|what do i say|help me reply)\b/.test(q))return 'sales';
   if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(q))return 'sales';
@@ -15808,9 +15837,9 @@ function getMissionOutputPackResponseV1_1(route,ctx,question,conv,brainState,sta
   var r=getMissionOutputRouteOverrideV1_1(routeAlias[route]||route||'now',q);
   var context=getMissionOutputContextV1_1(r,ctx,question,brainState);
   var pool=null;
-  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(q))pool=pools.correctionRecoveryPools&&pools.correctionRecoveryPools.salesNotPipeline;
-  else if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say)\b/.test(q))pool=pools.correctionRecoveryPools&&pools.correctionRecoveryPools.pipelineNotSales;
-  else if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q))pool=pools.correctionRecoveryPools&&pools.correctionRecoveryPools.firstWrongLane;
+  if(getMissionCorrectionTargetRouteV2(q)==='sales')pool=pools.correctionRecoveryPools&&pools.correctionRecoveryPools.salesNotPipeline;
+  else if(getMissionCorrectionTargetRouteV2(q)==='leads')pool=pools.correctionRecoveryPools&&pools.correctionRecoveryPools.pipelineNotSales;
+  else if(isMissionWrongLaneCorrectionSignal(q))pool=pools.correctionRecoveryPools&&pools.correctionRecoveryPools.firstWrongLane;
   else if(/^(why|why again|why tho again|run it back|explain more|make it make sense|final why)$/.test(q)){
     var whyDepth=Math.min(5,Math.max(1,state&&state.whyLoopDepth||1));
     pool=pools.ladderPools&&pools.ladderPools.why&&pools.ladderPools.why[whyDepth];
@@ -15841,7 +15870,7 @@ function getMissionOutputPackResponseV1_1(route,ctx,question,conv,brainState,sta
 
 function getMissionOutputPoolV1(route,conversationType,q){
   var pools=MISSION_OUTPUT_RESPONSE_POOLS_V1||{};
-  if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q))return pools.conversationTypePools.wrong_lane_correction||[];
+  if(isMissionWrongLaneCorrectionSignal(q))return pools.conversationTypePools.wrong_lane_correction||[];
   if(conversationType===CONV_WHY||/^(why|why again|run it back|explain more|make it make sense)$/.test(q))return pools.conversationTypePools.why_loop||[];
   if(/^(more|more again|tell me more|tell me more again|say more|go on|continue)$/.test(q))return pools.conversationTypePools.more_depth||[];
   var profile=getMissionInputProfile(q,q);
@@ -15882,7 +15911,7 @@ function updateMissionOutputLoopStateV1(route,q){
     state.moreLoopDepth=0;
   }else if(/^(more|more again|tell me more|tell me more again|say more|go on|continue)$/.test(q)){
     state.moreLoopDepth=Math.min(4,(state.moreLoopDepth||0)+1);
-  }else if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q)){
+  }else if(isMissionWrongLaneCorrectionSignal(q)){
     state.correctionAttemptCount=(state.correctionAttemptCount||0)+1;
   }else{
     state.whyLoopDepth=0;
@@ -15907,14 +15936,14 @@ function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
     outputRoute=priorState.topic;
   }
   var state=updateMissionOutputLoopStateV1(outputRoute,q);
-  if(state.correctionAttemptCount>=2&&/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q)){
+  if(state.correctionAttemptCount>=2&&isMissionWrongLaneCorrectionSignal(q)){
     return 'Wrong lane again.<br><br>Which one: <strong>Pipeline, Money, Sales, Content, Production, or Sync?</strong>';
   }
   var conversationType=conv&&conv.type||'';
   var tracedResponse=selectMissionOutputResponseWithTraceV1(outputRoute,ctx,question,conv,brainState,state,q);
   if(tracedResponse)return tracedResponse;
   var shouldHandle=false;
-  if(/\b(nah|not that|wrong lane|other one|no i mean|that aint it|you missed it)\b/.test(q))shouldHandle=true;
+  if(isMissionWrongLaneCorrectionSignal(q))shouldHandle=true;
   if(conversationType===CONV_WHY||/^(why|why again|run it back|explain more|make it make sense)$/.test(q))shouldHandle=true;
   if(/^(more|more again|tell me more|tell me more again|say more|go on|continue)$/.test(q))shouldHandle=true;
   var profile=getMissionInputProfile(question||'',q);
@@ -16672,10 +16701,14 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     route='sales';
     return finishMissionAnswer('Call mode closed.<br><br>What happened: <strong>booked, no, follow-up, or paid?</strong><br><br>Give me the result and I will help log the next move.',{sessionArc:false,closer:false,presence:false});
   }
-  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(rawQ)||/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(q)){
-    route='sales';
-    setMissionCommandActiveTopic('sales',question||'');
-    return finishMissionAnswer('Got it. Sales lane, not pipeline.<br><br>Ask: "Before I explain anything, what made you want to talk today?"<br><br>What did they say back?',{sessionArc:false,closer:false,presence:false});
+  var correctionTarget=getMissionCorrectionTargetRouteV2(rawQ)||getMissionCorrectionTargetRouteV2(q);
+  if(correctionTarget){
+    route=correctionTarget;
+    setMissionCommandActiveTopic(route,question||'');
+    if(route==='sales')return finishMissionAnswer('Got it. Sales lane, not pipeline.<br><br>Ask: "Before I explain anything, what made you want to talk today?"<br><br>What did they say back?',{sessionArc:false,closer:false,presence:false});
+    var correctionRouteAnswer=getMissionCommandRouteAnswer(route,ctx,question||cleanQuestion||'');
+    if(correctionRouteAnswer)return finishMissionAnswer('Got it. '+getMissionRouteLabelV2(route)+' lane.<br><br>'+correctionRouteAnswer,{sessionArc:false});
+    return finishMissionAnswer('Got it. Wrong lane.<br><br>Pick the lane and I will rerun it: Pipeline, Money, Sales, Content, Production, or Sync.',{sessionArc:false,closer:false,presence:false});
   }
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
@@ -16850,11 +16883,18 @@ function runMissionCommandSelfCheck(){
     {q:'he said it is too expensive',route:'sales',mustAny:['stage','say','tone','pause']},
     {q:'write a warm follow up',route:'sales',mustAny:['goal','send','reply']},
     {q:'write a warm follow-up',route:'sales',mustAny:['goal','send','reply']},
-    {q:'prep me for a call',route:'sales',mustAny:['lead read','opening','call path']},
-    {q:'perp me for a call',route:'sales',mustAny:['lead read','opening','call path']},
-    {q:'roleplay a skeptical artist',route:'sales',mustAny:['roleplay','prospect','your move']},
-    {q:'score my answer',route:'sales',mustAny:['scorecard','clarify','next step']}
-  ];
+	    {q:'prep me for a call',route:'sales',mustAny:['lead read','opening','call path']},
+	    {q:'perp me for a call',route:'sales',mustAny:['lead read','opening','call path']},
+	    {q:'roleplay a skeptical artist',route:'sales',mustAny:['roleplay','prospect','your move']},
+	    {q:'score my answer',route:'sales',mustAny:['scorecard','clarify','next step']},
+	    {q:'i meant sales not pipeline',route:'sales',mustAny:['sales lane','ask','what did they say back']},
+	    {q:'no not pipeline sales',route:'sales',mustAny:['sales lane','ask','what did they say back']},
+	    {q:'nah production not content',route:'production',mustAny:['production','asset','ship','status']},
+	    {q:'not content i mean production',route:'production',mustAny:['production','asset','ship','status']},
+	    {q:'i meant pipeline not sales',route:'leads',mustAny:['pipeline','lead','offer','hit list']},
+	    {q:'call finished',route:'sales',mustAny:['call mode closed','booked','follow-up','paid']},
+	    {q:'off the phone',route:'sales',mustAny:['call mode closed','booked','follow-up','paid']}
+	  ];
   checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
