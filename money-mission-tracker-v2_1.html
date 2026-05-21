@@ -11686,7 +11686,7 @@ function buildMissionDecisionMemoryResponseV1(turn,ctx){
 }
 
 /* =========================================================
-   MISSION PATTERN-BASED COACHING MEMORY — v1
+   MISSION PATTERN-BASED COACHING MEMORY — v1.1
 ========================================================= */
 function getMissionPatternMemorySessionV1(){
   try{
@@ -11719,15 +11719,32 @@ function getMissionPatternBasedCoachingMemoryV1(turn,ctx){
   var salesAsk=/\b(what should i say|what do i say|too expensive|cant afford|can't afford|he said|she said|they said|ghosted|payment plan|roleplay|score my answer|call is done|booked|paid)\b/.test(q);
   var followupAsk=/\b(why|why again|more|more again|run it back|tell me more|make it make sense|what next|what now|what should i do|what do i do|call the move)\b/.test(q);
   var directNext=/\b(what next|what now|what should i do|what do i do|call the move|pick one|one thing|help me get started|lock in)\b/.test(q);
+  var directSyncCommand=/^(sync check|where do i check sync|\/sync)\b/.test(q);
+  var directDpcRead=/\b(what did i log|what have i logged|show dpc|daily log|\/dpc)\b/.test(q);
+  var dpcZeroAsk=directNext||/\b(make money today|money today|get to the money|get started|start today|trying to make money|tryna make money)\b/.test(q);
+  var dataTrustAsk=/\b(data stale|stale data|is this current|current data|data current|sync|system health|notion|sheets|backup|webhook|connection)\b/.test(q);
   var noReplyCount=history.filter(function(r){return r&&r.type==='no_reply';}).length;
   var doneOnlyCount=history.filter(function(r){return r&&r.type==='done';}).length;
   var resourceUseCount=history.filter(function(r){return r&&r.followthroughType==='resource';}).length;
   var whyMoreCount=countMissionPatternQuestionsV1(turns,/^(why|why again|more|more again|run it back|tell me more|make it make sense)$/);
+  var syncTurns=countMissionPatternQuestionsV1(turns,/\b(sync|stale|data current|current data|is this current|where do i check sync|sync check|notion|sheets|backup|webhook|connection)\b/);
   var salesTurns=countMissionPatternRoutesV1(turns,'sales');
   var leadTurns=countMissionPatternRoutesV1(turns,'leads');
+  var cache=turn&&turn.sessionDataCache||{};
+  var snap=cache.snapshot||{};
+  var dpc=snap.dpc||ctx&&ctx.dpc||{};
+  var dpcTotal=0;
+  ['dms','callsMade','coldCalls','calls','booked','closes','money'].forEach(function(k){dpcTotal+=Number(dpc&&dpc[k]||0)||0;});
+  if(!dpcTotal&&cache.counts&&typeof cache.counts.dpcTotal==='number')dpcTotal=cache.counts.dpcTotal;
+  var dataLevel=turn&&turn.dataConfidence&&turn.dataConfidence.level||'medium';
+  var syncRisk=turn&&turn.syncStatus&&turn.syncStatus.risk||'none';
   var pattern=null;
 
-  if(noReplyCount>=2&&directNext&&!explicitData&&!salesAsk){
+  if(dpcTotal===0&&dpcZeroAsk&&!salesAsk&&!directSyncCommand&&!directDpcRead&&noReplyCount<2&&doneOnlyCount<2&&resourceUseCount<2&&whyMoreCount<3){
+    pattern={key:'dpc_zero_loop',label:'DPC Zero Loop',message:'Pattern read: the day is still invisible to the OS.<br><br>DPC is at zero, so another answer will not teach the system anything yet.<br><br>First move: log one measurable outreach or sales action.',action:{label:'Log DPC',type:'log_dpc',target:'dpc',action:'log one measurable outreach or sales action',requiresConfirmation:true,reason:'pattern_dpc_zero'}};
+  }else if((dataLevel==='low'||syncRisk==='high'||syncTurns>=2)&&dataTrustAsk&&!salesAsk&&!directSyncCommand){
+    pattern={key:'data_trust_loop',label:'Data Trust Loop',message:'Pattern read: we keep checking whether the data can be trusted.<br><br>Run one sync check, then stop checking and use the result to choose the next action.',action:{label:'Run Sync Check',type:'sync_check',target:'system_hub',action:'run one sync check and return to the active move',requiresConfirmation:false,reason:'pattern_data_trust_loop'}};
+  }else if(noReplyCount>=2&&directNext&&!explicitData&&!salesAsk){
     pattern={key:'repeated_no_reply',label:'Repeated No Reply',message:'Pattern read: the issue is not needing another move.<br><br>The last touches are not producing replies.<br><br>Switch signal: tighten the target, change the opener, or move to a warmer lead.',action:{label:'Review Opener',type:'open_card',target:'sales_coach',action:'review the opener before another touch',requiresConfirmation:false,reason:'pattern_repeated_no_reply'}};
   }else if(doneOnlyCount>=2&&directNext&&!explicitData&&!salesAsk){
     pattern={key:'done_without_result',label:'Done Without Result',message:'Pattern read: actions are getting marked done without a business result.<br><br>Before the next move, capture what happened: no reply, reply, booked, paid, or finished.',action:{label:'Capture Result',type:'result_prompt',target:'mission_command',action:'capture the result before a new move',requiresConfirmation:true,reason:'pattern_done_without_result'}};
@@ -11747,7 +11764,7 @@ function getMissionPatternBasedCoachingMemoryV1(turn,ctx){
     label:pattern&&pattern.label||'',
     message:pattern&&pattern.message||'',
     action:pattern&&pattern.action||null,
-    counts:{noReply:noReplyCount,doneOnly:doneOnlyCount,resourceUse:resourceUseCount,whyMore:whyMoreCount,salesTurns:salesTurns,leadTurns:leadTurns},
+    counts:{noReply:noReplyCount,doneOnly:doneOnlyCount,resourceUse:resourceUseCount,whyMore:whyMoreCount,syncTurns:syncTurns,salesTurns:salesTurns,leadTurns:leadTurns,dpcTotal:dpcTotal},
     suppressBubbles:shouldAnswer
   };
   if(pattern){
@@ -18474,6 +18491,17 @@ function runMissionIntegritySelfCheck(){
   ]}}));
   var patternClarity=getMissionPatternBasedCoachingMemoryV1({rawInput:'why again',route:'leads',inputSignals:{}},actionCtx);
   if(!patternClarity.shouldAnswer||patternClarity.reason!=='clarity_loop_open_action'||!patternClarity.action)failures.push('pattern_clarity_loop');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+  var patternDpcZero=getMissionPatternBasedCoachingMemoryV1({rawInput:'what should i do',route:'now',inputSignals:{},sessionDataCache:{snapshot:{dpc:{dms:0,callsMade:0,booked:0,closes:0,money:0}},counts:{dpcTotal:0}},dataConfidence:{level:'medium'},syncStatus:{risk:'none'}},actionCtx);
+  if(!patternDpcZero.shouldAnswer||patternDpcZero.reason!=='dpc_zero_loop'||!patternDpcZero.action||patternDpcZero.action.type!=='log_dpc')failures.push('pattern_dpc_zero');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[
+    {question:'data stale',route:'sync',timestamp:new Date().toISOString()},
+    {question:'is this current',route:'sync',timestamp:new Date().toISOString()}
+  ]}}));
+  var patternDataTrust=getMissionPatternBasedCoachingMemoryV1({rawInput:'data stale',route:'sync',inputSignals:{},dataConfidence:{level:'low'},syncStatus:{risk:'medium'},sessionDataCache:{snapshot:{dpc:{dms:1,callsMade:0,booked:0,closes:0,money:0}},counts:{dpcTotal:1}}},actionCtx);
+  if(!patternDataTrust.shouldAnswer||patternDataTrust.reason!=='data_trust_loop'||!patternDataTrust.action||patternDataTrust.action.type!=='sync_check')failures.push('pattern_data_trust_loop');
+  var patternSyncGuard=getMissionPatternBasedCoachingMemoryV1({rawInput:'sync check',route:'sync',inputSignals:{},dataConfidence:{level:'low'},syncStatus:{risk:'medium'},sessionDataCache:{snapshot:{dpc:{dms:1,callsMade:0,booked:0,closes:0,money:0}},counts:{dpcTotal:1}}},actionCtx);
+  if(patternSyncGuard.shouldAnswer)failures.push('pattern_sync_direct_guard');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'leads',turns:[{question:'/pipeline',route:'leads',timestamp:new Date().toISOString()}]},resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'leads',actionLabel:'Open Hit List',recordedAt:new Date().toISOString()},history:[]}}));
   var bookedThread=getMissionThreadMemoryV1({rawInput:'why',route:'leads',inputSignals:{}},actionCtx);
   if(!bookedThread.shouldAnswer||bookedThread.reason!=='last_result_thread')failures.push('thread_memory_booked_signal');
@@ -18564,7 +18592,7 @@ function runMissionIntegritySelfCheck(){
   var tooMuchPrompt=buildMissionTooMuchAdviceResponseV1({rawInput:'what next',tooMuchAdvice:tooMuch},actionCtx);
   if(tooMuchPrompt.indexOf('stack more advice')<0||tooMuchPrompt.indexOf('What is blocking')<0)failures.push('too_much_advice_prompt');
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:66};
+  return {passed:!failures.length,failures:failures,total:69};
 }
 
 function runMissionCommandSelfCheck(){
