@@ -9394,6 +9394,121 @@ MISSION_SKILL_PACKS.push({
   regressionTests:MISSION_SALES_DEEP_OUTPUT_PACK_V1.regressionTests
 });
 
+var MISSION_SALES_DEEP_INPUT_PACK_V1={
+  id:'mc_skill_sales_deep_pack_inputs_v1',
+  version:'1.0',
+  installMode:'additive_only',
+  route:'sales',
+  worker:'sales_coach',
+  inputTriggers:[
+    {subroute:'script_request',depth:'quick',responseShape:'script',b2:false,b3:false,confidence:0.94,phrases:['what should i say','what do i say','what should i text','what should i dm','help me reply','write a reply','write a response','text back','dm back','quick what do i say','tell me one thing to say right now']},
+    {subroute:'dm_script',depth:'medium',responseShape:'dm_reply',b2:false,b3:false,confidence:0.93,phrases:['write a dm','write a sales dm','cold dm','write me a dm','write a message','write a reply dm','same but dm']},
+    {subroute:'follow_up',depth:'medium',responseShape:'script',b2:false,b3:false,confidence:0.94,phrases:['write a follow up','write a warm follow up','warm follow up','cold follow up','follow up after ghosting','write an atl studio follow up','atl studio follow up','atl follow up','studio follow up','reopen this convo','restart this conversation','soft reopen','he came back','she came back','they came back after ghosting']},
+    {subroute:'bump_message',depth:'quick',responseShape:'script',b2:false,b3:false,confidence:0.94,phrases:['send a bump','write a bump','bump them','quick bump','wake him up','wake her up','wake them up']},
+    {subroute:'ghosted',depth:'quick',responseShape:'script',b2:false,b3:false,confidence:0.94,phrases:['he ghosted','she ghosted','they ghosted','he stopped replying','she stopped replying','they stopped replying','left me on read','no response','no reply','he dragging','she dragging','they dragging']},
+    {subroute:'live_call',depth:'live',responseShape:'live_call_line',b2:false,b3:false,confidence:0.96,phrases:['live call','i am on the phone','i am on phone','i’m on the phone','i am in a call','i’m in a call','on a sales call','call is live','calling them now','i am currently on the phone with them','i am in the middle of a sales call','i am literally on the call right now']},
+    {subroute:'call_prep',depth:'medium',responseShape:'call_prep',b2:false,b3:false,confidence:0.94,phrases:['prep me for a call','perp me for a call','prep this call','call prep','prepare me for a call','how do i get them on a call','how do i move them from dm to call']},
+    {subroute:'roleplay',depth:'medium',responseShape:'roleplay',b2:false,b3:false,confidence:0.94,phrases:['roleplay','let’s roleplay','lets roleplay','role play','pretend you are the client','pretend you’re the client','hit me with an objection','roleplay a skeptical artist','roleplay business owner','act like a skeptical artist','can you pretend to be the prospect']},
+    {subroute:'scorecard',depth:'medium',responseShape:'scorecard',b2:false,b3:false,confidence:0.94,phrases:['score my call','score my answer','score this dm','how did i do','was that good','score what i just said','rate my response','grade my call']},
+    {subroute:'post_call_debrief',depth:'medium',responseShape:'debrief',b2:false,b3:true,confidence:0.93,phrases:['call done','call is done','just got off the call','the call just ended','debrief this call','review this call','post call debrief','call notes']},
+    {subroute:'win_debrief',depth:'quick',responseShape:'debrief',b2:false,b3:true,confidence:0.93,phrases:['closed one','booked a call','got a reply','got paid','won the deal','we just closed the deal','we booked the call','i got a response back']},
+    {subroute:'loss_debrief',depth:'medium',responseShape:'debrief',b2:false,b3:true,confidence:0.93,phrases:['lost the deal','they said no','post call loss']},
+    {subroute:'stall_debrief',depth:'medium',responseShape:'debrief',b2:false,b3:true,confidence:0.93,phrases:['call stalled','no decision','post call stall']},
+    {subroute:'discovery_question',depth:'quick',responseShape:'script',b2:false,b3:false,confidence:0.9,phrases:['opening question','ask discovery question','ask a discovery question','how do i open the call']},
+    {subroute:'price_delivery',depth:'quick',responseShape:'script',b2:false,b3:false,confidence:0.9,phrases:['what if they ask price','how do i say the price','price delivery','price without flinching']},
+    {subroute:'silence_after_price',depth:'quick',responseShape:'coach',b2:false,b3:false,confidence:0.9,phrases:['what do i do after price','silence after price','after i say the price']},
+    {subroute:'trial_close',depth:'quick',responseShape:'script',b2:false,b3:false,confidence:0.9,phrases:['trial close','soft close','not pushy','less salesy']},
+    {subroute:'direct_close',depth:'quick',responseShape:'script',b2:false,b3:false,confidence:0.9,phrases:['how do i close','direct close','ask for payment','how do i ask for the money','help me close this','close him','close her','close them']},
+    {subroute:'next_step_lock',depth:'quick',responseShape:'script',b2:false,b3:false,confidence:0.9,phrases:['lock next step','next step lock','get him to move','get her to move','get them to move','move them','same but call']},
+    {subroute:'offer_angle',depth:'medium',responseShape:'diagnostic',b2:false,b3:false,confidence:0.88,phrases:['what is the angle','what’s the angle','give me the angle','how do i position this','turn the heat up','soft press']}
+  ],
+  objectionTriggers:{
+    too_expensive:['he said too expensive','she said too expensive','they said too expensive','too expensive','costs too much','price objection','he says it is too expensive','she says it is too expensive','they say it is too expensive'],
+    cant_afford:['can’t afford it','cant afford','he said he cant afford it','she said she cant afford it','they cant afford it','no budget','they have no budget','money tight'],
+    need_to_think:['need to think','he needs to think','she needs to think','they need to think','let me think about it','i will think about it','maybe later'],
+    talk_to_partner:['talk to partner','let me talk to my partner','need to ask spouse','need approval','who decides','decision maker absent','he said he needs to talk to his partner','she said she needs approval'],
+    send_more_info:['send more info','send me info','can you send details','send the details first','he wants me to send him more information','they want me to send more information'],
+    not_ready:['not ready yet','not right now','not the right time','bad timing','she said it is not the right time','they said maybe later'],
+    already_tried:['already tried that','tried something like this','he said he already tried something like this'],
+    what_makes_different:['what makes this different','how is this different','they asked what makes this different'],
+    need_results_first:['need to see results first','show me proof','show results first'],
+    start_smaller:['can we start smaller','start with something smaller','they want to start smaller','they asked if we could start smaller'],
+    just_want_beats:['just want beats','i just need beats','just need studio','only need mixing','he only wants beats right now','she only wants studio time'],
+    already_has_producer:['already has producer','i have a producer','she said she already has a producer'],
+    youtube_is_free:['youtube is free','free info online','he said youtube has this for free'],
+    no_time:['no time','don’t have time','dont have time','i do not have time'],
+    payment_plan:['payment plan','can we do payments','he asked for a payment plan'],
+    check_budget:['let me check my budget','check budget']
+  },
+  typoTriggers:[
+    ['waht should i say','what should i say'],['wht should i say','what should i say'],['wat should i say','what should i say'],['wut should i say','what should i say'],['what shuld i say','what should i say'],
+    ['wat do i say','what do i say'],['wut do i say','what do i say'],['hlp me reply','help me reply'],['help me replie','help me reply'],['write dm','write a dm'],
+    ['folow up','follow up'],['follw up','follow up'],['followup','follow up'],['warm folow','warm follow up'],['send bumb','send bump'],['bumb them','bump them'],
+    ['ghostd','ghosted'],['gosted','ghosted'],['too expesive','too expensive'],['to expensive','too expensive'],['to expenisve','too expensive'],
+    ['cnt afford','cant afford'],['no budgt','no budget'],['budjet','budget'],['need to tink','need to think'],['needa think','need to think'],['think abt it','think about it'],
+    ['send deets','send details'],['not redy','not ready'],['alrdy tried','already tried'],['already tryed','already tried'],['what makes diffrent','what makes this different'],
+    ['payment paln','payment plan'],['paymnt plan','payment plan'],['live cal','live call'],['liv call','live call'],['im on phone','i am on the phone'],['on the fone','on the phone'],
+    ['prep me fr call','prep me for call'],['cal prep','call prep'],['role ply','roleplay'],['roll play','roleplay'],['pretend ur client','pretend you are the client'],
+    ['socre my answer','score my answer'],['score my answr','score my answer'],['debrief cal','debrief call'],['closed 1','closed one'],['bookd a call','booked a call'],['got replie','got reply'],
+    ['rapprenuer dm','rappreneur os dm'],['rapprenuer os','rappreneur os'],['bangin plus close','bangin+ close'],['atl followup','atl follow up']
+  ],
+  offerTriggers:{
+    break_even:['break even','break-even','break even challenge','profit system','business not profitable','revenue leak','business owner','entrepreneur','offer leak'],
+    rappreneur_os:['rappreneur','rappreneur os','rapper business','artist business','music business system','rollout system','fans and money','monetize music'],
+    atl_studio_bookings:['atl','atlanta','studio','studio booking','book session','session time','record at the studio','local artist','touring artist','atl studio dm','atl studio follow up'],
+    bangin_production_deal:['bangin production','production deal','build my sound','producer package','beat package','custom beats'],
+    bangin_plus:['bangin+','bangin plus','monthly beats','consistent beats','production membership','keep sound moving'],
+    mix_master:['mix master','mix/master','mixing','mastering','song clean up','radio ready','final mix'],
+    beat_license:['beat license','lease beat','exclusive beat','beat lease','buy beat','license this beat'],
+    one_on_one_coaching:['coaching','consulting','one on one','1 on 1','direct help','work with me','private coaching']
+  },
+  personaSignals:{
+    artist_signal:['rapper','artist','musician','record','single','ep','album','fans','rollout','streams','beat','producer','studio','song','release'],
+    business_owner_signal:['entrepreneur','business owner','client','profit','leads','sales','revenue','offer','fulfillment','operations','marketing'],
+    budget_sensitive_signal:['price','expensive','afford','budget','cheaper','payment','discount','broke','money tight'],
+    stall_signal:['think','later','maybe','send info','get back','not ready','timing','ask partner','approval'],
+    win_signal:['closed','booked','paid','replied','said yes','invoice paid','deposit','sent payment'],
+    live_signal:['on phone','in call','live call','right now','quick','what do i say now']
+  },
+  signalWords:{script:['say','reply','text','dm','message'],live:['call','phone','live','right now'],objection:['price','expensive','afford','budget','discount','think','maybe','later','ready','timing'],follow_up:['ghost','read','reply','bump','follow'],practice:['roleplay','pretend','score','rate','grade'],win:['closed','booked','paid','got reply']},
+  contextCarryRules:['sales_short_followup','live_call_persist','same_but_dm','same_but_call','other_one_same_objection'],
+  subRouteDefinitions:{live_call:'A1XX needs help while actively on a call',objection:'Prospect gave a concern or stall',follow_up:'A1XX needs to re-open or follow up',script_request:'A1XX asks what to say or write',roleplay:'A1XX wants practice',scorecard:'A1XX wants call or DM scored',debrief:'A1XX wants to review a call or DM',dm_script:'A1XX wants a DM sequence or reply',offer_angle:'A1XX asks how to position a specific offer',call_prep:'A1XX wants prep before a call',closing:'A1XX wants to ask for decision or payment'},
+  regressionTests:[
+    {q:'what should i say',route:'sales',subroute:'script_request'},
+    {q:'waht should i say',route:'sales',subroute:'script_request'},
+    {q:'write a warm follow up',route:'sales',subroute:'follow_up'},
+    {q:'send a bump',route:'sales',subroute:'bump_message'},
+    {q:'he ghosted',route:'sales',subroute:'ghosted'},
+    {q:'too expensive',route:'sales',subroute:'objection',objectionKey:'too_expensive'},
+    {q:"he said it's too expensive",route:'sales',subroute:'objection',objectionKey:'too_expensive'},
+    {q:'need to think',route:'sales',subroute:'objection',objectionKey:'need_to_think'},
+    {q:'send more info',route:'sales',subroute:'objection',objectionKey:'send_more_info'},
+    {q:'payment plan',route:'sales',subroute:'objection',objectionKey:'payment_plan'},
+    {q:'i am on the phone',route:'sales',subroute:'live_call'},
+    {q:'prep me for a call',route:'sales',subroute:'call_prep'},
+    {q:'perp me for a call',route:'sales',subroute:'call_prep'},
+    {q:'roleplay a skeptical artist',route:'sales',subroute:'roleplay'},
+    {q:'score my answer',route:'sales',subroute:'scorecard'},
+    {q:'debrief this call',route:'sales',subroute:'post_call_debrief'},
+    {q:'closed one',route:'sales',subroute:'win_debrief'},
+    {q:'write a Rappreneur OS dm',route:'sales',subroute:'offer_specific_dm',offerKey:'rappreneur_os'},
+    {q:'write an ATL studio follow up',route:'sales',subroute:'follow_up',offerKey:'atl_studio_bookings'},
+    {q:'mix master reply',route:'sales',subroute:'offer_specific_dm',offerKey:'mix_master'}
+  ]
+};
+
+MISSION_SKILL_PACKS.push({
+  id:'mc_skill_sales_deep_pack_inputs_v1',
+  name:'Mission Command Sales Deep Pack v1 — Inputs',
+  version:'1.0',
+  status:'active',
+  installMode:'additive_only',
+  route:'sales',
+  worker:'sales_coach',
+  fallbackOrder:['mc_skill_a1xx_input_intelligence_expansion_v1_1','mc_skill_a1xx_input_intelligence_router_depth_v1','legacy_mission_command'],
+  regressionTests:MISSION_SALES_DEEP_INPUT_PACK_V1.regressionTests
+});
+
 var MISSION_RESPONSE_DEPTH={
   micro:{label:'Micro',description:'One short answer or one direct move.'},
   quick:{label:'Quick',description:'Short read plus next action.'},
@@ -10202,6 +10317,8 @@ function scoreMissionRoutesV2(q,signals,turn){
   }
   var singleMap={leads:'leads',pipeline:'leads',money:'report',revenue:'report',dpc:'dpc',content:'content',production:'production',calendar:'calendar',week:'weekly',review:'weekly',sync:'sync',resources:'resources',rolodex:'resources',memory:'memory',settings:'help',sales:'sales',closer:'sales',objection:'sales',discovery:'sales',roleplay:'sales'};
   if(singleMap[q])add(singleMap[q],0.92,'single_word_topic','data_request');
+  var salesDeepInput=typeof resolveMissionSalesDeepInputV1==='function'?resolveMissionSalesDeepInputV1(q,turn):null;
+  if(salesDeepInput)add('sales',Math.max(0.9,salesDeepInput.confidence||0.9),'sales_deep_input_'+(salesDeepInput.subroute||'match'),'sales_'+(salesDeepInput.subroute||'input'));
   var contextMode=turn&&turn.liveContext&&turn.liveContext.contextMode||getMissionContextMode();
   var contextRoute=getMissionContextRouteForMode(contextMode);
   if(contextRoute&&missionPromptCanUseContextMode(q,signals)){
@@ -10793,6 +10910,11 @@ function getMissionBrainStateV2(turn){
     contextMode:turn.liveContext&&turn.liveContext.contextMode||getMissionContextMode(),
     contextRoute:turn.liveContext&&turn.liveContext.contextRoute||getMissionContextRouteForMode(getMissionContextMode()),
     currentSalesMode:turn.liveContext&&turn.liveContext.currentSalesMode||'normal',
+    salesDeepInputMatch:turn.salesDeepInputMatch||null,
+    salesSubroute:turn.salesSubroute||'',
+    objectionKey:turn.objectionKey||'',
+    offerKey:turn.offerKey||'',
+    personaSignal:turn.personaSignal||'',
     inputEnergy:turn.inputEnergy||'',
     responseDepth:turn.responseDepth||'',
     responseShape:turn.responseShape||'',
@@ -11280,7 +11402,14 @@ function runMissionTurnV2SelfCheck(){
     {q:'prep me for a call',route:'sales',slices:['pipeline','revenue','session']},
     {q:'what should i do',route:'production',contextMode:'production'},
     {q:'what next',route:'content',contextMode:'content'},
-    {q:'sync check',route:'sync',contextMode:'content'}
+    {q:'sync check',route:'sync',contextMode:'content'},
+    {q:'waht should i say',route:'sales',salesSubroute:'script_request'},
+    {q:'send a bump',route:'sales',salesSubroute:'bump_message'},
+    {q:'he asked for a payment plan',route:'sales',salesSubroute:'objection',objectionKey:'payment_plan'},
+    {q:'write an ATL studio follow up',route:'sales',salesSubroute:'follow_up',offerKey:'atl_studio_bookings'},
+    {q:'mix master reply',route:'sales',salesSubroute:'offer_specific_dm',offerKey:'mix_master'},
+    {q:'roleplay a skeptical artist',route:'sales',salesSubroute:'roleplay'},
+    {q:'score my answer',route:'sales',salesSubroute:'scorecard'}
   ];
   var failures=[];
   var priorSession=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
@@ -11298,6 +11427,9 @@ function runMissionTurnV2SelfCheck(){
     if(item.shape&&turn.responseShape!==item.shape)failures.push(item.q+' shape '+(turn.responseShape||'none'));
     if(item.type&&turn.conversationType!==item.type)failures.push(item.q+' type '+(turn.conversationType||'none'));
     if(item.clarify&&!(turn.routePlan&&turn.routePlan.clarify))failures.push(item.q+' clarify false');
+    if(item.salesSubroute&&turn.salesSubroute!==item.salesSubroute)failures.push(item.q+' sales subroute '+(turn.salesSubroute||'none'));
+    if(item.objectionKey&&turn.objectionKey!==item.objectionKey)failures.push(item.q+' objection '+(turn.objectionKey||'none'));
+    if(item.offerKey&&turn.offerKey!==item.offerKey)failures.push(item.q+' offer '+(turn.offerKey||'none'));
     if(item.slices)item.slices.forEach(function(sliceName){if(!turn.contextSlices||!turn.contextSlices[sliceName])failures.push(item.q+' missing slice '+sliceName);});
     if(item.onlySlices){
       var actual=turn.contextSlices&&turn.contextSlices._slices||[];
@@ -11781,8 +11913,105 @@ var MISSION_SALES_OBJECTION_MAP={
   diy:{match:/\b(do it myself|youtube is free|already has|already have|another producer)\b/,type:'preference concern',stage:'E',say:'That may be true. What made you still take a look at this if you already have another option?',tone:'confused curiosity'}
 };
 
+function normalizeMissionSalesDeepInputTextV1(q){
+  var out=normalizeMissionQuestion(q||'');
+  var pack=typeof MISSION_SALES_DEEP_INPUT_PACK_V1!=='undefined'?MISSION_SALES_DEEP_INPUT_PACK_V1:null;
+  (pack&&pack.typoTriggers||[]).forEach(function(pair){
+    var wrong=pair&&pair[0]||'';
+    var right=pair&&pair[1]||'';
+    if(!wrong||!right)return;
+    var re=new RegExp('\\b'+wrong.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi');
+    out=out.replace(re,right);
+  });
+  return out.replace(/\s+/g,' ').trim();
+}
+
+function missionSalesDeepPhraseHitV1(q,phrases){
+  q=String(q||'').toLowerCase();
+  return (phrases||[]).some(function(phrase){
+    phrase=String(phrase||'').toLowerCase().trim();
+    return phrase&&q.indexOf(phrase)>=0;
+  });
+}
+
+function getMissionSalesDeepOfferKeyFromInputV1(q){
+  var pack=typeof MISSION_SALES_DEEP_INPUT_PACK_V1!=='undefined'?MISSION_SALES_DEEP_INPUT_PACK_V1:null;
+  var triggers=pack&&pack.offerTriggers||{};
+  for(var key in triggers){
+    if(triggers.hasOwnProperty(key)&&missionSalesDeepPhraseHitV1(q,triggers[key]))return key;
+  }
+  return typeof getMissionSalesDeepOfferKeyV1==='function'?getMissionSalesDeepOfferKeyV1(q):'';
+}
+
+function getMissionSalesDeepObjectionKeyFromInputV1(q){
+  var pack=typeof MISSION_SALES_DEEP_INPUT_PACK_V1!=='undefined'?MISSION_SALES_DEEP_INPUT_PACK_V1:null;
+  var triggers=pack&&pack.objectionTriggers||{};
+  for(var key in triggers){
+    if(triggers.hasOwnProperty(key)&&missionSalesDeepPhraseHitV1(q,triggers[key]))return key;
+  }
+  return typeof getMissionSalesDeepObjectionKeyV1==='function'?getMissionSalesDeepObjectionKeyV1(q):'';
+}
+
+function getMissionSalesDeepPersonaSignalV1(q){
+  var pack=typeof MISSION_SALES_DEEP_INPUT_PACK_V1!=='undefined'?MISSION_SALES_DEEP_INPUT_PACK_V1:null;
+  var signals=pack&&pack.personaSignals||{};
+  for(var key in signals){
+    if(signals.hasOwnProperty(key)&&missionSalesDeepPhraseHitV1(q,signals[key]))return key;
+  }
+  return '';
+}
+
+function resolveMissionSalesDeepInputV1(input,turn){
+  var pack=typeof MISSION_SALES_DEEP_INPUT_PACK_V1!=='undefined'?MISSION_SALES_DEEP_INPUT_PACK_V1:null;
+  if(!pack)return null;
+  var q=normalizeMissionSalesDeepInputTextV1(input||'');
+  if(!q)return null;
+  var best=null;
+  var objectionKey=getMissionSalesDeepObjectionKeyFromInputV1(q);
+  var offerKey=getMissionSalesDeepOfferKeyFromInputV1(q);
+  (pack.inputTriggers||[]).forEach(function(trigger){
+    if(!trigger||!missionSalesDeepPhraseHitV1(q,trigger.phrases))return;
+    if(!best||(trigger.confidence||0)>(best.confidence||0))best=trigger;
+  });
+  if(objectionKey&&!best){
+    best={subroute:'objection',depth:'quick',responseShape:'objection_diffuser',b2:false,b3:false,confidence:0.94};
+  }
+  if(offerKey&&!best){
+    best={subroute:'offer_specific_dm',depth:'medium',responseShape:'dm_reply',b2:false,b3:false,confidence:0.92};
+  }
+  if(!best)return null;
+  var match={
+    packId:pack.id,
+    route:'sales',
+    worker:'sales_coach',
+    normalizedInput:q,
+    subroute:best.subroute||'script_request',
+    salesSubroute:best.subroute||'script_request',
+    depth:best.depth||'quick',
+    responseShape:best.responseShape||'script',
+    b2:best.b2===true,
+    b3:best.b3===true,
+    confidence:best.confidence||0.9,
+    objectionKey:objectionKey||'',
+    offerKey:offerKey||'',
+    personaSignal:getMissionSalesDeepPersonaSignalV1(q)
+  };
+  if(match.offerKey&&match.subroute!=='follow_up'&&match.subroute!=='bump_message'&&match.subroute!=='ghosted')match.subroute='offer_specific_dm';
+  if(match.objectionKey)match.subroute='objection';
+  if(turn){
+    turn.salesDeepInputMatch=match;
+    turn.salesSubroute=match.subroute;
+    turn.objectionKey=match.objectionKey;
+    turn.offerKey=match.offerKey;
+    turn.personaSignal=match.personaSignal;
+  }
+  return match;
+}
+
 function getMissionSalesPhraseBridgeV1(q){
   q=normalizeMissionQuestion(q||'');
+  var deepInput=resolveMissionSalesDeepInputV1(q);
+  if(deepInput)return true;
   if(isMissionSalesModeExitSignal(q))return false;
   return /\b(closer|sales coach|what are sales|sales call|discovery call|call prep|prep me|perp me|prepare me|live call|on the phone|on phone|in a call|on a call|call right now|post call loss|post call stall|call was good|debrief this call|what should i say|what do i say|what should i text|what do i text|text back|dm back|help me reply|write.*(dm|text|reply|response|follow up|follow-up)|cold dm|warm follow|warm follow-up|atl studio|studio follow|studio dm|rappreneur.*(dm|qualifier|close|follow)|break even.*(dm|qualifier|close|follow)|bangin.*(dm|qualifier|close|follow)|mix.*master.*(dm|qualifier|close|follow)|beat license|objection|roleplay|role play|score my answer|scorecard|think about it|need to think|too expensive|price|costs too much|cant afford|can't afford|no budget|check budget|payment plan|discount|not ready|bad timing|maybe later|circle back|they said.*next week|he said.*next week|she said.*next week|send more info|send info|more information|talk to partner|talk to manager|decision maker|sign off|prove it works|proof first|guarantee|scam|what makes.*different|already tried|start smaller|just want beats|only need beats|they said.*no time|he said.*no time|she said.*no time|already has producer|already got a producer|youtube is free|ghosted|left me on read|bump)\b/.test(q);
 }
@@ -11794,6 +12023,16 @@ function getMissionSalesSignal(question){
 
 function getMissionSalesMode(question){
   var q=normalizeMissionQuestion(question||'');
+  var deepInput=resolveMissionSalesDeepInputV1(q);
+  if(deepInput){
+    if(deepInput.subroute==='live_call')return 'live_call';
+    if(deepInput.subroute==='call_prep')return 'call_prep';
+    if(deepInput.subroute==='dm_script'||deepInput.subroute==='follow_up'||deepInput.subroute==='bump_message'||deepInput.subroute==='ghosted'||deepInput.subroute==='offer_specific_dm')return 'dm_reply';
+    if(deepInput.subroute==='roleplay')return 'roleplay';
+    if(deepInput.subroute==='scorecard')return 'scorecard';
+    if(deepInput.subroute==='objection')return 'objection_diffuser';
+    if(deepInput.subroute==='discovery_question')return 'discovery_walkthrough';
+  }
   if(isMissionSalesModeExitSignal(q))return 'normal';
   if(/^\/livecall\b/.test(q)||/\b(on the phone|right now|live call|what should i say|what do i say|he said|she said|they said)\b/.test(q))return 'live_call';
   if(/^\/callprep\b/.test(q)||/\b(prep me|call prep|before a call|in 10 minutes|discovery call)\b/.test(q))return 'call_prep';
@@ -13948,12 +14187,18 @@ function getMissionSalesDeepOutputResponseV1(route,ctx,question,conv,brainState)
   var isSalesRoute=liveMode||route==='sales'||(conv&&conv.route==='sales')||getMissionSalesSignal(question||'');
   if(!q||!isSalesRoute)return '';
   var pack=MISSION_SALES_DEEP_OUTPUT_PACK_V1||null;
-  var offerKey=getMissionSalesDeepOfferKeyV1(q);
-  var objectionKey=getMissionSalesDeepObjectionKeyV1(q);
-  var subtype=getMissionSalesDeepSubtypeV1(q);
+  var inputMatch=typeof resolveMissionSalesDeepInputV1==='function'?resolveMissionSalesDeepInputV1(q):null;
+  if(inputMatch&&inputMatch.normalizedInput)q=inputMatch.normalizedInput;
+  var offerKey=(inputMatch&&inputMatch.offerKey)||getMissionSalesDeepOfferKeyV1(q);
+  var objectionKey=(inputMatch&&inputMatch.objectionKey)||getMissionSalesDeepObjectionKeyV1(q);
+  var subtype=(inputMatch&&inputMatch.subroute)||getMissionSalesDeepSubtypeV1(q);
   var offerIntent=getMissionSalesOfferIntentV1(q);
   if(liveMode&&!subtype)subtype='live_call';
-  if(offerKey&&!subtype)subtype='offer_specific_dm';
+  if(subtype==='roleplay')subtype='roleplay_start';
+  if(subtype==='dm_script')subtype=offerKey?'offer_specific_dm':'script_request';
+  if(subtype==='follow_up')subtype=(offerKey==='atl_studio_bookings'&&/\b(atl|studio)\b/.test(q))?'atl_studio_follow_up':'warm_follow_up';
+  if(subtype==='objection'&&objectionKey)subtype=objectionKey;
+  if(offerKey&&(!subtype||subtype==='offer_angle'))subtype='offer_specific_dm';
   if(objectionKey&&!subtype)subtype=objectionKey;
   var pool=getMissionSalesDeepPoolV1(pack,subtype,objectionKey,offerKey);
   if(offerKey)pool=filterMissionSalesOfferPoolV1(pool,offerIntent);
