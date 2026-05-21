@@ -12003,6 +12003,94 @@ function getMissionRouteConfidenceBand(score){
   return 'clarify';
 }
 
+/* =========================================================
+   MISSION COGNITIVE LOAD ENGINE — v1
+========================================================= */
+var MISSION_SUPERIOR_INTEL_STATE={
+  currentLoadLevel:'normal',
+  simplifyMode:false,
+  oneThingMode:false,
+  lastLoadSignals:[],
+  updatedAt:''
+};
+
+function getMissionSuperiorIntelStateV1(){
+  try{
+    var raw=sessionStorage.getItem('a1xx_mc_superior_intel_state_v1');
+    return Object.assign({},MISSION_SUPERIOR_INTEL_STATE,raw?JSON.parse(raw):{});
+  }catch(e){
+    return Object.assign({},MISSION_SUPERIOR_INTEL_STATE);
+  }
+}
+
+function setMissionSuperiorIntelStateV1(state){
+  try{
+    sessionStorage.setItem('a1xx_mc_superior_intel_state_v1',JSON.stringify(Object.assign({},MISSION_SUPERIOR_INTEL_STATE,state||{})));
+  }catch(e){}
+}
+
+function missionTopicSwitchCountV1(history){
+  var routes=(history||[]).map(function(turn){return turn&&turn.intentRoute||turn&&turn.route||'';}).filter(Boolean).slice(-5);
+  var count=0;
+  for(var i=1;i<routes.length;i++)if(routes[i]!==routes[i-1])count++;
+  return count;
+}
+
+function getMissionCognitiveLoadV1(rawInput,history,session){
+  var q=normalizeMissionQuestion(rawInput||'');
+  var words=q?q.split(/\s+/).filter(Boolean):[];
+  var signals=[];
+  var score=0;
+  function add(name,points){signals.push(name);score+=points;}
+  if(/\b(tired|drained|burned out|burnt out|exhausted|low energy|not feeling it|dragging|foggy|sleepy)\b/.test(q))add('fatigue',4);
+  if(/\b(overwhelmed|too much|too many|scattered|all over the place|spinning|cant focus|can't focus|cannot focus|decision fatigue)\b/.test(q))add('overwhelm',4);
+  if(/\b(stuck|lost|confused|i do not know|i dont know|help me get started|reset me|bring me back|not locked in)\b/.test(q))add('stuck_or_lost',3);
+  if(words.length>18&&/[?].*[?]/.test(String(rawInput||'')))add('long_multi_question',2);
+  if(words.length>0&&words.length<=4&&!/^(why|more|done|booked|paid|sync|pipeline|content|production|money|sales)$/.test(q))add('fragment',2);
+  var lastQuestions=(history||[]).map(function(turn){return normalizeMissionQuestion(turn&&turn.question||'');}).filter(Boolean).slice(-4);
+  if(q&&lastQuestions.indexOf(q)>=0)add('repeat_question',3);
+  var switches=missionTopicSwitchCountV1(history||[]);
+  if(switches>=3)add('topic_switching',2);
+  var level='normal';
+  if(score>=8)level='one_thing';
+  else if(score>=6)level='high';
+  else if(score>=3)level='elevated';
+  var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|pipeline|who hot|what changed|what did i log|how much money|what should i say|too expensive|call is done)\b/.test(q);
+  var sales=/\b(what should i say|too expensive|cant afford|can't afford|he said|she said|they said|ghosted|roleplay|score my answer)\b/.test(q);
+  var shouldForceFocus=(level==='high'||level==='one_thing'||signals.indexOf('fatigue')>=0||signals.indexOf('overwhelm')>=0)&&!explicitData&&!sales;
+  var read={
+    loadScore:score,
+    loadLevel:level,
+    signals:signals,
+    simplifyMode:level==='high'||level==='one_thing'||signals.indexOf('fatigue')>=0||signals.indexOf('overwhelm')>=0,
+    oneThingMode:level==='one_thing'||/\b(just one thing|one thing|just tell me one thing)\b/.test(q),
+    shouldForceFocus:shouldForceFocus,
+    suppressBubbles:shouldForceFocus||level==='one_thing',
+    responseDepth:level==='one_thing'?'micro':(level==='high'?'quick':'standard'),
+    responseShape:level==='one_thing'?'next_action_only':'focus_reset'
+  };
+  setMissionSuperiorIntelStateV1({currentLoadLevel:read.loadLevel,simplifyMode:read.simplifyMode,oneThingMode:read.oneThingMode,lastLoadSignals:signals,updatedAt:new Date().toISOString()});
+  return read;
+}
+
+function getMissionCognitiveLoadActionV1(turn,ctx){
+  var composed=typeof getMissionActionComposerV1==='function'?getMissionActionComposerV1(ctx||{},'now',turn&&turn.rawInput||'',turn&&turn.brainState||{}):null;
+  return composed&&composed.action||turn&&turn.brainState&&turn.brainState.nextBestMove||'take the next visible step, then log what happened';
+}
+
+function buildMissionCognitiveLoadResponseV1(turn,ctx){
+  var load=turn&&turn.cognitiveLoad||null;
+  if(!load||!load.simplifyMode||!load.shouldForceFocus)return '';
+  var action=getMissionCognitiveLoadActionV1(turn,ctx);
+  if(load.oneThingMode){
+    return 'Do this one thing: '+escapeHtml(action)+'.';
+  }
+  if(load.signals&&load.signals.indexOf('fatigue')>=0){
+    return 'You do not need the whole dashboard right now.<br><br>Do this first: '+escapeHtml(action)+'.<br><br>Then stop and tell me what changed.';
+  }
+  return 'Shrink the field.<br><br>One lane. One action.<br><br>Do this first: '+escapeHtml(action)+'.';
+}
+
 function tryMissionContextCarryRoute(turn){
   var q=turn&&turn.normalizedInput||'';
   var signals=turn&&turn.inputSignals||{};
@@ -12112,6 +12200,19 @@ function getMissionConversationTypeV2(q,signals,route,turn){
 function getMissionRoutePlan(turn){
   var q=turn.normalizedInput||'';
   var signals=turn.inputSignals||{};
+  if(turn&&turn.cognitiveLoad&&turn.cognitiveLoad.shouldForceFocus){
+    return {
+      selectedRoute:'now',
+      confidence:0.96,
+      confidenceBand:getMissionRouteConfidenceBand(0.96),
+      possibleRoutes:[{route:'now',score:0.96,reason:'cognitive_load_focus_reset',intentType:'focus_reset'}],
+      contextCarry:false,
+      clarify:false,
+      routeReason:'cognitive_load_focus_reset',
+      intent:{name:'now',type:'focus_reset'},
+      conversationType:'CONV_FOCUS_RESET'
+    };
+  }
   var skillResolution=resolveA1XXShortInputSkillPackV1(turn);
   if(skillResolution&&skillResolution.contextCarry){
     turn.skillPackResolution=skillResolution;
@@ -12641,6 +12742,7 @@ function inferMissionMemoryCategoryV2(q){
 }
 
 function getMissionResponseDepthV2(turn){
+  if(turn&&turn.cognitiveLoad&&turn.cognitiveLoad.simplifyMode)return turn.cognitiveLoad.responseDepth||'quick';
   if(turn&&turn.scratchpad&&turn.scratchpad.responseDepthHint)return turn.scratchpad.responseDepthHint;
   if(turn&&turn.skillPackResolution&&turn.skillPackResolution.responseDepth)return turn.skillPackResolution.responseDepth;
   if(typeof getMissionResponseDepth==='function'){
@@ -12658,6 +12760,7 @@ function getMissionResponseDepthV2(turn){
 
 function getMissionResponseShapeV2(turn){
   var route=turn.route||'now',s=turn.inputSignals||{},depth=turn.responseDepth||'';
+  if(turn&&turn.cognitiveLoad&&turn.cognitiveLoad.simplifyMode)return turn.cognitiveLoad.responseShape||'focus_reset';
   if(turn&&turn.scratchpad&&turn.scratchpad.responseShapeHint)return turn.scratchpad.responseShapeHint;
   if(turn.skillPackResolution&&turn.skillPackResolution.responseShape)return turn.skillPackResolution.responseShape;
   if(s.asksForWalkthrough)return 'app_walkthrough';
@@ -12698,6 +12801,7 @@ function getMissionBubblePlanV2(turn,depth,shape){
   var explicitDataAsk=false;
   try{explicitDataAsk=!!(turn.inputSignals&&turn.inputSignals.isSlashCommand)||!!(typeof missionQuestionHasExplicitDataAsk==='function'&&missionQuestionHasExplicitDataAsk(turn.route,turn.rawInput));}catch(e){}
   var renderB2=true,renderB3=true;
+  if(turn&&turn.cognitiveLoad&&turn.cognitiveLoad.suppressBubbles){renderB2=false;renderB3=false;}
   if(depth==='micro'){renderB2=false;renderB3=false;}
   if(dataLevel==='low'&&!explicitDataAsk&&!/sync|diagnostic|app_navigation/.test(shape))renderB2=false;
   if(shape==='education_answer'||shape==='plan_builder')renderB2=false;
@@ -12998,6 +13102,8 @@ function runMissionTurn(kind,rawInput,options){
     addMissionTrace(turn,'input_energy_read',{inputEnergy:turn.inputEnergy,turnCount:turn.turnCount});
     turn.inputSignals=analyzeMissionInputV2(turn.normalizedInput,turn);
     addMissionTrace(turn,'input_analyzed',turn.inputSignals);
+    turn.cognitiveLoad=getMissionCognitiveLoadV1(turn.rawInput,typeof getMissionChatHistory==='function'?getMissionChatHistory():[],getMissionBrainSessionV2());
+    addMissionTrace(turn,'cognitive_load_read',turn.cognitiveLoad);
     turn.routePlan=getMissionRoutePlan(turn);
     turn.route=turn.routePlan&&turn.routePlan.selectedRoute||'';
     turn.intent=turn.routePlan&&turn.routePlan.intent||null;
@@ -17134,6 +17240,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     route=turnV2.route||route||'now';
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
   }
+  var cognitiveLoadAnswer=buildMissionCognitiveLoadResponseV1(turnV2,ctx);
+  if(cognitiveLoadAnswer)return finishMissionAnswer(cognitiveLoadAnswer,{sessionArc:false,closer:false,presence:false,firstSentenceRule:false});
   var outputQuestion=getMissionSalesSignal(question||'')?(question||cleanQuestion||''):(cleanQuestion||question||'');
   var outputPackEarly=getMissionOutputPackResponseV1(route,ctx,outputQuestion,conv,brainState);
   if(outputPackEarly)return finishMissionAnswer(outputPackEarly,{sessionArc:false,closer:false,presence:false,explainDecision:true});
@@ -17249,7 +17357,11 @@ function runMissionIntegritySelfCheck(){
   var qualitySpacing=applyMissionReadabilityGuardV1('state.<strong>Current read:</strong>1) Money');
   if(qualitySpacing.indexOf('<br><br><strong>Current read:</strong><br>1)')<0)failures.push('readability_guard');
   if(!missionFirstSentenceNeedsFresheningV1('got it.',['got it.']))failures.push('first_sentence_rule_signal');
-  return {passed:!failures.length,failures:failures,total:16};
+  var cognitiveLoad=getMissionCognitiveLoadV1('I am tired',[],{});
+  if(!cognitiveLoad.shouldForceFocus||!cognitiveLoad.simplifyMode)failures.push('cognitive_load_fatigue');
+  var cognitivePrompt=buildMissionCognitiveLoadResponseV1({rawInput:'I am tired',cognitiveLoad:cognitiveLoad,brainState:{nextBestMove:'Open the current work card'}},{});
+  if(cognitivePrompt.indexOf('whole dashboard')<0||cognitivePrompt.indexOf('Do this first')<0)failures.push('cognitive_load_prompt');
+  return {passed:!failures.length,failures:failures,total:18};
 }
 
 function runMissionCommandSelfCheck(){
