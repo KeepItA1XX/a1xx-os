@@ -11548,7 +11548,7 @@ function getMissionWhatChangedEngineResponseV1(route,ctx,question,brainState){
   var changes=buildMissionChangeListV1(prior.snapshot,current);
   if(turn)addMissionDecisionTraceV1(turn,'what_changed_compared',{changeCount:changes.length,source:prior.source});
   if(!changes.length){
-    return 'Since the last saved checkpoint, I do not see a number or status change in the loaded app state.<br><br>Current read:<br>1) Money: '+fmt(current.revenue)+' of '+fmt(current.weekTarget)+' · gap '+fmt(current.gap)+'<br>2) DPC: '+current.dpc.dms+' DMs · '+current.dpc.callsMade+' calls made · '+current.dpc.booked+' booked · '+current.dpc.closes+' closes · '+fmt(current.dpc.money)+' collected<br>3) Pipeline: '+current.pipeline.open+' open leads<br><br>Next: create one visible move, then log it so the next comparison has something real to read.';
+    return 'Since the last saved checkpoint, I do not see a number or status change in the loaded app state.<br><br><strong>Current read:</strong><br>1) Money: '+fmt(current.revenue)+' of '+fmt(current.weekTarget)+' · gap '+fmt(current.gap)+'<br>2) DPC: '+current.dpc.dms+' DMs · '+current.dpc.callsMade+' calls made · '+current.dpc.booked+' booked · '+current.dpc.closes+' closes · '+fmt(current.dpc.money)+' collected<br>3) Pipeline: '+current.pipeline.open+' open leads<br><br><strong>Next:</strong><br>Create one visible move, then log it so the next comparison has something real to read.';
   }
   var loadSignal=getMissionSnapshotLoadSignalV1(prior.snapshot,current);
   var intro=loadSignal==='first_loaded_snapshot'?'Since the last saved checkpoint, the app has a fuller loaded read:':'Since the last saved checkpoint:';
@@ -16637,6 +16637,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   brainState=brainState||getMissionBrainState(ctx,question||'','');
   var initialIntent=getMissionCommandIntent(question||'');
   var cleanQuestion=initialIntent.cleanQuestion||question||'';
+  var rawQ=normalizeMissionQuestion(question||'');
   var q=String(cleanQuestion||question||'').toLowerCase();
   var shape=getMissionQuestionShape(cleanQuestion||'');
   var multi=initialIntent.forcedByMention?{primary:initialIntent,secondary:null,routes:[initialIntent.route]}:getMissionMultiIntent(question||'');
@@ -16666,12 +16667,12 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var shaped=applyMissionProseRules(applyMissionSessionArc(html,route,ctx,question||'',brainState,opts));
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
-  if(isMissionSalesModeExitSignal(q)){
+  if(isMissionSalesModeExitSignal(rawQ)||isMissionSalesModeExitSignal(q)){
     setMissionLiveCallMode(false,false);
     route='sales';
     return finishMissionAnswer('Call mode closed.<br><br>What happened: <strong>booked, no, follow-up, or paid?</strong><br><br>Give me the result and I will help log the next move.',{sessionArc:false,closer:false,presence:false});
   }
-  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(q)){
+  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(rawQ)||/\b(i meant sales not pipeline|sales not pipeline|what to say not who)\b/.test(q)){
     route='sales';
     setMissionCommandActiveTopic('sales',question||'');
     return finishMissionAnswer('Got it. Sales lane, not pipeline.<br><br>Ask: "Before I explain anything, what made you want to talk today?"<br><br>What did they say back?',{sessionArc:false,closer:false,presence:false});
