@@ -15073,13 +15073,75 @@ function getMissionIntelligenceAnswerStackV1(turn,ctx){
   return stack;
 }
 
+function getMissionArbiterPrioritySignalV1(turn,ctx){
+  var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||'');
+  var shortFollowup=/^(why|why again|more|more again|tell me more|run it back|same thing|continue)$/i.test(q);
+  var directNext=/\b(what next|what now|what should i do|what do i do|next move|just tell me one thing|call the move)\b/.test(q);
+  var explicitStrategy=/\b(how do i|get more|not converting|convert|improve|better|make my offer better|audit|diagnose|framework|principle|teach me|what should i track|what should we track|what is keeping me broke|what's keeping me broke|why am i not making money|why ain'?t i making|need a reset)\b/.test(q);
+  var explicitSales=/\b(what should i say|what do i say|too expensive|he said|she said|they said|ghosted|payment plan|roleplay|score my answer|prep me for a call|call is done|booked|paid)\b/.test(q);
+  var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|how many booked|report|pipeline|who hot|content|production|calendar|data stale)\b/.test(q);
+  var overwhelmed=!!(turn&&turn.cognitiveLoad&&(turn.cognitiveLoad.shouldForceFocus||turn.cognitiveLoad.oneThingMode||turn.cognitiveLoad.simplifyMode));
+  var hasResultMemory=!!(turn&&turn.decisionMemory&&turn.decisionMemory.lastResult&&turn.decisionMemory.shouldAnswer);
+  return {
+    q:q,
+    shortFollowup:shortFollowup,
+    directNext:directNext,
+    explicitStrategy:explicitStrategy,
+    explicitSales:explicitSales,
+    explicitData:explicitData,
+    overwhelmed:overwhelmed,
+    hasResultMemory:hasResultMemory,
+    route:turn&&turn.route||''
+  };
+}
+
+function scoreMissionArbiterCandidateV1(item,signal){
+  var id=item&&item.id||'';
+  var score={
+    cognitive_load:100,
+    execution_mode:90,
+    decision_memory:82,
+    pattern_memory:88,
+    silence_intelligence:78,
+    thread_memory:80,
+    too_much_advice:72,
+    constraint_guidance:70,
+    mission_mentor:76,
+    decision_intent:62
+  }[id]||40;
+  if(signal.overwhelmed&&id==='cognitive_load')score=130;
+  if(signal.shortFollowup&&id==='thread_memory')score=118;
+  if(signal.shortFollowup&&id==='mission_mentor')score-=35;
+  if(signal.directNext&&signal.hasResultMemory&&id==='decision_memory')score=116;
+  if(signal.directNext&&signal.hasResultMemory&&id==='pattern_memory')score-=18;
+  if(signal.explicitStrategy&&id==='mission_mentor')score=122;
+  if(signal.explicitStrategy&&id==='thread_memory')score-=30;
+  if(signal.explicitStrategy&&id==='too_much_advice')score-=25;
+  if(signal.explicitStrategy&&id==='decision_memory')score-=22;
+  if(signal.explicitData&&id==='mission_mentor')score-=12;
+  if(signal.explicitSales&&id==='mission_mentor'&&signal.route==='sales')score-=30;
+  return score;
+}
+
 function getMissionArbitratedIntelligenceAnswerV1(turn,ctx){
   var stack=getMissionIntelligenceAnswerStackV1(turn,ctx);
-  var chosen=stack[0]||null;
+  var signal=getMissionArbiterPrioritySignalV1(turn,ctx);
+  var chosen=null;
+  var bestScore=-Infinity;
+  stack.forEach(function(item,index){
+    var score=scoreMissionArbiterCandidateV1(item,signal)-(index*0.01);
+    item.priorityScore=score;
+    if(score>bestScore){
+      bestScore=score;
+      chosen=item;
+    }
+  });
+  chosen=chosen||stack[0]||null;
   if(turn){
     turn.intelligenceAnswerStack=stack.map(function(item){return item.id;});
     turn.intelligenceAnswerChosen=chosen&&chosen.id||'';
-    if(typeof addMissionTrace==='function')addMissionTrace(turn,'intelligence_answer_arbitrated',{chosen:turn.intelligenceAnswerChosen,stack:turn.intelligenceAnswerStack});
+    turn.intelligenceArbiterPriority={chosen:turn.intelligenceAnswerChosen,signal:signal,scores:stack.map(function(item){return {id:item.id,score:item.priorityScore};})};
+    if(typeof addMissionTrace==='function')addMissionTrace(turn,'intelligence_answer_arbitrated',turn.intelligenceArbiterPriority);
   }
   return chosen;
 }
@@ -19066,10 +19128,57 @@ function runMissionIntegritySelfCheck(){
   if(!arbitrated||arbitrated.id!=='pattern_memory'||arbitrated.answer!=='Pattern answer'||arbiterTurn.intelligenceAnswerChosen!=='pattern_memory')failures.push('intelligence_arbiter_priority');
   var arbiterStack=getMissionIntelligenceAnswerStackV1(arbiterTurn,actionCtx).map(function(item){return item.id;}).join(',');
   if(arbiterStack.indexOf('pattern_memory')<0||arbiterStack.indexOf('thread_memory')<0||arbiterStack.indexOf('decision_intent')<0)failures.push('intelligence_arbiter_stack');
+  var mentorPriorityTurn=fakeTurn({
+    rawInput:'how do I get more leads',
+    normalizedInput:'how do I get more leads',
+    route:'leads',
+    cognitiveLoad:{shouldAnswer:false},
+    decisionMemory:{shouldAnswer:true,message:'Memory answer'},
+    threadMemory:{shouldAnswer:true,message:'Thread answer'},
+    tooMuchAdvice:{shouldAnswer:true,message:'Too much answer'},
+    constraintGuidance:{shouldAnswer:false},
+    decisionIntent:{shouldAnswer:false}
+  });
+  var mentorPriority=getMissionArbitratedIntelligenceAnswerV1(mentorPriorityTurn,actionCtx);
+  if(!mentorPriority||mentorPriority.id!=='mission_mentor')failures.push('arbiter_strategy_mentor_priority');
+  var followupPriorityTurn=fakeTurn({
+    rawInput:'why',
+    normalizedInput:'why',
+    route:'now',
+    cognitiveLoad:{shouldAnswer:false},
+    threadMemory:{shouldAnswer:true,message:'Thread answer'},
+    decisionMemory:{shouldAnswer:true,message:'Memory answer'},
+    decisionIntent:{shouldAnswer:false}
+  });
+  var followupPriority=getMissionArbitratedIntelligenceAnswerV1(followupPriorityTurn,actionCtx);
+  if(!followupPriority||followupPriority.id!=='thread_memory')failures.push('arbiter_short_followup_thread_priority');
+  var cognitivePriorityTurn=fakeTurn({
+    rawInput:'I am overwhelmed and need a reset',
+    normalizedInput:'i am overwhelmed and need a reset',
+    route:'now',
+    cognitiveLoad:{shouldAnswer:true,shouldForceFocus:true,oneThingMode:true,simplifyMode:true},
+    missionMentor:{shouldAnswer:true,message:'Mentor answer'},
+    threadMemory:{shouldAnswer:true,message:'Thread answer'},
+    decisionIntent:{shouldAnswer:false}
+  });
+  var cognitivePriority=getMissionArbitratedIntelligenceAnswerV1(cognitivePriorityTurn,actionCtx);
+  if(!cognitivePriority||cognitivePriority.id!=='cognitive_load')failures.push('arbiter_cognitive_priority');
+  var resultPriorityTurn=fakeTurn({
+    rawInput:'what next',
+    normalizedInput:'what next',
+    route:'now',
+    cognitiveLoad:{shouldAnswer:false},
+    decisionMemory:{shouldAnswer:true,message:'Result memory answer',lastResult:{type:'booked',label:'Booked Call'}},
+    patternMemory:{shouldAnswer:true,message:'Pattern answer'},
+    threadMemory:{shouldAnswer:true,message:'Thread answer'},
+    decisionIntent:{shouldAnswer:false}
+  });
+  var resultPriority=getMissionArbitratedIntelligenceAnswerV1(resultPriorityTurn,actionCtx);
+  if(!resultPriority||resultPriority.id!=='decision_memory')failures.push('arbiter_result_next_priority');
   var masterQASweep=runMissionMasterIntelligenceQASweepV1();
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
-  return {passed:!failures.length,failures:failures,total:93};
+  return {passed:!failures.length,failures:failures,total:97};
 }
 
 function runMissionCommandSelfCheck(){
