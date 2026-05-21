@@ -15658,6 +15658,7 @@ function runMissionBroadRegressionHardeningV1(){
       var plain=answer.replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
       if(!test.must.test(plain))failures.push(test.name+'_route_drift');
       if((plain.match(/Before switching:/g)||[]).length>1)failures.push(test.name+'_duplicate_handoff');
+      if(test.card&&plain.indexOf('Before switching:')<0)failures.push(test.name+'_handoff_missing');
       if(test.card&&/\b(Same pipeline lane|Which lead do you want to move first|Who is closest to a real decision|Want to go through one lead at a time)\b/i.test(plain))failures.push(test.name+'_route_garnish_bleed');
       if(missionVisibleAnswerHasInternalLeakV1(answer))failures.push(test.name+'_internal_leak');
     });
@@ -20729,6 +20730,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var shaped=cleanMissionVisibleAnswerText(applyMissionAnswerQualityGuardsV1(styled,route,cleanQuestion||question||'',opts));
     shaped=cleanMissionVisibleAnswerText(applyMissionB1ProseGuard(shaped,{route:route,question:cleanQuestion||question||'',turn:turnV2,opts:opts}));
     shaped=cleanMissionCardRouteGarnishV1(shaped,opts);
+    shaped=applyMissionCardCohesionV1(shaped,opts);
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   var earlyBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
