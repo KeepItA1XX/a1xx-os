@@ -16002,6 +16002,11 @@ function runMissionBroadRegressionHardeningV1(){
     if(validatorFail.valid||!validatorFail.errors.some(function(error){return /protected_route_conflict/.test(error);})){
       failures.push('skill_validator_protected_conflict_missing');
     }
+    try{sessionStorage.removeItem(MISSION_RESPONSE_FRAME_STORE_KEY_V1);}catch(e){}
+    var frameOne=applyMissionResponseFrameVarietyGuardV1('Cleaner read:<br><br>Open Content.','now','make it make sense',{});
+    var frameTwo=applyMissionResponseFrameVarietyGuardV1('Cleaner read:<br><br>Open Content.','now','make it make sense',{});
+    if(!/^Cleaner read:/i.test(frameOne)||/^Cleaner read:/i.test(frameTwo))failures.push('response_frame_cleaner_rotation');
+    try{sessionStorage.removeItem(MISSION_RESPONSE_FRAME_STORE_KEY_V1);}catch(e){}
     var prompts=[
       {name:'brief_card',q:'read the brief card',must:/Mission Brief read/i,card:'brief'},
       {name:'outreach_card',q:'what should i do on the outreach card',must:/Outreach card read/i,card:'outreach'},
@@ -16068,7 +16073,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:43,meta:failures.length?failures.join(', '):'31 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:44,meta:failures.length?failures.join(', '):'31 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -19453,6 +19458,82 @@ function applyMissionIdenticalResponseGuardV1(html,route,question){
   return carry+'<br><br>'+out;
 }
 
+/* =========================================================
+   MISSION RESPONSE FRAME VARIETY GUARD — v1
+========================================================= */
+var MISSION_RESPONSE_FRAME_STORE_KEY_V1='a1xx_mc_response_frame_variety_v1';
+
+function getMissionResponseFrameStoreV1(){
+  try{
+    var raw=sessionStorage.getItem(MISSION_RESPONSE_FRAME_STORE_KEY_V1);
+    var store=raw?JSON.parse(raw):{};
+    store.recent=Array.isArray(store.recent)?store.recent:[];
+    return store;
+  }catch(e){return {recent:[]};}
+}
+
+function setMissionResponseFrameStoreV1(store){
+  try{sessionStorage.setItem(MISSION_RESPONSE_FRAME_STORE_KEY_V1,JSON.stringify(store||{recent:[]}));}catch(e){}
+}
+
+function getMissionResponseFrameSignatureV1(html){
+  var text=missionPlainTextV1(html).toLowerCase();
+  if(!text)return '';
+  if(/^cleaner read\b/.test(text))return 'cleaner_read';
+  if(/^pattern read\b/.test(text))return 'pattern_read';
+  if(/^i am looking at\b/.test(text))return 'looking_at';
+  if(/^this belongs to\b/.test(text))return 'card_ownership';
+  if(/^money read\b/.test(text))return 'money_read';
+  if(/^booked calls?\b/.test(text))return 'booked_count';
+  if(/^same\b|^still\b|^picking it back up\b/.test(text))return 'continuation_opener';
+  if(/before switching:/i.test(text))return 'handoff';
+  return '';
+}
+
+function getMissionFrameReplacementV1(frame,route,count){
+  var pools={
+    cleaner_read:['Clean version:','Simple version:','The useful read:'],
+    pattern_read:['Pattern:','What keeps repeating:','The loop:'],
+    looking_at:['I am reading:','The app view:','Current view:'],
+    card_ownership:['Card owner:','This lives in:','Use this card:'],
+    money_read:['Money view:','Number read:','Cash read:'],
+    continuation_opener:['Same thread:','Still here:','Back to the thread:']
+  };
+  var pool=pools[frame]||[];
+  if(!pool.length)return '';
+  return pool[count%pool.length];
+}
+
+function replaceMissionFrameOpeningV1(html,frame,replacement){
+  var out=String(html||'');
+  if(!replacement)return out;
+  if(frame==='cleaner_read')return out.replace(/^Cleaner read:/i,replacement);
+  if(frame==='pattern_read')return out.replace(/^Pattern read:/i,replacement);
+  if(frame==='looking_at')return out.replace(/^I am looking at:/i,replacement);
+  if(frame==='card_ownership')return out.replace(/^This belongs to/i,replacement.replace(/:$/,''));
+  if(frame==='money_read')return out.replace(/^Money read:/i,replacement);
+  if(frame==='continuation_opener')return out.replace(/^(Same [^:]+:|Still [^:]+:|Picking it back up\.)/i,replacement);
+  return out;
+}
+
+function applyMissionResponseFrameVarietyGuardV1(html,route,question,opts){
+  var out=String(html||'');
+  opts=opts||{};
+  if(!out||opts.responseFrameGuard===false||window.__missionCommandSelfCheckActive)return out;
+  if(/^\/\w+/.test(normalizeMissionUserPromptForRoutingV1(question||''))&&route!=='now')return out;
+  var frame=getMissionResponseFrameSignatureV1(out);
+  if(!frame||frame==='handoff'||frame==='booked_count')return out;
+  var store=getMissionResponseFrameStoreV1();
+  var now=Date.now();
+  store.recent=(store.recent||[]).filter(function(item){return item&&now-Number(item.at||0)<20*60*1000;}).slice(-12);
+  var routeKey=route||'now';
+  var repeatCount=store.recent.filter(function(item){return item.frame===frame&&item.route===routeKey;}).length;
+  store.recent.push({frame:frame,route:routeKey,question:normalizeMissionUserPromptForRoutingV1(question||''),at:now});
+  setMissionResponseFrameStoreV1(store);
+  if(repeatCount<1)return out;
+  return replaceMissionFrameOpeningV1(out,frame,getMissionFrameReplacementV1(frame,routeKey,repeatCount));
+}
+
 function applyMissionReadabilityGuardV1(html){
   var out=String(html||'');
   if(!out)return out;
@@ -19486,6 +19567,7 @@ function applyMissionAnswerQualityGuardsV1(html,route,question,opts){
   if(opts.responseBeforeReason!==false)out=applyMissionResponseBeforeReasonV1(out);
   if(opts.firstSentenceRule!==false)out=applyMissionFirstSentenceRuleV1(out,route||'now',question||'');
   if(opts.identicalResponseGuard!==false)out=applyMissionIdenticalResponseGuardV1(out,route||'now',question||'');
+  out=applyMissionResponseFrameVarietyGuardV1(out,route||'now',question||'',opts);
   out=stripMissionInternalSourceLinesV1(out,opts);
   out=applyMissionReadabilityGuardV1(out);
   out=out.replace(/\s+([.,!?;:])/g,'$1');
