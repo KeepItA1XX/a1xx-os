@@ -10904,7 +10904,10 @@ function cleanMissionVisibleAnswerText(html){
     .replace(/\bQuick check before we add another move:\s*/gi,'Quick check before we add another move. ')
     .replace(/\s+([.,!?;:])/g,'$1')
     .replace(/([.!?])([A-Z])/g,'$1 $2')
+    .replace(/([.!?])((?:<br\s*\/?>\s*){2,})([a-z])/g,function(match,punc,brs,letter){return punc+brs+letter.toUpperCase();})
     .replace(/([.!?])\s*(<br\s*\/?>\s*)?([a-z])/g,function(match,punc,br,letter){return punc+(br||' ')+letter.toUpperCase();})
+    .replace(/([a-z0-9).])(Open Content\s*→)/gi,'$1<br><br>$2')
+    .replace(/→\s*Open/g,'→ Open')
     .replace(/(^|[.!?]\s+)open the current work card/g,function(match,prefix){return prefix+'Open the current work card';})
     .replace(/(^|[.!?]\s+)([a-z])/g,function(match,prefix,letter){return prefix+letter.toUpperCase();});
 }
@@ -12353,7 +12356,7 @@ function getMissionThreadExplicitRouteFromQuestionV1(q){
   if(/^(\/)?(sales|closer|call|coach)\b/.test(q)||/\b(i meant sales not pipeline|sales not pipeline|what should i say|what do i say|too expensive|payment plan|call is done|prep me for a call|roleplay|score my answer)\b/.test(q))return 'sales';
   if(/^(\/)?(sync|health)\b/.test(q)||/\b(sync check|where do i check sync|data stale|is this data current)\b/.test(q))return 'sync';
   if(/^(\/)?(dpc|daily)\b/.test(q)||/\b(what did i log today|show dpc|daily log)\b/.test(q))return 'dpc';
-  if(/^(\/)?(money|report|revenue)\b/.test(q)||/\b(how much money|revenue|weekly target|how far off)\b/.test(q))return 'report';
+  if(/^(\/)?(money|report|revenue)\b/.test(q)||/\b(how much money|how much did i make|how much have i made|what did i make|what came in|revenue|weekly target|how far off)\b/.test(q))return 'report';
   if(/^(\/)?(content|post)\b/.test(q)||/\b(what should i post|content tracker)\b/.test(q))return 'content';
   if(/^(\/)?(production|beats|beat)\b/.test(q)||/\b(bangin plus|production tracker|mix master)\b/.test(q))return 'production';
   if(/^(\/)?(calendar|schedule)\b/.test(q)||/\b(what block|calendar|schedule)\b/.test(q))return 'calendar';
@@ -19300,7 +19303,7 @@ function missionLinkHtml(label,url,action){
 function missionLinksHtml(items){
   var links=(items||[]).filter(function(item){return item&&item.label&&item.url;});
   if(!links.length)return '';
-  return '<div class="mission-link-row">'+links.map(function(item){return missionLinkHtml(item.label,item.url,item.action);}).join('')+'</div>';
+  return '<br><br><div class="mission-link-row">'+links.map(function(item){return missionLinkHtml(item.label,item.url,item.action);}).join(' ')+'</div>';
 }
 
 function missionLinkifyHtml(html){
@@ -20151,6 +20154,8 @@ function applyMissionB1ProseGuard(html,routeContext){
     out=applyMissionVoiceContractionsV1(out);
     out=out.replace(/\bNext move is\s+Use\b/g,'Next move: use');
     out=out.replace(/\bNext move is\s+/g,'Next move: ');
+    out=out.replace(/([a-z0-9).])(Open Content\s*→)/gi,'$1<br><br>$2');
+    out=out.replace(/→\s*Open/g,'→ Open');
     out=out.replace(/\s+([.,!?;:])/g,'$1');
     out=out.replace(/(<br\s*\/?>\s*){3,}/gi,'<br><br>').trim();
     return out||html;
@@ -21820,7 +21825,7 @@ function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,t
 
 function getMissionMoneyReadResponseV1(ctx,question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
-  if(!/\b(how much money|how much have i made|what came in|what cam in|any new sales|money check|revenue report|how far off|what can i do to make some money|what should i do to make money today|make some money today|make money today|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return '';
+  if(!/\b(how much money|how much did i make|how much have i made|what did i make|what came in|what cam in|any new sales|money check|revenue report|how far off|what can i do to make some money|what should i do to make money today|make some money today|make money today|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return '';
   if(/\b(what changed|what moved|what happened)\b/.test(q))return '';
   ctx=ctx||{};
   var ledger=typeof getMissionContextTruthLedgerV1==='function'?getMissionContextTruthLedgerV1(ctx):null;
