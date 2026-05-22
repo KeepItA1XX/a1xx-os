@@ -11820,6 +11820,28 @@ function getMissionResultSessionCountsV1(){
   }catch(e){return {};}
 }
 
+function countMissionActiveChatResultSignalsV12(type){
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var messages=active&&Array.isArray(active.messages)?active.messages:[];
+    if(!messages.length)return null;
+    var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+    var freshStarterAt=typeof missionLatestActiveChatFreshStarterTimeV12==='function'?missionLatestActiveChatFreshStarterTimeV12():NaN;
+    var boundaryAt=!isNaN(freshStarterAt)?freshStarterAt:activeCreatedAt;
+    var count=0;
+    messages.forEach(function(msg){
+      if(!msg||msg.role!=='user')return;
+      var msgTime=Date.parse(msg.ts||msg.at||msg.timestamp||msg.createdAt||'');
+      if(!isNaN(boundaryAt)&&(isNaN(msgTime)||msgTime<boundaryAt))return;
+      var signal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(msg.body||''):null;
+      if(signal&&signal.type===type)count+=1;
+    });
+    return count;
+  }catch(e){
+    return null;
+  }
+}
+
 function bumpMissionResultSessionCountV1(type){
   if(!type)return;
   try{
@@ -11853,12 +11875,15 @@ function getMissionContextTruthLedgerV1(ctx){
   var callEvents=calendarEvents.filter(function(event){
     return /call|session|consult|meeting/i.test([event&&event.title,event&&event.summary,event&&event.description].join(' '));
   });
-  var sessionBooked=Math.max(lastResult&&lastResult.type==='booked'?1:0,countMissionResultHistoryTypeV1(history,'booked'));
-  var sessionPaid=Math.max(lastResult&&lastResult.type==='paid'?1:0,countMissionResultHistoryTypeV1(history,'paid'));
-  var sessionReply=Math.max(lastResult&&lastResult.type==='reply'?1:0,countMissionResultHistoryTypeV1(history,'reply'));
-  if(!sessionBooked)sessionBooked=Number(fallbackCounts.booked||0);
-  if(!sessionPaid)sessionPaid=Number(fallbackCounts.paid||0);
-  if(!sessionReply)sessionReply=Number(fallbackCounts.reply||0);
+  var activeBooked=countMissionActiveChatResultSignalsV12('booked');
+  var activePaid=countMissionActiveChatResultSignalsV12('paid');
+  var activeReply=countMissionActiveChatResultSignalsV12('reply');
+  var sessionBooked=activeBooked!==null?activeBooked:Math.max(lastResult&&lastResult.type==='booked'?1:0,countMissionResultHistoryTypeV1(history,'booked'));
+  var sessionPaid=activePaid!==null?activePaid:Math.max(lastResult&&lastResult.type==='paid'?1:0,countMissionResultHistoryTypeV1(history,'paid'));
+  var sessionReply=activeReply!==null?activeReply:Math.max(lastResult&&lastResult.type==='reply'?1:0,countMissionResultHistoryTypeV1(history,'reply'));
+  if(activeBooked===null&&!sessionBooked)sessionBooked=Number(fallbackCounts.booked||0);
+  if(activePaid===null&&!sessionPaid)sessionPaid=Number(fallbackCounts.paid||0);
+  if(activeReply===null&&!sessionReply)sessionReply=Number(fallbackCounts.reply||0);
   var dpcBooked=Number(d.calls||d.booked||0)||0;
   var dpcCloses=Number(d.closes||0)||0;
   var dpcMoney=Number((ctx.dpc&&ctx.dpc.money)||d.money||0)||0;
@@ -12693,9 +12718,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
       tags:['new'],
       messages:[
         {role:'user',body:'good morning',ts:now},
-        {role:'assistant',body:'Current mode is General Mode.',ts:now},
-        {role:'user',body:'booked',ts:bookedAt},
-        {role:'assistant',body:'Booked call logged.',ts:bookedAt}
+        {role:'assistant',body:'Current mode is General Mode.',ts:now}
       ],
       memory:{brainSession:activeBrain}
     }]);
@@ -12712,6 +12735,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     if((bookedArb.staleSignals||[]).length)failures.push('active_booked_false_stale_signal');
     var bookedCountAnswer=plainMissionQaAnswer('how many booked calls do i have');
     if(!/booked/i.test(bookedCountAnswer)||!/chat-only|reported here|dashboard confirmed/i.test(bookedCountAnswer))failures.push('active_booked_count_not_separated');
+    if(!/Chat-only result memory:\s*1 booked/i.test(bookedCountAnswer))failures.push('active_booked_count_not_active_chat_scoped');
   }catch(e){
     failures.push('exception_'+(e&&e.message?e.message:String(e)));
   }finally{
