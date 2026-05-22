@@ -12217,6 +12217,37 @@ function missionActiveChatUserTextMatchesV12(re){
   }
 }
 
+function missionActiveChatHasBookedAfterFreshStarterV12(){
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var messages=active&&Array.isArray(active.messages)?active.messages:[];
+    var starterRe=/^(good morning|gm|morning|yo|yo let'?s go|let'?s go|lock in)$/i;
+    var bookedRe=/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i;
+    var boundaryTime=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+    var starterIndex=-1;
+    messages.forEach(function(msg,idx){
+      if(!msg||msg.role!=='user')return;
+      var body=String(msg.body||'').trim();
+      var msgTime=Date.parse(msg.ts||msg.at||msg.timestamp||msg.createdAt||'');
+      if(starterRe.test(body)){
+        starterIndex=idx;
+        if(!isNaN(msgTime)&&(!isNaN(boundaryTime)?msgTime>=boundaryTime:true))boundaryTime=msgTime;
+      }
+    });
+    return messages.some(function(msg,idx){
+      if(!msg||msg.role!=='user'||!bookedRe.test(String(msg.body||'')))return false;
+      if(starterIndex>=0&&idx<=starterIndex)return false;
+      if(!isNaN(boundaryTime)){
+        var msgTime=Date.parse(msg.ts||msg.at||msg.timestamp||msg.createdAt||'');
+        if(isNaN(msgTime)||msgTime<boundaryTime)return false;
+      }
+      return true;
+    });
+  }catch(e){
+    return false;
+  }
+}
+
 function missionResultIsFreshForActiveChatV12(result){
   if(!result)return false;
   if(!missionResultBelongsToActiveChatV12(result))return false;
@@ -12236,6 +12267,7 @@ function getMissionDecisionMemoryV1(turn,ctx){
   var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||'');
   var session=getMissionDecisionMemorySessionV1();
   var result=session.lastResult||null;
+  if(result&&result.type==='booked'&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive&&!missionActiveChatHasBookedAfterFreshStarterV12())result=null;
   var action=null;
   var message='';
   var label='';
@@ -12520,7 +12552,7 @@ function getMissionWhyResponseV1(turn,ctx){
   var memory=turn&&turn.threadMemory||{};
   var lastResult=memory.lastResult||(getMissionBrainSessionV2().resultLoop||{}).lastResult||null;
   if(lastResult&&!missionResultBelongsToActiveChatV12(lastResult))lastResult=null;
-  if(lastResult&&lastResult.type==='booked'&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive&&!missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i))lastResult=null;
+  if(lastResult&&lastResult.type==='booked'&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive&&!missionActiveChatHasBookedAfterFreshStarterV12())lastResult=null;
   var pending=memory.pendingAction||(getMissionBrainSessionV2().resultLoop||{}).pendingAction||getMissionBrainSessionV2().lastActionPlan||null;
   var lastTurn=memory.lastTurn||null;
   var lastTurnSlash=(lastTurn&&String(lastTurn.question||lastTurn.rawInput||'').match(/^\/([a-z0-9_]+)/i))||null;
@@ -17543,7 +17575,7 @@ function getMissionActionAccountabilityV1(turn,ctx){
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   var pendingNeedsBooked=/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(pendingText);
   var bookedResultFresh=lastResult&&lastResult.type==='booked'&&missionResultIsFreshForActiveChatV12(lastResult);
-  if(pendingNeedsBooked&&!bookedResultFresh&&!missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i)){
+  if(pendingNeedsBooked&&!bookedResultFresh&&!missionActiveChatHasBookedAfterFreshStarterV12()){
     freshPending=false;
     recentResult=false;
   }
@@ -17593,7 +17625,7 @@ function buildMissionActionAccountabilityResponseV1(turn,ctx){
   var action=formatMissionActionAccountabilityActionLineV1(pending.action||pending.label||'the last move');
   var pendingText=normalizeMissionQuestion([pending.label,pending.action,pending.target,pending.reason].filter(Boolean).join(' '));
   var bookedPrep=/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(pendingText);
-  if(bookedPrep&&!missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i))return '';
+  if(bookedPrep&&!missionActiveChatHasBookedAfterFreshStarterV12())return '';
   return 'Quick check before we add another move. Did this happen yet?<br><br><strong>'+escapeHtml(action)+'</strong><br><br>Reply with: done, no reply, reply, booked, paid, or wrong lane.';
 }
 
@@ -21810,7 +21842,7 @@ function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,
   }catch(e){}
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   var freshBookedResult=!!(lastResult&&lastResult.type==='booked'&&missionResultIsFreshForActiveChatV12(lastResult));
-  var bookedContext=!!(freshBookedResult||(/\b(prep call|booked call|calendar detail|opening question|sales coach)\b/.test(pendingText)&&missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i)));
+  var bookedContext=!!(freshBookedResult||(/\b(prep call|booked call|calendar detail|opening question|sales coach)\b/.test(pendingText)&&missionActiveChatHasBookedAfterFreshStarterV12()));
   if(bookedContext&&/\b(what card owns this|what lane owns this|which card handles|what card do i open|what do i log|what should i log after this|what result are we|where do i go from here|what counts as done|make it make sense|that sounds disconnected|answer like the app knows|wrong read)\b/.test(q)){
     activeRoute='sales';
   }
