@@ -11807,6 +11807,7 @@ function getMissionDecisionExplainerLineV1(explainer){
    MISSION CONTEXT TRUTH LEDGER — v1
 ========================================================= */
 var MISSION_RESULT_SESSION_COUNTS_KEY_V1='a1xx_mc_result_session_counts_v1';
+var MISSION_RESULT_EVENT_LEDGER_KEY_V12='a1xx_mc_result_event_ledger_v12';
 
 function countMissionResultHistoryTypeV1(history,type){
   return (Array.isArray(history)?history:[]).filter(function(item){return item&&item.type===type;}).length;
@@ -11864,6 +11865,67 @@ function countMissionFreshResultLoopSignalsV12(history,lastResult,type){
   }
 }
 
+function getMissionResultEventLedgerV12(){
+  try{
+    var raw=sessionStorage.getItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12)||localStorage.getItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    var list=raw?JSON.parse(raw):[];
+    return Array.isArray(list)?list:[];
+  }catch(e){
+    return [];
+  }
+}
+
+function setMissionResultEventLedgerV12(list){
+  try{
+    list=(Array.isArray(list)?list:[]).slice(0,24);
+    var raw=JSON.stringify(list);
+    sessionStorage.setItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12,raw);
+    localStorage.setItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12,raw);
+  }catch(e){}
+}
+
+function rememberMissionResultEventV12(result){
+  if(!result||!result.type)return;
+  try{
+    var event=Object.assign({},result,{
+      chatId:result.chatId||localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'',
+      recordedAt:result.recordedAt||new Date().toISOString(),
+      source:'mission_result_event_ledger'
+    });
+    var key=[event.type||'',event.recordedAt||'',event.chatId||'',event.label||''].join('|');
+    var list=getMissionResultEventLedgerV12().filter(function(item){
+      return [item&&item.type||'',item&&item.recordedAt||'',item&&item.chatId||'',item&&item.label||''].join('|')!==key;
+    });
+    list.unshift(event);
+    setMissionResultEventLedgerV12(list);
+  }catch(e){}
+}
+
+function countMissionFreshResultEventsV12(type){
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var activeId=active&&active.id||localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'';
+    var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+    var starterTime=typeof missionLatestActiveChatFreshStarterTimeV12==='function'?missionLatestActiveChatFreshStarterTimeV12():NaN;
+    var boundaryAt=!isNaN(starterTime)?starterTime:activeCreatedAt;
+    var seen={};
+    var count=0;
+    getMissionResultEventLedgerV12().forEach(function(item){
+      if(!item||item.type!==type)return;
+      if(item.chatId&&activeId&&item.chatId!==activeId)return;
+      var recordedAt=Date.parse(item.recordedAt||'');
+      if(!isNaN(boundaryAt)&&(isNaN(recordedAt)||recordedAt<boundaryAt))return;
+      var key=[item.type||'',item.recordedAt||'',item.chatId||'',item.label||''].join('|');
+      if(seen[key])return;
+      seen[key]=true;
+      count+=1;
+    });
+    return count;
+  }catch(e){
+    return 0;
+  }
+}
+
 function bumpMissionResultSessionCountV1(type){
   if(!type)return;
   try{
@@ -11903,9 +11965,12 @@ function getMissionContextTruthLedgerV1(ctx){
   var loopBooked=countMissionFreshResultLoopSignalsV12(history,lastResult,'booked');
   var loopPaid=countMissionFreshResultLoopSignalsV12(history,lastResult,'paid');
   var loopReply=countMissionFreshResultLoopSignalsV12(history,lastResult,'reply');
-  var sessionBooked=activeBooked!==null?Math.max(activeBooked,loopBooked):loopBooked;
-  var sessionPaid=activePaid!==null?Math.max(activePaid,loopPaid):loopPaid;
-  var sessionReply=activeReply!==null?Math.max(activeReply,loopReply):loopReply;
+  var eventBooked=countMissionFreshResultEventsV12('booked');
+  var eventPaid=countMissionFreshResultEventsV12('paid');
+  var eventReply=countMissionFreshResultEventsV12('reply');
+  var sessionBooked=activeBooked!==null?Math.max(activeBooked,loopBooked,eventBooked):Math.max(loopBooked,eventBooked);
+  var sessionPaid=activePaid!==null?Math.max(activePaid,loopPaid,eventPaid):Math.max(loopPaid,eventPaid);
+  var sessionReply=activeReply!==null?Math.max(activeReply,loopReply,eventReply):Math.max(loopReply,eventReply);
   if(activeBooked===null&&!sessionBooked)sessionBooked=Number(fallbackCounts.booked||0);
   if(activePaid===null&&!sessionPaid)sessionPaid=Number(fallbackCounts.paid||0);
   if(activeReply===null&&!sessionReply)sessionReply=Number(fallbackCounts.reply||0);
@@ -12170,6 +12235,7 @@ function completeMissionResultLoopV1(signal,turn){
   session.pendingLogPrompt=true;
   if(signal.type!=='done')session.resultLoop.pendingAction=null;
   setMissionBrainSessionV2(session);
+  rememberMissionResultEventV12(result);
   bumpMissionResultSessionCountV1(signal.type);
   try{
     if(['paid','booked','reply'].indexOf(signal.type)>=0){
@@ -12744,6 +12810,8 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     if((freshArb.staleSignals||[]).indexOf('blocked_booked_carry')<0)failures.push('fresh_chat_missing_blocked_booked_signal');
     if(rawAfter.resultLoop&&rawAfter.resultLoop.lastResult&&rawAfter.resultLoop.lastResult.type==='booked')failures.push('fresh_chat_saved_stale_booked_result');
     if(rawAfter.resultLoop&&missionPendingLooksBookedPrepV12(rawAfter.resultLoop.pendingAction))failures.push('fresh_chat_saved_stale_booked_pending');
+    var freshGreetingAnswer=plainMissionQaAnswer('good morning');
+    if(/Last thread:|What happened since then/i.test(freshGreetingAnswer))failures.push('fresh_starter_silence_reentry_leak');
     var freshWhy=plainMissionQaAnswer('why');
     if(answerHasBookedPrep(freshWhy))failures.push('fresh_chat_why_booked_prep');
     var freshNext=plainMissionQaAnswer('what next');
@@ -12796,6 +12864,12 @@ function runMissionLivePathContextArbitrationRegressionV11(){
       saveMissionChatSessions(loopOnlySessions);
       var loopOnlyCountAnswer=plainMissionQaAnswer('how many booked calls do i have');
       if(!/Chat-only result memory:\s*1 booked/i.test(loopOnlyCountAnswer))failures.push('active_booked_count_result_loop_fallback');
+      var eventOnlyBrain=getMissionRawBrainSessionForArbitrationV11();
+      eventOnlyBrain.resultLoop={history:[]};
+      eventOnlyBrain.lastActionPlan=null;
+      setMissionBrainSessionV2(eventOnlyBrain);
+      var eventOnlyCountAnswer=plainMissionQaAnswer('how many booked calls do i have');
+      if(!/Chat-only result memory:\s*1 booked/i.test(eventOnlyCountAnswer))failures.push('active_booked_count_event_ledger_fallback');
     }
   }catch(e){
     failures.push('exception_'+(e&&e.message?e.message:String(e)));
@@ -12807,7 +12881,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     window.__missionCommandContext=priorCtx;
     window.__missionLastContextArbitrationV11=priorLastArb;
   }
-  return {passed:!failures.length,failures:failures,total:10};
+  return {passed:!failures.length,failures:failures,total:12};
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
@@ -13204,6 +13278,9 @@ function updateMissionThreadMemoryV1(turn){
 ========================================================= */
 function getMissionSilenceIntelligenceV1(turn,ctx){
   var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||'');
+  if(typeof missionQuestionIsFreshStarterV12==='function'&&missionQuestionIsFreshStarterV12(q)){
+    return {hasPrior:false,gapMinutes:null,band:'fresh_start',activeRoute:'now',lastQuestion:'',lastResult:null,pendingAction:null,shouldAnswer:false,reason:'fresh_starter_boundary',message:'',suppressBubbles:false};
+  }
   var session=sanitizeMissionBrainSessionForFreshStarterV12(getMissionThreadMemorySessionV1(),turn&&turn.rawInput||turn&&turn.normalizedInput||q);
   var thread=session.threadMemory||{};
   var lastAt=thread.lastUpdatedAt||session.lastTurnAt||'';
