@@ -11617,39 +11617,111 @@ function getMissionDecisionExplainerLineV1(explainer){
   return '<span style="color:#8f9aa3">Why this move: '+escapeHtml(explainer.reason)+'.'+escapeHtml(confidence)+'</span>';
 }
 
-function getMissionBookedCallsCountAnswerV1(ctx){
+/* =========================================================
+   MISSION CONTEXT TRUTH LEDGER — v1
+========================================================= */
+function countMissionResultHistoryTypeV1(history,type){
+  return (Array.isArray(history)?history:[]).filter(function(item){return item&&item.type===type;}).length;
+}
+
+function getMissionContextTruthLedgerV1(ctx){
+  ctx=ctx||{};
   var d={};
   try{d=typeof getDailyCoach==='function'?getDailyCoach()||{}:{};}catch(e){d={};}
-  var dpcBooked=Number(d.calls||d.booked||0)||0;
+  var session={};
+  try{session=typeof getMissionBrainSessionV2==='function'?getMissionBrainSessionV2()||{}:{};}catch(e){session={};}
+  var loop=session.resultLoop||{};
+  var history=Array.isArray(loop.history)?loop.history:[];
+  var lastResult=loop.lastResult||null;
   var crm=[];
   try{crm=typeof getCRMLeads==='function'?getCRMLeads()||[]:window.__crmLeads||[];}catch(e){crm=window.__crmLeads||[];}
   crm=Array.isArray(crm)?crm:[];
+  var calendarEvents=Array.isArray(window.__calEvents)?window.__calEvents:[];
   var bookedLeads=crm.filter(function(lead){
     return /book|schedul|call/i.test([lead&&lead.stage,lead&&lead.status,lead&&lead.bookingPriority,lead&&lead.conversionEvent,lead&&lead.recentActivity].join(' '));
   });
-  var calendarEvents=Array.isArray(window.__calEvents)?window.__calEvents:[];
+  var paidLeads=crm.filter(function(lead){
+    return /paid|closed won|purchased|purchase|client|invoice paid/i.test([lead&&lead.stage,lead&&lead.status,lead&&lead.paymentStatus,lead&&lead.conversionEvent,lead&&lead.recentActivity].join(' '));
+  });
   var callEvents=calendarEvents.filter(function(event){
     return /call|session|consult|meeting/i.test([event&&event.title,event&&event.summary,event&&event.description].join(' '));
   });
-  var sessionBooked=0;
-  try{
-    var session=getMissionBrainSessionV2()||{};
-    var loop=session.resultLoop||{};
-    if(loop.lastResult&&loop.lastResult.type==='booked')sessionBooked++;
-    if(Array.isArray(loop.history)){
-      sessionBooked=Math.max(sessionBooked,loop.history.filter(function(item){return item&&item.type==='booked';}).length);
-    }
-  }catch(e){}
+  var sessionBooked=Math.max(lastResult&&lastResult.type==='booked'?1:0,countMissionResultHistoryTypeV1(history,'booked'));
+  var sessionPaid=Math.max(lastResult&&lastResult.type==='paid'?1:0,countMissionResultHistoryTypeV1(history,'paid'));
+  var sessionReply=Math.max(lastResult&&lastResult.type==='reply'?1:0,countMissionResultHistoryTypeV1(history,'reply'));
+  var dpcBooked=Number(d.calls||d.booked||0)||0;
+  var dpcCloses=Number(d.closes||0)||0;
+  var dpcMoney=Number((ctx.dpc&&ctx.dpc.money)||d.money||0)||0;
+  var ledger={
+    version:'context_truth_ledger_v1',
+    session:{
+      lastResult:lastResult,
+      booked:sessionBooked,
+      paid:sessionPaid,
+      replies:sessionReply,
+      source:'Mission Command chat/session memory',
+      confidence:history.length||lastResult?'session_only':'none',
+      isConfirmed:false
+    },
+    dpc:{
+      booked:dpcBooked,
+      closes:dpcCloses,
+      money:dpcMoney,
+      source:'DPC daily log',
+      confidence:'confirmed_loaded',
+      isConfirmed:true
+    },
+    crm:{
+      booked:bookedLeads.length,
+      paid:paidLeads.length,
+      total:crm.length,
+      source:'CRM leads',
+      confidence:Array.isArray(crm)?'loaded':'missing',
+      isConfirmed:true
+    },
+    calendar:{
+      calls:callEvents.length,
+      total:calendarEvents.length,
+      source:'Calendar events',
+      confidence:Array.isArray(window.__calEvents)?'loaded':'missing',
+      isConfirmed:true
+    },
+    weekly:{
+      revenue:Number(ctx.rev||0)||0,
+      target:Number(ctx.wk||0)||0,
+      gap:Math.max(0,Number(ctx.gap!==undefined?ctx.gap:(Number(ctx.wk||0)-Number(ctx.rev||0)))||0),
+      source:'Weekly score / local app state',
+      confidence:'loaded',
+      isConfirmed:true
+    },
+    discrepancies:[]
+  };
+  if(ledger.session.booked&&!ledger.dpc.booked&&!ledger.crm.booked&&!ledger.calendar.calls)ledger.discrepancies.push('session_booked_not_confirmed');
+  if(ledger.session.paid&&!ledger.dpc.money&&!ledger.dpc.closes&&!ledger.crm.paid)ledger.discrepancies.push('session_paid_not_confirmed');
+  window.__missionLastTruthLedgerV1=ledger;
+  return ledger;
+}
+
+function missionTruthLedgerHasDiscrepancyV1(ledger,key){
+  return !!(ledger&&Array.isArray(ledger.discrepancies)&&ledger.discrepancies.indexOf(key)>=0);
+}
+
+function getMissionBookedCallsCountAnswerV1(ctx){
+  var ledger=getMissionContextTruthLedgerV1(ctx||{});
+  var dpcBooked=ledger.dpc.booked;
+  var sessionBooked=ledger.session.booked;
+  var crmBooked=ledger.crm.booked;
+  var calendarCalls=ledger.calendar.calls;
   var lines=[
-    'Booked-call read.',
+    'Booked calls:',
     '',
-    'DPC logged today: '+dpcBooked+' booked.',
-    'Session result memory: '+sessionBooked+' booked.',
-    'CRM booked/session signals: '+bookedLeads.length+'.',
-    'Calendar call/session events loaded: '+callEvents.length+'.'
+    'Confirmed DPC: '+dpcBooked+' booked today.',
+    'Session memory: '+sessionBooked+' booked reported in this chat.',
+    'Confirmed CRM booked/session signals: '+crmBooked+'.',
+    'Confirmed Calendar call/session events loaded: '+calendarCalls+'.'
   ];
-  if(!dpcBooked&&!sessionBooked&&!bookedLeads.length&&!callEvents.length)lines.push('I do not see a booked call loaded yet. If one happened, log it in DPC and update the lead.');
-  else if(sessionBooked&&!dpcBooked&&!bookedLeads.length&&!callEvents.length)lines.push('I see the booked result in this chat, but it is not in DPC, CRM, or Calendar yet. Log it there so the dashboard count can carry it forward.');
+  if(!dpcBooked&&!sessionBooked&&!crmBooked&&!calendarCalls)lines.push('I do not see a booked call loaded yet. If one happened, log it in DPC and update the lead.');
+  else if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_booked_not_confirmed'))lines.push('I saw the booked result in this chat, but it is not confirmed in DPC, CRM, or Calendar yet. Log it there so the dashboard count can carry it forward.');
   else lines.push('Use the freshest source first: calendar for schedule, CRM for lead status, DPC for today’s logged result.');
   return lines.map(escapeHtml).join('<br>');
 }
@@ -11819,7 +11891,10 @@ function completeMissionResultLoopV1(signal,turn){
     action:pending&&pending.action||'',
     resourceTitle:pending&&pending.resourceTitle||'',
     followthroughType:pending&&pending.followthroughType||'',
-    recordedAt:new Date().toISOString()
+    recordedAt:new Date().toISOString(),
+    truthStatus:'session_only',
+    confirmed:false,
+    source:'mission_command_chat'
   };
   result.microWin=getMissionMicroWinAcknowledgmentV1(signal,{result:result,pending:pending},turn);
   session.resultLoop.lastResult=result;
@@ -15804,6 +15879,18 @@ function runMissionBroadRegressionHardeningV1(){
         failures.push(test.name+'_accountability_guard');
       }
     });
+    var qaCalendarEvents=window.__calEvents;
+    window.__calEvents=[];
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false},history:[{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false}]}}));
+    var truthLedger=getMissionContextTruthLedgerV1(ctx);
+    if(!truthLedger||truthLedger.session.booked<1||!missionTruthLedgerHasDiscrepancyV1(truthLedger,'session_booked_not_confirmed'))failures.push('truth_ledger_session_booked_discrepancy');
+    var bookedTruthAnswer=getMissionBookedCallsCountAnswerV1(ctx).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Session memory: 1 booked/i.test(bookedTruthAnswer)||!/not confirmed in DPC, CRM, or Calendar/i.test(bookedTruthAnswer))failures.push('truth_ledger_booked_count_copy');
+    window.__calEvents=qaCalendarEvents;
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false},history:[{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false}]}}));
+    var paidTruthAnswer=getMissionMoneyReadResponseV1(Object.assign({},ctx,{dpc:{money:0}}),'how much money have I made today').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/paid result in this chat/i.test(paidTruthAnswer)||!/does not confirm it yet/i.test(paidTruthAnswer))failures.push('truth_ledger_paid_money_copy');
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
     var prompts=[
       {name:'brief_card',q:'read the brief card',must:/Mission Brief read/i,card:'brief'},
       {name:'outreach_card',q:'what should i do on the outreach card',must:/Outreach card read/i,card:'outreach'},
@@ -15870,7 +15957,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:38,meta:failures.length?failures.join(', '):'31 regression prompts + 7 route-priority matrix checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:41,meta:failures.length?failures.join(', '):'31 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -21049,6 +21136,7 @@ function getMissionMoneyReadResponseV1(ctx,question){
   if(!/\b(how much money|how much have i made|what came in|what cam in|any new sales|money check|revenue report|how far off|what can i do to make some money|what should i do to make money today|make some money today|make money today|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return '';
   if(/\b(what changed|what moved|what happened)\b/.test(q))return '';
   ctx=ctx||{};
+  var ledger=typeof getMissionContextTruthLedgerV1==='function'?getMissionContextTruthLedgerV1(ctx):null;
   var d=typeof getDailyCoach==='function'?getDailyCoach():{};
   var weekly=Number(ctx.wk||0);
   var revenue=Number(ctx.rev||0);
@@ -21062,7 +21150,11 @@ function getMissionMoneyReadResponseV1(ctx,question){
     read=gap<=0?'You are not behind on the weekly number; the risk is leaving today invisible.':'The money constraint is still open.';
     next=gap<=0?'log one real sales or outreach action so the OS can see today move':'contact the warmest visible lead and make the direct ask';
   }
-  return 'Money read:<br><br>'+escapeHtml(firstLine)+'<br>'+escapeHtml(read)+'<br><br>Next move: '+escapeHtml(next)+'.';
+  var truthLine='';
+  if(ledger&&missionTruthLedgerHasDiscrepancyV1(ledger,'session_paid_not_confirmed')){
+    truthLine='<br><br>I saw a paid result in this chat, but today’s DPC/CRM money record does not confirm it yet.';
+  }
+  return 'Money read:<br><br>'+escapeHtml(firstLine)+'<br>'+escapeHtml(read)+truthLine+'<br><br>Next move: '+escapeHtml(next)+'.';
 }
 
 function getMissionCommandResponse(kind,ctx,question,brainState){
@@ -21087,6 +21179,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     directRouteOverride=routePriorityDecision.selectedRoute;
   }
   brainState.routePriorityDecision=routePriorityDecision||null;
+  brainState.truthLedger=typeof getMissionContextTruthLedgerV1==='function'?getMissionContextTruthLedgerV1(ctx):null;
   window.__missionLastRoutePriorityDecisionV1=routePriorityDecision||null;
   if(intent&&intent.route&&missionQuestionHasExplicitDataAsk(intent.route,cleanQuestion||question||''))route=intent.route;
   var turnV2=null;
@@ -21095,6 +21188,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     window.__missionLastTurnV2=turnV2Packet;
     turnV2=window.__missionLastTurnObjectV2||null;
     if(turnV2&&routePriorityDecision)turnV2.routePriorityDecision=routePriorityDecision;
+    if(turnV2&&brainState.truthLedger)turnV2.truthLedger=brainState.truthLedger;
   }catch(e){}
   if(missionV2TurnShouldOwnVisibleRoute(turnV2)){
     route=(turnV2.routePlan&&turnV2.routePlan.clarify)?'':turnV2.route;
