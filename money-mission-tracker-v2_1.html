@@ -12179,6 +12179,11 @@ function missionResultBelongsToActiveChatV12(result){
     var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
     var activeId=active&&active.id||'';
     if(result.chatId&&activeId&&result.chatId!==activeId)return false;
+    if(!result.chatId&&active&&active.createdAt&&result.recordedAt){
+      var activeCreatedAt=Date.parse(active.createdAt);
+      var resultRecordedAt=Date.parse(result.recordedAt);
+      if(!isNaN(activeCreatedAt)&&!isNaN(resultRecordedAt)&&resultRecordedAt<activeCreatedAt)return false;
+    }
     var messages=active&&Array.isArray(active.messages)?active.messages:[];
     if(!messages.length)return true;
     var type=result.type||'';
@@ -12201,6 +12206,21 @@ function missionActiveChatUserTextMatchesV12(re){
     return messages.some(function(msg){return msg&&msg.role==='user'&&re.test(String(msg.body||''));});
   }catch(e){
     return false;
+  }
+}
+
+function missionResultIsFreshForActiveChatV12(result){
+  if(!result)return false;
+  if(!missionResultBelongsToActiveChatV12(result))return false;
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    if(!active||!active.createdAt||!result.recordedAt)return true;
+    var activeCreatedAt=Date.parse(active.createdAt);
+    var resultRecordedAt=Date.parse(result.recordedAt);
+    if(isNaN(activeCreatedAt)||isNaN(resultRecordedAt))return true;
+    return resultRecordedAt>=activeCreatedAt;
+  }catch(e){
+    return true;
   }
 }
 
@@ -12491,6 +12511,7 @@ function getMissionWhyResponseV1(turn,ctx){
   if(!missionIsWhyRequestV1(turn&&turn.rawInput||turn&&turn.normalizedInput||''))return '';
   var memory=turn&&turn.threadMemory||{};
   var lastResult=memory.lastResult||(getMissionBrainSessionV2().resultLoop||{}).lastResult||null;
+  if(lastResult&&!missionResultBelongsToActiveChatV12(lastResult))lastResult=null;
   var pending=memory.pendingAction||(getMissionBrainSessionV2().resultLoop||{}).pendingAction||getMissionBrainSessionV2().lastActionPlan||null;
   var lastTurn=memory.lastTurn||null;
   var lastTurnSlash=(lastTurn&&String(lastTurn.question||lastTurn.rawInput||'').match(/^\/([a-z0-9_]+)/i))||null;
@@ -17512,7 +17533,8 @@ function getMissionActionAccountabilityV1(turn,ctx){
   var recentResult=!!(lastResult&&lastResult.type&&(resultAge===null||resultAge<=120));
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   var pendingNeedsBooked=/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(pendingText);
-  if(pendingNeedsBooked&&!missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i)){
+  var bookedResultFresh=lastResult&&lastResult.type==='booked'&&missionResultIsFreshForActiveChatV12(lastResult);
+  if(pendingNeedsBooked&&!bookedResultFresh&&!missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i)){
     freshPending=false;
     recentResult=false;
   }
@@ -21775,7 +21797,8 @@ function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,
     pending=session&&((session.resultLoop&&session.resultLoop.pendingAction)||session.lastActionPlan)||null;
   }catch(e){}
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
-  var bookedContext=!!(lastResult&&lastResult.type==='booked'||/\b(prep call|booked call|calendar detail|opening question|sales coach)\b/.test(pendingText));
+  var freshBookedResult=!!(lastResult&&lastResult.type==='booked'&&missionResultIsFreshForActiveChatV12(lastResult));
+  var bookedContext=!!(freshBookedResult||(/\b(prep call|booked call|calendar detail|opening question|sales coach)\b/.test(pendingText)&&missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i)));
   if(bookedContext&&/\b(what card owns this|what lane owns this|which card handles|what card do i open|what do i log|what should i log after this|what result are we|where do i go from here|what counts as done|make it make sense|that sounds disconnected|answer like the app knows|wrong read)\b/.test(q)){
     activeRoute='sales';
   }
