@@ -3537,7 +3537,6 @@ var MISSION_MEMORY_WINS_KEY='a1xx_mc_wins_v1';
 var MISSION_MEMORY_STRUGGLES_KEY='a1xx_mc_struggles_v1';
 var MISSION_MEMORY_PREFS_KEY='a1xx_mc_prefs_v1';
 var MISSION_MEMORY_NOTES_KEY='a1xx_mc_notes_v1';
-var MISSION_MEMORY_ARCHIVE_KEY='a1xx_mc_archive_v1';
 var MISSION_APP_MEMORY_KEY='MISSION_APP_MEMORY';
 var MISSION_MULTI_CHAT_MEMORY_MIGRATION_KEY='a1xx_mc_multi_chat_memory_v1_1_migrated';
 var MISSION_LONG_MEMORY_KEY='a1xx_mission_long_memory_v1';
@@ -4079,14 +4078,6 @@ function saveBridgeWebhookToken(){
 function toggleBridgeWebhookToken(){
   var input=document.getElementById('bridge-webhook-token');
   if(input)input.type=input.type==='password'?'text':'password';
-}
-
-function toggleCoachDetails(){
-  var el=document.getElementById('coach-details');
-  var btn=document.getElementById('coach-toggle');
-  if(!el)return;
-  el.classList.toggle('collapsed');
-  if(btn)btn.textContent=el.classList.contains('collapsed')?'Get started ↓':'Hide details ↑';
 }
 
 function saveTodoist(){
@@ -5620,26 +5611,6 @@ function topCount(counts){
   return {name:keys[0],value:counts[keys[0]]};
 }
 
-function buildCRMLeadCard(lead){
-  var source=lead.source||lead.funnelSource||'Manual';
-  var stage=lead.stage||lead.status||'New Lead';
-  var offer=asArray(lead.offerInterest).join(', ')||lead.funnelSource||asArray(lead.cfTags||[]).join(', ')||'';
-  var next=lead.followUpDate?'Follow up: '+formatContentDate(lead.followUpDate):'Next: move this lead one stage forward';
-  return renderLeadCard({
-    name:lead.name||'Unnamed lead',
-    stageName:getLeadStageName(lead),
-    realName:getLeadRealName(lead),
-    meta:[source,stage,offer].filter(Boolean).join(' · '),
-    next:next,
-    heat:isHotCRMLead(lead)?'Hot':'Active',
-    phone:lead.phone||'',
-    stage:stage,
-    cfTags:lead.cfTags||[],
-    instagramUrl:lead.instagramUrl||'',
-    url:lead.url||NOTION_CRM_URL
-  });
-}
-
 /* ═══════════════════════════════════════════════════════════
    HIT LIST
 ═══════════════════════════════════════════════════════════ */
@@ -5676,13 +5647,6 @@ function isATLLead(lead){
   var tags=String(lead.cfAtlTag||lead.source||lead.funnelSource||'').toLowerCase();
   if(/atl|atlanta/.test(tags))return true;
   return false;
-}
-
-function buildHLPhone(lead){
-  var phone=String(lead.phone||'').trim();
-  if(!phone)return '';
-  var leadId=getLeadDisplayName(lead).replace(/\s/g,'');
-  return '<span class="hl-phone" onclick="hlCopyPhone(\''+escapeHtml(phone)+'\')" id="hlph-'+escapeHtml(leadId)+'">📋 '+escapeHtml(phone)+'</span>';
 }
 
 function buildLeadPhoneLine(phone,lineClass){
@@ -6237,14 +6201,6 @@ function renderHitList(){
   else{html+='<div class="hl-empty" style="border-color:#1a3050;color:#2a4a70"><strong>No ATL locals detected yet.</strong><br>ATL leads are flagged by 404, 470, 678, or 770 area codes and the CF ATL tag.</div>';}
   html+='</div>';
   wrap.innerHTML=html;
-}
-
-function renderBarRows(rows,maxVal){
-  maxVal=maxVal||Math.max.apply(null,rows.map(function(r){return r.value;}).concat([1]));
-  return '<div class="dpc-source-list">'+rows.map(function(row){
-    var w=Math.min(100,Math.round(row.value/Math.max(maxVal,1)*100));
-    return '<div class="dpc-source-row"><div class="dpc-source-name">'+escapeHtml(row.name)+'</div><div class="dpc-source-track"><div class="dpc-source-fill" style="width:'+Math.max(w,row.value?8:0)+'%"></div></div><div class="dpc-source-val">'+escapeHtml(row.label||String(row.value))+'</div></div>';
-  }).join('')+'</div>';
 }
 
 function isStudioLead(lead){
@@ -7993,13 +7949,6 @@ function saveMissionStore(m){
   setStore(MISSION_KEY,m);
 }
 
-function setMissionChoice(kind,value){
-  var m=getMissionStore();
-  m[kind]=value;
-  saveMissionStore(m);
-  renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
-}
-
 function setMissionSlide(idx){
   missionSlideIdx=((idx||0)+3)%3;
   document.querySelectorAll('.mission-move').forEach(function(el,i){
@@ -8008,11 +7957,6 @@ function setMissionSlide(idx){
   document.querySelectorAll('.mission-dot').forEach(function(el,i){
     el.classList.toggle('active',i===missionSlideIdx);
   });
-}
-
-function startMissionSlideRotation(){
-  if(missionSlideTimer)return;
-  missionSlideTimer=setInterval(function(){setMissionSlide(missionSlideIdx+1);},8000);
 }
 
 function getMissionPrimaryTool(dayType){
@@ -8042,40 +7986,6 @@ function getYesterdayMissionSummary(){
 
 function getOpenMissionTasks(limit){
   return (todoistTasks||[]).filter(function(t){return !localChecks[t.id];}).slice(0,limit||3);
-}
-
-function getMissionMoves(dayType,mission,contentPieces,calEvents){
-  var d=getDailyCoach();
-  var pieces=contentPieces||[];
-  var topContent=pieces[0]&&pieces[0].title&&pieces[0].title!=='Untitled'?pieces[0].title:'today’s scheduled content';
-  var nextEvent=getNextCalendarEvent(calEvents||[]);
-  var openTasks=getOpenMissionTasks(3);
-  var topTask=openTasks[0];
-  var rev=parseFloat((document.getElementById('w-rev')||{}).value)||0;
-  var wk=parseFloat((document.getElementById('w-wk')||{}).value)||400;
-  var gap=Math.max(0,wk-rev);
-  var prod=getProductionData();
-  var activeContent=(window.__contentPipelinePieces||pieces||[]).length;
-  var activeProduction=(window.__productionPieces||[]).length;
-  var calCount=(calEvents||[]).length;
-  var dms=parseFloat((document.getElementById('w-dms')||{}).value)||d.dms||0;
-  var leads=parseFloat((document.getElementById('r-leads')||{}).value)||d.leads||0;
-  var calls=parseFloat((document.getElementById('w-calls')||{}).value)||d.calls||0;
-  var closes=parseFloat((document.getElementById('w-closes')||{}).value)||d.closes||0;
-  var topTaskText=topTask?topTask.content:'No open Todoist task loaded';
-  var scheduleText=nextEvent?'Next calendar: '+nextEvent.startTime+' · '+nextEvent.title:'Calendar clear right now';
-  var priority='';
-  if(dayType==='content')priority='Top 3: post '+topContent+' · move 1 content project · log the post.';
-  else if(dayType==='beat')priority='Top 3: move 1 production · BANGIN+ '+(prod.banginThisWeek===1?'already done':'needs upload')+' · update project status.';
-  else if(dayType==='manager')priority='Top 3: handle calendar · clear '+(openTasks.length||0)+' task'+(openTasks.length===1?'':'s')+' · update weekly numbers.';
-  else priority='Top 3: send '+Math.max(0,40-dms)+' DMs · follow up '+leads+' warm lead'+(leads===1?'':'s')+' · book 1 call.';
-  var constraints='Today: '+calCount+' calendar event'+(calCount===1?'':'s')+' · '+scheduleText+' · Task: '+topTaskText;
-  var proof='';
-  if(dayType==='content')proof='Proof by shutdown: content posted, '+activeContent+' active content project'+(activeContent===1?'':'s')+' reviewed.';
-  else if(dayType==='beat')proof='Proof by shutdown: production moved, '+activeProduction+' active project'+(activeProduction===1?'':'s')+' checked, BANGIN+ status updated.';
-  else if(dayType==='manager')proof='Proof by shutdown: top task cleared, meetings handled, scoreboard updated.';
-  else proof='Proof by shutdown: '+Math.max(0,40-dms)+' DMs left, '+Math.max(0,1-calls)+' call left, '+Math.max(0,1-closes)+' close left, '+fmt(gap)+' weekly gap.';
-  return [priority,constraints,proof];
 }
 
 function updateMissionToolSignals(contentPieces,calEvents){
@@ -9290,7 +9200,7 @@ var MISSION_OUTPUT_RESPONSE_POOLS_V1_1={
     ],
     sync:[
       {id:'v11_sync_01',text:'This may be stale. I will not treat it as current without a sync check.'},
-      {id:'v11_sync_02',text:'Source: {{source}}.<br><br>Confidence: {{confidence}}.<br><br>Missing: {{missing}}.'},
+      {id:'v11_sync_02',text:'Data read: {{source}}.<br><br>Confidence: {{confidence}}.<br><br>Missing: {{missing}}.'},
       {id:'v11_sync_03',text:'Data path: {{sourceA}} → {{sourceB}} → Mission Command.'},
       {id:'v11_sync_04',text:'I can give a safe next move, but I will not fake a data read.'}
     ],
@@ -9629,7 +9539,7 @@ var MISSION_OS_AWARE_OUTPUT_PACK_V1={
       {id:'os_day_03',text:'You can switch cards without losing the OS, but the selected context tells Mission Command what lens to use.'}
     ],
     data_confidence:[
-      {id:'os_data_01',text:'Source: {{dataLine}}.<br><br>Confidence: {{confidence}}.<br><br>If this needs to be current-current, run the sync check.'},
+      {id:'os_data_01',text:'Data read: {{dataLine}}.<br><br>Confidence: {{confidence}}.<br><br>If this needs to be current-current, run the sync check.'},
       {id:'os_data_02',text:'I can answer from the loaded app state, but I will qualify the read when sync is not confirmed.'},
       {id:'os_data_03',text:'The data is useful enough for a safe move.<br><br>For exact numbers, check System Hub → Health.'}
     ],
@@ -10596,7 +10506,6 @@ var MISSION_TOOL_REGISTRY={
 /* =========================================================
    MISSION TURN OBJECT — v2
 ========================================================= */
-var MISSION_DEBUG_MODE=false;
 var MISSION_ROUTER_V2_PRIMARY=true;
 var MISSION_TURN_CHECKPOINTS_KEY='a1xx_mc_turn_checkpoints_v1';
 var MISSION_BRAIN_SESSION_V2_KEY='a1xx_mc_brain_session_v2';
@@ -11613,12 +11522,6 @@ function getMissionFocusSessionOpenLineV1(dayType,timeBlock,ctx){
     setMissionFocusGuardSessionV1(session);
   }
   return out;
-}
-
-function getMissionFocusGuardNudge(dayType,timeBlock,ctx){
-  var pools=MISSION_FOCUS_GUARD_DAY_INTEL_V1.ambientNudgePools||{};
-  var dayPool=pools[dayType]||pools.none||{};
-  return dayPool[timeBlock]||'Pick one lane and move it.';
 }
 
 function getMissionFocusGuardOutputV1(subtype,dayType,timeBlock,tabState,ctx,route,question,brainState){
@@ -13710,20 +13613,6 @@ function shouldRenderActionBubbleSkillPackV1(turn){
   return false;
 }
 
-function getWhyLoopDepthSkillPackV1(turn){
-  var brain=(turn&&turn.brainState)||{};
-  var topic=brain.sessionTopic||(turn&&turn.route)||'current_topic';
-  var count=1;
-  try{
-    var thread=brain.topicHistory||brain.topicThread||[];
-    count=thread.filter(function(x){return x===topic||x===(turn&&turn.route);}).length||1;
-  }catch(e){}
-  if(count<=1)return 'reason';
-  if(count===2)return 'root_cause';
-  if(count===3)return 'constraint';
-  return 'decision';
-}
-
 function getMissionConversationTypeV2(q,signals,route,turn){
   if(signals&&signals.isCompletion)return 'CONV_ACTION_COMPLETE';
   if(signals&&signals.isCorrection)return 'CONV_CORRECTION';
@@ -14545,10 +14434,6 @@ function missionQuestionAllowsSuggestionBubbleV2(route,conv,question,links,turn)
   return missionQuestionAllowsSuggestionBubble(route,conv,question,links);
 }
 
-function adaptMissionBubblePacketToLegacyResponse(packet){
-  return {answer:packet&&packet.b1&&packet.b1.answer||'',workerId:packet&&packet.workerId||'',workerLabel:packet&&packet.workerLabel||'',route:packet&&packet.route||'',inputEnergy:packet&&packet.inputEnergy||'',responseMode:packet&&packet.responseMode||'',responseDepth:packet&&packet.responseDepth||'',responseShape:packet&&packet.responseShape||'',dataBubble:packet&&packet.b2&&packet.b2.shouldRender?packet.b2:null,actionBubble:packet&&packet.b3&&packet.b3.shouldRender?packet.b3:null,warnings:packet&&packet.warnings||[],trace:packet&&packet.trace||[]};
-}
-
 function getMissionLegacyConversationFromTurnV2(turn,currentConv){
   if(!turn)return currentConv||{type:CONV_DATA_REQUEST,route:'now',activeRoute:''};
   var route=turn.route||'';
@@ -15095,13 +14980,6 @@ function getMissionPhraseVariation(category,slot,vars,brainState){
   store.recent=recent.slice(-18);
   saveMissionPhraseStore(store);
   return chosen;
-}
-
-function getMissionLanguageLine(route,slot,ctx,question){
-  var brain=(window.__missionDataPacket&&window.__missionDataPacket.brainState)||getMissionBrainSession();
-  var vars=getMissionVarsExpanded(ctx,brain);
-  var responseShape=getMissionResponseShape(route,brain,(getMissionConversationType(question||'',ctx,{route:route},brain)||{}).type,question||'');
-  return getMissionPhraseVariation(responseShape.category,slot||'reads',vars,brain);
 }
 
 function getMissionSlashAlias(value){
@@ -21190,10 +21068,6 @@ function mergeMissionSuggestionBubble(followUp,links,route,question){
   return parts.join('<br><br>');
 }
 
-function missionCompactText(html){
-  return String(html||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-}
-
 function missionRouteNeedsDataBubble(route,conv,question){
   if(!route||!conv)return false;
   if(route==='diagnostic')return false;
@@ -22927,10 +22801,6 @@ function getMissionDataPacket(question){
       ]
     }
   };
-}
-
-function renderMissionSources(sources){
-  return '<div class="mission-source-row">'+(sources||['App State']).map(function(s){return '<span class="mission-source-chip">'+escapeHtml(s)+'</span>';}).join('')+'</div>';
 }
 
 function missionBubble(role,body,allowHtml){
@@ -25360,16 +25230,6 @@ function setBangin(val){
   renderContentCard();renderProductionCard();
 }
 
-function togglePosted(){
-  var d=getProductionData();
-  var today=dateKey(new Date());
-  var wasPosted=d.postedToday===today;
-  if(wasPosted){d.postedToday=null;}
-  else{d.postedToday=today;d.lastPostDate=today;}
-  setStore(PROD_KEY,d);
-  renderContentCard();renderProductionCard();
-}
-
 /* ═══════════════════════════════════════════════════════════
    DAILY ACTIVITY STREAK (per day type)
 ═══════════════════════════════════════════════════════════ */
@@ -25512,27 +25372,6 @@ function setContentView(view){
   if(contentView==='live')renderLiveTab();
   if(contentView==='spark')renderSparkTab();
   renderContentCard();
-}
-
-function markContentPosted(){
-  var log=getContentLog();
-  var today=dateKey(new Date());
-  var wasPosted=log.days[today];
-  if(wasPosted){
-    // Toggle off
-    delete log.days[today];
-  } else {
-    log.days[today]=true;
-  }
-  setStore(CONTENT_LOG_KEY,log);
-  renderContentCard();
-  updateStreakChain();
-  renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
-  // Also update production data
-  var prod=getProductionData();
-  prod.postedToday=wasPosted?null:today;
-  prod.lastPostDate=wasPosted?prod.lastPostDate:today;
-  setStore(PROD_KEY,prod);
 }
 
 function getContentStreak(){
