@@ -10868,7 +10868,22 @@ function cleanMissionVisibleAnswerText(html){
     .replace(/\bOpen\s+Open\s+/g,'Open ')
     .replace(/\bopen\s+Open\s+/g,'open ')
     .replace(/\bOpen\s+The\s+Current\s+Work\s+Card\b/g,'open the current work card')
+    .replace(/(^|<br\s*\/?>\s*)(Start with|Ask|Send|Say):\s*(?=&quot;|")/gi,function(_,prefix,label){return prefix+label.charAt(0).toUpperCase()+label.slice(1).toLowerCase()+' this. ';})
+    .replace(/(^|<br\s*\/?>\s*)Mirror,\s*ask,\s*pause:\s*/gi,'$1Keep it simple. Mirror them, ask one question, then pause. ')
+    .replace(/\bMirror,\s*ask,\s*pause:\s*/gi,'Mirror them, ask one question, then pause. ')
+    .replace(/(^|<br\s*\/?>\s*)Pattern read:\s*/gi,'$1Here is the pattern. ')
+    .replace(/(^|<br\s*\/?>\s*)Cleaner read:\s*/gi,'$1Clean read. ')
+    .replace(/(^|<br\s*\/?>\s*)Clean read:\s*/gi,'$1Clean read. ')
+    .replace(/(^|<br\s*\/?>\s*)Data read:\s*/gi,'$1I checked the data. ')
+    .replace(/(^|<br\s*\/?>\s*)Trust level:\s*/gi,'$1Trust check. ')
+    .replace(/(^|<br\s*\/?>\s*)Current read:\s*/gi,'$1Right now, ')
+    .replace(/(^|<br\s*\/?>\s*)Next move:\s*/gi,'$1Next, ')
+    .replace(/(^|<br\s*\/?>\s*)Result read:\s*/gi,'$1Result logged. ')
+    .replace(/(^|<br\s*\/?>\s*)What it means:\s*/gi,'$1What this means. ')
+    .replace(/(^|<br\s*\/?>\s*)Why:\s*/gi,'$1Why. ')
+    .replace(/(^|<br\s*\/?>\s*)Move:\s*/gi,'$1Move. ')
     .replace(/\bDo this next:\s*/gi,'Next, ')
+    .replace(/\bDo this now:\s*/gi,'Do this now. ')
     .replace(/\s+([.,!?;:])/g,'$1')
     .replace(/([.!?])([A-Z])/g,'$1 $2')
     .replace(/(^|[.!?]\s+)open the current work card/g,function(match,prefix){return prefix+'Open the current work card';})
@@ -16246,7 +16261,7 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'content_card',q:'what should i do on the content card',must:/I checked Content|Content card read/i,card:'content'},
       {name:'production_card',q:'what should i do on the beat card',must:/I checked Production|Production card read/i,card:'production'},
       {name:'manager_card',q:'what should i check on the manager card',must:/I checked Manager|Manager card read/i,card:'manager'},
-      {name:'hit_list',q:'how is the hit list looking',must:/Hit List read/i,card:'outreach'},
+      {name:'hit_list',q:'how is the hit list looking',must:/I checked the Hit List|Hit List read/i,card:'outreach'},
       {name:'hit_list_navigation',q:'where do i click to find the hit list',must:/Hit List read|Open Hit List|Outreach/i,card:'outreach'},
       {name:'weekly_scorecard',q:'what should i track every week',must:/weekly scorecard|five numbers|Track five numbers/i,card:'weekly'},
       {name:'dpc_card',q:'read the dpc card',must:/DPC read/i,card:'outreach'},
@@ -16255,8 +16270,8 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'content_proof_polite',q:'hey what proof should i post',must:/I checked Content|Content card read|proof|post/i,card:'content'},
       {name:'content_pipeline_polite',q:'what is stuck in the content pipeline please',must:/I checked Content|Content card read|Content|Pipeline|content/i,card:'content'},
       {name:'production_ship_polite',q:'hey what can ship today',must:/I checked Production|Production card read|ship|Production/i,card:'production'},
-      {name:'sales_mix_master_reply',q:'mix master reply',must:/Send:|Ask:|Say:|Sales/i},
-      {name:'sales_break_even_qualifier',q:'Break EVEN qualifier',must:/Send:|Ask:|Say:|Sales/i},
+      {name:'sales_mix_master_reply',q:'mix master reply',must:/Send this|Ask this|Say this|Send:|Ask:|Say:|Sales/i},
+      {name:'sales_break_even_qualifier',q:'Break EVEN qualifier',must:/Send this|Ask this|Say this|Send:|Ask:|Say:|Sales/i},
       {name:'money_read_plain',q:'how much money are we making',must:/I checked the money lane|Money read|This week|Next/i},
       {name:'money_make_today',q:'what can i do to make some money today',must:/I checked the money lane|Money read|Next/i},
       {name:'sync_calendar_stale',q:'calendar stale',must:/current enough|Data read|sync|missing|loaded/i},
@@ -16352,7 +16367,7 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var missingLine=missing.length?escapeHtml(missing.join(', ')):'nothing obvious from the current app packet';
   var trustLine=missing.length?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
   if(/\b(what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|what is trusted|what is safe to act on)\b/.test(q)){
-    return 'I am looking at this right now:<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine);
+    return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see)\b/.test(q)){
     return 'I cannot fully see this yet:<br><br>'+missingLine+'<br><br>'+escapeHtml(trustLine)+'<br><br>Only run sync if this decision needs current numbers.';
@@ -18478,7 +18493,7 @@ function getMissionOutreachCardIntelligenceResponseV11(route,ctx,question,brainS
     answer='DPC read:<br><br>'+Number(d.dms||0)+' DMs · '+Number(d.coldCalls||0)+' calls made · '+Number(d.calls||0)+' booked · '+Number(d.closes||0)+' closes · '+fmt(d.money||0)+' collected.<br><br>Do this next: '+move+'.';
   }else if(mode==='hitlist'){
     var top=snap.ranked.slice(0,3).map(getMissionOutreachLeadLabelV11).join('<br>');
-    answer='Hit List read:<br><br>'+(snap.leads.length?snap.leads.length+' open lead'+(snap.leads.length===1?'':'s')+'.<br>'+top:'No open CRM leads are loaded right now.')+'<br><br>Do this next: '+move+'.';
+    answer='I checked the Hit List.<br><br>'+(snap.leads.length?'There '+(snap.leads.length===1?'is ':'are ')+snap.leads.length+' open lead'+(snap.leads.length===1?'':'s')+'.<br>'+top:'No open CRM leads are loaded right now.')+'<br><br>Do this next: '+move+'.';
   }else if(mode==='followup'){
     var followList=(snap.due.length?snap.due:snap.ranked).slice(0,3).map(getMissionOutreachLeadLabelV11).join('<br>');
     answer='Follow-up read:<br><br>'+(followList||'No due follow-up is visible in the loaded packet.')+'<br><br>Do this next: '+move+'.';
@@ -18851,7 +18866,7 @@ function getMissionManagerCardIntelligenceResponseV11(route,ctx,question,brainSt
   var minutes=Number(snap.block&&snap.block.minutesLeft||0);
   var answer='';
   if(mode==='block'){
-    answer='Manager block read:<br><br>'+blockName+(minutes?' has '+minutes+' minutes left.':' is the active window.')+'<br><br>Do this next: '+move+'.';
+    answer='You are in '+blockName+' right now.<br><br>'+(minutes?'There are '+minutes+' minutes left.':'This is the active window.')+' Keep it to one clean outcome.<br><br>Do this next: '+move+'.';
   }else if(mode==='calendar'){
     answer='Calendar read:<br><br>'+(snap.events.length?snap.events.slice(0,3).map(missionManagerEventLabelV11).join('<br>'):'No upcoming business event is loaded right now.')+'<br><br>Do this next: '+move+'.';
   }else if(mode==='prep'){
@@ -21510,7 +21525,7 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
     var leadLines=leads.length?leads.slice(0,3).map(function(lead){
       return escapeHtml((lead.status?'['+lead.status+'] ':'')+(lead.name||lead.title||'Unnamed lead'));
     }).join('<br>'):'No lead list is loaded in this packet.';
-    return 'Leads read:<br><br>'+leads.length+' open lead'+(leads.length===1?'':'s')+' loaded.<br><br>'+leadLines+'<br><br>Next: open Hit List, touch the warmest visible signal, then log the result.';
+    return 'I checked Leads.<br><br>'+leads.length+' open lead'+(leads.length===1?'':'s')+' loaded.<br><br>'+leadLines+'<br><br>Next, open Hit List, touch the warmest visible signal, then log the result.';
   }
   if(/^\/report\b|^\/money\b|^\/m\b/.test(q)){
     var target=Number(ctx&&ctx.wk||ctx&&ctx.target||0);
@@ -21584,10 +21599,10 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
 function getMissionSalesEdgeCaseResponseV1(question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
   if(/\b(needs to think|need to think|he needs to think|she needs to think|they need to think)\b/.test(q)){
-    return 'Say: "Totally fair. What part are you still thinking through: the money, the timing, or whether this solves the problem?"';
+    return 'Say this. "Totally fair. What part are you still thinking through: the money, the timing, or whether this solves the problem?"';
   }
   if(/\b(wants to start smaller|want to start smaller|start smaller)\b/.test(q)){
-    return 'Say: "We can look at that. Would smaller still solve the problem you told me about?"';
+    return 'Say this. "We can look at that. Would smaller still solve the problem you told me about?"';
   }
   if(/\bpost call loss\b/.test(q)){
     return 'Post-call loss read:<br><br>Do not just mark it lost.<br><br>Find the break: fit, money, timing, trust, or clarity.<br><br>Next: write the lesson, then decide the follow-up or close-the-loop message.';
