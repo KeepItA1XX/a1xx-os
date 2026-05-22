@@ -13108,7 +13108,15 @@ function getMissionDirectRouteOverrideV1(question){
   if(!q)return '';
   var salesRoute=getMissionSalesReplyOverrideV1(q);
   if(salesRoute)return salesRoute;
+  var slash=String(q||'').match(/^\/([a-z0-9_]+)/);
+  if(slash){
+    var slashRoute=normalizeMissionSlashRouteV2(slash[1]);
+    if(slashRoute)return slashRoute;
+  }
   if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q))return 'sync';
+  if(/\b(teach me dpc|explain dpc|daily profit campaign|quick.*dpc count|what is my dpc count|i sent \d+ dms|i sent dms)\b/.test(q))return 'dpc';
+  if(/\b(why should i focus on leads|walk me through follow ups|walk me through followups|how do follow ups work|how do followups work)\b/.test(q))return 'leads';
+  if(/\b(who is a1xx|what is a1xx|who am i in this os|what is my role here)\b/.test(q))return 'profile';
   if(/\b(brief card|mission brief|read the brief|business condition)\b/.test(q))return 'report';
   if(/\b(hit list|show my leads|outreach card|who hot|who warm|who needs a bump|who is closest to money|pipeline|open leads|lead list)\b/.test(q))return 'leads';
   if(/\b(content card|content pipeline|what proof should i post|proof should i post|what should i post|caption|hook|post today|content stuck|stuck in the content)\b/.test(q))return 'content';
@@ -21470,6 +21478,56 @@ function getMissionPersonalityFallback(ctx,question){
 
 function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  if(/^\/calendar\b/.test(q)){
+    var cal=(window.__calEvents||[]).filter(Boolean);
+    var nextEvent=(ctx&&ctx.nextEvent)||cal[0]||null;
+    var nextLine=nextEvent?(nextEvent.time||nextEvent.start||'Next')+' · '+(nextEvent.title||nextEvent.name||'calendar event'):'no upcoming event loaded';
+    return 'Calendar read:<br><br>Events loaded: '+cal.length+'.<br><br>Next event: '+escapeHtml(nextLine)+'.<br><br>Use Manager when the move is time, schedule, prep, or admin.';
+  }
+  if(/^\/sync\b|^\/health\b/.test(q)){
+    return 'Sync read:<br><br>'+getMissionCommandRouteAnswer('sync',ctx,question);
+  }
+  if(/^\/leads\b|^\/lead\b|^\/pipeline\b/.test(q)){
+    var leads=(window.__crmLeads||[]).filter(Boolean);
+    var leadLines=leads.length?leads.slice(0,3).map(function(lead){
+      return escapeHtml((lead.status?'['+lead.status+'] ':'')+(lead.name||lead.title||'Unnamed lead'));
+    }).join('<br>'):'No lead list is loaded in this packet.';
+    return 'Leads read:<br><br>'+leads.length+' open lead'+(leads.length===1?'':'s')+' loaded.<br><br>'+leadLines+'<br><br>Next: open Hit List, touch the warmest visible signal, then log the result.';
+  }
+  if(/^\/report\b|^\/money\b|^\/m\b/.test(q)){
+    var target=Number(ctx&&ctx.wk||ctx&&ctx.target||0);
+    var revenue=Number(ctx&&ctx.rev||ctx&&ctx.revenue||0);
+    if(!isFinite(target))target=0;
+    if(!isFinite(revenue))revenue=0;
+    var gap=Math.max(0,target-revenue);
+    var pct=target>0?Math.round((revenue/target)*100):0;
+    var moneyLine=target>0?(fmt(revenue)+' of '+fmt(target)+' · '+pct+'% · '+fmt(gap)+' gap'):'No money target loaded in this packet.';
+    return 'Report read:<br><br>Money: '+moneyLine+'<br><br>Use this for the money picture, then choose the closest buyer-facing or delivery move.';
+  }
+  if(/^\/dpc\b/.test(q)){
+    return 'DPC read:<br><br>'+getMissionDpcAnswer();
+  }
+  if(/^\/help\b/.test(q)){
+    return 'Commands:<br><br>/now - current move<br>/pipeline - lead list<br>/money - money read<br>/dpc - daily log<br>/sync - system health<br>/calendar - schedule<br>/content - content lane<br>/production - beat and asset lane<br><br>Ask naturally if you do not want a slash command.';
+  }
+  if(route==='profile'&&/\b(who is a1xx|what is a1xx|who am i in this os|what is my role here)\b/.test(q)){
+    return 'A1XX read:<br><br>You are the operator of this OS: sales, content, production, money, and delivery all route back to your next visible move.<br><br>Mission Command should not treat you like a lead. It should help you decide what to do next and what to log.';
+  }
+  if(route==='dpc'&&/\b(teach me dpc|explain dpc|daily profit campaign)\b/.test(q)){
+    return 'Daily Profit Campaign:<br><br>DPC is the daily money-motion log: DMs, calls, replies, booked calls, closes, content, and cash collected.<br><br>Why it matters: it shows whether the day created real movement or just activity.<br><br>How to use it: log the action right after the block, then let the numbers point to the next move.<br><br>What to watch: replies, booked calls, closes, and money collected.';
+  }
+  if(route==='dpc'&&/\b(quick.*dpc count|what is my dpc count)\b/.test(q)){
+    return 'DPC count:<br><br>'+getMissionDpcAnswer();
+  }
+  if(route==='dpc'&&/\bi sent \d+ dms\b|\bi sent dms\b/.test(q)){
+    return 'Good. Log the DMs in DPC now so the OS can count the move.<br><br>Then watch for the next result: no reply, reply, booked, or paid.';
+  }
+  if(route==='leads'&&/\bwhy should i focus on leads\b/.test(q)){
+    return 'Because leads are the closest visible path to a money conversation.<br><br>Pipeline is not storage. It is a map of who can become an offer, a call, a follow-up, or a clean no.<br><br>Next: open Hit List, touch the warmest visible signal, then log the result.';
+  }
+  if(route==='leads'&&/\b(walk me through follow ups|walk me through followups|how do follow ups work|how do followups work)\b/.test(q)){
+    return 'Follow-up walkthrough:<br><br>1) Open Hit List.<br>2) Pick the warmest visible lead.<br>3) Send one clear check-in.<br>4) Log the result: no reply, reply, booked, paid, or wrong lane.<br><br>Keep the message short enough that the reply is easy.';
+  }
   if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q)){
     if(/\b(where do i check sync|where|check sync)\b/.test(q)){
       return 'System Hub → Health → Run sync check.<br><br>Check Notion, Sheets, Calendar, and backup status.<br><br>If something fails, save locally first, then retry one source.';
