@@ -12250,7 +12250,8 @@ function getMissionPatternBasedCoachingMemoryV1(turn,ctx){
   }else if(resourceUseCount>=2&&directNext&&!explicitData&&!salesAsk){
     pattern={key:'resource_without_result',label:'Resource Without Result',message:'Pattern read: resources are being pulled, but the result loop is not clear yet.<br><br>Use one script once, then tell me what happened before pulling another one.',action:{label:'Close Resource Loop',type:'result_prompt',target:'mission_command',action:'report the resource result',requiresConfirmation:true,reason:'pattern_resource_without_result'}};
   }else if(whyMoreCount>=3&&followupAsk&&!explicitData&&!salesAsk&&pending){
-    pattern={key:'clarity_loop_open_action',label:'Clarity Loop',message:'Pattern read: the question keeps asking for more because the action is still open.<br><br>Close this move first: '+escapeHtml(pending.label||pending.action||'the current move')+'.',action:{label:pending.label||'Do Current Move',type:pending.type||'next_best_move',target:pending.target||pending.action||'mission_command',action:pending.action||pending.label||'',requiresConfirmation:false,reason:'pattern_clarity_loop'}};
+    var friendlyPendingAction=getMissionFriendlyActionTextV1(pending,'the current move');
+    pattern={key:'clarity_loop_open_action',label:'Clarity Loop',message:'Pattern read: the question keeps asking for more because the action is still open.<br><br>Close this move first: '+escapeHtml(friendlyPendingAction)+'.',action:{label:friendlyPendingAction,type:pending.type||'next_best_move',target:pending.target||pending.action||'mission_command',action:pending.action||friendlyPendingAction,requiresConfirmation:false,reason:'pattern_clarity_loop'}};
   }else if(salesTurns>=2&&leadTurns>=2&&directNext&&!explicitData){
     pattern={key:'sales_pipeline_blend',label:'Sales/Pipeline Blend',message:'Pattern read: sales language and pipeline work are blending together.<br><br>Split it clean: Pipeline tells who to contact. Sales tells what to say.',action:{label:'Pick Sales or Pipeline',type:'next_best_move',target:'mission_command',action:'choose whether this is who to contact or what to say',requiresConfirmation:false,reason:'pattern_sales_pipeline_blend'}};
   }
@@ -12371,8 +12372,9 @@ function getMissionThreadMemoryV1(turn,ctx){
     }
   }else if(shouldAnswer&&pending){
     reason='pending_action_thread';
-    action={label:pending.label||'Do Next Move',type:pending.type||'next_best_move',target:pending.target||'',action:pending.action||pending.label||'',requiresConfirmation:false,reason:'thread_memory_pending'};
-    message='We are still on '+escapeHtml(getMissionRouteLabelV2(pending.route||activeRoute))+'.<br><br>Last move: '+escapeHtml(pending.label||pending.action||'the next move')+'.<br><br>Do that, then tell me what happened.';
+    var pendingFriendly=getMissionFriendlyActionTextV1(pending,'the next move');
+    action={label:pendingFriendly,type:pending.type||'next_best_move',target:pending.target||'',action:pending.action||pendingFriendly,requiresConfirmation:false,reason:'thread_memory_pending'};
+    message='We are still on '+escapeHtml(getMissionRouteLabelV2(pending.route||activeRoute))+'.<br><br>Last move: '+escapeHtml(pendingFriendly)+'.<br><br>Do that, then tell me what happened.';
   }else if(shouldAnswer){
     reason=routeChanged?'route_changed_followup':'active_thread_followup';
     message='We are still on '+escapeHtml(getMissionRouteLabelV2(activeRoute))+'.<br><br>Last useful thread: '+escapeHtml(lastTurn&&lastTurn.question||'the current mission')+'.<br><br>Next: make one visible move, then log what changed.';
@@ -12419,7 +12421,7 @@ function getMissionWhyResponseV1(turn,ctx){
   var leadCount=(ctx&&ctx.crm&&ctx.crm.length)||0;
   var contentCount=(window.__contentPieces&&window.__contentPieces.length)||0;
   var productionCount=(window.__productionItems&&window.__productionItems.length)||(window.__beats&&window.__beats.length)||0;
-  var nextMove=pending&&pending.label||turn&&turn.brainState&&turn.brainState.nextBestMove||lastTurn&&lastTurn.actionLabel||'the next visible move';
+  var nextMove=pending?getMissionFriendlyActionTextV1(pending,'the next visible move'):(turn&&turn.brainState&&turn.brainState.nextBestMove||lastTurn&&lastTurn.actionLabel||'the next visible move');
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   var pendingLooksSales=/\b(prep call|sales coach|sales|closer|call prep|booked call|opening question|discovery)\b/.test(pendingText);
   if(route&&route!=='sales'&&route!=='leads'&&pendingLooksSales){
@@ -16356,6 +16358,18 @@ function getMissionDataConfidenceResponse(route,ctx,question){
     return 'Currentness read:<br><br>'+usingLine+'<br><br>Sync status:<br>'+healthLine+'<br><br>Trust level: '+escapeHtml(trustLine)+'<br><br>Next: use the loaded read for a safe move, or run sync before treating the numbers as final.';
   }
   return 'Data read:<br><br>'+(missing.length?'Partial - missing '+escapeHtml(missing.join(', '))+'.':'Clean enough for the current app packet.')+'<br><br>What that means:<br>'+escapeHtml(trustLine)+'<br><br>Next: run sync only if the decision needs current numbers.';
+}
+
+function getMissionFriendlyActionTextV1(action,fallback){
+  var item=action||{};
+  var label=String(item.label||'').replace(/\s+/g,' ').trim();
+  var rawAction=String(item.action||'').replace(/\s+/g,' ').trim();
+  var target=String(item.target||'').replace(/\s+/g,' ').trim();
+  if(/^do current step$/i.test(label)||/^do current move$/i.test(label)||/^do next move$/i.test(label)){
+    if(rawAction&&!/^(mission_command|now|next_best_move)$/i.test(rawAction))return rawAction;
+    if(target&&!/^(mission_command|now|next_best_move)$/i.test(target))return target;
+  }
+  return label||rawAction||target||fallback||'the next move';
 }
 
 function isMissionDataTrustPromptV12(question){
@@ -21509,6 +21523,9 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   }
   if(/^\/help\b/.test(q)){
     return 'Commands:<br><br>/now - current move<br>/pipeline - lead list<br>/money - money read<br>/dpc - daily log<br>/sync - system health<br>/calendar - schedule<br>/content - content lane<br>/production - beat and asset lane<br><br>Ask naturally if you do not want a slash command.';
+  }
+  if(route==='sync'&&isMissionDataTrustPromptV12(q)){
+    return getMissionDataConfidenceResponse('sync',ctx,question)||getMissionCommandRouteAnswer('sync',ctx,question);
   }
   if(route==='profile'&&/\b(who is a1xx|what is a1xx|who am i in this os|what is my role here)\b/.test(q)){
     return 'A1XX read:<br><br>You are the operator of this OS: sales, content, production, money, and delivery all route back to your next visible move.<br><br>Mission Command should not treat you like a lead. It should help you decide what to do next and what to log.';
