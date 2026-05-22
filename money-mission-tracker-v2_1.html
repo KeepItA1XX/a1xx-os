@@ -22564,6 +22564,23 @@ function runMissionMultiChatMemoryPanelCheckV11(){
     if(!brainOne||!brainOne.resultLoop||!brainOne.resultLoop.lastResult||brainOne.resultLoop.lastResult.type!=='paid')failures.push('original chat memory was not preserved');
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_chat_memory_2');
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_chat_memory_2');
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({lastRoute:'leads',lastActionPlan:{label:'Stale Hit List',route:'leads'},resultLoop:{pendingAction:{label:'Stale Hit List',route:'leads'},history:[]},threadMemory:{activeRoute:'leads',turns:[{question:'/pipeline',route:'leads',timestamp:now}]}}));
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_KEY,JSON.stringify({topicThread:['leads'],topicHistory:['leads']}));
+    sessionStorage.setItem(MISSION_PRESENCE_LOG_KEY,JSON.stringify({recent:['stale']}));
+    startMissionNewChat();
+    var newChatId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';
+    var newChatBrain=getMissionBrainSessionV2();
+    var newChatLegacyBrain=getMissionBrainSession();
+    var newChatThread=getMissionThreadMemoryV1({rawInput:'good morning',route:'now',inputSignals:{}},{});
+    var newChatAccountability=getMissionActionAccountabilityV1({rawInput:'what should i do today',route:'now'},{});
+    if(newChatBrain&&((newChatBrain.resultLoop&&newChatBrain.resultLoop.pendingAction)||newChatBrain.lastActionPlan||newChatBrain.lastRoute))failures.push('new chat retained v2 brain session');
+    if(newChatLegacyBrain&&((newChatLegacyBrain.topicThread&&newChatLegacyBrain.topicThread.length)||(newChatLegacyBrain.topicHistory&&newChatLegacyBrain.topicHistory.length)))failures.push('new chat retained legacy brain session');
+    if(newChatThread&&newChatThread.shouldAnswer)failures.push('new chat retained thread memory response');
+    if(newChatAccountability&&newChatAccountability.shouldAnswer)failures.push('new chat retained pending accountability');
+    if(newChatId){
+      var removedNewChat=deleteMissionSession(newChatId);
+      if(!removedNewChat||!removedNewChat.ok)failures.push('new chat cleanup failed');
+    }
     var removed=deleteMissionSession('qa_chat_memory_2');
     if(!removed||!removed.ok)failures.push('delete did not remove a secondary chat');
     var appAfterDelete=getMissionAppMemoryBundle();
@@ -23026,6 +23043,30 @@ function patchMissionActiveChatMemory(type,mutator){
   return next;
 }
 
+function resetMissionTransientChatBrainV11(reason){
+  var keys=[
+    MISSION_BRAIN_SESSION_V2_KEY,
+    MISSION_SESSION_DATA_CACHE_KEY,
+    MISSION_PRESENCE_LOG_KEY,
+    MISSION_OUTPUT_STATE_V1_KEY,
+    MISSION_RESPONSE_FRAME_STORE_KEY_V1,
+    MISSION_VARIANTS_KEY,
+    MISSION_WHY_DEPTH_KEY,
+    MISSION_BRAIN_SESSION_KEY,
+    'a1xx_mc_phrase_rotation_v1'
+  ].filter(Boolean);
+  keys.forEach(function(key){
+    try{sessionStorage.removeItem(key);}catch(e){}
+  });
+  window.__missionLastTurnObjectV2=null;
+  window.__missionLastTurnV2=null;
+  window.__missionLastRoutePriorityDecisionV1=null;
+  window.__missionLastInternalQADebugProbeV1=null;
+  window.__missionCommandActiveTopicRoute='';
+  window.__missionCommandActiveTopicQuestion='';
+  return {ok:true,reason:reason||'chat_boundary_reset',keysCleared:keys.length};
+}
+
 function getMissionGlobalChatHistoryV11(){
   var items=getStore(MISSION_CHAT_HISTORY_KEY);
   return Array.isArray(items)?items:[];
@@ -23318,6 +23359,7 @@ function getActiveMissionSession(){
   saveMissionChatSessions(allSessions);
   localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,active.id);
   localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,active.id);
+  resetMissionTransientChatBrainV11('created_first_active_chat');
   return active;
 }
 
@@ -23329,6 +23371,7 @@ function setActiveMissionSession(id){
   localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
   localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,session.id);
   localStorage.setItem(MISSION_CHAT_ACTIVE_PROJECT_KEY,session.project||getActiveMissionProject());
+  resetMissionTransientChatBrainV11('chat_switched');
   renderMissionSessionThread(session);
   renderMissionHistoryPanel();
   toggleMissionHistory(false);
@@ -23400,6 +23443,7 @@ function startMissionNewChat(){
   syncMissionChatSession(session,'new');
   localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,session.id);
   localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,session.id);
+  resetMissionTransientChatBrainV11('new_chat_started');
   renderMissionSessionThread(session);
   renderMissionHistoryPanel();
   toggleMissionHistory(false);
