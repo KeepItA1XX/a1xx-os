@@ -11842,6 +11842,28 @@ function countMissionActiveChatResultSignalsV12(type){
   }
 }
 
+function countMissionFreshResultLoopSignalsV12(history,lastResult,type){
+  try{
+    var count=0;
+    var seen={};
+    function countOne(item){
+      if(!item||item.type!==type)return;
+      if(typeof missionResultIsFreshForActiveChatV12==='function'&&!missionResultIsFreshForActiveChatV12(item))return;
+      var key=[item.type||'',item.recordedAt||'',item.chatId||'',item.label||''].join('|');
+      if(seen[key])return;
+      seen[key]=true;
+      count+=1;
+    }
+    countOne(lastResult);
+    (Array.isArray(history)?history:[]).forEach(function(item){
+      countOne(item);
+    });
+    return count;
+  }catch(e){
+    return 0;
+  }
+}
+
 function bumpMissionResultSessionCountV1(type){
   if(!type)return;
   try{
@@ -11878,9 +11900,12 @@ function getMissionContextTruthLedgerV1(ctx){
   var activeBooked=countMissionActiveChatResultSignalsV12('booked');
   var activePaid=countMissionActiveChatResultSignalsV12('paid');
   var activeReply=countMissionActiveChatResultSignalsV12('reply');
-  var sessionBooked=activeBooked!==null?activeBooked:Math.max(lastResult&&lastResult.type==='booked'?1:0,countMissionResultHistoryTypeV1(history,'booked'));
-  var sessionPaid=activePaid!==null?activePaid:Math.max(lastResult&&lastResult.type==='paid'?1:0,countMissionResultHistoryTypeV1(history,'paid'));
-  var sessionReply=activeReply!==null?activeReply:Math.max(lastResult&&lastResult.type==='reply'?1:0,countMissionResultHistoryTypeV1(history,'reply'));
+  var loopBooked=countMissionFreshResultLoopSignalsV12(history,lastResult,'booked');
+  var loopPaid=countMissionFreshResultLoopSignalsV12(history,lastResult,'paid');
+  var loopReply=countMissionFreshResultLoopSignalsV12(history,lastResult,'reply');
+  var sessionBooked=activeBooked!==null?Math.max(activeBooked,loopBooked):loopBooked;
+  var sessionPaid=activePaid!==null?Math.max(activePaid,loopPaid):loopPaid;
+  var sessionReply=activeReply!==null?Math.max(activeReply,loopReply):loopReply;
   if(activeBooked===null&&!sessionBooked)sessionBooked=Number(fallbackCounts.booked||0);
   if(activePaid===null&&!sessionPaid)sessionPaid=Number(fallbackCounts.paid||0);
   if(activeReply===null&&!sessionReply)sessionReply=Number(fallbackCounts.reply||0);
@@ -12132,6 +12157,7 @@ function completeMissionResultLoopV1(signal,turn){
     resourceTitle:pending&&pending.resourceTitle||'',
     followthroughType:pending&&pending.followthroughType||'',
     recordedAt:new Date().toISOString(),
+    chatId:localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'',
     truthStatus:'session_only',
     confirmed:false,
     source:'mission_command_chat'
@@ -12209,6 +12235,7 @@ function missionResultBelongsToActiveChatV12(result){
     var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
     var activeId=active&&active.id||'';
     if(result.chatId&&activeId&&result.chatId!==activeId)return false;
+    if(result.chatId&&activeId&&result.chatId===activeId)return true;
     if(!result.chatId&&active&&active.createdAt&&result.recordedAt){
       var activeCreatedAt=Date.parse(active.createdAt);
       var resultRecordedAt=Date.parse(result.recordedAt);
@@ -12279,6 +12306,30 @@ function missionActiveChatHasBookedAfterFreshStarterV12(){
   }
 }
 
+function missionActiveResultLoopHasBookedAfterFreshStarterV12(){
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var activeId=active&&active.id||'';
+    var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+    var starterTime=missionLatestActiveChatFreshStarterTimeV12();
+    var boundaryTime=!isNaN(starterTime)?starterTime:activeCreatedAt;
+    var session=typeof getMissionRawBrainSessionForArbitrationV11==='function'?getMissionRawBrainSessionForArbitrationV11():{};
+    var loop=session&&session.resultLoop||{};
+    var results=[];
+    if(loop.lastResult)results.push(loop.lastResult);
+    if(Array.isArray(loop.history))results=results.concat(loop.history);
+    return results.some(function(result){
+      if(!result||result.type!=='booked')return false;
+      if(result.chatId&&activeId&&result.chatId!==activeId)return false;
+      var recordedAt=Date.parse(result.recordedAt||'');
+      if(!isNaN(boundaryTime)&&(isNaN(recordedAt)||recordedAt<boundaryTime))return false;
+      return true;
+    });
+  }catch(e){
+    return false;
+  }
+}
+
 function missionQuestionIsFreshStarterV12(question){
   return /^(good morning|gm|morning|yo|yo let'?s go|let'?s go|lock in)$/i.test(String(question||'').trim());
 }
@@ -12304,7 +12355,7 @@ function missionLatestActiveChatFreshStarterTimeV12(){
 
 function missionShouldBlockStaleBookedCarryV12(question){
   if(missionQuestionIsFreshStarterV12(question||''))return true;
-  return !isNaN(missionLatestActiveChatFreshStarterTimeV12())&&!missionActiveChatHasBookedAfterFreshStarterV12();
+  return !isNaN(missionLatestActiveChatFreshStarterTimeV12())&&!missionActiveChatHasBookedAfterFreshStarterV12()&&!missionActiveResultLoopHasBookedAfterFreshStarterV12();
 }
 
 function missionThreadTurnIsBeforeFreshStarterV12(turn,fallbackAt){
@@ -12358,6 +12409,8 @@ function missionResultIsFreshForActiveChatV12(result){
     var activeCreatedAt=Date.parse(active.createdAt);
     var resultRecordedAt=Date.parse(result.recordedAt);
     if(isNaN(activeCreatedAt)||isNaN(resultRecordedAt))return true;
+    var starterTime=typeof missionLatestActiveChatFreshStarterTimeV12==='function'?missionLatestActiveChatFreshStarterTimeV12():NaN;
+    if(!isNaN(starterTime)&&resultRecordedAt<starterTime)return false;
     return resultRecordedAt>=activeCreatedAt;
   }catch(e){
     return true;
@@ -12701,9 +12754,9 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     var bookedAt=new Date(Date.now()+1).toISOString();
     var activeBrain={
       resultLoop:{
-        lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:bookedAt,chatId:'qa_context_arb_booked'},
-        pendingAction:{label:'Prep Call',action:'prep the booked call and add the calendar detail',target:'sales_coach',reason:'thread_memory_booked',suggestedAt:bookedAt},
-        history:[{type:'booked',label:'Booked Call',recordedAt:bookedAt,chatId:'qa_context_arb_booked'}]
+        lastResult:null,
+        pendingAction:null,
+        history:[]
       },
       lastActionPlan:{label:'Prep Call',action:'prep the booked call and add the calendar detail',target:'sales_coach',reason:'decision_memory_booked',suggestedAt:bookedAt},
       threadMemory:{activeRoute:'sales',turns:[{question:'booked',route:'sales',timestamp:bookedAt}],lastUpdatedAt:bookedAt},
@@ -12736,6 +12789,14 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     var bookedCountAnswer=plainMissionQaAnswer('how many booked calls do i have');
     if(!/booked/i.test(bookedCountAnswer)||!/chat-only|reported here|dashboard confirmed/i.test(bookedCountAnswer))failures.push('active_booked_count_not_separated');
     if(!/Chat-only result memory:\s*1 booked/i.test(bookedCountAnswer))failures.push('active_booked_count_not_active_chat_scoped');
+    var loopOnlySessions=getMissionChatSessions();
+    var loopOnlyIdx=loopOnlySessions.findIndex(function(s){return s&&s.id==='qa_context_arb_booked';});
+    if(loopOnlyIdx>=0){
+      loopOnlySessions[loopOnlyIdx].messages=(loopOnlySessions[loopOnlyIdx].messages||[]).filter(function(msg){return !(msg&&msg.role==='user'&&/\bbooked\b/i.test(String(msg.body||'')));});
+      saveMissionChatSessions(loopOnlySessions);
+      var loopOnlyCountAnswer=plainMissionQaAnswer('how many booked calls do i have');
+      if(!/Chat-only result memory:\s*1 booked/i.test(loopOnlyCountAnswer))failures.push('active_booked_count_result_loop_fallback');
+    }
   }catch(e){
     failures.push('exception_'+(e&&e.message?e.message:String(e)));
   }finally{
@@ -12746,7 +12807,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     window.__missionCommandContext=priorCtx;
     window.__missionLastContextArbitrationV11=priorLastArb;
   }
-  return {passed:!failures.length,failures:failures,total:9};
+  return {passed:!failures.length,failures:failures,total:10};
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
