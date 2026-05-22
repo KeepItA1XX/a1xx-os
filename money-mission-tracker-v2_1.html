@@ -11780,8 +11780,28 @@ function getMissionDecisionExplainerLineV1(explainer){
 /* =========================================================
    MISSION CONTEXT TRUTH LEDGER — v1
 ========================================================= */
+var MISSION_RESULT_SESSION_COUNTS_KEY_V1='a1xx_mc_result_session_counts_v1';
+
 function countMissionResultHistoryTypeV1(history,type){
   return (Array.isArray(history)?history:[]).filter(function(item){return item&&item.type===type;}).length;
+}
+
+function getMissionResultSessionCountsV1(){
+  try{
+    var raw=sessionStorage.getItem(MISSION_RESULT_SESSION_COUNTS_KEY_V1);
+    var counts=raw?JSON.parse(raw):{};
+    return counts&&typeof counts==='object'?counts:{};
+  }catch(e){return {};}
+}
+
+function bumpMissionResultSessionCountV1(type){
+  if(!type)return;
+  try{
+    var counts=getMissionResultSessionCountsV1();
+    counts[type]=Number(counts[type]||0)+1;
+    counts.updatedAt=new Date().toISOString();
+    sessionStorage.setItem(MISSION_RESULT_SESSION_COUNTS_KEY_V1,JSON.stringify(counts));
+  }catch(e){}
 }
 
 function getMissionContextTruthLedgerV1(ctx){
@@ -11793,6 +11813,7 @@ function getMissionContextTruthLedgerV1(ctx){
   var loop=session.resultLoop||{};
   var history=Array.isArray(loop.history)?loop.history:[];
   var lastResult=loop.lastResult||null;
+  var fallbackCounts=getMissionResultSessionCountsV1();
   var crm=[];
   try{crm=typeof getCRMLeads==='function'?getCRMLeads()||[]:window.__crmLeads||[];}catch(e){crm=window.__crmLeads||[];}
   crm=Array.isArray(crm)?crm:[];
@@ -11809,6 +11830,9 @@ function getMissionContextTruthLedgerV1(ctx){
   var sessionBooked=Math.max(lastResult&&lastResult.type==='booked'?1:0,countMissionResultHistoryTypeV1(history,'booked'));
   var sessionPaid=Math.max(lastResult&&lastResult.type==='paid'?1:0,countMissionResultHistoryTypeV1(history,'paid'));
   var sessionReply=Math.max(lastResult&&lastResult.type==='reply'?1:0,countMissionResultHistoryTypeV1(history,'reply'));
+  if(!sessionBooked)sessionBooked=Number(fallbackCounts.booked||0);
+  if(!sessionPaid)sessionPaid=Number(fallbackCounts.paid||0);
+  if(!sessionReply)sessionReply=Number(fallbackCounts.reply||0);
   var dpcBooked=Number(d.calls||d.booked||0)||0;
   var dpcCloses=Number(d.closes||0)||0;
   var dpcMoney=Number((ctx.dpc&&ctx.dpc.money)||d.money||0)||0;
@@ -12064,6 +12088,7 @@ function completeMissionResultLoopV1(signal,turn){
   session.pendingLogPrompt=true;
   if(signal.type!=='done')session.resultLoop.pendingAction=null;
   setMissionBrainSessionV2(session);
+  bumpMissionResultSessionCountV1(signal.type);
   try{
     if(['paid','booked','reply'].indexOf(signal.type)>=0){
       appendMissionAppMemoryItem(signal.type==='paid'?'wins':'milestones',Object.assign({},result,{source:'result_loop'}),100);
@@ -13132,7 +13157,7 @@ function getMissionDirectRouteOverrideV1(question){
     var slashRoute=normalizeMissionSlashRouteV2(slash[1]);
     if(slashRoute)return slashRoute;
   }
-  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q))return 'sync';
+  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what is loaded|what data is loaded|what sources are loaded)\b/.test(q))return 'sync';
   if(/\b(teach me dpc|explain dpc|daily profit campaign|quick.*dpc count|what is my dpc count|i sent \d+ dms|i sent dms)\b/.test(q))return 'dpc';
   if(/\b(why should i focus on leads|walk me through follow ups|walk me through followups|how do follow ups work|how do followups work)\b/.test(q))return 'leads';
   if(/\b(who is a1xx|what is a1xx|who am i in this os|what is my role here)\b/.test(q))return 'profile';
@@ -16360,13 +16385,13 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   if(window.__productionPieces&&window.__productionPieces.length)loaded.push('production: '+window.__productionPieces.length);
   if(window.__calEvents&&window.__calEvents.length)loaded.push('calendar: '+window.__calEvents.length);
   if(ctx&&ctx.dpc)loaded.push('DPC today: '+(Number(ctx.dpc.dms||0)+Number(ctx.dpc.callsMade||0)+Number(ctx.dpc.booked||0)+Number(ctx.dpc.closes||0))+' logged actions');
-  if(ctx&&(ctx.rev!==undefined||ctx.wk!==undefined))loaded.push('money: '+fmt(Number(ctx.rev||0))+' of '+fmt(Number(ctx.wk||0)));
+  if(ctx&&(ctx.rev!==undefined||ctx.wk!==undefined))loaded.push('money: '+fmt(Number(ctx.rev||0))+' of '+fmt(Number(ctx.wk||0))+'.');
   var usingLine=loaded.length?loaded.slice(0,6).join('<br>'):'No detailed app packet is loaded in this chat yet.';
   var healthLine=serviceNames.length?serviceNames.slice(0,5).map(function(name){var s=services[name]||{};return escapeHtml(name+': '+(s.status||'checked'));}).join('<br>'):'Sync health has not been checked in detail yet.';
-  var healthRead=serviceNames.length?'Sync check shows:<br>'+healthLine:healthLine;
+  var healthRead=serviceNames.length?'The sync check shows:<br>'+healthLine:healthLine;
   var missingLine=missing.length?escapeHtml(missing.join(', ')):'nothing obvious from the current app packet';
   var trustLine=missing.length?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
-  if(/\b(what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|what is trusted|what is safe to act on)\b/.test(q)){
+  if(/\b(what data are you using|what data do you have|what do you see|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|what is trusted|what is safe to act on)\b/.test(q)){
     return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see)\b/.test(q)){
@@ -16392,7 +16417,7 @@ function getMissionFriendlyActionTextV1(action,fallback){
 
 function isMissionDataTrustPromptV12(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what can you not see|what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|calendar stale)\b/.test(q);
+  return /\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what do you see|what can you not see|what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|calendar stale)\b/.test(q);
 }
 
 var MISSION_SALES_CLOSER_STAGES={
@@ -21118,6 +21143,7 @@ function mergeMissionSuggestionBubble(followUp,links,route,question){
 function missionRouteNeedsDataBubble(route,conv,question){
   if(!route||!conv)return false;
   if(route==='diagnostic')return false;
+  if(route==='sync'&&isMissionDataTrustPromptV12(question||'')&&!/\b(sync check|where do i check sync|run sync|system health|webhook|web hook|backup check)\b/.test(normalizeMissionQuestion(question||'')))return false;
   if(!missionQuestionAllowsDataBubble(route,conv,question||''))return false;
   if([CONV_QUICK_READ,CONV_WHY,CONV_WHAT_ELSE,CONV_FOLLOWUP,CONV_CLOSE,CONV_UNCLEAR].indexOf(conv.type)>=0)return false;
   if(conv.type===CONV_DEEPER)return true;
@@ -21572,7 +21598,7 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   if(route==='leads'&&/\b(walk me through follow ups|walk me through followups|how do follow ups work|how do followups work)\b/.test(q)){
     return 'Follow-up walkthrough:<br><br>1) Open Hit List.<br>2) Pick the warmest visible lead.<br>3) Send one clear check-in.<br>4) Log the result: no reply, reply, booked, paid, or wrong lane.<br><br>Keep the message short enough that the reply is easy.';
   }
-  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q)){
+  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what is loaded|what data is loaded|what sources are loaded)\b/.test(q)){
     if(/\b(where do i check sync|where|check sync)\b/.test(q)){
       return 'System Hub → Health → Run sync check.<br><br>Check Notion, Sheets, Calendar, and backup status.<br><br>If something fails, save locally first, then retry one source.';
     }
@@ -21656,7 +21682,7 @@ var MISSION_COMMUNICATION_COHESION_SKILL_V1={
       'how does this affect sales','does this connect to content','does this connect to sales','should this go in outreach or sales','is this a production thing or a money thing','is this content or sales','is this pipeline or production','what does this mean for today','what do i do with this information','what we doing with that','what is the play off that','what is the move off that','connect this to money','connect this to content','connect this to sales','connect this to production','connect this to outreach','connect this back to the OS','bring this back to the app','tie this back to the move','tie this to the mission','where does this fit','what lane owns this','which worker owns this','which card handles this','what system handles this','which part of the app is this','where should this live','what does this change','what does this unlock','what does this block','what matters here','what is primary here','what is secondary here','what can wait','what should move first'
     ],
     clearer_explanation:[
-      'say that cleaner','say it cleaner','make that make sense','make it make sense','explain that like the app','explain it like the app','give me the simple version','what is the simple version','what is the point','why should i care','what is the takeaway','cleaner read','clean read','simple read','real read','break that down','translate that','put that in plain english','say less but clearer','answer cleaner','that sounds generic','that sounds disconnected','that sounds random','that does not sound connected','that does not sound like the app','make it sound more like Mission Command','answer like Mission Command','answer like the app knows what i am doing','answer like you know what i am doing','do not just give me advice','do not give me a dashboard answer','what are you really saying','what is the actual read','what is the useful read','what should i take from that','what is the bottom line','what is the operator read','what is the business read'
+      'say that cleaner','say it cleaner','make that make sense','make it make sense','explain that like the app','explain it like the app','give me the simple version','give me the clean version','what is the simple version','what is the point','why should i care','what is the takeaway','cleaner read','clean read','simple read','real read','break that down','translate that','put that in plain english','say less but clearer','answer cleaner','that sounds generic','that sounds disconnected','that sounds random','that does not sound connected','that does not sound like the app','make it sound more like Mission Command','answer like Mission Command','answer like the app knows what i am doing','answer like you know what i am doing','do not just give me advice','do not give me a dashboard answer','what are you really saying','what is the actual read','what is the useful read','what should i take from that','what is the bottom line','what is the operator read','what is the business read'
     ],
     next_step_translation:[
       'turn that into the move','turn this into the move','what button do i press','what card do i open','what do i log','what changes after i do that','what should i come back and tell you','what result are we looking for','what result are we trying to create','what do i do after that','where do i go from here','where do we go from here','what is the next status change','what do i update','where do i update it','what do i check after this','what should i report back','what do i say after i do it','what counts as done','what counts as a result','what should change in the app','what card should change','where should i click next','what tab should i open','what lane do i move','what should i finish first','what is the smallest visible move','what is the logged result','what should i log after this','what does done mean here','what happens when i finish','what should i bring back','what is the success signal','what is the next clean action'
@@ -21665,7 +21691,7 @@ var MISSION_COMMUNICATION_COHESION_SKILL_V1={
       'that is not what i meant','thats not what i meant','wrong read','you are answering the wrong thing','that answer is disconnected','that sounds disconnected','connect it back to the app','make it sound more like Mission Command','answer like you know what i am doing','do not just give me advice','wrong lane','not that','nah not that','no not that','that missed it','you missed it','wrong thing','try again but connected','try again but with the app context','say that with the OS context','answer from the OS','answer from the app','connect the answer','that felt random','that felt generic','too generic','too much advice','not enough app context','where is the app in that answer','what is the actual app move','bring it back to the card','bring it back to the data','bring it back to money','bring it back to the mission','make the answer useful','make it operational','make it actionable'
     ],
     context_awareness:[
-      'what mode are we in','what card are we on','what card am i on','what is the OS looking at','what data do you have','what data are you using','what data is missing','what memory are you using','what was the last move','what is the active loop','what is the last result','what is the active route','what lane are we in','what worker is answering','what is the context','what is the current context','what is active right now','what did you carry over','what are you remembering','are you using memory','are you using the last thread','what did i just ask','what are we still on','what did we leave open','what is the open loop','what is the current card','what is the current lane','what is the app state','what is the loaded packet','what can you see','what can you not see','what is partial','what is trusted','what should i trust from this','what is stale','what is safe to act on','what should not be assumed'
+      'what mode are we in','what card are we on','what card am i on','what is the OS looking at','what data do you have','what data are you using','what data is missing','what memory are you using','what was the last move','what is the active loop','what is the last result','what is the active route','what lane are we in','what worker is answering','what is the context','what is the current context','what is active right now','what did you carry over','what are you remembering','are you using memory','are you using the last thread','what did i just ask','what are we still on','what did we leave open','what is the open loop','what is the current card','what is the current lane','what is the app state','what is the loaded packet','what do you see','what can you see','what can you not see','what is partial','what is trusted','what should i trust from this','what is stale','what is safe to act on','what should not be assumed'
     ]
   }
 };
@@ -21673,10 +21699,10 @@ var MISSION_COMMUNICATION_COHESION_SKILL_V1={
 function getMissionCommunicationCohesionCategoryV1(question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
   if(!q)return '';
-  if(/\b(what mode are we in|what card are we on|what card am i on|what is the os looking at|what data do you have|what data are you using|what data is missing|what memory are you using|what was the last move|what is the active loop|what lane are we in|what worker is answering|what is the current context|what are you remembering|what did you carry over|what is stale|what is trusted|what should i trust from this|what can you see|what can you not see)\b/.test(q))return 'context_awareness';
+  if(/\b(what mode are we in|what card are we on|what card am i on|what is the os looking at|what data do you have|what data are you using|what data is missing|what memory are you using|what was the last move|what is the active loop|what lane are we in|what worker is answering|what is the current context|what are you remembering|what did you carry over|what is stale|what is trusted|what should i trust from this|what do you see|what can you see|what can you not see)\b/.test(q))return 'context_awareness';
   if(/\b(that is not what i meant|thats not what i meant|wrong read|answering the wrong thing|sounds disconnected|connect it back|answer like you know|answer like the app knows|app knows what i|app know what i|do not just give me advice|wrong lane|nah not that|no not that|you missed it|too generic|felt random|bring it back)\b/.test(q))return 'correction_repair';
   if(/\b(turn that into the move|turn this into the move|what button do i press|what card do i open|what do i log|what changes after|what should i come back|what result are we|where do i go from here|what counts as done|what should i log after this|what is the success signal)\b/.test(q))return 'next_step_translation';
-  if(/\b(say that cleaner|make that make sense|make it make sense|explain that like the app|give me the simple version|what is the simple version|why should i care|cleaner read|clean read|real read|break that down|translate that|plain english|bottom line|operator read|business read)\b/.test(q))return 'clearer_explanation';
+  if(/\b(say that cleaner|make that make sense|make it make sense|explain that like the app|give me the simple version|give me the clean version|what is the simple version|why should i care|cleaner read|clean read|real read|break that down|translate that|plain english|bottom line|operator read|business read)\b/.test(q))return 'clearer_explanation';
   if(/\b(affect sales|connect to content|connect to sales|outreach or sales|production thing or a money thing|content or sales|pipeline or production|mean for today|do i do with this information|connect this to|connect this back|tie this|where does this fit|what lane owns|which worker owns|which card handles|what system handles|where should this live|what is primary|what can wait)\b/.test(q))return 'lane_bridge';
   if(/\b(what does that mean|what do you mean|what u mean|what you mean|how does that connect|how does this connect|what are you basing|why are you telling|what does the app see|what are we reading|what lane is this|what card owns this|where is this coming from|where is that coming from|where that coming from|what is the read|what is the point|what does that have to do|how this help|what are you looking at|what is the signal|what is the takeaway|ok so what|bet so what now|so what|so what now)\b/.test(q))return 'context_connection';
   return '';
