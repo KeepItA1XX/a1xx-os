@@ -12837,14 +12837,14 @@ function getMissionDirectRouteOverrideV1(question){
   if(!q)return '';
   var salesRoute=getMissionSalesReplyOverrideV1(q);
   if(salesRoute)return salesRoute;
-  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health)\b/.test(q))return 'sync';
+  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what is missing|what is loaded|what data is loaded|what sources are loaded)\b/.test(q))return 'sync';
   if(/\b(brief card|mission brief|read the brief|business condition)\b/.test(q))return 'report';
   if(/\b(hit list|show my leads|outreach card|who hot|who warm|who needs a bump|who is closest to money|pipeline|open leads|lead list)\b/.test(q))return 'leads';
   if(/\b(content card|content pipeline|what proof should i post|proof should i post|what should i post|caption|hook|post today|content stuck|stuck in the content)\b/.test(q))return 'content';
-  if(/\b(beat card|production card|what can ship today|what can ship|ship today|metadata|dsp|production pipeline|bangin plus|bangin\+)\b/.test(q))return 'production';
+  if(/\b(beat card|production card|what can ship today|what can ship|ship today|metadata|dsp|production pipeline|production studio session|studio session|bangin plus|bangin\+)\b/.test(q))return 'production';
   if(/\b(manager card|calendar|schedule|what block|time block|next event)\b/.test(q))return 'calendar';
   if(/\b(what should i track every week|weekly scorecard|wrap it|weekly review|next week)\b/.test(q))return 'weekly';
-  if(/\b(how much money|how much have i made|what came in|what cam in|money check|revenue report|how far off|what can i do to make some money|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return 'report';
+  if(/\b(how much money|how much have i made|what came in|what cam in|any new sales|money check|revenue report|how far off|what can i do to make some money|what should i do to make money today|make some money today|make money today|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return 'report';
   return '';
 }
 
@@ -15695,6 +15695,11 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'sales_mix_master_reply',q:'mix master reply',must:/Send:|Ask:|Say:|Sales/i},
       {name:'sales_break_even_qualifier',q:'Break EVEN qualifier',must:/Send:|Ask:|Say:|Sales/i},
       {name:'money_read_plain',q:'how much money are we making',must:/Money read|This week|Next move:/i},
+      {name:'money_make_today',q:'what can i do to make some money today',must:/Money read|Next move:/i},
+      {name:'sync_calendar_stale',q:'calendar stale',must:/Data read|sync|missing|loaded/i},
+      {name:'sync_trust_data',q:'do i trust this data',must:/Data read|Clean enough|Partial|loaded/i},
+      {name:'production_studio_session',q:'production studio session',must:/Production|studio|asset|song|beat/i},
+      {name:'data_loaded_status',q:'what is loaded',must:/Data read|Clean enough|Partial|loaded/i},
       {name:'sales_correction',q:'i meant sales not pipeline',must:/Sales lane, not pipeline|Ask:/i},
       {name:'changed_today',q:'what changed today',must:/Since the last saved checkpoint|Current read|changed/i},
       {name:'booked_count',q:'how many booked calls do i have',must:/booked/i}
@@ -15708,6 +15713,7 @@ function runMissionBroadRegressionHardeningV1(){
       if(test.name==='money_read_plain'&&/Next move is Use/i.test(plain))failures.push(test.name+'_next_move_phrase');
       if(test.name==='sales_mix_master_reply'&&/Production card read|Production vs paid delivery/i.test(plain))failures.push(test.name+'_production_bleed');
       if(test.name==='sales_break_even_qualifier'&&/BANGIN\+ Upload Checklist|Production card read/i.test(plain))failures.push(test.name+'_resource_bleed');
+      if(test.name==='production_studio_session'&&/Send:|Ask:|Sales lane/i.test(plain))failures.push(test.name+'_sales_bleed');
       if((plain.match(/Before switching:/g)||[]).length>1)failures.push(test.name+'_duplicate_handoff');
       if(test.card&&plain.indexOf('Before switching:')<0)failures.push(test.name+'_handoff_missing');
       if(test.card&&/\b(Same pipeline lane|Which lead do you want to move first|Who is closest to a real decision|Want to go through one lead at a time)\b/i.test(plain))failures.push(test.name+'_route_garnish_bleed');
@@ -15731,7 +15737,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:20,meta:failures.length?failures.join(', '):'20 regression prompts · explicit cards · polite wrappers · sales/resource guards · money phrasing · leak guard'};
+  return {passed:!failures.length,failures:failures,total:25,meta:failures.length?failures.join(', '):'25 regression prompts · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -20737,9 +20743,12 @@ function getMissionPersonalityFallback(ctx,question){
 
 function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
-  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health)\b/.test(q)){
+  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what is missing|what is loaded|what data is loaded|what sources are loaded)\b/.test(q)){
     if(/\b(where do i check sync|where|check sync)\b/.test(q)){
       return 'System Hub → Health → Run sync check.<br><br>Check Notion, Sheets, Calendar, and backup status.<br><br>If something fails, save locally first, then retry one source.';
+    }
+    if(/\b(what is missing|what is loaded|what data is loaded|what sources are loaded|trust this data|do i trust this data|calendar stale)\b/.test(q)){
+      return getMissionDataConfidenceResponse('sync',ctx,question)||getMissionCommandRouteAnswer('sync',ctx,question);
     }
     return getMissionCommandRouteAnswer('sync',ctx,question);
   }
@@ -20757,7 +20766,7 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
     var contentAnswer=getMissionContentCardIntelligenceResponseV11('content',ctx,question,brainState||{},turn);
     return contentAnswer||getMissionCommandRouteAnswer('content',ctx,question);
   }
-  if(route==='production'&&/\b(beat card|production card|what can ship today|what can ship|ship today|metadata|dsp|production pipeline|bangin plus|bangin\+)\b/.test(q)){
+  if(route==='production'&&/\b(beat card|production card|what can ship today|what can ship|ship today|metadata|dsp|production pipeline|production studio session|studio session|bangin plus|bangin\+)\b/.test(q)){
     var productionAnswer=getMissionProductionCardIntelligenceResponseV11('production',ctx,question,brainState||{},turn);
     return productionAnswer||getMissionCommandRouteAnswer('production',ctx,question);
   }
@@ -20766,7 +20775,7 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
 
 function getMissionMoneyReadResponseV1(ctx,question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
-  if(!/\b(how much money|how much have i made|what came in|what cam in|money check|revenue report|how far off|what can i do to make some money|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return '';
+  if(!/\b(how much money|how much have i made|what came in|what cam in|any new sales|money check|revenue report|how far off|what can i do to make some money|what should i do to make money today|make some money today|make money today|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return '';
   if(/\b(what changed|what moved|what happened)\b/.test(q))return '';
   ctx=ctx||{};
   var d=typeof getDailyCoach==='function'?getDailyCoach():{};
@@ -20778,7 +20787,7 @@ function getMissionMoneyReadResponseV1(ctx,question){
   var firstLine=asksToday?('Today: '+fmt(today)+' logged.'):('This week: '+fmt(revenue)+' of '+fmt(weekly)+' loaded.');
   var read=gap<=0?'Target pressure is covered.':'Gap: '+fmt(gap)+' left.';
   var next=gap<=0?'protect delivery, then make one clean buyer-facing follow-up':'move the closest buyer toward payment and log the result';
-  if(/\b(keeping me broke|why am i not making money|make some money)\b/.test(q)){
+  if(/\b(keeping me broke|why am i not making money|make some money|any new sales)\b/.test(q)){
     read=gap<=0?'You are not behind on the weekly number; the risk is leaving today invisible.':'The money constraint is still open.';
     next=gap<=0?'log one real sales or outreach action so the OS can see today move':'contact the warmest visible lead and make the direct ask';
   }
