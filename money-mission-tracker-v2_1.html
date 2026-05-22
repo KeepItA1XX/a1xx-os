@@ -8433,7 +8433,7 @@ var MISSION_LANGUAGE_PACKS={
     short:['Close the smallest money loop first.','One offer beats one more dashboard check.']
   },
   pipeline:{
-    openers:['Pipeline read: heat beats volume.','The list is there. The question is who is warm enough to move today.','Do not read the CRM like storage. Read it like a money map.'],
+    openers:['Pipeline is showing heat over volume.','The list is there. The question is who is warm enough to move today.','Do not read the CRM like storage. Read it like a money map.'],
     reads:['You have names, but the next useful signal is qualification.','Call-ready does not always mean offer-ready.','The pipeline improves when one lead gets a clearer status.'],
     meanings:['Cold volume only matters after you find warm signal.','A direct touch turns the pipeline from noise into a decision.'],
     moves:['Pick one call-ready lead, qualify intent, then make the direct offer if the signal is real.','Start with {topLead}, then log the result.'],
@@ -19323,7 +19323,11 @@ function getMissionCommandRouteAnswer(route,ctx,question){
   if(route==='sales')return getMissionSalesCoachResponse(route,ctx,question,null,null)+getMissionIntentLinks('sales');
   if(route==='community')return continuity+getMissionSpecialLaneAnswer('community',ctx,question)+getMissionIntentLinks('community');
   if(route==='live')return continuity+getMissionSpecialLaneAnswer('live',ctx,question)+getMissionIntentLinks('live');
-  if(route==='sync')return continuity+getMissionSyncAnswer()+getMissionContextNudge('sync',ctx)+getMissionIntentLinks('sync');
+  if(route==='sync'){
+    var dataTrustRouteAnswer=typeof getMissionDataConfidenceResponse==='function'?getMissionDataConfidenceResponse('sync',ctx,question||''):'';
+    if(dataTrustRouteAnswer)return dataTrustRouteAnswer+getMissionIntentLinks('sync');
+    return continuity+getMissionSyncAnswer()+getMissionContextNudge('sync',ctx)+getMissionIntentLinks('sync');
+  }
   if(route==='memory')return getMissionMemoryAnswer(question)+getMissionIntentLinks('memory');
   if(route==='archive')return '<strong>Archive:</strong> Backup and archive tools are read-only in Phase 1. Use the existing buttons for manual backup or cycle archive until write actions are confirmation-gated.';
   if(route==='weekly')return continuity+getMissionWeeklyReviewAnswerV1(ctx,question)+getMissionIntentLinks('weekly');
@@ -21244,7 +21248,11 @@ function getMissionHumanBubble(route,conv,ctx,question){
   if(route==='resources')return 'Use the library to support the move you are already making. One useful resource beats opening five tabs and calling it research.';
   if(route==='sales')return 'Closer Coach read: ask the question that moves the prospect one stage forward. Do not pitch before they own the problem.';
   if(route==='cycle')return pickMissionLibraryLineAntiRepeat((ctx&&ctx.cycleDaysLeft&&ctx.cycleDaysLeft<14)?'cycle_late':'cycle_early',vars);
-  if(route==='sync')return 'Check system health only long enough to clear the blocker. Then get back to the active mission.';
+  if(route==='sync'){
+    var dataTrustHumanAnswer=typeof getMissionDataConfidenceResponse==='function'?getMissionDataConfidenceResponse('sync',ctx,question||''):'';
+    if(dataTrustHumanAnswer)return dataTrustHumanAnswer;
+    return 'Check system health only long enough to clear the blocker. Then get back to the active mission.';
+  }
   return '';
 }
 
@@ -21722,15 +21730,27 @@ function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,
   };
 }
 
+function getMissionCohesionCardLabelFromMoveV1(label,nextMove){
+  var text=normalizeMissionQuestion([label,nextMove].filter(Boolean).join(' '));
+  if(/\b(content|post|proof|caption|hook|script|tracker|due|overdue)\b/.test(text))return 'Content';
+  if(/\b(ig|instagram|saved collection|saved collections|theme page|theme pages|resource|library|rolodex)\b/.test(text))return 'Resources';
+  if(/\b(production|beat|asset|upload|metadata|dsp|bangin|song|mix|master|delivery)\b/.test(text))return 'Production';
+  if(/\b(hit list|lead|pipeline|outreach|dm|follow up|follow-up|reply|call ready)\b/.test(text))return 'Outreach';
+  if(/\b(calendar|manager|schedule|block|admin|task|event)\b/.test(text))return 'Manager';
+  if(/\b(dpc|daily profit|log|logged|measurable outreach|sales action)\b/.test(text))return 'Daily Profit Campaign';
+  return label||'Mission Command';
+}
+
 function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,turn){
   var category=getMissionCommunicationCohesionCategoryV1(question||'');
   if(!category)return '';
   var c=getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,turn);
+  var naturalCardLabel=getMissionCohesionCardLabelFromMoveV1(c.cardLabel,c.nextMove);
   if(/\b(what card owns this|what lane owns this|which card handles|what card should change|what card do i open|where should this live)\b/.test(c.q)){
     if(c.bookedContext){
       return 'That split lives in Sales and Manager.<br><br>Sales owns the call prep. Manager owns the calendar detail.<br><br>Open Sales Coach for the question, then Manager/Calendar to save the call.<br><br>Come back with: call added, lead updated, booked, paid, or wrong lane.';
     }
-    return 'That lives on '+escapeHtml(c.cardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open '+escapeHtml(c.cardLabel)+', do the smallest step, then come back with done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+    return 'That lives on '+escapeHtml(naturalCardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open '+escapeHtml(naturalCardLabel)+', do the smallest step, then come back with done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   }
   if(/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for|what result are we trying to create)\b/.test(c.q)&&c.bookedContext){
     return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
@@ -21746,9 +21766,9 @@ function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,t
   }
   if(category==='correction_repair'||category==='clearer_explanation'){
     if(c.bookedContext){
-      return 'Clean read: the conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
+      return 'Clean read. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
     }
-    return 'Clean read: '+escapeHtml(c.nextMove)+'.<br><br>That should happen in '+escapeHtml(c.cardLabel)+' so the app can see the status change.<br><br>Do the smallest visible step there, then tell me what changed.';
+    return 'Clean read. '+escapeHtml(c.nextMove)+'.<br><br>That should happen in '+escapeHtml(naturalCardLabel)+' so the app can see the status change.<br><br>Do the smallest visible step there, then tell me what changed.';
   }
   return 'I am reading '+escapeHtml(c.cardLabel)+' plus the current '+escapeHtml(c.routeLabel)+' lane.<br><br>The clean read is: '+escapeHtml(c.nextMove)+'.<br><br>'+(c.missing.length?'The part I do not know yet: '+escapeHtml(c.missing.join(', '))+'.<br><br>':'')+'I would trust this enough to take one safe next action, but not enough to invent missing numbers.';
 }
@@ -22056,7 +22076,7 @@ function runMissionIntegritySelfCheck(){
   if(!/booked call/i.test(bookedCountBubbleVoice)||/Booked-call read|DPC logged today|CRM booked\/session signals|Calendar call\/session events loaded|Start the DPC/i.test(bookedCountBubbleVoice))failures.push('booked_call_count_bubble_protect');
   var liveCohesionCtx={gap:0,rev:999,wk:500,dpc:{dms:0,coldCalls:0,callsMade:0,booked:0,closes:0,money:0}};
   var dataTrustCommand=getMissionCommandResponse('ask',liveCohesionCtx,'what data are you using',{});
-  if(!/I am looking at this right now|I am reading|Trust level|safe next move/i.test(dataTrustCommand)||/Check system health only/i.test(dataTrustCommand))failures.push('data_trust_command_route_guard');
+  if(!/I am looking at this right now|I'm looking at this right now|I am reading|I'm reading|Trust level|safe next move/i.test(dataTrustCommand)||/Check system health only/i.test(dataTrustCommand))failures.push('data_trust_command_route_guard');
   var dataMissingCommand=getMissionCommandResponse('ask',liveCohesionCtx,'what data is missing',{});
   if(!/I cannot fully see|Missing or light data|Only run sync|Next: run sync/i.test(dataMissingCommand)||/Check system health only/i.test(dataMissingCommand))failures.push('data_missing_command_route_guard');
   var currentDataCommand=getMissionCommandResponse('ask',liveCohesionCtx,'is this data current',{});
