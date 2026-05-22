@@ -12223,24 +12223,25 @@ function missionActiveChatHasBookedAfterFreshStarterV12(){
     var messages=active&&Array.isArray(active.messages)?active.messages:[];
     var starterRe=/^(good morning|gm|morning|yo|yo let'?s go|let'?s go|lock in)$/i;
     var bookedRe=/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i;
-    var boundaryTime=active&&active.createdAt?Date.parse(active.createdAt):NaN;
-    var starterIndex=-1;
-    messages.forEach(function(msg,idx){
+    var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+    var latestStarterTime=NaN;
+    var sawStarter=false;
+    messages.forEach(function(msg){
       if(!msg||msg.role!=='user')return;
       var body=String(msg.body||'').trim();
       var msgTime=Date.parse(msg.ts||msg.at||msg.timestamp||msg.createdAt||'');
       if(starterRe.test(body)){
-        starterIndex=idx;
-        if(!isNaN(msgTime)&&(!isNaN(boundaryTime)?msgTime>=boundaryTime:true))boundaryTime=msgTime;
+        sawStarter=true;
+        if(!isNaN(msgTime)&&(isNaN(latestStarterTime)||msgTime>latestStarterTime))latestStarterTime=msgTime;
       }
     });
-    return messages.some(function(msg,idx){
+    var boundaryTime=!isNaN(latestStarterTime)?latestStarterTime:activeCreatedAt;
+    if(sawStarter&&isNaN(latestStarterTime))return false;
+    return messages.some(function(msg){
       if(!msg||msg.role!=='user'||!bookedRe.test(String(msg.body||'')))return false;
-      if(starterIndex>=0&&idx<=starterIndex)return false;
-      if(!isNaN(boundaryTime)){
-        var msgTime=Date.parse(msg.ts||msg.at||msg.timestamp||msg.createdAt||'');
-        if(isNaN(msgTime)||msgTime<boundaryTime)return false;
-      }
+      var msgTime=Date.parse(msg.ts||msg.at||msg.timestamp||msg.createdAt||'');
+      if(isNaN(msgTime))return false;
+      if(!isNaN(boundaryTime)&&msgTime<boundaryTime)return false;
       return true;
     });
   }catch(e){
