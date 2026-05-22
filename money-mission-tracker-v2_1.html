@@ -12249,6 +12249,36 @@ function missionActiveChatHasBookedAfterFreshStarterV12(){
   }
 }
 
+function missionLatestActiveChatFreshStarterTimeV12(){
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var messages=active&&Array.isArray(active.messages)?active.messages:[];
+    var starterRe=/^(good morning|gm|morning|yo|yo let'?s go|let'?s go|lock in)$/i;
+    var latest=NaN;
+    messages.forEach(function(msg){
+      if(!msg||msg.role!=='user')return;
+      var body=String(msg.body||'').trim();
+      if(!starterRe.test(body))return;
+      var msgTime=Date.parse(msg.ts||msg.at||msg.timestamp||msg.createdAt||'');
+      if(!isNaN(msgTime)&&(isNaN(latest)||msgTime>latest))latest=msgTime;
+    });
+    return latest;
+  }catch(e){
+    return NaN;
+  }
+}
+
+function missionThreadTurnIsBeforeFreshStarterV12(turn,fallbackAt){
+  try{
+    var starterTime=missionLatestActiveChatFreshStarterTimeV12();
+    if(isNaN(starterTime))return false;
+    var turnTime=Date.parse((turn&&(turn.timestamp||turn.ts||turn.at||turn.createdAt))||fallbackAt||'');
+    return !isNaN(turnTime)&&turnTime<starterTime;
+  }catch(e){
+    return false;
+  }
+}
+
 function missionResultIsFreshForActiveChatV12(result){
   if(!result)return false;
   if(!missionResultBelongsToActiveChatV12(result))return false;
@@ -12456,9 +12486,19 @@ function getMissionThreadMemoryV1(turn,ctx){
   var thread=session.threadMemory||{};
   var turns=Array.isArray(thread.turns)?thread.turns:[];
   var lastTurn=turns[0]||null;
+  var freshStarterBoundaryTime=missionLatestActiveChatFreshStarterTimeV12();
+  var hasFreshStarterBoundary=!isNaN(freshStarterBoundaryTime);
+  if(hasFreshStarterBoundary&&missionThreadTurnIsBeforeFreshStarterV12(lastTurn,thread.lastUpdatedAt||session.lastTurnAt||'')){
+    lastTurn=null;
+    turns=[];
+    thread=Object.assign({},thread,{turns:[],activeRoute:'',lastRoute:'',lastQuestion:''});
+    session=Object.assign({},session,{lastRoute:'',sessionTopic:''});
+  }
   var loop=session.resultLoop||{};
   var lastResult=loop.lastResult||null;
   var pending=loop.pendingAction||session.lastActionPlan||null;
+  var bookedAfterFreshStarter=typeof missionActiveChatHasBookedAfterFreshStarterV12==='function'?missionActiveChatHasBookedAfterFreshStarterV12():true;
+  if(hasFreshStarterBoundary&&lastResult&&lastResult.type==='booked'&&!bookedAfterFreshStarter)lastResult=null;
   var explicitLastRoute=getMissionThreadExplicitRouteFromQuestionV1(lastTurn&&lastTurn.question||lastTurn&&lastTurn.normalizedInput||'');
   var lastRoute=explicitLastRoute||thread.activeRoute||lastTurn&&lastTurn.route||session.lastRoute||'';
   var followup=/^(why|why again|more|more again|tell me more|run it back|what next|what now|what about that|that one|this one|same thing|continue|and then what)$/i.test(q);
@@ -12469,6 +12509,8 @@ function getMissionThreadMemoryV1(turn,ctx){
   var pendingLooksPipeline=/\b(hit list|pipeline|lead|crm|follow up|contact)\b/.test(pendingText);
   var pendingLooksContent=/\b(content|post|proof|caption|hook|tracker|clip)\b/.test(pendingText);
   var pendingLooksProduction=/\b(production|beat|song|asset|upload|metadata|mix|master)\b/.test(pendingText);
+  var pendingNeedsBooked=/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(pendingText);
+  if(hasFreshStarterBoundary&&pendingNeedsBooked&&!bookedAfterFreshStarter)pending=null;
   var pendingRouteMismatch=pending&&activeRoute&&(
     (pending.route&&pending.route!==activeRoute)||
     (activeRoute==='leads'&&pendingLooksSales&&!pendingLooksPipeline)||
@@ -12552,10 +12594,17 @@ function getMissionWhyResponseV1(turn,ctx){
   if(!missionIsWhyRequestV1(turn&&turn.rawInput||turn&&turn.normalizedInput||''))return '';
   var memory=turn&&turn.threadMemory||{};
   var lastResult=memory.lastResult||(getMissionBrainSessionV2().resultLoop||{}).lastResult||null;
+  var hasFreshStarterBoundary=!isNaN(missionLatestActiveChatFreshStarterTimeV12());
   if(lastResult&&!missionResultBelongsToActiveChatV12(lastResult))lastResult=null;
-  if(lastResult&&lastResult.type==='booked'&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive&&!missionActiveChatHasBookedAfterFreshStarterV12())lastResult=null;
+  if(hasFreshStarterBoundary&&lastResult&&lastResult.type==='booked'&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive&&!missionActiveChatHasBookedAfterFreshStarterV12())lastResult=null;
   var pending=memory.pendingAction||(getMissionBrainSessionV2().resultLoop||{}).pendingAction||getMissionBrainSessionV2().lastActionPlan||null;
   var lastTurn=memory.lastTurn||null;
+  if(missionThreadTurnIsBeforeFreshStarterV12(lastTurn,memory.lastUpdatedAt||'')){
+    lastTurn=null;
+    memory=Object.assign({},memory,{activeRoute:'',lastRoute:'',lastTurn:null});
+  }
+  var stalePendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
+  if(hasFreshStarterBoundary&&/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(stalePendingText)&&!missionActiveChatHasBookedAfterFreshStarterV12())pending=null;
   var lastTurnSlash=(lastTurn&&String(lastTurn.question||lastTurn.rawInput||'').match(/^\/([a-z0-9_]+)/i))||null;
   var lastTurnSlashRoute=lastTurnSlash?normalizeMissionSlashRouteV2(lastTurnSlash[1]):'';
   var route=(lastTurnSlashRoute||memory.activeRoute||memory.lastRoute||lastTurn&&lastTurn.route||turn&&turn.route||'now');
