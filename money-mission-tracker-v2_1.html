@@ -10866,6 +10866,7 @@ function compactMissionDuplicateParagraphs(html){
 function cleanMissionVisibleAnswerText(html){
   return String(html||'')
     .replace(/^(Same pipeline lane:|Still the lead lane:|Cleaner pipeline read:|Same sales lane:|Still the sales lane:|Cleaner sales read:|Same DPC lane:|Still the daily campaign lane:|Cleaner scoreboard read:|Same money lane:|Still the number talking:|Cleaner money read:|Same content lane:|Still the proof lane:|Cleaner proof read:|Same production lane:|Still the asset lane:|Cleaner delivery read:|Same sync lane:|Still the trust check:|Cleaner system read:|Same route:|Still on the move:|Clean pass:)\s*(<br\s*\/?>\s*){1,2}/i,'')
+    .replace(/^(Still on the sales thread\.|Back on the sales thread\.|Same conversation, cleaner\.|Still on the lead thread\.|Back on the pipeline thread\.|Same lead map, cleaner\.|Still on the daily campaign\.|Back on the scoreboard\.|Same numbers, cleaner\.|Still on the money thread\.|Back on the number\.|Same money read, cleaner\.|Still on the content thread\.|Back on the proof move\.|Same content lane, cleaner\.|Still on the production thread\.|Back on the asset move\.|Same delivery lane, cleaner\.|Still on the data check\.|Back on the trust check\.|Same system read, cleaner\.|Still on the move\.|Back on the point\.|Same move, cleaner\.)\s*(<br\s*\/?>\s*){1,2}/i,'')
     .replace(/\bOpen\s+Open\s+/g,'Open ')
     .replace(/\bopen\s+Open\s+/g,'open ')
     .replace(/\bOpen\s+The\s+Current\s+Work\s+Card\b/g,'open the current work card')
@@ -12189,6 +12190,17 @@ function missionResultBelongsToActiveChatV12(result){
     return messages.some(function(msg){return msg&&msg.role==='user'&&re.test(String(msg.body||''));});
   }catch(e){
     return true;
+  }
+}
+
+function missionActiveChatUserTextMatchesV12(re){
+  try{
+    if(!re)return false;
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var messages=active&&Array.isArray(active.messages)?active.messages:[];
+    return messages.some(function(msg){return msg&&msg.role==='user'&&re.test(String(msg.body||''));});
+  }catch(e){
+    return false;
   }
 }
 
@@ -17498,6 +17510,12 @@ function getMissionActionAccountabilityV1(turn,ctx){
   var freshPending=!!(pending&&(age===null||age<=120));
   var resultAge=getMissionAgeMinutes(lastResult&&lastResult.recordedAt||'');
   var recentResult=!!(lastResult&&lastResult.type&&(resultAge===null||resultAge<=120));
+  var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
+  var pendingNeedsBooked=/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(pendingText);
+  if(pendingNeedsBooked&&!missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i)){
+    freshPending=false;
+    recentResult=false;
+  }
   var activeChat=getActiveMissionSession();
   var activeMessages=activeChat&&Array.isArray(activeChat.messages)?activeChat.messages:[];
   var earlyChat=activeChat&&activeMessages.length<=2&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive;
