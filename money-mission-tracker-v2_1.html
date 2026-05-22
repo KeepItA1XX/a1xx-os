@@ -8648,6 +8648,7 @@ var MISSION_SKILL_PACKS=[];
 var MISSION_SKILL_PACK_REGISTRY={};
 var MISSION_SKILL_RESPONSE_POOLS={};
 var MISSION_SKILL_REGRESSION_TESTS=[];
+var MISSION_SKILL_PACK_VALIDATION_REPORTS=[];
 
 function missionUniqueList(list){
   var seen={},out=[];
@@ -8663,8 +8664,112 @@ function mergeMissionSkillArray(target,key,items){
   target[key]=missionUniqueList((target[key]||[]).concat(items||[]));
 }
 
+/* =========================================================
+   MISSION SKILL PACK VALIDATOR — v1
+========================================================= */
+var MISSION_SKILL_PACK_PROTECTED_ROUTE_TESTS_V1=[
+  {route:'sales',q:'what should i say',label:'sales reply'},
+  {route:'sales',q:'too expensive',label:'sales objection'},
+  {route:'leads',q:'/pipeline',label:'pipeline slash'},
+  {route:'sync',q:'what data is missing',label:'data trust'},
+  {route:'report',q:'how much money are we making',label:'money read'},
+  {route:'content',q:'what should i do on the content card',label:'content card'},
+  {route:'production',q:'what should i do on the beat card',label:'production card'},
+  {route:'calendar',q:'what should i check on the manager card',label:'manager card'},
+  {route:'report',q:'what changed today',label:'what changed'}
+];
+
+function missionSkillPackFlattenInputPhrasesV1(pack){
+  var phrases=[];
+  (pack&&pack.inputBanks||[]).forEach(function(bank){
+    ['naturalPhrases','slangPhrases','typoVariants','voiceTranscriptPatterns','signalWords'].forEach(function(key){
+      (bank&&bank[key]||[]).forEach(function(item){phrases.push({phrase:String(item||''),category:bank.category||'',route:bank.routeTarget||pack.routesAffected&&pack.routesAffected[0]||''});});
+    });
+  });
+  return phrases.filter(function(item){return item.phrase.trim();});
+}
+
+function validateMissionSkillPackV1(pack,options){
+  options=options||{};
+  var report={
+    id:pack&&pack.id||'missing_id',
+    name:pack&&pack.name||'Unnamed Skill Pack',
+    valid:true,
+    errors:[],
+    warnings:[],
+    stats:{inputBanks:0,inputPhrases:0,regressionTests:0,routeCollisions:0,protectedConflicts:0}
+  };
+  if(!pack||typeof pack!=='object'){
+    report.valid=false;
+    report.errors.push('pack_missing_or_not_object');
+    return report;
+  }
+  ['id','name','purpose'].forEach(function(key){
+    if(!pack[key])report.warnings.push('missing_'+key);
+  });
+  if(!Array.isArray(pack.routesAffected)||!pack.routesAffected.length)report.warnings.push('missing_routesAffected');
+  if(!Array.isArray(pack.inputBanks)||!pack.inputBanks.length)report.warnings.push('missing_inputBanks');
+  if(!Array.isArray(pack.regressionTests)||!pack.regressionTests.length)report.warnings.push('missing_regressionTests');
+  report.stats.inputBanks=(pack.inputBanks||[]).length;
+  report.stats.regressionTests=(pack.regressionTests||[]).length;
+  var phrases=missionSkillPackFlattenInputPhrasesV1(pack);
+  report.stats.inputPhrases=phrases.length;
+  var phraseSeen={};
+  phrases.forEach(function(item){
+    var key=normalizeMissionQuestion(item.phrase);
+    if(!key)return;
+    if(phraseSeen[key]&&phraseSeen[key]!==item.route){
+      report.warnings.push('route_collision:'+key+'='+phraseSeen[key]+' vs '+item.route);
+      report.stats.routeCollisions++;
+    }else{
+      phraseSeen[key]=item.route;
+    }
+  });
+  (pack.inputBanks||[]).forEach(function(bank){
+    if(!bank.category)report.warnings.push('inputBank_missing_category');
+    if(!bank.routeTarget)report.warnings.push('inputBank_missing_routeTarget:'+(bank.category||'unknown'));
+    var phraseCount=['naturalPhrases','slangPhrases','typoVariants','voiceTranscriptPatterns','signalWords'].reduce(function(sum,key){return sum+(bank[key]||[]).length;},0);
+    if(!phraseCount)report.warnings.push('inputBank_missing_phrases:'+(bank.category||'unknown'));
+  });
+  (pack.regressionTests||[]).forEach(function(test){
+    if(!test||!test.q)report.warnings.push('regression_missing_prompt');
+    if(test&&!test.route)report.warnings.push('regression_missing_route:'+(test.q||'unknown'));
+    if(test&&!(test.mustAny&&test.mustAny.length)&&!test.must)report.warnings.push('regression_missing_assertion:'+(test.q||'unknown'));
+  });
+  MISSION_SKILL_PACK_PROTECTED_ROUTE_TESTS_V1.forEach(function(test){
+    var q=normalizeMissionUserPromptForRoutingV1(test.q);
+    var direct=typeof getMissionDirectRouteOverrideV1==='function'?getMissionDirectRouteOverrideV1(q):'';
+    var protectedRoute=direct||test.route;
+    var phraseMatch=phrases.some(function(item){return normalizeMissionQuestion(item.phrase)===q&&item.route&&item.route!==protectedRoute;});
+    if(phraseMatch){
+      report.errors.push('protected_route_conflict:'+test.label+'=>'+protectedRoute);
+      report.stats.protectedConflicts++;
+    }
+  });
+  if(report.errors.length)report.valid=false;
+  if(options.throwOnInvalid&&report.errors.length)throw new Error('Invalid Mission skill pack '+report.id+': '+report.errors.join(', '));
+  return report;
+}
+
+function runMissionSkillPackValidatorV1(packs){
+  var reports=(packs||MISSION_SKILL_PACKS||[]).map(function(pack){return validateMissionSkillPackV1(pack);});
+  return {
+    passed:reports.every(function(report){return report.valid;}),
+    total:reports.length,
+    errors:reports.reduce(function(out,report){return out.concat(report.errors.map(function(error){return report.id+':'+error;}));},[]),
+    warnings:reports.reduce(function(out,report){return out.concat(report.warnings.map(function(warning){return report.id+':'+warning;}));},[]),
+    reports:reports
+  };
+}
+
 function installMissionSkillPack(pack){
   if(!pack||!pack.id||MISSION_SKILL_PACK_REGISTRY[pack.id])return false;
+  var validation=validateMissionSkillPackV1(pack);
+  MISSION_SKILL_PACK_VALIDATION_REPORTS.push(validation);
+  if(!validation.valid){
+    console.warn('Mission skill pack validation failed',validation);
+    return false;
+  }
   MISSION_SKILL_PACK_REGISTRY[pack.id]=pack;
   (pack.inputBanks||[]).forEach(function(bank){
     if(!bank||!bank.category)return;
@@ -15891,6 +15996,12 @@ function runMissionBroadRegressionHardeningV1(){
     var paidTruthAnswer=getMissionMoneyReadResponseV1(Object.assign({},ctx,{dpc:{money:0}}),'how much money have I made today').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/paid result in this chat/i.test(paidTruthAnswer)||!/does not confirm it yet/i.test(paidTruthAnswer))failures.push('truth_ledger_paid_money_copy');
     sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    var validatorPass=validateMissionSkillPackV1({id:'qa_valid_skill_pack',name:'QA Valid Skill Pack',purpose:'QA only',routesAffected:['content'],inputBanks:[{category:'qa_content',routeTarget:'content',naturalPhrases:['qa content prompt'],slangPhrases:[],typoVariants:[],voiceTranscriptPatterns:[],signalWords:['qa']}],regressionTests:[{q:'qa content prompt',route:'content',mustAny:['content']}]});
+    if(!validatorPass.valid)failures.push('skill_validator_valid_pack_failed');
+    var validatorFail=validateMissionSkillPackV1({id:'qa_bad_skill_pack',name:'QA Bad Skill Pack',purpose:'QA only',routesAffected:['content'],inputBanks:[{category:'qa_bad',routeTarget:'content',naturalPhrases:['what should i say'],slangPhrases:[],typoVariants:[],voiceTranscriptPatterns:[],signalWords:[]}],regressionTests:[{q:'what should i say',route:'content',mustAny:['content']}]});
+    if(validatorFail.valid||!validatorFail.errors.some(function(error){return /protected_route_conflict/.test(error);})){
+      failures.push('skill_validator_protected_conflict_missing');
+    }
     var prompts=[
       {name:'brief_card',q:'read the brief card',must:/Mission Brief read/i,card:'brief'},
       {name:'outreach_card',q:'what should i do on the outreach card',must:/Outreach card read/i,card:'outreach'},
@@ -15957,7 +16068,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:41,meta:failures.length?failures.join(', '):'31 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:43,meta:failures.length?failures.join(', '):'31 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
