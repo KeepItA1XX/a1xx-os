@@ -10865,6 +10865,7 @@ function compactMissionDuplicateParagraphs(html){
 
 function cleanMissionVisibleAnswerText(html){
   return String(html||'')
+    .replace(/^(Same pipeline lane:|Still the lead lane:|Cleaner pipeline read:|Same sales lane:|Still the sales lane:|Cleaner sales read:|Same DPC lane:|Still the daily campaign lane:|Cleaner scoreboard read:|Same money lane:|Still the number talking:|Cleaner money read:|Same content lane:|Still the proof lane:|Cleaner proof read:|Same production lane:|Still the asset lane:|Cleaner delivery read:|Same sync lane:|Still the trust check:|Cleaner system read:|Same route:|Still on the move:|Clean pass:)\s*(<br\s*\/?>\s*){1,2}/i,'')
     .replace(/\bOpen\s+Open\s+/g,'Open ')
     .replace(/\bopen\s+Open\s+/g,'open ')
     .replace(/\bOpen\s+The\s+Current\s+Work\s+Card\b/g,'open the current work card')
@@ -12048,6 +12049,8 @@ function buildMissionMicroWinResultPromptV1(turn,signal,completed){
   if(!signal)return '';
   var ack=getMissionMicroWinAcknowledgmentV1(signal,completed,turn);
   if(!ack)return '';
+  if(ack.type==='booked')return escapeHtml(ack.acknowledgment)+'<br><br>Booked call logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
+  if(ack.type==='paid')return escapeHtml(ack.acknowledgment)+'<br><br>Money result logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
   return escapeHtml(ack.acknowledgment)+'<br><br>Result read: <strong>'+escapeHtml(ack.resultRead)+'</strong>.<br><br>Next: '+escapeHtml(ack.next)+'.';
 }
 
@@ -17495,6 +17498,13 @@ function getMissionActionAccountabilityV1(turn,ctx){
   var freshPending=!!(pending&&(age===null||age<=120));
   var resultAge=getMissionAgeMinutes(lastResult&&lastResult.recordedAt||'');
   var recentResult=!!(lastResult&&lastResult.type&&(resultAge===null||resultAge<=120));
+  var activeChat=getActiveMissionSession();
+  var activeMessages=activeChat&&Array.isArray(activeChat.messages)?activeChat.messages:[];
+  var earlyChat=activeChat&&activeMessages.length<=2&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive;
+  if(earlyChat&&pending&&!flags.protectedAsk&&!flags.resultSignal){
+    freshPending=false;
+    recentResult=false;
+  }
   var mode=getMissionActionAccountabilityModeV2({
     pending:pending,
     protectedAsk:flags.protectedAsk,
@@ -19833,15 +19843,15 @@ function getMissionRecentAssistantAnswersV1(limit){
 
 function getMissionRepeatCarryLineV1(route,recent){
   var pool={
-    sales:['Same sales lane:','Still the sales lane:','Cleaner sales read:'],
-    leads:['Same pipeline lane:','Still the lead lane:','Cleaner pipeline read:'],
-    dpc:['Same DPC lane:','Still the daily campaign lane:','Cleaner scoreboard read:'],
-    report:['Same money lane:','Still the number talking:','Cleaner money read:'],
-    content:['Same content lane:','Still the proof lane:','Cleaner proof read:'],
-    production:['Same production lane:','Still the asset lane:','Cleaner delivery read:'],
-    sync:['Same sync lane:','Still the trust check:','Cleaner system read:'],
-    now:['Same route:','Still on the move:','Clean pass:']
-  }[route]||['Same route:','Still on the move:','Clean pass:'];
+    sales:['Still on the sales thread.','Back on the sales thread.','Same conversation, cleaner.'],
+    leads:['Still on the lead thread.','Back on the pipeline thread.','Same lead map, cleaner.'],
+    dpc:['Still on the daily campaign.','Back on the scoreboard.','Same numbers, cleaner.'],
+    report:['Still on the money thread.','Back on the number.','Same money read, cleaner.'],
+    content:['Still on the content thread.','Back on the proof move.','Same content lane, cleaner.'],
+    production:['Still on the production thread.','Back on the asset move.','Same delivery lane, cleaner.'],
+    sync:['Still on the data check.','Back on the trust check.','Same system read, cleaner.'],
+    now:['Still on the move.','Back on the point.','Same move, cleaner.']
+  }[route]||['Still on the move.','Back on the point.','Same move, cleaner.'];
   recent=recent||[];
   for(var i=0;i<pool.length;i++){
     if(recent.indexOf(pool[i].toLowerCase())<0)return pool[i];
