@@ -12642,14 +12642,36 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     }]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_context_arb_fresh');
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_context_arb_fresh');
-    var freshAnswer=String(getMissionCommandResponse('ask',ctx,'what should i do today',{})||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    function plainMissionQaAnswer(prompt){
+      return String(getMissionCommandResponse('ask',ctx,prompt,{})||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    }
+    function answerHasBookedPrep(text){
+      return /Last result was booked|booked-call thread|prep the booked call|prep the call|calendar detail|opening question/i.test(String(text||''));
+    }
+    function appendMissionQaMessage(role,body,ts){
+      var sessions=getMissionChatSessions();
+      var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';
+      var idx=sessions.findIndex(function(s){return s&&s.id===activeId;});
+      if(idx<0)return;
+      sessions[idx].messages=Array.isArray(sessions[idx].messages)?sessions[idx].messages:[];
+      sessions[idx].messages.push({role:role,body:body,ts:ts||new Date().toISOString()});
+      sessions[idx].updatedAt=ts||new Date().toISOString();
+      saveMissionChatSessions(sessions);
+    }
+    var freshAnswer=plainMissionQaAnswer('what should i do today');
     var freshArb=window.__missionLastContextArbitrationV11||{};
     var rawAfter=getMissionRawBrainSessionForArbitrationV11();
-    if(/Last result was booked|booked-call thread|prep the booked call/i.test(freshAnswer))failures.push('fresh_chat_visible_booked_prep');
+    if(answerHasBookedPrep(freshAnswer))failures.push('fresh_chat_visible_booked_prep');
     if(freshArb.finalContextMode!=='blocked_stale_memory')failures.push('fresh_chat_context_mode_'+(freshArb.finalContextMode||'none'));
     if((freshArb.staleSignals||[]).indexOf('blocked_booked_carry')<0)failures.push('fresh_chat_missing_blocked_booked_signal');
     if(rawAfter.resultLoop&&rawAfter.resultLoop.lastResult&&rawAfter.resultLoop.lastResult.type==='booked')failures.push('fresh_chat_saved_stale_booked_result');
     if(rawAfter.resultLoop&&missionPendingLooksBookedPrepV12(rawAfter.resultLoop.pendingAction))failures.push('fresh_chat_saved_stale_booked_pending');
+    var freshWhy=plainMissionQaAnswer('why');
+    if(answerHasBookedPrep(freshWhy))failures.push('fresh_chat_why_booked_prep');
+    var freshNext=plainMissionQaAnswer('what next');
+    if(answerHasBookedPrep(freshNext))failures.push('fresh_chat_next_booked_prep');
+    var freshPipeline=plainMissionQaAnswer('/pipeline');
+    if(answerHasBookedPrep(freshPipeline)||!/pipeline|lead|call-ready|call ready/i.test(freshPipeline))failures.push('fresh_chat_explicit_pipeline_drift');
 
     var bookedAt=new Date(Date.now()+1).toISOString();
     var activeBrain={
@@ -12679,10 +12701,17 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     }]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_context_arb_booked');
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_context_arb_booked');
-    var bookedAnswer=String(getMissionCommandResponse('ask',ctx,'what next',{})||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    var bookedSignalTime=new Date(Date.now()+2).toISOString();
+    appendMissionQaMessage('user','booked',bookedSignalTime);
+    var bookedSignalAnswer=plainMissionQaAnswer('booked');
+    appendMissionQaMessage('assistant',bookedSignalAnswer,bookedSignalTime);
+    if(!/booked|calendar|call/i.test(bookedSignalAnswer))failures.push('active_booked_signal_not_logged');
+    var bookedAnswer=plainMissionQaAnswer('what next');
     var bookedArb=window.__missionLastContextArbitrationV11||{};
     if(!/prep|calendar detail|opening question/i.test(bookedAnswer))failures.push('active_booked_prep_not_allowed');
     if((bookedArb.staleSignals||[]).length)failures.push('active_booked_false_stale_signal');
+    var bookedCountAnswer=plainMissionQaAnswer('how many booked calls do i have');
+    if(!/booked/i.test(bookedCountAnswer)||!/chat-only|reported here|dashboard confirmed/i.test(bookedCountAnswer))failures.push('active_booked_count_not_separated');
   }catch(e){
     failures.push('exception_'+(e&&e.message?e.message:String(e)));
   }finally{
@@ -12693,7 +12722,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     window.__missionCommandContext=priorCtx;
     window.__missionLastContextArbitrationV11=priorLastArb;
   }
-  return {passed:!failures.length,failures:failures,total:2};
+  return {passed:!failures.length,failures:failures,total:9};
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
