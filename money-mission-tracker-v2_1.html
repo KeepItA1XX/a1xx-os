@@ -10868,9 +10868,11 @@ function cleanMissionVisibleAnswerText(html){
     .replace(/\bOpen\s+Open\s+/g,'Open ')
     .replace(/\bopen\s+Open\s+/g,'open ')
     .replace(/\bOpen\s+The\s+Current\s+Work\s+Card\b/g,'open the current work card')
+    .replace(/\bDo this next:\s*/gi,'Next, ')
     .replace(/\s+([.,!?;:])/g,'$1')
     .replace(/([.!?])([A-Z])/g,'$1 $2')
-    .replace(/(^|[.!?]\s+)open the current work card/g,function(match,prefix){return prefix+'Open the current work card';});
+    .replace(/(^|[.!?]\s+)open the current work card/g,function(match,prefix){return prefix+'Open the current work card';})
+    .replace(/(^|[.!?]\s+)([a-z])/g,function(match,prefix,letter){return prefix+letter.toUpperCase();});
 }
 
 function shouldMissionIntegritySuppressBubbles(turn){
@@ -12240,20 +12242,20 @@ function getMissionPatternBasedCoachingMemoryV1(turn,ctx){
   var pattern=null;
 
   if(dpcTotal===0&&dpcZeroAsk&&!salesAsk&&!directSyncCommand&&!directDpcRead&&noReplyCount<2&&doneOnlyCount<2&&resourceUseCount<2&&whyMoreCount<3){
-    pattern={key:'dpc_zero_loop',label:'DPC Zero Loop',message:'Pattern read: the day is still invisible to the OS.<br><br>DPC is at zero, so another answer will not teach the system anything yet.<br><br>First move: log one measurable outreach or sales action.',action:{label:'Log DPC',type:'log_dpc',target:'dpc',action:'log one measurable outreach or sales action',requiresConfirmation:true,reason:'pattern_dpc_zero'}};
+    pattern={key:'dpc_zero_loop',label:'DPC Zero Loop',message:'You are trying to get the day moving.<br><br>Nothing is logged in DPC yet, so the cleanest first move is one outreach or sales action.<br><br>Log that first so the OS has something real to work from.',action:{label:'Log DPC',type:'log_dpc',target:'dpc',action:'log one measurable outreach or sales action',requiresConfirmation:true,reason:'pattern_dpc_zero'}};
   }else if((dataLevel==='low'||syncRisk==='high'||syncTurns>=2)&&dataTrustAsk&&!salesAsk&&!directSyncCommand){
-    pattern={key:'data_trust_loop',label:'Data Trust Loop',message:'Pattern read: we keep checking whether the data can be trusted.<br><br>Run one sync check, then stop checking and use the result to choose the next action.',action:{label:'Run Sync Check',type:'sync_check',target:'system_hub',action:'run one sync check and return to the active move',requiresConfirmation:false,reason:'pattern_data_trust_loop'}};
+    pattern={key:'data_trust_loop',label:'Data Trust Loop',message:'You are checking whether the numbers can be trusted.<br><br>Run one sync check, use the result, then get back to the move instead of checking the system again.',action:{label:'Run Sync Check',type:'sync_check',target:'system_hub',action:'run one sync check and return to the active move',requiresConfirmation:false,reason:'pattern_data_trust_loop'}};
   }else if(noReplyCount>=2&&directNext&&!explicitData&&!salesAsk){
-    pattern={key:'repeated_no_reply',label:'Repeated No Reply',message:'Pattern read: the issue is not needing another move.<br><br>The last touches are not producing replies.<br><br>Switch signal: tighten the target, change the opener, or move to a warmer lead.',action:{label:'Review Opener',type:'open_card',target:'sales_coach',action:'review the opener before another touch',requiresConfirmation:false,reason:'pattern_repeated_no_reply'}};
+    pattern={key:'repeated_no_reply',label:'Repeated No Reply',message:'The issue is not needing another move.<br><br>The last touches are not producing replies. Tighten the target, change the opener, or move to a warmer lead.',action:{label:'Review Opener',type:'open_card',target:'sales_coach',action:'review the opener before another touch',requiresConfirmation:false,reason:'pattern_repeated_no_reply'}};
   }else if(doneOnlyCount>=2&&directNext&&!explicitData&&!salesAsk){
-    pattern={key:'done_without_result',label:'Done Without Result',message:'Pattern read: actions are getting marked done without a business result.<br><br>Before the next move, capture what happened: no reply, reply, booked, paid, or finished.',action:{label:'Capture Result',type:'result_prompt',target:'mission_command',action:'capture the result before a new move',requiresConfirmation:true,reason:'pattern_done_without_result'}};
+    pattern={key:'done_without_result',label:'Done Without Result',message:'The work is getting marked done, but the result is still unclear.<br><br>Before the next move, capture what happened: no reply, reply, booked, paid, or finished.',action:{label:'Capture Result',type:'result_prompt',target:'mission_command',action:'capture the result before a new move',requiresConfirmation:true,reason:'pattern_done_without_result'}};
   }else if(resourceUseCount>=2&&directNext&&!explicitData&&!salesAsk){
-    pattern={key:'resource_without_result',label:'Resource Without Result',message:'Pattern read: resources are being pulled, but the result loop is not clear yet.<br><br>Use one script once, then tell me what happened before pulling another one.',action:{label:'Close Resource Loop',type:'result_prompt',target:'mission_command',action:'report the resource result',requiresConfirmation:true,reason:'pattern_resource_without_result'}};
+    pattern={key:'resource_without_result',label:'Resource Without Result',message:'You are pulling resources, but the result loop is not closed yet.<br><br>Use one script once, then tell me what happened before pulling another one.',action:{label:'Close Resource Loop',type:'result_prompt',target:'mission_command',action:'report the resource result',requiresConfirmation:true,reason:'pattern_resource_without_result'}};
   }else if(whyMoreCount>=3&&followupAsk&&!explicitData&&!salesAsk&&pending){
     var friendlyPendingAction=getMissionFriendlyActionTextV1(pending,'the current move');
-    pattern={key:'clarity_loop_open_action',label:'Clarity Loop',message:'Pattern read: the question keeps asking for more because the action is still open.<br><br>Close this move first: '+escapeHtml(friendlyPendingAction)+'.',action:{label:friendlyPendingAction,type:pending.type||'next_best_move',target:pending.target||pending.action||'mission_command',action:pending.action||friendlyPendingAction,requiresConfirmation:false,reason:'pattern_clarity_loop'}};
+    pattern={key:'clarity_loop_open_action',label:'Clarity Loop',message:'You keep asking for more because the action is still open.<br><br>Close this move first: '+escapeHtml(friendlyPendingAction)+'.',action:{label:friendlyPendingAction,type:pending.type||'next_best_move',target:pending.target||pending.action||'mission_command',action:pending.action||friendlyPendingAction,requiresConfirmation:false,reason:'pattern_clarity_loop'}};
   }else if(salesTurns>=2&&leadTurns>=2&&directNext&&!explicitData){
-    pattern={key:'sales_pipeline_blend',label:'Sales/Pipeline Blend',message:'Pattern read: sales language and pipeline work are blending together.<br><br>Split it clean: Pipeline tells who to contact. Sales tells what to say.',action:{label:'Pick Sales or Pipeline',type:'next_best_move',target:'mission_command',action:'choose whether this is who to contact or what to say',requiresConfirmation:false,reason:'pattern_sales_pipeline_blend'}};
+    pattern={key:'sales_pipeline_blend',label:'Sales/Pipeline Blend',message:'Sales and pipeline are blending together here.<br><br>Split it clean: Pipeline tells who to contact. Sales tells what to say.',action:{label:'Pick Sales or Pipeline',type:'next_best_move',target:'mission_command',action:'choose whether this is who to contact or what to say',requiresConfirmation:false,reason:'pattern_sales_pipeline_blend'}};
   }
 
   var shouldAnswer=!!(pattern&&pattern.message);
@@ -15919,7 +15921,7 @@ function runMissionMasterIntelligenceQASweepV1(){
   var weeklyChanged=getMissionWeeklyReviewAnswerV1({rev:999,wk:500,gap:0,cycle:{name:'Foundation'}},'what changed this week');
   if(!/Weekly review read/i.test(weeklyChanged)||!/Lesson:/i.test(weeklyChanged)||!/Next move/i.test(weeklyChanged))failures.push('qa_weekly_review_read_shape');
   var weeklyScorecard=getMissionWeeklyReviewAnswerV1({rev:999,wk:500,gap:0,cycle:{name:'Foundation'}},'what should i track every week');
-  if(!/Weekly scorecard read/i.test(weeklyScorecard)||!/money collected/i.test(weeklyScorecard)||!/Review it in this order/i.test(weeklyScorecard))failures.push('qa_weekly_review_scorecard_shape');
+  if(!/weekly scorecard|five numbers/i.test(weeklyScorecard)||!/money collected/i.test(weeklyScorecard)||!/money first|conversations/i.test(weeklyScorecard))failures.push('qa_weekly_review_scorecard_shape');
   var weeklySignal=getMissionWeeklyReviewSignalV11('wrap it','now');
   if(!weeklySignal||weeklySignal.mode!=='closeout')failures.push('qa_weekly_review_signal_closeout');
   var weeklyIntel=getMissionWeeklyReviewIntelligenceResponseV11('weekly',{rev:999,wk:500,gap:0},'what worked this week',{},null);
@@ -15929,17 +15931,17 @@ function runMissionMasterIntelligenceQASweepV1(){
   var cardOutreach=getMissionThisWeekCardResponseV1('leads',{rev:999,wk:500,gap:0},'what should i do on the outreach card',{},null);
   if(!/Outreach card|open leads|Do this next/i.test(cardOutreach))failures.push('qa_card_outreach_read');
   var outreachOverview=getMissionOutreachCardIntelligenceResponseV11('leads',{rev:999,wk:500,gap:0},'what should i do on the outreach card',{},null);
-  if(!/Outreach card read|Do this next/i.test(outreachOverview))failures.push('qa_outreach_card_overview_read');
+  if(!/I checked Outreach|Outreach card read|Do this next/i.test(outreachOverview))failures.push('qa_outreach_card_overview_read');
   var outreachDpc=getMissionOutreachCardIntelligenceResponseV11('dpc',{rev:999,wk:500,gap:0},'what did i log today',{},null);
   if(!/DPC read|DMs|Do this next/i.test(outreachDpc))failures.push('qa_outreach_card_dpc_read');
   var outreachFollow=getMissionOutreachCardIntelligenceResponseV11('leads',{rev:999,wk:500,gap:0},'who needs a bump',{},null);
   if(!/Follow-up read|Do this next/i.test(outreachFollow))failures.push('qa_outreach_card_followup_read');
   var alignedOutreach=applyMissionCrossCardAlignmentV1(outreachOverview,{cardAlignment:'outreach'});
-  if(!/Before switching: log the outreach result/i.test(alignedOutreach))failures.push('qa_cross_card_outreach_alignment');
+  if(!/Before (switching:|you switch lanes,).*log the outreach result/i.test(alignedOutreach))failures.push('qa_cross_card_outreach_alignment');
   var cardContent=getMissionThisWeekCardResponseV1('content',{rev:999,wk:500,gap:0},'what should i do on the content card',{},null);
   if(!/Content card|active item|Do this next/i.test(cardContent))failures.push('qa_card_content_read');
   var contentToday=getMissionContentCardIntelligenceResponseV11('content',{rev:999,wk:500,gap:0},'what should i post today',{},null);
-  if(!/Content card read|Today|Do this next/i.test(contentToday))failures.push('qa_content_card_today_read');
+  if(!/I checked Content|Content card read|Today|Do this next/i.test(contentToday))failures.push('qa_content_card_today_read');
   var contentPipeline=getMissionContentCardIntelligenceResponseV11('content',{rev:999,wk:500,gap:0},'what is stuck in the content pipeline',{},null);
   if(!/Content pipeline read|Bottleneck|Do this next/i.test(contentPipeline))failures.push('qa_content_card_pipeline_read');
   var contentPerformance=getMissionContentCardIntelligenceResponseV11('content',{rev:999,wk:500,gap:0},'content not converting',{},null);
@@ -15951,21 +15953,21 @@ function runMissionMasterIntelligenceQASweepV1(){
   var productionBangin=getMissionProductionCardIntelligenceResponseV11('production',{rev:999,wk:500,gap:0},'bangin plus',{},null);
   if(!/BANGIN\+ consistency read|Do this next/i.test(productionBangin))failures.push('qa_production_card_bangin_read');
   var managerCalendar=getMissionManagerCardIntelligenceResponseV11('calendar',{rev:999,wk:500,gap:0},'what should i check on the manager card',{},null);
-  if(!/Manager card read|Calendar events loaded|Do this next/i.test(managerCalendar))failures.push('qa_manager_card_overview_read');
+  if(!/I checked Manager|Manager card read|calendar event|Calendar events loaded|Do this next/i.test(managerCalendar))failures.push('qa_manager_card_overview_read');
   var managerBlock=getMissionManagerCardIntelligenceResponseV11('calendar',{rev:999,wk:500,gap:0},'what block we in',{},null);
   if(!/Manager block read|Do this next/i.test(managerBlock))failures.push('qa_manager_card_block_read');
   var managerTasks=getMissionManagerCardIntelligenceResponseV11('calendar',{rev:999,wk:500,gap:0,openTasks:[{content:'Review calendar'}]},'what admin loop matters',{},null);
   if(!/Admin task read|Review calendar|Do this next/i.test(managerTasks))failures.push('qa_manager_card_task_read');
   var alignedManager=applyMissionCrossCardAlignmentV1(managerTasks,{cardAlignment:'manager'});
-  if(!/Before switching: name the outcome/i.test(alignedManager))failures.push('qa_cross_card_manager_alignment');
+  if(!/Before (switching:|you switch lanes,).*name the outcome/i.test(alignedManager))failures.push('qa_cross_card_manager_alignment');
   var alignedDuplicate=applyMissionCrossCardAlignmentV1(alignedManager,{cardAlignment:'manager'});
-  if((alignedDuplicate.match(/Before switching:/g)||[]).length!==1)failures.push('qa_cross_card_alignment_duplicate_guard');
+  if((alignedDuplicate.match(/Before (?:switching:|you switch lanes,)/g)||[]).length!==1)failures.push('qa_cross_card_alignment_duplicate_guard');
   var weeklyCohesion=applyMissionCardCohesionV1(weeklyScorecard,{cardAlignment:'weekly'});
-  if(!/Before switching: save the lesson/i.test(weeklyCohesion))failures.push('qa_card_cohesion_weekly_alignment');
+  if(!/Before (switching:|you switch lanes,).*save the lesson/i.test(weeklyCohesion))failures.push('qa_card_cohesion_weekly_alignment');
   var rolodexCohesion=applyMissionCardCohesionV1('Rolodex read:<br><br>Open Rolodex and pull: Cold DM Opener Script.',{cardAlignment:'resources'});
-  if(!/Before switching: use one support piece once/i.test(rolodexCohesion))failures.push('qa_card_cohesion_resources_alignment');
+  if(!/Before (switching:|you switch lanes,).*use one support piece once/i.test(rolodexCohesion))failures.push('qa_card_cohesion_resources_alignment');
   var cohesionDuplicate=applyMissionCardCohesionV1(rolodexCohesion,{cardAlignment:'resources'});
-  if((cohesionDuplicate.match(/Before switching:/g)||[]).length!==1)failures.push('qa_card_cohesion_duplicate_guard');
+  if((cohesionDuplicate.match(/Before (?:switching:|you switch lanes,)/g)||[]).length!==1)failures.push('qa_card_cohesion_duplicate_guard');
   var cardProduction=getMissionThisWeekCardResponseV1('production',{rev:999,wk:500,gap:0},'what should i do on the beat card',{},null);
   if(!/Production card|beat lane|Do this next/i.test(cardProduction))failures.push('qa_card_production_read');
   var cardManager=getMissionThisWeekCardResponseV1('calendar',{rev:999,wk:500,gap:0},'what should i check on the manager card',{},null);
@@ -15975,7 +15977,7 @@ function runMissionMasterIntelligenceQASweepV1(){
   var briefSlide=getMissionBriefIntelligenceResponseV1('now',{rev:100,wk:500,gap:400},'what should i look at first in the brief',{},null);
   if(!/Money slide|Why:|Do this next/i.test(briefSlide))failures.push('qa_brief_best_slide');
   var briefDashboard=getMissionBriefIntelligenceResponseV1('now',{rev:500,wk:500,gap:0,openTasks:[{content:'Prep event'}]},'read the brief card',{},null);
-  if(!/Mission Brief read|Brief score|Content\/Production|Watch first/i.test(briefDashboard))failures.push('qa_brief_dashboard_v12_read');
+  if(!/I checked the Brief|Mission Brief read|Brief score|Content\/Production|Start with|Watch first/i.test(briefDashboard))failures.push('qa_brief_dashboard_v12_read');
   var briefDpcSlide=getMissionBriefIntelligenceResponseV1('now',{rev:500,wk:500,gap:0},'read the dpc slide',{},null);
   if(!/DPC slide|Meaning|Do this next/i.test(briefDpcSlide))failures.push('qa_brief_slide_specific_read');
   var briefMatters=getMissionBriefIntelligenceResponseV1('now',{rev:500,wk:500,gap:0},'what matters right now',{},null);
@@ -16014,9 +16016,9 @@ function runMissionMasterIntelligenceQASweepV1(){
   var architectureMap=runMissionBrainArchitectureMapCheckV1();
   if(!architectureMap.passed)failures.push('qa_brain_architecture_map');
   var dataUsing=getMissionDataConfidenceResponse('sync',{rev:999,wk:500,dpc:{dms:0,callsMade:0,booked:0,closes:0,money:0}},'what data are you using');
-  if(!/I am reading|Trust level/i.test(dataUsing)||/Check system health only/i.test(dataUsing))failures.push('qa_data_trust_using_response');
+  if(!/I am looking at this right now|I am reading|Trust level|safe next move/i.test(dataUsing)||/Check system health only/i.test(dataUsing))failures.push('qa_data_trust_using_response');
   var dataMissing=getMissionDataConfidenceResponse('sync',{rev:999,wk:500,dpc:{dms:0,callsMade:0,booked:0,closes:0,money:0}},'what data is missing');
-  if(!/Missing or light data|Next: run sync/i.test(dataMissing)||/Check system health only/i.test(dataMissing))failures.push('qa_data_trust_missing_response');
+  if(!/I cannot fully see|Missing or light data|Only run sync|Next: run sync/i.test(dataMissing)||/Check system health only/i.test(dataMissing))failures.push('qa_data_trust_missing_response');
   return {passed:!failures.length,failures:failures,total:79};
 }
 
@@ -16239,34 +16241,34 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/^Cleaner read:/i.test(frameOne)||/^Cleaner read:/i.test(frameTwo))failures.push('response_frame_cleaner_rotation');
     try{sessionStorage.removeItem(MISSION_RESPONSE_FRAME_STORE_KEY_V1);}catch(e){}
     var prompts=[
-      {name:'brief_card',q:'read the brief card',must:/Mission Brief read/i,card:'brief'},
-      {name:'outreach_card',q:'what should i do on the outreach card',must:/Outreach card read/i,card:'outreach'},
-      {name:'content_card',q:'what should i do on the content card',must:/Content card read/i,card:'content'},
-      {name:'production_card',q:'what should i do on the beat card',must:/Production card read/i,card:'production'},
-      {name:'manager_card',q:'what should i check on the manager card',must:/Manager card read/i,card:'manager'},
+      {name:'brief_card',q:'read the brief card',must:/I checked the Brief|Mission Brief read/i,card:'brief'},
+      {name:'outreach_card',q:'what should i do on the outreach card',must:/I checked Outreach|Outreach card read/i,card:'outreach'},
+      {name:'content_card',q:'what should i do on the content card',must:/I checked Content|Content card read/i,card:'content'},
+      {name:'production_card',q:'what should i do on the beat card',must:/I checked Production|Production card read/i,card:'production'},
+      {name:'manager_card',q:'what should i check on the manager card',must:/I checked Manager|Manager card read/i,card:'manager'},
       {name:'hit_list',q:'how is the hit list looking',must:/Hit List read/i,card:'outreach'},
       {name:'hit_list_navigation',q:'where do i click to find the hit list',must:/Hit List read|Open Hit List|Outreach/i,card:'outreach'},
-      {name:'weekly_scorecard',q:'what should i track every week',must:/Weekly scorecard read|Track five numbers/i,card:'weekly'},
+      {name:'weekly_scorecard',q:'what should i track every week',must:/weekly scorecard|five numbers|Track five numbers/i,card:'weekly'},
       {name:'dpc_card',q:'read the dpc card',must:/DPC read/i,card:'outreach'},
       {name:'sync_navigation',q:'where do i check sync',must:/System Hub|sync check/i},
       {name:'sync_navigation_polite',q:'where do i check sync please',must:/System Hub|Health|sync check/i},
-      {name:'content_proof_polite',q:'hey what proof should i post',must:/Content card read|proof|post/i,card:'content'},
-      {name:'content_pipeline_polite',q:'what is stuck in the content pipeline please',must:/Content card read|Content|Pipeline|content/i,card:'content'},
-      {name:'production_ship_polite',q:'hey what can ship today',must:/Production card read|ship|Production/i,card:'production'},
+      {name:'content_proof_polite',q:'hey what proof should i post',must:/I checked Content|Content card read|proof|post/i,card:'content'},
+      {name:'content_pipeline_polite',q:'what is stuck in the content pipeline please',must:/I checked Content|Content card read|Content|Pipeline|content/i,card:'content'},
+      {name:'production_ship_polite',q:'hey what can ship today',must:/I checked Production|Production card read|ship|Production/i,card:'production'},
       {name:'sales_mix_master_reply',q:'mix master reply',must:/Send:|Ask:|Say:|Sales/i},
       {name:'sales_break_even_qualifier',q:'Break EVEN qualifier',must:/Send:|Ask:|Say:|Sales/i},
-      {name:'money_read_plain',q:'how much money are we making',must:/Money read|This week|Next move:/i},
-      {name:'money_make_today',q:'what can i do to make some money today',must:/Money read|Next move:/i},
-      {name:'sync_calendar_stale',q:'calendar stale',must:/Data read|sync|missing|loaded/i},
-      {name:'sync_trust_data',q:'do i trust this data',must:/Data read|Clean enough|Partial|loaded/i},
+      {name:'money_read_plain',q:'how much money are we making',must:/I checked the money lane|Money read|This week|Next/i},
+      {name:'money_make_today',q:'what can i do to make some money today',must:/I checked the money lane|Money read|Next/i},
+      {name:'sync_calendar_stale',q:'calendar stale',must:/current enough|Data read|sync|missing|loaded/i},
+      {name:'sync_trust_data',q:'do i trust this data',must:/safe next move|Data read|Clean enough|Partial|loaded/i},
       {name:'production_studio_session',q:'production studio session',must:/Production|studio|asset|song|beat/i},
-      {name:'data_loaded_status',q:'what is loaded',must:/I am reading|Data read|Clean enough|Partial|loaded|Trust level/i},
+      {name:'data_loaded_status',q:'what is loaded',must:/I am looking at this right now|I am reading|Data read|Clean enough|Partial|loaded|Trust level/i},
       {name:'cohesion_meaning',q:'what does that mean',must:/clean read|reading|useful read|move/i},
       {name:'cohesion_money_bridge',q:'how does that connect to money',must:/connection|money|move|matters/i},
       {name:'cohesion_card_owner',q:'what card owns this',must:/Card|belongs to|Open|Come back/i},
-      {name:'cohesion_data_source',q:'what data are you using',must:/I am reading|Trust level|Money|DPC/i},
-      {name:'cohesion_clean_read',q:'give me the clean read',must:/Cleaner read|clean read|Move/i},
-      {name:'cohesion_app_context',q:'answer like the app knows what I’m doing',must:/Cleaner read|card|trackable|Move/i},
+      {name:'cohesion_data_source',q:'what data are you using',must:/I am looking at this right now|I am reading|Trust level|Money|DPC/i},
+      {name:'cohesion_clean_read',q:'give me the clean read',must:/Clean read|Cleaner read|clean read|Move/i},
+      {name:'cohesion_app_context',q:'answer like the app knows what I’m doing',must:/Clean read|Cleaner read|card|status change|trackable|Move/i},
       {name:'sales_correction',q:'i meant sales not pipeline',must:/Sales lane, not pipeline|Ask:/i},
       {name:'changed_today',q:'what changed today',must:/Since the last saved checkpoint|Current read|changed/i},
       {name:'booked_count',q:'how many booked calls do i have',must:/booked/i}
@@ -16281,16 +16283,16 @@ function runMissionBroadRegressionHardeningV1(){
       if(test.name==='sales_mix_master_reply'&&/Production card read|Production vs paid delivery/i.test(plain))failures.push(test.name+'_production_bleed');
       if(test.name==='sales_break_even_qualifier'&&/BANGIN\+ Upload Checklist|Production card read/i.test(plain))failures.push(test.name+'_resource_bleed');
       if(test.name==='production_studio_session'&&/Send:|Ask:|Sales lane/i.test(plain))failures.push(test.name+'_sales_bleed');
-      if((plain.match(/Before switching:/g)||[]).length>1)failures.push(test.name+'_duplicate_handoff');
-      if(test.card&&plain.indexOf('Before switching:')<0)failures.push(test.name+'_handoff_missing');
+      if((plain.match(/Before (?:switching:|you switch lanes,)/g)||[]).length>1)failures.push(test.name+'_duplicate_handoff');
+      if(test.card&&!/Before (?:switching:|you switch lanes,)/.test(plain))failures.push(test.name+'_handoff_missing');
       if(test.card&&/\b(Same pipeline lane|Which lead do you want to move first|Who is closest to a real decision|Want to go through one lead at a time)\b/i.test(plain))failures.push(test.name+'_route_garnish_bleed');
       if(missionVisibleAnswerHasInternalLeakV1(answer))failures.push(test.name+'_internal_leak');
     });
     ['brief','outreach','content','production','manager'].forEach(function(card){
       var aligned=applyMissionCrossCardAlignmentV1('QA card answer',{cardAlignment:card});
-      if(aligned.indexOf('Before switching:')<0)failures.push(card+'_alignment_missing');
+      if(!/Before (?:switching:|you switch lanes,)/.test(aligned))failures.push(card+'_alignment_missing');
       var duplicate=applyMissionCrossCardAlignmentV1(aligned,{cardAlignment:card});
-      if((duplicate.match(/Before switching:/g)||[]).length!==1)failures.push(card+'_alignment_duplicate');
+      if((duplicate.match(/Before (?:switching:|you switch lanes,)/g)||[]).length!==1)failures.push(card+'_alignment_duplicate');
     });
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
@@ -16346,18 +16348,19 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   if(ctx&&(ctx.rev!==undefined||ctx.wk!==undefined))loaded.push('money: '+fmt(Number(ctx.rev||0))+' of '+fmt(Number(ctx.wk||0)));
   var usingLine=loaded.length?loaded.slice(0,6).join('<br>'):'No detailed app packet is loaded in this chat yet.';
   var healthLine=serviceNames.length?serviceNames.slice(0,5).map(function(name){var s=services[name]||{};return escapeHtml(name+': '+(s.status||'checked'));}).join('<br>'):'Sync health has not been checked in detail yet.';
+  var healthRead=serviceNames.length?'Sync check shows:<br>'+healthLine:healthLine;
   var missingLine=missing.length?escapeHtml(missing.join(', ')):'nothing obvious from the current app packet';
-  var trustLine=missing.length?'I would use this for a safe next move, but not for final counts until sync is checked.':'This is clean enough to choose the next move.';
+  var trustLine=missing.length?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
   if(/\b(what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|what is trusted|what is safe to act on)\b/.test(q)){
-    return 'I am reading:<br><br>'+usingLine+'<br><br>Sync status:<br>'+healthLine+'<br><br>Trust level: '+escapeHtml(trustLine);
+    return 'I am looking at this right now:<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see)\b/.test(q)){
-    return 'Missing or light data:<br><br>'+missingLine+'<br><br>What that means:<br>'+escapeHtml(trustLine)+'<br><br>Next: run sync only if this decision needs current numbers.';
+    return 'I cannot fully see this yet:<br><br>'+missingLine+'<br><br>'+escapeHtml(trustLine)+'<br><br>Only run sync if this decision needs current numbers.';
   }
   if(/\b(is this current|is this data current|current data|data current|is this live|calendar stale|data stale|stale data)\b/.test(q)){
-    return 'Currentness read:<br><br>'+usingLine+'<br><br>Sync status:<br>'+healthLine+'<br><br>Trust level: '+escapeHtml(trustLine)+'<br><br>Next: use the loaded read for a safe move, or run sync before treating the numbers as final.';
+    return 'It is current enough for a safe next move, not final enough for locked numbers.<br><br>I am seeing:<br>'+usingLine+'<br><br>'+healthRead+'<br><br>Run sync first only if the decision depends on exact counts.';
   }
-  return 'Data read:<br><br>'+(missing.length?'Partial - missing '+escapeHtml(missing.join(', '))+'.':'Clean enough for the current app packet.')+'<br><br>What that means:<br>'+escapeHtml(trustLine)+'<br><br>Next: run sync only if the decision needs current numbers.';
+  return (missing.length?'The data is partial. I cannot fully see '+escapeHtml(missing.join(', '))+'.':'The current app packet is clean enough for the next move.')+'<br><br>'+escapeHtml(trustLine)+'<br><br>Run sync only if the decision needs current numbers.';
 }
 
 function getMissionFriendlyActionTextV1(action,fallback){
@@ -18214,8 +18217,9 @@ function getMissionWeeklyReviewAnswerV1(ctx,question){
   var loadedLine=snap.openLeads+' open leads, '+snap.contentCount+' content item'+(snap.contentCount===1?'':'s')+', '+snap.productionCount+' production item'+(snap.productionCount===1?'':'s')+' loaded.';
   var constraint=getMissionWeeklyReviewConstraintV1(snap);
   var move=getMissionWeeklyReviewNextMoveV1(snap);
+  var moveStart=String(move||'').replace(/^log\b/i,'logging');
   if(/\b(track|kpi|metric|scorecard|every week)\b/.test(q)){
-    return 'Weekly scorecard read:<br><br>'+escapeHtml(getMissionWeeklyScorecardLineV11(snap))+'<br><br>Review it in this order:<br>1) Money.<br>2) Conversations.<br>3) Booked calls.<br>4) Closes.<br>5) Proof created.<br><br>Next move is '+escapeHtml(move)+'.';
+    return 'For the weekly scorecard, keep it to five numbers.<br><br>'+escapeHtml(getMissionWeeklyScorecardLineV11(snap))+'<br><br>Review money first, then conversations, booked calls, closes, and proof created.<br><br>After that, start by '+escapeHtml(moveStart)+'.';
   }
   if(/\b(plan|prep|next week|make a plan|top 3)\b/.test(q)){
     return 'Weekly plan from the loaded read:<br><br>Phase 1: close the open loop. '+escapeHtml(constraint)+'.<br><br>Phase 2: protect the money path. '+escapeHtml(move)+'.<br><br>Phase 3: turn the lesson into a system. Pick what repeats, what gets cut, and what gets scheduled first.<br><br>Start here: '+escapeHtml(move)+'.';
@@ -18483,7 +18487,7 @@ function getMissionOutreachCardIntelligenceResponseV11(route,ctx,question,brainS
   }else if(mode==='handoff'){
     answer='Outreach handoff read:<br><br>The lane is not closed until the result is logged. Current DPC: '+Number(d.dms||0)+' DMs · '+Number(d.coldCalls||0)+' calls · '+Number(d.calls||0)+' booked · '+Number(d.closes||0)+' closes.<br><br>Do this next: '+move+'.';
   }else{
-    answer='Outreach card read:<br><br>'+snap.leads.length+' open lead'+(snap.leads.length===1?'':'s')+' loaded. Today: '+Number(d.dms||0)+' DMs · '+Number(d.coldCalls||0)+' calls · '+Number(d.calls||0)+' booked · '+Number(d.closes||0)+' closes.<br><br>Top move: '+getMissionOutreachLeadLabelV11(snap.topLead)+'.<br><br>Do this next: '+move+'.';
+    answer='I checked Outreach.<br><br>'+snap.leads.length+' open lead'+(snap.leads.length===1?'':'s')+' loaded. Today has '+Number(d.dms||0)+' DMs, '+Number(d.coldCalls||0)+' calls, '+Number(d.calls||0)+' booked, and '+Number(d.closes||0)+' closes logged.<br><br>The next touch is '+getMissionOutreachLeadLabelV11(snap.topLead)+'.<br><br>Do this next: '+move+'.';
   }
   if(turn){
     turn.outreachCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,leadCount:snap.leads.length,dpcTotal:snap.totalActivity};
@@ -18603,7 +18607,7 @@ function getMissionContentCardIntelligenceResponseV11(route,ctx,question,brainSt
     answer='Repurpose read:<br><br>'+snap.needsRepurpose.length+' long-form piece'+(snap.needsRepurpose.length===1?'':'s')+' looks usable for leverage.<br><br>Do this next: '+move+'.';
   }else{
     var status=snap.postedToday?'Posted today. Keep the chain alive with distribution.':(snap.daysAgo===1?'Posted yesterday. Do not break the chain.':'No post logged today yet.');
-    answer='Content card read:<br><br>'+status+'<br><br>Today’s piece: '+title+'.<br>Job: '+pillar+' → '+cta+'.<br><br>Do this next: '+move+'.';
+    answer='I checked Content.<br><br>'+status+' Today’s piece is '+title+'.<br><br>Its job is '+pillar+' → '+cta+'.<br><br>Do this next: '+move+'.';
   }
   if(turn){
     turn.contentCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,pipelineCount:snap.pipelinePieces.length};
@@ -18736,7 +18740,7 @@ function getMissionProductionCardIntelligenceResponseV11(route,ctx,question,brai
   }else if(mode==='delivery'){
     answer='Production delivery read:<br><br>Sessions logged: '+snap.sessions+' · closes logged: '+snap.closes+'. The paid-delivery lane wins when a client result is waiting.<br><br>Do this next: '+move+'.';
   }else{
-    answer='Production card read:<br><br>Active projects: '+snap.items.length+'. Current focus: '+selectedTitle+'. BANGIN+ is '+(snap.banginDone?'handled':'still open')+' this week.<br><br>Do this next: '+move+'.';
+    answer='I checked Production.<br><br>'+snap.items.length+' active project'+(snap.items.length===1?'':'s')+' loaded. Current focus is '+selectedTitle+'. BANGIN+ is '+(snap.banginDone?'handled':'still open')+' this week.<br><br>Do this next: '+move+'.';
   }
   if(snap.pipelineLimited)answer+='<br><br>Note: production sync looks limited, so this read is based on the loaded local view.';
   if(turn){
@@ -18859,7 +18863,7 @@ function getMissionManagerCardIntelligenceResponseV11(route,ctx,question,brainSt
   }else if(mode==='day'){
     answer='Day mode read:<br><br>Current mode: '+String(snap.dayType||'General Mode')+'. Block: '+blockName+(minutes?' · '+minutes+' minutes left':'')+'.<br><br>Do this next: '+move+'.';
   }else{
-    answer='Manager card read:<br><br>Calendar events loaded: '+snap.events.length+'. Open tasks: '+snap.openTasks.length+'. Next event: '+missionManagerEventLabelV11(snap.nextEvent)+'.<br><br>Do this next: '+move+'.';
+    answer='I checked Manager.<br><br>'+snap.events.length+' calendar event'+(snap.events.length===1?'':'s')+' loaded, '+snap.openTasks.length+' open task'+(snap.openTasks.length===1?'':'s')+', and next event is '+missionManagerEventLabelV11(snap.nextEvent)+'.<br><br>Do this next: '+move+'.';
   }
   if(turn){
     turn.managerCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,eventCount:snap.events.length,taskCount:snap.openTasks.length};
@@ -18896,10 +18900,10 @@ function applyMissionCrossCardAlignmentV1(html,opts){
   if(!card||opts.cardAlignment===false)return html;
   var out=String(html||'');
   if(!out)return out;
-  if(/\bBefore switching:/i.test(out))return out;
+  if(/\bBefore (switching|you switch lanes),/i.test(out)||/\bBefore switching:/i.test(out))return out;
   var handoff=getMissionCardAlignmentHandoffV1(card);
   if(!handoff)return out;
-  return out+'<br><br>Before switching: '+escapeHtml(handoff)+'.';
+  return out+'<br><br>Before you switch lanes, '+escapeHtml(handoff)+'.';
 }
 
 /* =========================================================
@@ -18921,7 +18925,7 @@ function applyMissionCardCohesionV1(html,opts){
   if(!out)return out;
   out=out.replace(/(<br\s*\/?>\s*){2,}/gi,'<br><br>');
   out=applyMissionCrossCardAlignmentV1(out,Object.assign({},opts,{cardAlignment:card}));
-  return out.replace(/(<br\s*\/?>\s*){2,}Before switching:/i,'<br><br>Before switching:');
+  return out.replace(/(<br\s*\/?>\s*){2,}Before switching:/i,'<br><br>Before you switch lanes,');
 }
 
 function cleanMissionCardRouteGarnishV1(html,opts){
@@ -19118,7 +19122,7 @@ function getMissionBriefIntelligenceResponseV1(route,ctx,question,brainState,tur
   if(/\b(business condition|overall condition|how is the business looking|how are we looking overall|read the room|what matters first|what matters right now|dashboard condition)\b/.test(q)){
     return 'Business condition: '+escapeHtml(condition.label)+'.<br><br>'+escapeHtml(condition.line)+'<br><br>Money: '+escapeHtml(money)+'<br>DPC: '+escapeHtml(dpc)+'<br>Pipeline: '+escapeHtml(pipeline)+'<br>Content/Production: '+snap.contentCount+' / '+snap.productionCount+'.<br><br>'+escapeHtml(scoreLine)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
   }
-  return 'Mission Brief read:<br><br>'+escapeHtml(condition.label)+'.<br><br>'+escapeHtml(condition.line)+'<br><br>Watch first: '+escapeHtml(snap.bestSlide.label)+' slide.<br>Current block: '+escapeHtml(block)+'.<br>Money: '+escapeHtml(money)+'<br>DPC: '+escapeHtml(dpc)+'<br>Pipeline: '+escapeHtml(pipeline)+'<br>Content/Production: '+snap.contentCount+' / '+snap.productionCount+'.<br><br>'+escapeHtml(scoreLine)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
+  return 'I checked the Brief.<br><br>'+escapeHtml(condition.label)+'. '+escapeHtml(condition.line)+'<br><br>Start with the '+escapeHtml(snap.bestSlide.label)+' slide. Current block is '+escapeHtml(block)+'.<br><br>Money: '+escapeHtml(money)+'<br>DPC: '+escapeHtml(dpc)+'<br>Pipeline: '+escapeHtml(pipeline)+'<br>Content/Production: '+snap.contentCount+' / '+snap.productionCount+'.<br><br>'+escapeHtml(scoreLine)+'<br><br>Do this next: '+escapeHtml(snap.action)+'.';
 }
 
 function getMissionDiagnosticArea(question){
@@ -21709,9 +21713,9 @@ function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,t
   var c=getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,turn);
   if(/\b(what card owns this|what lane owns this|which card handles|what card should change|what card do i open|where should this live)\b/.test(c.q)){
     if(c.bookedContext){
-      return 'This belongs to Sales and Manager.<br><br>Sales owns the call prep.<br>Manager owns the calendar detail.<br><br>Open: Sales Coach for the question, then Manager/Calendar to save the call.<br><br>Come back with: call added, lead updated, booked, paid, or wrong lane.';
+      return 'That split lives in Sales and Manager.<br><br>Sales owns the call prep. Manager owns the calendar detail.<br><br>Open Sales Coach for the question, then Manager/Calendar to save the call.<br><br>Come back with: call added, lead updated, booked, paid, or wrong lane.';
     }
-    return 'This belongs to '+escapeHtml(c.cardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open: '+escapeHtml(c.cardLabel)+'.<br><br>Come back with: done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+    return 'That lives on '+escapeHtml(c.cardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open '+escapeHtml(c.cardLabel)+', do the smallest step, then come back with done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   }
   if(/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for|what result are we trying to create)\b/.test(c.q)&&c.bookedContext){
     return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
@@ -21723,13 +21727,13 @@ function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,t
     return 'Here is the connection:<br><br>'+escapeHtml(c.routeLabel)+' is pointing at '+escapeHtml(c.cardLabel)+'.<br><br>That matters because this app needs the work to land as a card action, not just advice.<br><br>So the move is: '+escapeHtml(c.nextMove)+'.';
   }
   if(category==='next_step_translation'){
-    return 'This belongs to '+escapeHtml(c.cardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open: '+escapeHtml(c.cardLabel)+'.<br><br>Come back with: done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+    return 'Turn it into a card move.<br><br>Open '+escapeHtml(c.cardLabel)+', make the next visible status change, then come back with done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   }
   if(category==='correction_repair'||category==='clearer_explanation'){
     if(c.bookedContext){
-      return 'Cleaner read:<br><br>The conversation moved to a booked call.<br><br>Why:<br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Move:<br>Prep one opening question, add the call detail, then update the lead.';
+      return 'Clean read: the conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
     }
-    return 'Cleaner read:<br><br>'+escapeHtml(c.nextMove)+'.<br><br>Why:<br>'+escapeHtml(c.cardLabel)+' is the surface that turns this from advice into a trackable result.<br><br>Move:<br>Do the smallest visible step there, then tell me what changed.';
+    return 'Clean read: '+escapeHtml(c.nextMove)+'.<br><br>That should happen in '+escapeHtml(c.cardLabel)+' so the app can see the status change.<br><br>Do the smallest visible step there, then tell me what changed.';
   }
   return 'I am reading '+escapeHtml(c.cardLabel)+' plus the current '+escapeHtml(c.routeLabel)+' lane.<br><br>The clean read is: '+escapeHtml(c.nextMove)+'.<br><br>'+(c.missing.length?'The part I do not know yet: '+escapeHtml(c.missing.join(', '))+'.<br><br>':'')+'I would trust this enough to take one safe next action, but not enough to invent missing numbers.';
 }
@@ -21757,7 +21761,7 @@ function getMissionMoneyReadResponseV1(ctx,question){
   if(ledger&&missionTruthLedgerHasDiscrepancyV1(ledger,'session_paid_not_confirmed')){
     truthLine='<br><br>I saw a paid result in this chat, but today’s DPC/CRM money record does not confirm it yet.';
   }
-  return 'Money read:<br><br>'+escapeHtml(firstLine)+'<br>'+escapeHtml(read)+truthLine+'<br><br>Next move: '+escapeHtml(next)+'.';
+  return 'I checked the money lane.<br><br>'+escapeHtml(firstLine)+' '+escapeHtml(read)+truthLine+'<br><br>Next, '+escapeHtml(next)+'.';
 }
 
 function getMissionCommandResponse(kind,ctx,question,brainState){
@@ -22037,11 +22041,11 @@ function runMissionIntegritySelfCheck(){
   if(!/booked call/i.test(bookedCountBubbleVoice)||/Booked-call read|DPC logged today|CRM booked\/session signals|Calendar call\/session events loaded|Start the DPC/i.test(bookedCountBubbleVoice))failures.push('booked_call_count_bubble_protect');
   var liveCohesionCtx={gap:0,rev:999,wk:500,dpc:{dms:0,coldCalls:0,callsMade:0,booked:0,closes:0,money:0}};
   var dataTrustCommand=getMissionCommandResponse('ask',liveCohesionCtx,'what data are you using',{});
-  if(!/I am reading|Trust level/i.test(dataTrustCommand)||/Check system health only/i.test(dataTrustCommand))failures.push('data_trust_command_route_guard');
+  if(!/I am looking at this right now|I am reading|Trust level|safe next move/i.test(dataTrustCommand)||/Check system health only/i.test(dataTrustCommand))failures.push('data_trust_command_route_guard');
   var dataMissingCommand=getMissionCommandResponse('ask',liveCohesionCtx,'what data is missing',{});
-  if(!/Missing or light data|Next: run sync/i.test(dataMissingCommand)||/Check system health only/i.test(dataMissingCommand))failures.push('data_missing_command_route_guard');
+  if(!/I cannot fully see|Missing or light data|Only run sync|Next: run sync/i.test(dataMissingCommand)||/Check system health only/i.test(dataMissingCommand))failures.push('data_missing_command_route_guard');
   var currentDataCommand=getMissionCommandResponse('ask',liveCohesionCtx,'is this data current',{});
-  if(!/Currentness read|Trust level/i.test(currentDataCommand)||/Check system health only/i.test(currentDataCommand))failures.push('data_current_command_route_guard');
+  if(!/current enough|Currentness read|Trust level/i.test(currentDataCommand)||/Check system health only/i.test(currentDataCommand))failures.push('data_current_command_route_guard');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString()},history:[]},lastActionPlan:{label:'Prep Call',action:'prep the booked call and add calendar detail',target:'sales_coach',reason:'decision_memory_booked'}}));
   var bookedCardOwner=getMissionCommandResponse('ask',liveCohesionCtx,'what card owns this',{});
   if(!/Sales and Manager|calendar detail|call prep/i.test(bookedCardOwner)||/Open Content tracker|This belongs to Mission Command/i.test(bookedCardOwner))failures.push('booked_card_owner_cohesion_guard');
@@ -22128,7 +22132,7 @@ function runMissionIntegritySelfCheck(){
   var patternNoReply=getMissionPatternBasedCoachingMemoryV1({rawInput:'what next',route:'now',inputSignals:{}},actionCtx);
   if(!patternNoReply.shouldAnswer||patternNoReply.reason!=='repeated_no_reply'||patternNoReply.message.indexOf('not producing replies')<0)failures.push('pattern_no_reply');
   var patternNoReplyPrompt=buildMissionPatternCoachingResponseV1({patternMemory:patternNoReply},actionCtx);
-  if(patternNoReplyPrompt.indexOf('Pattern read')<0)failures.push('pattern_prompt');
+  if(!/The issue is not needing another move|Pattern read/i.test(patternNoReplyPrompt))failures.push('pattern_prompt');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact GARY RAOGUY',route:'leads',suggestedAt:new Date().toISOString()},history:[]},threadMemory:{turns:[
     {question:'why',route:'leads',timestamp:new Date().toISOString()},
     {question:'more',route:'leads',timestamp:new Date().toISOString()},
@@ -22746,7 +22750,7 @@ function runMissionLongMemoryPanelCheckV1(){
     var formatted=formatMissionLongMemorySummaryV1(summary);
     if(formatted.indexOf('Pipeline / Leads')<0||formatted.indexOf('Carry-forward')<0)failures.push('formatted summary incomplete');
     var nudge=getMissionLongMemoryOpeningNudgeV1({sessionArc:'opening'},summary,'good morning');
-    if(nudge.indexOf('Pattern read')<0)failures.push('opening nudge missing');
+    if(!/Pattern read|coming back to/i.test(nudge))failures.push('opening nudge missing');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
