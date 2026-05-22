@@ -12201,6 +12201,25 @@ function getMissionDecisionMemorySessionV1(){
   }
 }
 
+function missionResultBelongsToActiveChatV12(result){
+  if(!result)return false;
+  try{
+    if(typeof missionHasActiveChatSessionV11!=='function'||!missionHasActiveChatSessionV11())return true;
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var messages=active&&Array.isArray(active.messages)?active.messages:[];
+    if(!messages.length)return false;
+    var type=result.type||'';
+    var re=type==='booked'?/\b(booked|booked one|booked a call|scheduled|put it on the calendar)\b/i:
+      type==='paid'?/\b(paid|got paid|collected|invoice paid|closed one|sale made|sold)\b/i:
+      type==='reply'?/\b(got a reply|they replied|he replied|she replied|responded)\b/i:
+      type==='no_reply'?/\b(no reply|no replies|no answer|nothing yet|ghosted|left me on read)\b/i:null;
+    if(!re)return true;
+    return messages.some(function(msg){return msg&&msg.role==='user'&&re.test(String(msg.body||''));});
+  }catch(e){
+    return true;
+  }
+}
+
 function getMissionDecisionMemoryV1(turn,ctx){
   var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||'');
   var session=getMissionDecisionMemorySessionV1();
@@ -12238,7 +12257,8 @@ function getMissionDecisionMemoryV1(turn,ctx){
   var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|report|pipeline|who hot|content|production|calendar)\b/.test(q);
   var salesAsk=/\b(what should i say|what do i say|too expensive|he said|she said|they said|ghosted|payment plan|roleplay|score my answer)\b/.test(q);
   var openEnergy=missionIsOpenEndedWorkStartV2(turn)||/\b(yo let'?s go|lets go|let's go|lock in|ready|i'?m ready|im ready)\b/.test(q);
-  var shouldAnswer=!!(result&&message&&directNext&&!explicitData&&!salesAsk&&!openEnergy);
+  var resultInThisChat=missionResultBelongsToActiveChatV12(result);
+  var shouldAnswer=!!(result&&resultInThisChat&&message&&directNext&&!explicitData&&!salesAsk&&!openEnergy);
   return {
     hasMemory:!!result,
     lastResult:result,
@@ -12401,12 +12421,22 @@ function getMissionThreadMemoryV1(turn,ctx){
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   var pendingLooksSales=/\b(prep call|sales coach|sales|closer|call prep|booked call|opening question|discovery)\b/.test(pendingText);
   var pendingLooksPipeline=/\b(hit list|pipeline|lead|crm|follow up|contact)\b/.test(pendingText);
-  if(pending&&activeRoute&&((pending.route&&pending.route!==activeRoute)||/decision_memory_paid|thread_memory_paid/.test(pending.reason||'')||(activeRoute==='leads'&&pendingLooksSales&&!pendingLooksPipeline)||(activeRoute==='sales'&&pendingLooksPipeline&&!pendingLooksSales)))pending=null;
+  var pendingLooksContent=/\b(content|post|proof|caption|hook|tracker|clip)\b/.test(pendingText);
+  var pendingLooksProduction=/\b(production|beat|song|asset|upload|metadata|mix|master)\b/.test(pendingText);
+  var pendingRouteMismatch=pending&&activeRoute&&(
+    (pending.route&&pending.route!==activeRoute)||
+    (activeRoute==='leads'&&pendingLooksSales&&!pendingLooksPipeline)||
+    (activeRoute==='sales'&&pendingLooksPipeline&&!pendingLooksSales)||
+    (activeRoute==='content'&&(pendingLooksSales||pendingLooksPipeline||pendingLooksProduction)&&!pendingLooksContent)||
+    (activeRoute==='production'&&(pendingLooksSales||pendingLooksPipeline||pendingLooksContent)&&!pendingLooksProduction)||
+    (activeRoute==='calendar'&&(pendingLooksSales||pendingLooksPipeline||pendingLooksContent||pendingLooksProduction)&&!/calendar|manager|admin|schedule/.test(pendingText))
+  );
+  if(pending&&(pendingRouteMismatch||/decision_memory_paid|thread_memory_paid/.test(pending.reason||'')))pending=null;
   var correction=!!(turn&&turn.inputSignals&&turn.inputSignals.isCorrection)||/\b(nah not that|not that|wrong lane|i meant)\b/.test(q);
   var lastWasCorrection=!!(lastTurn&&/\b(nah not that|not that|wrong lane|i meant)\b/.test(normalizeMissionQuestion(lastTurn.question||lastTurn.normalizedInput||'')));
   var resultRoute=lastResult&&lastResult.route||'';
   var routeSupersedesResult=!!(lastTurn&&lastTurn.route&&resultRoute&&lastTurn.route!==resultRoute&&/^(why|why again|more|more again|tell me more|run it back)$/i.test(q));
-  var resultFollowup=!!(lastResult&&/\b(what next|what now|next move|what should i do|what do i do|why|more|run it back)\b/.test(q)&&!lastWasCorrection&&!routeSupersedesResult);
+  var resultFollowup=!!(lastResult&&missionResultBelongsToActiveChatV12(lastResult)&&/\b(what next|what now|next move|what should i do|what do i do|why|more|run it back)\b/.test(q)&&!lastWasCorrection&&!routeSupersedesResult);
   var explicitCommand=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|report|pipeline|who hot|content|production|calendar|what should i say|too expensive|he said|she said|they said|roleplay|score my answer)\b/.test(q);
   var routeChanged=!!(lastRoute&&activeRoute&&lastRoute!==activeRoute);
   var hasThread=!!(lastTurn||lastResult||pending);
@@ -12485,6 +12515,12 @@ function getMissionWhyResponseV1(turn,ctx){
   var contentCount=(window.__contentPieces&&window.__contentPieces.length)||0;
   var productionCount=(window.__productionItems&&window.__productionItems.length)||(window.__beats&&window.__beats.length)||0;
   var nextMove=pending&&pending.label||turn&&turn.brainState&&turn.brainState.nextBestMove||lastTurn&&lastTurn.actionLabel||'the next visible move';
+  var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
+  var pendingLooksSales=/\b(prep call|sales coach|sales|closer|call prep|booked call|opening question|discovery)\b/.test(pendingText);
+  if(route&&route!=='sales'&&route!=='leads'&&pendingLooksSales){
+    pending=null;
+    nextMove=turn&&turn.brainState&&turn.brainState.nextBestMove||lastTurn&&lastTurn.actionLabel||'the next visible move';
+  }
   var lastResultMatchesRoute=!lastResult||!lastResult.route||!route||route==='now'||lastResult.route===route;
   if(lastResult&&lastResultMatchesRoute){
     if(lastResult.type==='booked')return 'Because the conversation already moved to a booked call.<br><br>The next useful move is prep, calendar detail, and one clean opening question.';
@@ -13167,7 +13203,7 @@ function getMissionDirectRouteOverrideV1(question){
   if(!q)return '';
   var salesRoute=getMissionSalesReplyOverrideV1(q);
   if(salesRoute)return salesRoute;
-  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q))return 'sync';
+  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q))return 'sync';
   if(/\b(brief card|mission brief|read the brief|business condition)\b/.test(q))return 'report';
   if(/\b(hit list|show my leads|outreach card|who hot|who warm|who needs a bump|who is closest to money|pipeline|open leads|lead list)\b/.test(q))return 'leads';
   if(/\b(content card|content pipeline|what proof should i post|proof should i post|what should i post|caption|hook|post today|content stuck|stuck in the content)\b/.test(q))return 'content';
@@ -16402,7 +16438,7 @@ function getMissionClarificationResponse(route,ctx,question,conv){
 
 function getMissionDataConfidenceResponse(route,ctx,question){
   var q=normalizeMissionQuestion(question||'');
-  if(!/\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|clean read|trust this data|do i trust this data|what is missing|what data is missing|what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|calendar stale)\b/.test(q))return '';
+  if(!isMissionDataTrustPromptV12(q))return '';
   var missing=[];
   if(!(window.__crmLeads&&window.__crmLeads.length))missing.push('CRM leads');
   if(!((window.__contentPipelinePieces&&window.__contentPipelinePieces.length)||(window.__contentPieces&&window.__contentPieces.length)))missing.push('content');
@@ -16422,13 +16458,21 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var healthLine=serviceNames.length?serviceNames.slice(0,5).map(function(name){var s=services[name]||{};return escapeHtml(name+': '+(s.status||'checked'));}).join('<br>'):'Sync health has not been checked in detail yet.';
   var missingLine=missing.length?escapeHtml(missing.join(', ')):'nothing obvious from the current app packet';
   var trustLine=missing.length?'I would use this for a safe next move, but not for final counts until sync is checked.':'This is clean enough to choose the next move.';
-  if(/\b(what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using)\b/.test(q)){
+  if(/\b(what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|what is trusted|what is safe to act on)\b/.test(q)){
     return 'I am reading:<br><br>'+usingLine+'<br><br>Sync status:<br>'+healthLine+'<br><br>Trust level: '+escapeHtml(trustLine);
   }
   if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see)\b/.test(q)){
     return 'Missing or light data:<br><br>'+missingLine+'<br><br>What that means:<br>'+escapeHtml(trustLine)+'<br><br>Next: run sync only if this decision needs current numbers.';
   }
+  if(/\b(is this current|is this data current|current data|data current|is this live|calendar stale|data stale|stale data)\b/.test(q)){
+    return 'Currentness read:<br><br>'+usingLine+'<br><br>Sync status:<br>'+healthLine+'<br><br>Trust level: '+escapeHtml(trustLine)+'<br><br>Next: use the loaded read for a safe move, or run sync before treating the numbers as final.';
+  }
   return 'Data read:<br><br>'+(missing.length?'Partial - missing '+escapeHtml(missing.join(', '))+'.':'Clean enough for the current app packet.')+'<br><br>What that means:<br>'+escapeHtml(trustLine)+'<br><br>Next: run sync only if the decision needs current numbers.';
+}
+
+function isMissionDataTrustPromptV12(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what can you not see|what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|calendar stale)\b/.test(q);
 }
 
 var MISSION_SALES_CLOSER_STAGES={
@@ -21550,11 +21594,11 @@ function getMissionPersonalityFallback(ctx,question){
 
 function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
-  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q)){
+  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q)){
     if(/\b(where do i check sync|where|check sync)\b/.test(q)){
       return 'System Hub → Health → Run sync check.<br><br>Check Notion, Sheets, Calendar, and backup status.<br><br>If something fails, save locally first, then retry one source.';
     }
-    if(/\b(what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded|trust this data|do i trust this data|calendar stale)\b/.test(q)){
+    if(isMissionDataTrustPromptV12(q)){
       return getMissionDataConfidenceResponse('sync',ctx,question)||getMissionCommandRouteAnswer('sync',ctx,question);
     }
     return getMissionCommandRouteAnswer('sync',ctx,question);
@@ -21662,10 +21706,26 @@ function getMissionCommunicationCohesionCategoryV1(question){
 
 function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,turn){
   ctx=ctx||{};
+  brainState=brainState||{};
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
   var activeRoute=route||turn&&turn.route||getMissionDirectRouteOverrideV1(q)||'now';
+  var session=null;
+  var lastResult=null;
+  var pending=null;
+  try{
+    session=brainState._preTurnBrainSession||{};
+    if(!session||!Object.keys(session).length)session=typeof getMissionBrainSessionV2==='function'?getMissionBrainSessionV2():{};
+    lastResult=session&&session.resultLoop&&session.resultLoop.lastResult||null;
+    pending=session&&((session.resultLoop&&session.resultLoop.pendingAction)||session.lastActionPlan)||null;
+  }catch(e){}
+  var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
+  var bookedContext=!!(lastResult&&lastResult.type==='booked'||/\b(prep call|booked call|calendar detail|opening question|sales coach)\b/.test(pendingText));
+  if(bookedContext&&/\b(what card owns this|what lane owns this|which card handles|what card do i open|what do i log|what should i log after this|what result are we|where do i go from here|what counts as done|make it make sense|that sounds disconnected|answer like the app knows|wrong read)\b/.test(q)){
+    activeRoute='sales';
+  }
   var cardSignal=typeof getMissionCardSignalV1==='function'?getMissionCardSignalV1(q,activeRoute):null;
   var card=cardSignal&&cardSignal.card||({leads:'outreach',sales:'outreach',dpc:'outreach',report:'brief',money:'brief',content:'content',production:'production',calendar:'manager',weekly:'manager',sync:'manager',resources:'resources'}[activeRoute]||'command');
+  if(bookedContext&&activeRoute==='sales'&&/\b(card owns|card do i open|what do i log|what should i log|where do i go|what counts as done|what result are we)\b/.test(q))card='manager';
   var mode=typeof getMissionContextMode==='function'?getMissionContextMode():'general';
   var routeLabel=typeof getMissionRouteLabelV2==='function'?getMissionRouteLabelV2(activeRoute):activeRoute;
   var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
@@ -21673,12 +21733,8 @@ function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,
   if(!(window.__crmLeads&&window.__crmLeads.length))missing.push('CRM');
   if(!((window.__contentPipelinePieces&&window.__contentPipelinePieces.length)||(window.__contentPieces&&window.__contentPieces.length)))missing.push('content');
   if(!(window.__productionPieces&&window.__productionPieces.length))missing.push('production');
-  var lastResult='';
-  try{
-    var session=getMissionBrainSession&&getMissionBrainSession()||{};
-    lastResult=session&&session.resultLoop&&session.resultLoop.lastResult&&(session.resultLoop.lastResult.label||session.resultLoop.lastResult.type)||'';
-  }catch(e){}
   var nextMove=brainState&&brainState.nextBestMove||ctx.nowText||'make one visible move and log what changed';
+  if(bookedContext)nextMove='prep the call, add the calendar detail, update the lead, and open with one discovery question';
   return {
     q:q,
     route:activeRoute,
@@ -21690,7 +21746,8 @@ function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,
     gap:Number(ctx.gap||0),
     dpcLine:Number(daily.dms||0)+' DMs, '+Number(daily.coldCalls||0)+' calls, '+Number(daily.calls||0)+' booked, '+Number(daily.closes||0)+' closes',
     missing:missing,
-    lastResult:lastResult,
+    lastResult:lastResult&&(lastResult.label||lastResult.type)||'',
+    bookedContext:bookedContext,
     nextMove:nextMove
   };
 }
@@ -21700,7 +21757,13 @@ function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,t
   if(!category)return '';
   var c=getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,turn);
   if(/\b(what card owns this|what lane owns this|which card handles|what card should change|what card do i open|where should this live)\b/.test(c.q)){
+    if(c.bookedContext){
+      return 'This belongs to Sales and Manager.<br><br>Sales owns the call prep.<br>Manager owns the calendar detail.<br><br>Open: Sales Coach for the question, then Manager/Calendar to save the call.<br><br>Come back with: call added, lead updated, booked, paid, or wrong lane.';
+    }
     return 'This belongs to '+escapeHtml(c.cardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open: '+escapeHtml(c.cardLabel)+'.<br><br>Come back with: done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+  }
+  if(/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for|what result are we trying to create)\b/.test(c.q)&&c.bookedContext){
+    return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
   }
   if(category==='context_awareness'){
     return 'I am looking at:<br><br>- Lane: '+escapeHtml(c.routeLabel)+'<br>- Card: '+escapeHtml(c.cardLabel)+'<br>- Mode: '+escapeHtml(c.mode)+'<br>- Money: '+escapeHtml(c.moneyLine)+'<br>- DPC: '+escapeHtml(c.dpcLine)+(c.lastResult?'<br>- Last result: '+escapeHtml(c.lastResult):'')+(c.missing.length?'<br>- Missing: '+escapeHtml(c.missing.join(', ')):'')+'<br><br>The useful read is: '+escapeHtml(c.nextMove)+'.';
@@ -21712,6 +21775,9 @@ function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,t
     return 'This belongs to '+escapeHtml(c.cardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open: '+escapeHtml(c.cardLabel)+'.<br><br>Come back with: done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   }
   if(category==='correction_repair'||category==='clearer_explanation'){
+    if(c.bookedContext){
+      return 'Cleaner read:<br><br>The conversation moved to a booked call.<br><br>Why:<br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Move:<br>Prep one opening question, add the call detail, then update the lead.';
+    }
     return 'Cleaner read:<br><br>'+escapeHtml(c.nextMove)+'.<br><br>Why:<br>'+escapeHtml(c.cardLabel)+' is the surface that turns this from advice into a trackable result.<br><br>Move:<br>Do the smallest visible step there, then tell me what changed.';
   }
   return 'I am reading '+escapeHtml(c.cardLabel)+' plus the current '+escapeHtml(c.routeLabel)+' lane.<br><br>The clean read is: '+escapeHtml(c.nextMove)+'.<br><br>'+(c.missing.length?'The part I do not know yet: '+escapeHtml(c.missing.join(', '))+'.<br><br>':'')+'I would trust this enough to take one safe next action, but not enough to invent missing numbers.';
@@ -21745,6 +21811,8 @@ function getMissionMoneyReadResponseV1(ctx,question){
 
 function getMissionCommandResponse(kind,ctx,question,brainState){
   brainState=brainState||getMissionBrainState(ctx,question||'','');
+  var preTurnBrainSession=null;
+  try{preTurnBrainSession=typeof getMissionBrainSessionV2==='function'?getMissionBrainSessionV2():null;brainState._preTurnBrainSession=preTurnBrainSession;}catch(e){}
   var routeQuestion=normalizeMissionUserPromptForRoutingV1(question||'');
   var directRouteOverride=getMissionDirectRouteOverrideV1(question||'');
   var initialIntent=getMissionCommandIntent(routeQuestion||question||'');
@@ -21776,12 +21844,27 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     if(turnV2&&routePriorityDecision)turnV2.routePriorityDecision=routePriorityDecision;
     if(turnV2&&brainState.truthLedger)turnV2.truthLedger=brainState.truthLedger;
   }catch(e){}
+  try{
+    if(preTurnBrainSession&&preTurnBrainSession.resultLoop&&preTurnBrainSession.resultLoop.lastResult){
+      var postTurnSession=getMissionBrainSessionV2();
+      postTurnSession.resultLoop=postTurnSession.resultLoop||{};
+      if(!postTurnSession.resultLoop.lastResult){
+        postTurnSession.resultLoop.lastResult=preTurnBrainSession.resultLoop.lastResult;
+        postTurnSession.resultLoop.history=Array.isArray(postTurnSession.resultLoop.history)?postTurnSession.resultLoop.history:[];
+        if(Array.isArray(preTurnBrainSession.resultLoop.history)&&preTurnBrainSession.resultLoop.history.length){
+          postTurnSession.resultLoop.history=preTurnBrainSession.resultLoop.history.concat(postTurnSession.resultLoop.history).slice(0,12);
+        }
+        setMissionBrainSessionV2(postTurnSession);
+      }
+    }
+  }catch(e){}
   if(missionV2TurnShouldOwnVisibleRoute(turnV2)){
     route=(turnV2.routePlan&&turnV2.routePlan.clarify)?'':turnV2.route;
     intent=getMissionIntentFromTurnV2(turnV2,intent);
     conv=getMissionLegacyConversationFromTurnV2(turnV2,conv);
     multi={primary:intent,secondary:null,routes:route?[route]:[]};
     brainState=turnV2.brainState||brainState;
+    if(preTurnBrainSession)brainState._preTurnBrainSession=preTurnBrainSession;
     shape=getMissionQuestionShape(cleanQuestion||'');
   }
   if(directRouteOverride){
@@ -21818,6 +21901,12 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     shaped=cleanMissionCardRouteGarnishV1(shaped,opts);
     shaped=applyMissionCardCohesionV1(shaped,opts);
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
+  }
+  var dataTrustQuestion=isMissionDataTrustPromptV12(cleanQuestion||question||'');
+  if(dataTrustQuestion){
+    route='sync';
+    var dataTrustAnswer=getMissionDataConfidenceResponse('sync',ctx,cleanQuestion||question||'');
+    if(dataTrustAnswer)return finishMissionAnswer(dataTrustAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
   }
   var splitPromptAnswer=getMissionSplitPromptResponseV1(ctx,cleanQuestion||question||'');
   if(splitPromptAnswer)return finishMissionAnswer(splitPromptAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
@@ -21995,6 +22084,18 @@ function runMissionIntegritySelfCheck(){
   var bookedCountBubble=buildMissionBubblePacket('dpc',{type:'CONV_DATA_REQUEST',route:'dpc'},actionCtx,'how many booked calls do i have','Booked-call read.','','',{});
   var bookedCountBubbleVoice=applyMissionB1ProseGuard(bookedCountBubble.b1,{route:'dpc',question:'how many booked calls do i have'});
   if(!/booked call/i.test(bookedCountBubbleVoice)||/Booked-call read|DPC logged today|CRM booked\/session signals|Calendar call\/session events loaded|Start the DPC/i.test(bookedCountBubbleVoice))failures.push('booked_call_count_bubble_protect');
+  var liveCohesionCtx={gap:0,rev:999,wk:500,dpc:{dms:0,coldCalls:0,callsMade:0,booked:0,closes:0,money:0}};
+  var dataTrustCommand=getMissionCommandResponse('ask',liveCohesionCtx,'what data are you using',{});
+  if(!/I am reading|Trust level/i.test(dataTrustCommand)||/Check system health only/i.test(dataTrustCommand))failures.push('data_trust_command_route_guard');
+  var dataMissingCommand=getMissionCommandResponse('ask',liveCohesionCtx,'what data is missing',{});
+  if(!/Missing or light data|Next: run sync/i.test(dataMissingCommand)||/Check system health only/i.test(dataMissingCommand))failures.push('data_missing_command_route_guard');
+  var currentDataCommand=getMissionCommandResponse('ask',liveCohesionCtx,'is this data current',{});
+  if(!/Currentness read|Trust level/i.test(currentDataCommand)||/Check system health only/i.test(currentDataCommand))failures.push('data_current_command_route_guard');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString()},history:[]},lastActionPlan:{label:'Prep Call',action:'prep the booked call and add calendar detail',target:'sales_coach',reason:'decision_memory_booked'}}));
+  var bookedCardOwner=getMissionCommandResponse('ask',liveCohesionCtx,'what card owns this',{});
+  if(!/Sales and Manager|calendar detail|call prep/i.test(bookedCardOwner)||/Open Content tracker|This belongs to Mission Command/i.test(bookedCardOwner))failures.push('booked_card_owner_cohesion_guard');
+  var bookedLogTarget=getMissionCommandResponse('ask',liveCohesionCtx,'what do i log after this',{});
+  if(!/DPC|Lead|Calendar/i.test(bookedLogTarget)||/Open Content tracker/i.test(bookedLogTarget))failures.push('booked_log_target_cohesion_guard');
   var longTrace=[];for(var traceIdx=0;traceIdx<40;traceIdx++)longTrace.push({timestamp:'t'+traceIdx,message:'message '+traceIdx,data:{text:'x'.repeat(400),list:[1,2,3,4,5,6,7,8,9,10]}});
   var compactTrace=summarizeMissionDecisionTraceForCheckpointV1(longTrace);
   if(compactTrace.length!==30||compactTrace[0].message!=='message 10'||compactTrace[0].data.text.length>240||compactTrace[0].data.list.length>8)failures.push('checkpoint_trace_compaction');
