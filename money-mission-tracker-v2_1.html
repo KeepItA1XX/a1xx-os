@@ -12825,7 +12825,7 @@ function getMissionSalesReplyOverrideV1(question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
   if(!q)return '';
   if(/^(bangin|bangin\+|bangin plus)$/.test(q))return '';
-  var salesAsk=/\b(what should i say|what do i say|waht should i say|what should i text|what do i text|help me reply|reply|dm|text back|dm back|write.*(dm|text|reply|response|follow up|follow-up)|follow up|follow-up|bump|qualifier|objection|too expensive|need to think|needs to think|cant afford|can't afford|payment plan|ghosted|roleplay|role play|score my answer)\b/.test(q);
+  var salesAsk=/\b(what should i say|what do i say|waht should i say|what should i text|what do i text|help me reply|reply|dm|text back|dm back|write.*(dm|text|reply|response|follow up|follow-up)|follow up|follow-up|bump|qualifier|objection|too expensive|need to think|needs to think|cant afford|can't afford|payment plan|ghosted|roleplay|role play|score my answer|wants to start smaller|start smaller|post call loss|post call stall)\b/.test(q);
   var offerAsk=/\b(atl studio|studio|rappreneur|break even|mix master|mix\/master|bangin)\b/.test(q)&&/\b(reply|dm|text|follow up|follow-up|qualifier|objection|close|what should i say)\b/.test(q);
   var productionOnly=/\b(upload|metadata|dsp|even upload|cover art|asset status|what can ship|ship today|shipping|export)\b/.test(q)&&!/\b(reply|dm|text|qualifier|follow up|follow-up|what should i say|objection|too expensive|ghosted)\b/.test(q);
   if(productionOnly)return '';
@@ -15761,7 +15761,7 @@ function getMissionClarificationResponse(route,ctx,question,conv){
 
 function getMissionDataConfidenceResponse(route,ctx,question){
   var q=normalizeMissionQuestion(question||'');
-  if(!/\b(stale|missing data|no data|not loaded|why no|current data|data current|is this current|is this live|clean read)\b/.test(q))return '';
+  if(!/\b(stale|missing data|no data|not loaded|why no|current data|data current|is this current|is this live|clean read|trust this data|do i trust this data|what is missing|what is loaded|what data is loaded|what sources are loaded|calendar stale)\b/.test(q))return '';
   var missing=[];
   if(!(window.__crmLeads&&window.__crmLeads.length))missing.push('CRM leads');
   if(!((window.__contentPipelinePieces&&window.__contentPipelinePieces.length)||(window.__contentPieces&&window.__contentPieces.length)))missing.push('content');
@@ -20753,6 +20753,8 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
     return getMissionCommandRouteAnswer('sync',ctx,question);
   }
   if(route==='sales'&&getMissionSalesReplyOverrideV1(q)){
+    var quickSales=getMissionSalesEdgeCaseResponseV1(q);
+    if(quickSales)return quickSales;
     var salesAnswer=getMissionOutputPackResponseV1('sales',ctx,question,{type:'CONV_DATA_REQUEST',route:'sales'},brainState||{});
     return salesAnswer||getMissionCommandRouteAnswer('sales',ctx,question);
   }
@@ -20769,6 +20771,43 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   if(route==='production'&&/\b(beat card|production card|what can ship today|what can ship|ship today|metadata|dsp|production pipeline|production studio session|studio session|bangin plus|bangin\+)\b/.test(q)){
     var productionAnswer=getMissionProductionCardIntelligenceResponseV11('production',ctx,question,brainState||{},turn);
     return productionAnswer||getMissionCommandRouteAnswer('production',ctx,question);
+  }
+  return '';
+}
+
+function getMissionSalesEdgeCaseResponseV1(question){
+  var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  if(/\b(needs to think|need to think|he needs to think|she needs to think|they need to think)\b/.test(q)){
+    return 'Say: "Totally fair. What part are you still thinking through: the money, the timing, or whether this solves the problem?"';
+  }
+  if(/\b(wants to start smaller|want to start smaller|start smaller)\b/.test(q)){
+    return 'Say: "We can look at that. Would smaller still solve the problem you told me about?"';
+  }
+  if(/\bpost call loss\b/.test(q)){
+    return 'Post-call loss read:<br><br>Do not just mark it lost.<br><br>Find the break: fit, money, timing, trust, or clarity.<br><br>Next: write the lesson, then decide the follow-up or close-the-loop message.';
+  }
+  if(/\bpost call stall\b/.test(q)){
+    return 'Post-call stall read:<br><br>They did not say yes or no.<br><br>Your follow-up needs to isolate the real concern: money, timing, fit, trust, or clarity.';
+  }
+  return '';
+}
+
+function getMissionSplitPromptResponseV1(ctx,question){
+  var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  if(/\bshould i post or follow up\b/.test(q)||/\bshould i work on content or sales\b/.test(q)){
+    return 'Split read:<br><br>Sales first if there is a warm conversation open.<br><br>Content first if there is no buyer signal and you need proof for the next ask.<br><br>Default move: send one clean follow-up, then turn the result into today’s proof post.';
+  }
+  if(/\bwhat changed today\b/.test(q)&&/\bwhat should i say\b/.test(q)){
+    return 'Two-part read:<br><br>1) Check what changed today: money, DPC, pipeline, content, and production.<br><br>2) For the sales line, start with: "Before I explain anything, what made you want to talk today?"';
+  }
+  if(/\buse the brief\b/.test(q)&&/\bnext move\b/.test(q)){
+    return 'Mission Brief read:<br><br>Use the brief as the business condition check: money, DPC, pipeline, content, production, and calendar.<br><br>Next move: choose the card that owns the first visible result, then log what changed.';
+  }
+  if(/\bshow me the data\b/.test(q)&&/\btell me the move\b/.test(q)){
+    return 'Data then move:<br><br>Current read: money, DPC, pipeline, content, production, and calendar are the lanes to trust first.<br><br>Move: pick the lane closest to a logged result and make one visible status change.';
+  }
+  if(/\bno not pipeline the call\b/.test(q)||/\bnot pipeline\b/.test(q)&&/\bcall\b/.test(q)){
+    return 'Sales lane, not pipeline.<br><br>Ask: "Before I explain anything, what made this worth taking a call about?"';
   }
   return '';
 }
@@ -20863,6 +20902,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   }
   var earlyBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(earlyBriefIntel)return finishMissionAnswer(earlyBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,cardAlignment:'brief'});
+  var splitPromptAnswer=getMissionSplitPromptResponseV1(ctx,cleanQuestion||question||'');
+  if(splitPromptAnswer)return finishMissionAnswer(splitPromptAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
   var protectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
   if(protectedRouteAnswer){
     var protectedCard={leads:'outreach',content:'content',production:'production',calendar:'manager',weekly:'weekly',report:'brief'}[directRouteOverride]||'';
