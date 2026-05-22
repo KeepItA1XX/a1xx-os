@@ -12512,6 +12512,7 @@ function getMissionWhyResponseV1(turn,ctx){
   var memory=turn&&turn.threadMemory||{};
   var lastResult=memory.lastResult||(getMissionBrainSessionV2().resultLoop||{}).lastResult||null;
   if(lastResult&&!missionResultBelongsToActiveChatV12(lastResult))lastResult=null;
+  if(lastResult&&lastResult.type==='booked'&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive&&!missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i))lastResult=null;
   var pending=memory.pendingAction||(getMissionBrainSessionV2().resultLoop||{}).pendingAction||getMissionBrainSessionV2().lastActionPlan||null;
   var lastTurn=memory.lastTurn||null;
   var lastTurnSlash=(lastTurn&&String(lastTurn.question||lastTurn.rawInput||'').match(/^\/([a-z0-9_]+)/i))||null;
@@ -17582,6 +17583,9 @@ function buildMissionActionAccountabilityResponseV1(turn,ctx){
   if(!read||!read.shouldAnswer)return '';
   var pending=read.pendingAction||{};
   var action=formatMissionActionAccountabilityActionLineV1(pending.action||pending.label||'the last move');
+  var pendingText=normalizeMissionQuestion([pending.label,pending.action,pending.target,pending.reason].filter(Boolean).join(' '));
+  var bookedPrep=/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(pendingText);
+  if(bookedPrep&&!missionActiveChatUserTextMatchesV12(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i))return '';
   return 'Quick check before we add another move. Did this happen yet?<br><br><strong>'+escapeHtml(action)+'</strong><br><br>Reply with: done, no reply, reply, booked, paid, or wrong lane.';
 }
 
