@@ -11858,12 +11858,12 @@ function getMissionBookedCallsCountAnswerV1(ctx){
   var lines=[
     'Booked calls:',
     '',
-    'Confirmed DPC: '+dpcBooked+' booked today.',
-    'Session memory: '+sessionBooked+' booked reported in this chat.',
-    'Confirmed CRM booked/session signals: '+crmBooked+'.',
-    'Confirmed Calendar call/session events loaded: '+calendarCalls+'.'
+    'Dashboard confirmed: '+dpcBooked+' booked in DPC today.',
+    'Chat-only result memory: '+sessionBooked+' booked reported here.',
+    'CRM confirmed: '+crmBooked+' booked/session signal'+(crmBooked===1?'':'s')+'.',
+    'Calendar confirmed: '+calendarCalls+' call/session event'+(calendarCalls===1?'':'s')+'.'
   ];
-  if(!dpcBooked&&!sessionBooked&&!crmBooked&&!calendarCalls)lines.push('I do not see a booked call loaded yet. If one happened, log it in DPC and update the lead.');
+  if(!dpcBooked&&!sessionBooked&&!crmBooked&&!calendarCalls)lines.push('I do not see a confirmed booked call yet. If one happened, log it in DPC, update the lead, and add the calendar detail.');
   else if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_booked_not_confirmed'))lines.push('I saw the booked result in this chat, but it is not confirmed in DPC, CRM, or Calendar yet. Log it there so the dashboard count can carry it forward.');
   else lines.push('Use the freshest source first: calendar for schedule, CRM for lead status, DPC for today’s logged result.');
   return lines.map(escapeHtml).join('<br>');
@@ -12109,8 +12109,10 @@ function missionResultBelongsToActiveChatV12(result){
   try{
     if(typeof missionHasActiveChatSessionV11!=='function'||!missionHasActiveChatSessionV11())return true;
     var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var activeId=active&&active.id||'';
+    if(result.chatId&&activeId&&result.chatId!==activeId)return false;
     var messages=active&&Array.isArray(active.messages)?active.messages:[];
-    if(!messages.length)return false;
+    if(!messages.length)return true;
     var type=result.type||'';
     var re=type==='booked'?/\b(booked|booked one|booked a call|scheduled|put it on the calendar)\b/i:
       type==='paid'?/\b(paid|got paid|collected|invoice paid|closed one|sale made|sold)\b/i:
@@ -16209,7 +16211,7 @@ function runMissionBroadRegressionHardeningV1(){
     var truthLedger=getMissionContextTruthLedgerV1(ctx);
     if(!truthLedger||truthLedger.session.booked<1||!missionTruthLedgerHasDiscrepancyV1(truthLedger,'session_booked_not_confirmed'))failures.push('truth_ledger_session_booked_discrepancy');
     var bookedTruthAnswer=getMissionBookedCallsCountAnswerV1(ctx).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
-    if(!/Session memory: 1 booked/i.test(bookedTruthAnswer)||!/not confirmed in DPC, CRM, or Calendar/i.test(bookedTruthAnswer))failures.push('truth_ledger_booked_count_copy');
+    if(!/Chat-only result memory: 1 booked/i.test(bookedTruthAnswer)||!/not confirmed in DPC, CRM, or Calendar/i.test(bookedTruthAnswer))failures.push('truth_ledger_booked_count_copy');
     window.__calEvents=qaCalendarEvents;
     sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false},history:[{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false}]}}));
     var paidTruthAnswer=getMissionMoneyReadResponseV1(Object.assign({},ctx,{dpc:{money:0}}),'how much money have I made today').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
@@ -16248,7 +16250,7 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'sync_calendar_stale',q:'calendar stale',must:/Data read|sync|missing|loaded/i},
       {name:'sync_trust_data',q:'do i trust this data',must:/Data read|Clean enough|Partial|loaded/i},
       {name:'production_studio_session',q:'production studio session',must:/Production|studio|asset|song|beat/i},
-      {name:'data_loaded_status',q:'what is loaded',must:/Data read|Clean enough|Partial|loaded/i},
+      {name:'data_loaded_status',q:'what is loaded',must:/I am reading|Data read|Clean enough|Partial|loaded|Trust level/i},
       {name:'cohesion_meaning',q:'what does that mean',must:/clean read|reading|useful read|move/i},
       {name:'cohesion_money_bridge',q:'how does that connect to money',must:/connection|money|move|matters/i},
       {name:'cohesion_card_owner',q:'what card owns this',must:/Card|belongs to|Open|Come back/i},
@@ -21780,14 +21782,14 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   if(dataTrustQuestion){
     route='sync';
     var dataTrustAnswer=getMissionDataConfidenceResponse('sync',ctx,cleanQuestion||question||'');
-    if(dataTrustAnswer)return finishMissionAnswer(dataTrustAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+    if(dataTrustAnswer)return finishMissionAnswer(dataTrustAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,stylePreference:false});
   }
   var splitPromptAnswer=getMissionSplitPromptResponseV1(ctx,cleanQuestion||question||'');
   if(splitPromptAnswer)return finishMissionAnswer(splitPromptAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
   var earlyProtectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
   if(earlyProtectedRouteAnswer){
     var earlyProtectedCard={leads:'outreach',content:'content',production:'production',calendar:'manager',weekly:'weekly',report:'brief'}[directRouteOverride]||'';
-    return finishMissionAnswer(earlyProtectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,cardAlignment:earlyProtectedCard});
+    return finishMissionAnswer(earlyProtectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,stylePreference:directRouteOverride==='sync'?false:undefined,cardAlignment:earlyProtectedCard});
   }
   var cohesionAnswer=getMissionCommunicationCohesionAnswerV1(ctx,question||cleanQuestion||'',route,brainState,turnV2);
   if(cohesionAnswer)return finishMissionAnswer(cohesionAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
@@ -21798,7 +21800,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var protectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
   if(protectedRouteAnswer){
     var protectedCard={leads:'outreach',content:'content',production:'production',calendar:'manager',weekly:'weekly',report:'brief'}[directRouteOverride]||'';
-    return finishMissionAnswer(protectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,cardAlignment:protectedCard});
+    return finishMissionAnswer(protectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,stylePreference:directRouteOverride==='sync'?false:undefined,cardAlignment:protectedCard});
   }
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(rawQ)||/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
     route='dpc';
