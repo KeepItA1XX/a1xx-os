@@ -12852,7 +12852,7 @@ function getMissionDirectRouteOverrideV1(question){
   if(!q)return '';
   var salesRoute=getMissionSalesReplyOverrideV1(q);
   if(salesRoute)return salesRoute;
-  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what is missing|what is loaded|what data is loaded|what sources are loaded)\b/.test(q))return 'sync';
+  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q))return 'sync';
   if(/\b(brief card|mission brief|read the brief|business condition)\b/.test(q))return 'report';
   if(/\b(hit list|show my leads|outreach card|who hot|who warm|who needs a bump|who is closest to money|pipeline|open leads|lead list)\b/.test(q))return 'leads';
   if(/\b(content card|content pipeline|what proof should i post|proof should i post|what should i post|caption|hook|post today|content stuck|stuck in the content)\b/.test(q))return 'content';
@@ -12863,6 +12863,95 @@ function getMissionDirectRouteOverrideV1(question){
   return '';
 }
 
+var MISSION_ROUTE_PRIORITY_MATRIX_V1=[
+  {id:'slash_command',priority:1000,protectedBy:'slash_command'},
+  {id:'correction_route',priority:990,protectedBy:'correction'},
+  {id:'booked_call_count',priority:985,protectedBy:'data_count'},
+  {id:'live_call_exit',priority:982,protectedBy:'sales_mode_exit'},
+  {id:'result_loop',priority:975,protectedBy:'result_signal'},
+  {id:'sync_data_trust',priority:965,protectedBy:'data_trust'},
+  {id:'what_changed_engine',priority:960,protectedBy:'what_changed'},
+  {id:'explicit_card',priority:955,protectedBy:'card_prompt'},
+  {id:'communication_cohesion',priority:952,protectedBy:'cohesion_prompt'},
+  {id:'sales_reply',priority:950,protectedBy:'sales_reply'},
+  {id:'money_read',priority:940,protectedBy:'money_read'},
+  {id:'direct_route',priority:930,protectedBy:'direct_route'}
+];
+
+function getMissionRoutePriorityRuleV1(id){
+  return (MISSION_ROUTE_PRIORITY_MATRIX_V1||[]).filter(function(rule){return rule&&rule.id===id;})[0]||{id:id||'unknown',priority:0,protectedBy:''};
+}
+
+function missionRoutePriorityCardToRouteV1(card){
+  var map={brief:'report',outreach:'leads',content:'content',production:'production',manager:'calendar',weekly:'weekly',resources:'resources',command:'now'};
+  return map[card]||'';
+}
+
+function buildMissionRoutePriorityDecisionV1(id,route,reason,extras){
+  var rule=getMissionRoutePriorityRuleV1(id);
+  return Object.assign({
+    selectedRoute:route||'',
+    selectedLayer:id||'',
+    priority:rule.priority||0,
+    priorityReason:reason||rule.id||'',
+    protectedBy:rule.protectedBy||'',
+    allowMemory:false,
+    allowAccountability:false,
+    dataNeeds:[],
+    candidates:[]
+  },extras||{});
+}
+
+function getMissionRoutePriorityDecisionV1(question,ctx,turn,legacyRoute){
+  var raw=String(question||'');
+  var q=normalizeMissionUserPromptForRoutingV1(raw);
+  var candidates=[];
+  function add(id,route,reason,extras){
+    var decision=buildMissionRoutePriorityDecisionV1(id,route,reason,extras);
+    candidates.push(decision);
+    return decision;
+  }
+  if(!q)return buildMissionRoutePriorityDecisionV1('',legacyRoute||'now','empty_prompt',{allowMemory:true,allowAccountability:true,candidates:[]});
+  var slash=String(q||'').match(/^\/([a-z0-9_]+)/);
+  if(slash)add('slash_command',normalizeMissionSlashRouteV2(slash[1]),'slash command /'+slash[1],{allowMemory:false,allowAccountability:false});
+  var correction=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(raw)||getMissionCorrectionTargetRouteV2(q):'';
+  if(correction)add('correction_route',correction,'explicit wrong-lane correction',{allowMemory:false,allowAccountability:false});
+  if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
+    add('booked_call_count','dpc','booked-call count request',{dataNeeds:['dpc','crm','calendar'],allowMemory:true,allowAccountability:false});
+  }
+  if(typeof isMissionSalesModeExitSignal==='function'&&isMissionSalesModeExitSignal(raw)||typeof isMissionSalesModeExitSignal==='function'&&isMissionSalesModeExitSignal(q)){
+    add('live_call_exit','sales','live-call exit signal',{allowMemory:true,allowAccountability:false});
+  }
+  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(raw)||getMissionResultSignalV1(q):null;
+  if(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done)$/.test(resultSignal.type||'')){
+    add('result_loop','sales','result signal: '+resultSignal.type,{resultSignal:resultSignal,allowMemory:true,allowAccountability:false});
+  }
+  var directRoute=typeof getMissionDirectRouteOverrideV1==='function'?getMissionDirectRouteOverrideV1(raw)||getMissionDirectRouteOverrideV1(q):'';
+  if(directRoute==='sync')add('sync_data_trust','sync','explicit sync/data-trust request',{dataNeeds:['sync'],allowMemory:false,allowAccountability:false});
+  if(/\b(what changed|whats changed|what'?s changed|what moved|what happened today|what happened since|since last time|since yesterday|since this morning|since last session|what is different|what'?s different)\b/.test(q)){
+    add('what_changed_engine','report','explicit change comparison request',{dataNeeds:['checkpoint','dpc','crm','content','production','calendar'],allowMemory:true,allowAccountability:false});
+  }
+  var cardSignal=typeof getMissionCardSignalV1==='function'?getMissionCardSignalV1(q,directRoute||legacyRoute||''):null;
+  var explicitCard=typeof isMissionExplicitCardPromptV1==='function'?isMissionExplicitCardPromptV1(q):false;
+  if(explicitCard||cardSignal&&cardSignal.card&&/\b(card|brief|hit list|dpc slide|weekly scorecard|manager|rolodex|resources)\b/.test(q)){
+    var cardRoute=missionRoutePriorityCardToRouteV1(cardSignal&&cardSignal.card)||directRoute||legacyRoute||'now';
+    add('explicit_card',cardRoute,'explicit card ownership request',{card:cardSignal&&cardSignal.card||'',dataNeeds:['card_state'],allowMemory:false,allowAccountability:false});
+  }
+  var cohesionCategory=typeof getMissionCommunicationCohesionCategoryV1==='function'?getMissionCommunicationCohesionCategoryV1(q):'';
+  if(cohesionCategory){
+    add('communication_cohesion',directRoute||legacyRoute||'now','communication cohesion: '+cohesionCategory,{cohesionCategory:cohesionCategory,allowMemory:true,allowAccountability:false});
+  }
+  var salesRoute=typeof getMissionSalesReplyOverrideV1==='function'?getMissionSalesReplyOverrideV1(raw)||getMissionSalesReplyOverrideV1(q):'';
+  if(salesRoute)add('sales_reply','sales','protected sales reply/script request',{allowMemory:true,allowAccountability:false});
+  if(directRoute==='report')add('money_read','report','explicit money/report request',{dataNeeds:['money','dpc'],allowMemory:true,allowAccountability:false});
+  if(directRoute&&directRoute!=='sync'&&directRoute!=='report')add('direct_route',directRoute,'direct route override',{allowMemory:false,allowAccountability:false});
+  if(legacyRoute)add('direct_route',legacyRoute,'legacy route fallback',{allowMemory:true,allowAccountability:true,priority:320});
+  candidates.sort(function(a,b){return (b.priority||0)-(a.priority||0);});
+  var selected=candidates[0]||buildMissionRoutePriorityDecisionV1('',legacyRoute||'now','no priority match',{allowMemory:true,allowAccountability:true});
+  selected.candidates=candidates.map(function(item){return {selectedLayer:item.selectedLayer,selectedRoute:item.selectedRoute,priority:item.priority,priorityReason:item.priorityReason,protectedBy:item.protectedBy};});
+  return selected;
+}
+
 function scoreMissionRoutesV2(q,signals,turn){
   var routes=[];
   function add(route,score,reason,intentType){
@@ -12871,6 +12960,11 @@ function scoreMissionRoutesV2(q,signals,turn){
   q=normalizeMissionUserPromptForRoutingV1(q||'');
   if(turn&&turn.options&&turn.options.legacyRoute)add(turn.options.legacyRoute,MISSION_ROUTER_V2_PRIMARY?0.42:0.88,MISSION_ROUTER_V2_PRIMARY?'legacy_fallback_route':'legacy_visible_route','legacy');
   var rawTurnInput=turn&&turn.rawInput||q||'';
+  var priorityDecision=typeof getMissionRoutePriorityDecisionV1==='function'?getMissionRoutePriorityDecisionV1(rawTurnInput,null,turn,turn&&turn.options&&turn.options.legacyRoute||''):null;
+  if(priorityDecision&&priorityDecision.selectedRoute&&priorityDecision.priority>=930){
+    if(turn)turn.routePriorityDecision=priorityDecision;
+    add(priorityDecision.selectedRoute,Math.min(1,priorityDecision.priority/1000),priorityDecision.selectedLayer||'route_priority_matrix','priority_matrix');
+  }
   var directRoute=typeof getMissionDirectRouteOverrideV1==='function'?getMissionDirectRouteOverrideV1(rawTurnInput||q):'';
   if(directRoute)add(directRoute,0.985,'direct_route_override','explicit_route');
   var correctionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(rawTurnInput):'';
@@ -15692,6 +15786,24 @@ function runMissionBroadRegressionHardeningV1(){
     window.__productionPieces=[{title:'QA Beat Upload',status:'DSP & EVEN Upload'}];
     window.__calEvents=[{title:'QA Client Call',start:new Date(Date.now()+3600000).toISOString(),startTime:'3:00 PM'}];
     var ctx={rev:999,wk:500,gap:0,nextEvent:window.__calEvents[0],openTasks:[{content:'Review calendar'}],dayType:'manager'};
+    var routePriorityCases=[
+      {name:'priority_pipeline',q:'/pipeline',route:'leads',layer:'slash_command'},
+      {name:'priority_sales_correction',q:'i meant sales not pipeline',route:'sales',layer:'correction_route'},
+      {name:'priority_sales_reply',q:'what should i say',route:'sales',layer:'sales_reply'},
+      {name:'priority_sync_data',q:'what data is missing',route:'sync',layer:'sync_data_trust'},
+      {name:'priority_content_card',q:'what should i do on the content card',route:'content',layer:'explicit_card'},
+      {name:'priority_what_changed',q:'what changed today',route:'report',layer:'what_changed_engine'},
+      {name:'priority_booked_count',q:'how many booked calls do i have',route:'dpc',layer:'booked_call_count'}
+    ];
+    routePriorityCases.forEach(function(test){
+      var decision=getMissionRoutePriorityDecisionV1(test.q,ctx,null,'now');
+      if(!decision||decision.selectedRoute!==test.route||decision.selectedLayer!==test.layer){
+        failures.push(test.name+'_route_priority_matrix');
+      }
+      if(decision&&decision.allowAccountability!==false){
+        failures.push(test.name+'_accountability_guard');
+      }
+    });
     var prompts=[
       {name:'brief_card',q:'read the brief card',must:/Mission Brief read/i,card:'brief'},
       {name:'outreach_card',q:'what should i do on the outreach card',must:/Outreach card read/i,card:'outreach'},
@@ -15758,7 +15870,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:31,meta:failures.length?failures.join(', '):'31 regression prompts · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:38,meta:failures.length?failures.join(', '):'31 regression prompts + 7 route-priority matrix checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -20765,11 +20877,11 @@ function getMissionPersonalityFallback(ctx,question){
 
 function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
-  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what is missing|what is loaded|what data is loaded|what sources are loaded)\b/.test(q)){
+  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded)\b/.test(q)){
     if(/\b(where do i check sync|where|check sync)\b/.test(q)){
       return 'System Hub → Health → Run sync check.<br><br>Check Notion, Sheets, Calendar, and backup status.<br><br>If something fails, save locally first, then retry one source.';
     }
-    if(/\b(what is missing|what is loaded|what data is loaded|what sources are loaded|trust this data|do i trust this data|calendar stale)\b/.test(q)){
+    if(/\b(what is missing|what data is missing|what data do you have|what data are you using|what is loaded|what data is loaded|what sources are loaded|trust this data|do i trust this data|calendar stale)\b/.test(q)){
       return getMissionDataConfidenceResponse('sync',ctx,question)||getMissionCommandRouteAnswer('sync',ctx,question);
     }
     return getMissionCommandRouteAnswer('sync',ctx,question);
@@ -20970,12 +21082,19 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var preflightCorrectionTarget=getMissionCorrectionTargetRouteV2(question||'')||getMissionCorrectionTargetRouteV2(rawQ)||getMissionCorrectionTargetRouteV2(q);
   if(preflightCorrectionTarget)directRouteOverride=preflightCorrectionTarget;
   var preflightResultSignal=getMissionResultSignalV1(question||cleanQuestion||'');
+  var routePriorityDecision=typeof getMissionRoutePriorityDecisionV1==='function'?getMissionRoutePriorityDecisionV1(question||cleanQuestion||'',ctx,null,route):null;
+  if(routePriorityDecision&&routePriorityDecision.selectedRoute&&routePriorityDecision.priority>=930&&routePriorityDecision.selectedLayer!=='communication_cohesion'){
+    directRouteOverride=routePriorityDecision.selectedRoute;
+  }
+  brainState.routePriorityDecision=routePriorityDecision||null;
+  window.__missionLastRoutePriorityDecisionV1=routePriorityDecision||null;
   if(intent&&intent.route&&missionQuestionHasExplicitDataAsk(intent.route,cleanQuestion||question||''))route=intent.route;
   var turnV2=null;
   try{
     var turnV2Packet=runMissionTurn(kind||'ask',cleanQuestion||question||'',{ctx:ctx,legacyRoute:route,legacyIntent:intent,legacyConversation:conv,passive:true,allowLegacy:false});
     window.__missionLastTurnV2=turnV2Packet;
     turnV2=window.__missionLastTurnObjectV2||null;
+    if(turnV2&&routePriorityDecision)turnV2.routePriorityDecision=routePriorityDecision;
   }catch(e){}
   if(missionV2TurnShouldOwnVisibleRoute(turnV2)){
     route=(turnV2.routePlan&&turnV2.routePlan.clarify)?'':turnV2.route;
