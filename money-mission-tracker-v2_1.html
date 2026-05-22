@@ -16068,6 +16068,9 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(accountabilityNudge.shouldAnswer||accountabilityNudge.mode!=='nudge'||!accountabilityNudge.shouldNudge)failures.push('qa_action_accountability_nudge_mode');
   var accountabilityNudgeLine=getMissionActionAccountabilityNudgeV2(accountabilityNudge);
   if(accountabilityNudgeLine.indexOf('Quick check before we drift')<0||accountabilityNudgeLine.indexOf('Open Hit List')<0)failures.push('qa_action_accountability_nudge_line');
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({lastActionPlan:{label:'Define the one result this block should produce',action:'Define the one result this block should produce',reason:'calendar_blocks_need_outcome',route:'calendar',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Define the one result this block should produce',action:'Define the one result this block should produce',reason:'calendar_blocks_need_outcome',route:'calendar',suggestedAt:new Date().toISOString()},history:[]}}));
+  var starterAccountability=getMissionActionAccountabilityV1({rawInput:'what should i do today',route:'now'},{});
+  if(starterAccountability.shouldAnswer||starterAccountability.mode!=='silent')failures.push('qa_action_accountability_starter_prompt_guard');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
   var qaProbe=getMissionInternalQADebugProbeV1('/pipeline',{crm:[{name:'Lead'}]},{});
@@ -16084,7 +16087,11 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(!qaStress.passed)failures.push('qa_internal_debug_stress_runner');
   var architectureMap=runMissionBrainArchitectureMapCheckV1();
   if(!architectureMap.passed)failures.push('qa_brain_architecture_map');
-  return {passed:!failures.length,failures:failures,total:76};
+  var dataUsing=getMissionDataConfidenceResponse('sync',{rev:999,wk:500,dpc:{dms:0,callsMade:0,booked:0,closes:0,money:0}},'what data are you using');
+  if(!/I am reading|Trust level/i.test(dataUsing)||/Check system health only/i.test(dataUsing))failures.push('qa_data_trust_using_response');
+  var dataMissing=getMissionDataConfidenceResponse('sync',{rev:999,wk:500,dpc:{dms:0,callsMade:0,booked:0,closes:0,money:0}},'what data is missing');
+  if(!/Missing or light data|Next: run sync/i.test(dataMissing)||/Check system health only/i.test(dataMissing))failures.push('qa_data_trust_missing_response');
+  return {passed:!failures.length,failures:failures,total:79};
 }
 
 /* =========================================================
@@ -16331,7 +16338,7 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'cohesion_meaning',q:'what does that mean',must:/clean read|reading|useful read|move/i},
       {name:'cohesion_money_bridge',q:'how does that connect to money',must:/connection|money|move|matters/i},
       {name:'cohesion_card_owner',q:'what card owns this',must:/Card|belongs to|Open|Come back/i},
-      {name:'cohesion_data_source',q:'what data are you using',must:/looking at|Money|DPC|Lane|Card/i},
+      {name:'cohesion_data_source',q:'what data are you using',must:/I am reading|Trust level|Money|DPC/i},
       {name:'cohesion_clean_read',q:'give me the clean read',must:/Cleaner read|clean read|Move/i},
       {name:'cohesion_app_context',q:'answer like the app knows what I’m doing',must:/Cleaner read|card|trackable|Move/i},
       {name:'sales_correction',q:'i meant sales not pipeline',must:/Sales lane, not pipeline|Ask:/i},
@@ -16395,12 +16402,33 @@ function getMissionClarificationResponse(route,ctx,question,conv){
 
 function getMissionDataConfidenceResponse(route,ctx,question){
   var q=normalizeMissionQuestion(question||'');
-  if(!/\b(stale|missing data|no data|not loaded|why no|current data|data current|is this current|is this live|clean read|trust this data|do i trust this data|what is missing|what is loaded|what data is loaded|what sources are loaded|calendar stale)\b/.test(q))return '';
+  if(!/\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|clean read|trust this data|do i trust this data|what is missing|what data is missing|what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|calendar stale)\b/.test(q))return '';
   var missing=[];
   if(!(window.__crmLeads&&window.__crmLeads.length))missing.push('CRM leads');
   if(!((window.__contentPipelinePieces&&window.__contentPipelinePieces.length)||(window.__contentPieces&&window.__contentPieces.length)))missing.push('content');
   if(!(window.__productionPieces&&window.__productionPieces.length))missing.push('production');
-  return '<p><strong>Data read:</strong><br>'+(missing.length?'Partial - missing '+escapeHtml(missing.join(', '))+'.':'Clean enough for the current app packet.')+'</p><p><strong>What that means:</strong><br>I will not fake numbers that are not loaded.</p><p><strong>Best move:</strong><br>Run /sync, then ask for the lane again.</p>';
+  var h=typeof getHealth==='function'?getHealth():{};
+  var services=h.services||{};
+  var serviceNames=Object.keys(services);
+  var loaded=[];
+  if(window.__crmLeads&&window.__crmLeads.length)loaded.push('CRM leads: '+window.__crmLeads.length);
+  if(window.__contentPieces&&window.__contentPieces.length)loaded.push('content: '+window.__contentPieces.length);
+  if(window.__contentPipelinePieces&&window.__contentPipelinePieces.length)loaded.push('content pipeline: '+window.__contentPipelinePieces.length);
+  if(window.__productionPieces&&window.__productionPieces.length)loaded.push('production: '+window.__productionPieces.length);
+  if(window.__calEvents&&window.__calEvents.length)loaded.push('calendar: '+window.__calEvents.length);
+  if(ctx&&ctx.dpc)loaded.push('DPC today: '+(Number(ctx.dpc.dms||0)+Number(ctx.dpc.callsMade||0)+Number(ctx.dpc.booked||0)+Number(ctx.dpc.closes||0))+' logged actions');
+  if(ctx&&(ctx.rev!==undefined||ctx.wk!==undefined))loaded.push('money: '+fmt(Number(ctx.rev||0))+' of '+fmt(Number(ctx.wk||0)));
+  var usingLine=loaded.length?loaded.slice(0,6).join('<br>'):'No detailed app packet is loaded in this chat yet.';
+  var healthLine=serviceNames.length?serviceNames.slice(0,5).map(function(name){var s=services[name]||{};return escapeHtml(name+': '+(s.status||'checked'));}).join('<br>'):'Sync health has not been checked in detail yet.';
+  var missingLine=missing.length?escapeHtml(missing.join(', ')):'nothing obvious from the current app packet';
+  var trustLine=missing.length?'I would use this for a safe next move, but not for final counts until sync is checked.':'This is clean enough to choose the next move.';
+  if(/\b(what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using)\b/.test(q)){
+    return 'I am reading:<br><br>'+usingLine+'<br><br>Sync status:<br>'+healthLine+'<br><br>Trust level: '+escapeHtml(trustLine);
+  }
+  if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see)\b/.test(q)){
+    return 'Missing or light data:<br><br>'+missingLine+'<br><br>What that means:<br>'+escapeHtml(trustLine)+'<br><br>Next: run sync only if this decision needs current numbers.';
+  }
+  return 'Data read:<br><br>'+(missing.length?'Partial - missing '+escapeHtml(missing.join(', '))+'.':'Clean enough for the current app packet.')+'<br><br>What that means:<br>'+escapeHtml(trustLine)+'<br><br>Next: run sync only if the decision needs current numbers.';
 }
 
 var MISSION_SALES_CLOSER_STAGES={
@@ -17426,6 +17454,9 @@ function getMissionActionAccountabilityModeV2(args){
   if(args.recentResult)return 'silent';
   if(!args.sameDomain)return 'silent';
   if(!args.freshPending)return 'silent';
+  var pendingText=normalizeMissionQuestion([args.pending.label,args.pending.action,args.pending.target,args.pending.reason].filter(Boolean).join(' '));
+  var starterPending=/\b(define the one result|calendar blocks need outcome|general mode needs lane|do current step)\b/.test(pendingText);
+  if(starterPending&&args.directNext)return 'silent';
   if(args.directNext&&args.age!==null&&args.age<=MISSION_ACTION_ACCOUNTABILITY_POLICY_V2.blockMinutes)return 'block';
   if(args.directNext)return 'nudge';
   if(args.vagueSwitch&&args.age!==null&&args.age<=MISSION_ACTION_ACCOUNTABILITY_POLICY_V2.nudgeMinutes)return 'nudge';
@@ -21790,6 +21821,11 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   }
   var splitPromptAnswer=getMissionSplitPromptResponseV1(ctx,cleanQuestion||question||'');
   if(splitPromptAnswer)return finishMissionAnswer(splitPromptAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+  var earlyProtectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(earlyProtectedRouteAnswer){
+    var earlyProtectedCard={leads:'outreach',content:'content',production:'production',calendar:'manager',weekly:'weekly',report:'brief'}[directRouteOverride]||'';
+    return finishMissionAnswer(earlyProtectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,cardAlignment:earlyProtectedCard});
+  }
   var cohesionAnswer=getMissionCommunicationCohesionAnswerV1(ctx,question||cleanQuestion||'',route,brainState,turnV2);
   if(cohesionAnswer)return finishMissionAnswer(cohesionAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
   var moneyReadResponse=getMissionMoneyReadResponseV1(ctx,cleanQuestion||question||'');
