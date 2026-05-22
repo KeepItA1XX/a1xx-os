@@ -12203,7 +12203,15 @@ function missionActiveChatUserTextMatchesV12(re){
     if(!re)return false;
     var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
     var messages=active&&Array.isArray(active.messages)?active.messages:[];
-    return messages.some(function(msg){return msg&&msg.role==='user'&&re.test(String(msg.body||''));});
+    var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+    return messages.some(function(msg){
+      if(!msg||msg.role!=='user'||!re.test(String(msg.body||'')))return false;
+      if(!isNaN(activeCreatedAt)){
+        var msgTime=Date.parse(msg.ts||msg.at||msg.timestamp||msg.createdAt||'');
+        if(isNaN(msgTime)||msgTime<activeCreatedAt)return false;
+      }
+      return true;
+    });
   }catch(e){
     return false;
   }
