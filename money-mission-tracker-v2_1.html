@@ -12812,13 +12812,52 @@ function resolveMissionA1XXExecutiveProducerInputV1(input,turn){
   return match;
 }
 
+function normalizeMissionUserPromptForRoutingV1(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q)return '';
+  q=q.replace(/^(hey|yo|ok|okay|bet|alright|all right|real quick|quick question|quick|so|um|uh|look|listen)\s+/,'');
+  q=q.replace(/\s+(please|plz|pls)$/,'');
+  q=q.replace(/\bwaht\b/g,'what').replace(/\bperp\b/g,'prep');
+  return q.replace(/\s+/g,' ').trim();
+}
+
+function getMissionSalesReplyOverrideV1(question){
+  var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  if(!q)return '';
+  if(/^(bangin|bangin\+|bangin plus)$/.test(q))return '';
+  var salesAsk=/\b(what should i say|what do i say|waht should i say|what should i text|what do i text|help me reply|reply|dm|text back|dm back|write.*(dm|text|reply|response|follow up|follow-up)|follow up|follow-up|bump|qualifier|objection|too expensive|need to think|needs to think|cant afford|can't afford|payment plan|ghosted|roleplay|role play|score my answer)\b/.test(q);
+  var offerAsk=/\b(atl studio|studio|rappreneur|break even|mix master|mix\/master|bangin)\b/.test(q)&&/\b(reply|dm|text|follow up|follow-up|qualifier|objection|close|what should i say)\b/.test(q);
+  var productionOnly=/\b(upload|metadata|dsp|even upload|cover art|asset status|what can ship|ship today|shipping|export)\b/.test(q)&&!/\b(reply|dm|text|qualifier|follow up|follow-up|what should i say|objection|too expensive|ghosted)\b/.test(q);
+  if(productionOnly)return '';
+  return salesAsk||offerAsk?'sales':'';
+}
+
+function getMissionDirectRouteOverrideV1(question){
+  var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  if(!q)return '';
+  var salesRoute=getMissionSalesReplyOverrideV1(q);
+  if(salesRoute)return salesRoute;
+  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health)\b/.test(q))return 'sync';
+  if(/\b(brief card|mission brief|read the brief|business condition)\b/.test(q))return 'report';
+  if(/\b(hit list|show my leads|outreach card|who hot|who warm|who needs a bump|who is closest to money|pipeline|open leads|lead list)\b/.test(q))return 'leads';
+  if(/\b(content card|content pipeline|what proof should i post|proof should i post|what should i post|caption|hook|post today|content stuck|stuck in the content)\b/.test(q))return 'content';
+  if(/\b(beat card|production card|what can ship today|what can ship|ship today|metadata|dsp|production pipeline|bangin plus|bangin\+)\b/.test(q))return 'production';
+  if(/\b(manager card|calendar|schedule|what block|time block|next event)\b/.test(q))return 'calendar';
+  if(/\b(what should i track every week|weekly scorecard|wrap it|weekly review|next week)\b/.test(q))return 'weekly';
+  if(/\b(how much money|how much have i made|what came in|what cam in|money check|revenue report|how far off|what can i do to make some money|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return 'report';
+  return '';
+}
+
 function scoreMissionRoutesV2(q,signals,turn){
   var routes=[];
   function add(route,score,reason,intentType){
     if(route)routes.push({route:route,score:score,reason:reason||'',intentType:intentType||''});
   }
+  q=normalizeMissionUserPromptForRoutingV1(q||'');
   if(turn&&turn.options&&turn.options.legacyRoute)add(turn.options.legacyRoute,MISSION_ROUTER_V2_PRIMARY?0.42:0.88,MISSION_ROUTER_V2_PRIMARY?'legacy_fallback_route':'legacy_visible_route','legacy');
   var rawTurnInput=turn&&turn.rawInput||q||'';
+  var directRoute=typeof getMissionDirectRouteOverrideV1==='function'?getMissionDirectRouteOverrideV1(rawTurnInput||q):'';
+  if(directRoute)add(directRoute,0.985,'direct_route_override','explicit_route');
   var correctionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(rawTurnInput):'';
   if(correctionRoute)add(correctionRoute,0.99,'correction_target_route','correction');
   var salesResultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(rawTurnInput):null;
@@ -15649,6 +15688,13 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'weekly_scorecard',q:'what should i track every week',must:/Weekly scorecard read|Track five numbers/i,card:'weekly'},
       {name:'dpc_card',q:'read the dpc card',must:/DPC read/i,card:'outreach'},
       {name:'sync_navigation',q:'where do i check sync',must:/System Hub|sync check/i},
+      {name:'sync_navigation_polite',q:'where do i check sync please',must:/System Hub|Health|sync check/i},
+      {name:'content_proof_polite',q:'hey what proof should i post',must:/Content card read|proof|post/i,card:'content'},
+      {name:'content_pipeline_polite',q:'what is stuck in the content pipeline please',must:/Content card read|Content|Pipeline|content/i,card:'content'},
+      {name:'production_ship_polite',q:'hey what can ship today',must:/Production card read|ship|Production/i,card:'production'},
+      {name:'sales_mix_master_reply',q:'mix master reply',must:/Send:|Ask:|Say:|Sales/i},
+      {name:'sales_break_even_qualifier',q:'Break EVEN qualifier',must:/Send:|Ask:|Say:|Sales/i},
+      {name:'money_read_plain',q:'how much money are we making',must:/Money read|This week|Next move:/i},
       {name:'sales_correction',q:'i meant sales not pipeline',must:/Sales lane, not pipeline|Ask:/i},
       {name:'changed_today',q:'what changed today',must:/Since the last saved checkpoint|Current read|changed/i},
       {name:'booked_count',q:'how many booked calls do i have',must:/booked/i}
@@ -15659,6 +15705,9 @@ function runMissionBroadRegressionHardeningV1(){
       catch(e){failures.push(test.name+'_error_'+(e&&e.message?e.message:String(e)));return;}
       var plain=answer.replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
       if(!test.must.test(plain))failures.push(test.name+'_route_drift');
+      if(test.name==='money_read_plain'&&/Next move is Use/i.test(plain))failures.push(test.name+'_next_move_phrase');
+      if(test.name==='sales_mix_master_reply'&&/Production card read|Production vs paid delivery/i.test(plain))failures.push(test.name+'_production_bleed');
+      if(test.name==='sales_break_even_qualifier'&&/BANGIN\+ Upload Checklist|Production card read/i.test(plain))failures.push(test.name+'_resource_bleed');
       if((plain.match(/Before switching:/g)||[]).length>1)failures.push(test.name+'_duplicate_handoff');
       if(test.card&&plain.indexOf('Before switching:')<0)failures.push(test.name+'_handoff_missing');
       if(test.card&&/\b(Same pipeline lane|Which lead do you want to move first|Who is closest to a real decision|Want to go through one lead at a time)\b/i.test(plain))failures.push(test.name+'_route_garnish_bleed');
@@ -15682,7 +15731,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:13,meta:failures.length?failures.join(', '):'13 regression prompts · explicit cards · handoff duplicate guard · leak guard'};
+  return {passed:!failures.length,failures:failures,total:20,meta:failures.length?failures.join(', '):'20 regression prompts · explicit cards · polite wrappers · sales/resource guards · money phrasing · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -19274,7 +19323,8 @@ function applyMissionB1ProseGuard(html,routeContext){
       out=applyMissionVoiceAntiPatternsV1(out);
     }
     out=applyMissionVoiceContractionsV1(out);
-    out=out.replace(/\bNext move is\s+([a-z])/g,function(match,ch){return 'Next move is '+ch;});
+    out=out.replace(/\bNext move is\s+Use\b/g,'Next move: use');
+    out=out.replace(/\bNext move is\s+/g,'Next move: ');
     out=out.replace(/\s+([.,!?;:])/g,'$1');
     out=out.replace(/(<br\s*\/?>\s*){3,}/gi,'<br><br>').trim();
     return out||html;
@@ -20685,10 +20735,63 @@ function getMissionPersonalityFallback(ctx,question){
   return applyMissionPresenceLayer('<strong>Mission Command:</strong> '+escapeHtml(options[idx])+'<br><br>'+tip+recovery+(context?'<br><br>'+context:'')+missionLinksHtml(links),intent&&intent.route||'',q,{closer:false});
 }
 
+function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
+  var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health)\b/.test(q)){
+    if(/\b(where do i check sync|where|check sync)\b/.test(q)){
+      return 'System Hub → Health → Run sync check.<br><br>Check Notion, Sheets, Calendar, and backup status.<br><br>If something fails, save locally first, then retry one source.';
+    }
+    return getMissionCommandRouteAnswer('sync',ctx,question);
+  }
+  if(route==='sales'&&getMissionSalesReplyOverrideV1(q)){
+    var salesAnswer=getMissionOutputPackResponseV1('sales',ctx,question,{type:'CONV_DATA_REQUEST',route:'sales'},brainState||{});
+    return salesAnswer||getMissionCommandRouteAnswer('sales',ctx,question);
+  }
+  if(route==='leads'&&/\b(hit list|show my leads|outreach card|who hot|who warm|who needs a bump|who is closest to money|pipeline|open leads|lead list)\b/.test(q)){
+    var outreachQuestion=/\b(show my leads|hit list)\b/.test(q)?'hit list':question;
+    var outreachAnswer=getMissionOutreachCardIntelligenceResponseV11('leads',ctx,outreachQuestion,brainState||{},turn);
+    if(outreachAnswer)return outreachAnswer;
+    return getMissionCommandRouteAnswer('leads',ctx,question);
+  }
+  if(route==='content'&&/\b(content card|content pipeline|proof should i post|what proof should i post|what should i post|caption|hook|post today|content stuck|stuck in the content)\b/.test(q)){
+    var contentAnswer=getMissionContentCardIntelligenceResponseV11('content',ctx,question,brainState||{},turn);
+    return contentAnswer||getMissionCommandRouteAnswer('content',ctx,question);
+  }
+  if(route==='production'&&/\b(beat card|production card|what can ship today|what can ship|ship today|metadata|dsp|production pipeline|bangin plus|bangin\+)\b/.test(q)){
+    var productionAnswer=getMissionProductionCardIntelligenceResponseV11('production',ctx,question,brainState||{},turn);
+    return productionAnswer||getMissionCommandRouteAnswer('production',ctx,question);
+  }
+  return '';
+}
+
+function getMissionMoneyReadResponseV1(ctx,question){
+  var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  if(!/\b(how much money|how much have i made|what came in|what cam in|money check|revenue report|how far off|what can i do to make some money|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return '';
+  if(/\b(what changed|what moved|what happened)\b/.test(q))return '';
+  ctx=ctx||{};
+  var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var weekly=Number(ctx.wk||0);
+  var revenue=Number(ctx.rev||0);
+  var gap=Math.max(0,Number(ctx.gap!==undefined?ctx.gap:(weekly-revenue))||0);
+  var today=Number((ctx.dpc&&ctx.dpc.money)||d.money||0);
+  var asksToday=/\b(today|made today|have i made today)\b/.test(q);
+  var firstLine=asksToday?('Today: '+fmt(today)+' logged.'):('This week: '+fmt(revenue)+' of '+fmt(weekly)+' loaded.');
+  var read=gap<=0?'Target pressure is covered.':'Gap: '+fmt(gap)+' left.';
+  var next=gap<=0?'protect delivery, then make one clean buyer-facing follow-up':'move the closest buyer toward payment and log the result';
+  if(/\b(keeping me broke|why am i not making money|make some money)\b/.test(q)){
+    read=gap<=0?'You are not behind on the weekly number; the risk is leaving today invisible.':'The money constraint is still open.';
+    next=gap<=0?'log one real sales or outreach action so the OS can see today move':'contact the warmest visible lead and make the direct ask';
+  }
+  return 'Money read:<br><br>'+escapeHtml(firstLine)+'<br>'+escapeHtml(read)+'<br><br>Next move: '+escapeHtml(next)+'.';
+}
+
 function getMissionCommandResponse(kind,ctx,question,brainState){
   brainState=brainState||getMissionBrainState(ctx,question||'','');
-  var initialIntent=getMissionCommandIntent(question||'');
+  var routeQuestion=normalizeMissionUserPromptForRoutingV1(question||'');
+  var directRouteOverride=getMissionDirectRouteOverrideV1(question||'');
+  var initialIntent=getMissionCommandIntent(routeQuestion||question||'');
   var cleanQuestion=initialIntent.cleanQuestion||question||'';
+  if(routeQuestion)cleanQuestion=routeQuestion;
   var rawQ=normalizeMissionQuestion(question||'');
   var q=String(cleanQuestion||question||'').toLowerCase();
   var shape=getMissionQuestionShape(cleanQuestion||'');
@@ -20697,6 +20800,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var conv=getMissionConversationType(cleanQuestion||'',ctx,intent,brainState);
   var route=(conv&&conv.route)||intent.route;
   var preflightCorrectionTarget=getMissionCorrectionTargetRouteV2(question||'')||getMissionCorrectionTargetRouteV2(rawQ)||getMissionCorrectionTargetRouteV2(q);
+  if(preflightCorrectionTarget)directRouteOverride=preflightCorrectionTarget;
   var preflightResultSignal=getMissionResultSignalV1(question||cleanQuestion||'');
   if(intent&&intent.route&&missionQuestionHasExplicitDataAsk(intent.route,cleanQuestion||question||''))route=intent.route;
   var turnV2=null;
@@ -20712,6 +20816,19 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     multi={primary:intent,secondary:null,routes:route?[route]:[]};
     brainState=turnV2.brainState||brainState;
     shape=getMissionQuestionShape(cleanQuestion||'');
+  }
+  if(directRouteOverride){
+    route=directRouteOverride;
+    intent=Object.assign({},intent||{},{
+      route:directRouteOverride,
+      intentRoute:directRouteOverride,
+      label:getMissionRouteLabelV2(directRouteOverride)||directRouteOverride
+    });
+    multi={primary:intent,secondary:null,routes:[directRouteOverride]};
+    if(turnV2){
+      turnV2.route=directRouteOverride;
+      turnV2.selectedRoute=directRouteOverride;
+    }
   }
   var responseMode=getMissionResponseMode(cleanQuestion||'',route,ctx,brainState);
   var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,responseMode);
@@ -20737,6 +20854,13 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   }
   var earlyBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(earlyBriefIntel)return finishMissionAnswer(earlyBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,cardAlignment:'brief'});
+  var protectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(protectedRouteAnswer){
+    var protectedCard={leads:'outreach',content:'content',production:'production',calendar:'manager',weekly:'weekly',report:'brief'}[directRouteOverride]||'';
+    return finishMissionAnswer(protectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,cardAlignment:protectedCard});
+  }
+  var moneyReadResponse=getMissionMoneyReadResponseV1(ctx,cleanQuestion||question||'');
+  if(moneyReadResponse)return finishMissionAnswer(moneyReadResponse,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false});
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(rawQ)||/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
     route='dpc';
     return finishMissionAnswer(getMissionBookedCallsCountAnswerV1(ctx),{sessionArc:false,closer:false,presence:false});
