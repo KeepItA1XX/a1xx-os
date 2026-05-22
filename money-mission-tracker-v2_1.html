@@ -15935,7 +15935,159 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(accountabilityNudgeLine.indexOf('Quick check before we drift')<0||accountabilityNudgeLine.indexOf('Open Hit List')<0)failures.push('qa_action_accountability_nudge_line');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:60};
+  var qaProbe=getMissionInternalQADebugProbeV1('/pipeline',{crm:[{name:'Lead'}]},{});
+  if(!qaProbe||qaProbe.normalizedInput!=='/pipeline'||qaProbe.selectedRoute!=='leads'||qaProbe.priorityLayer!=='slash_command'||qaProbe.leakRisk)failures.push('qa_internal_debug_probe_pipeline');
+  var qaProbeSales=getMissionInternalQADebugProbeV1('what should i say',{crm:[{name:'Lead'}]},{});
+  if(!qaProbeSales||qaProbeSales.selectedRoute!=='sales'||qaProbeSales.accountabilityMode!=='silent'||qaProbeSales.leakRisk)failures.push('qa_internal_debug_probe_sales');
+  var qaStress=runMissionInternalQADebugStressRunnerV1([
+    {q:'/pipeline',route:'leads'},
+    {q:'what should i say',route:'sales'},
+    {q:'read the brief card',route:'report'},
+    {q:'sync check',route:'sync'},
+    {q:'what changed today',route:'report'}
+  ],{crm:[{name:'Lead'}]});
+  if(!qaStress.passed)failures.push('qa_internal_debug_stress_runner');
+  return {passed:!failures.length,failures:failures,total:63};
+}
+
+/* =========================================================
+   MISSION INTERNAL QA DEBUG PROBE — v1
+   Internal-only: never render this object in normal chat.
+========================================================= */
+var MISSION_INTERNAL_QA_DEBUG_PROBE_V1={
+  id:'mission_internal_qa_debug_probe_v1',
+  version:'1.0',
+  normalChatVisible:false
+};
+
+function getMissionInternalQADebugProbeV1(question,ctx,options){
+  options=options||{};
+  ctx=ctx||{};
+  var raw=String(question||'');
+  var priorSession=null;
+  var priorContextMode=null;
+  var priorCheckpoints=null;
+  var priorLastTurn=window.__missionLastTurnObjectV2||null;
+  var priorSelfCheck=window.__missionCommandSelfCheckActive;
+  try{
+    priorSession=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+    priorContextMode=sessionStorage.getItem(MISSION_CONTEXT_MODE_KEY);
+    priorCheckpoints=typeof getStore==='function'?getStore(MISSION_TURN_CHECKPOINTS_KEY):null;
+  }catch(e){}
+  try{
+    window.__missionCommandSelfCheckActive=true;
+    var normalized=typeof normalizeMissionInputV2==='function'?normalizeMissionInputV2(raw):normalizeMissionQuestion(raw);
+    var routeQuestion=typeof normalizeMissionUserPromptForRoutingV1==='function'?normalizeMissionUserPromptForRoutingV1(raw):normalizeMissionQuestion(raw);
+    var initialIntent=typeof getMissionCommandIntent==='function'?getMissionCommandIntent(routeQuestion||raw):null;
+    var legacyRoute=options.legacyRoute||initialIntent&&initialIntent.route||'';
+    var priority=typeof getMissionRoutePriorityDecisionV1==='function'?getMissionRoutePriorityDecisionV1(raw,ctx,null,legacyRoute):null;
+    var packet=typeof runMissionTurn==='function'?runMissionTurn('qa_probe',raw,{ctx:ctx,legacyRoute:legacyRoute,passive:true,allowLegacy:false,skipCheckpoint:true}):null;
+    var turn=window.__missionLastTurnObjectV2||null;
+    var stack=[];
+    var chosen=null;
+    try{
+      if(turn&&typeof getMissionIntelligenceAnswerStackV1==='function'){
+        stack=getMissionIntelligenceAnswerStackV1(turn,ctx).map(function(item){return {id:item.id,score:item.priorityScore||null};});
+      }
+      if(turn&&typeof getMissionArbitratedIntelligenceAnswerV1==='function'){
+        chosen=getMissionArbitratedIntelligenceAnswerV1(turn,ctx);
+      }
+    }catch(e){}
+    var visibleAnswer=packet&&packet.b1&&packet.b1.answer||'';
+    var leakRisk=typeof missionVisibleAnswerHasInternalLeakV1==='function'?missionVisibleAnswerHasInternalLeakV1(visibleAnswer):/\b(decisionTrace|intelligenceAnswerStack|contextStatus|Source:\s*appState)\b/i.test(String(visibleAnswer||''));
+    var protectedRoute=priority&&priority.selectedRoute&&priority.priority>=930?priority.selectedRoute:'';
+    var truth=(turn&&turn.truthLedger)||(turn&&turn.brainState&&turn.brainState.truthLedger)||(typeof getMissionContextTruthLedgerV1==='function'?getMissionContextTruthLedgerV1(ctx):null);
+    var probe={
+      id:'mission_internal_qa_probe_'+Date.now(),
+      version:MISSION_INTERNAL_QA_DEBUG_PROBE_V1.version,
+      rawInput:raw,
+      normalizedInput:normalized,
+      routeQuestion:routeQuestion,
+      detectedIntent:initialIntent&&initialIntent.route||'',
+      selectedRoute:protectedRoute||turn&&turn.route||priority&&priority.selectedRoute||legacyRoute||'',
+      turnRoute:turn&&turn.route||'',
+      priorityRoute:priority&&priority.selectedRoute||'',
+      selectedWorker:turn&&turn.workerId||'',
+      selectedResponseLayer:chosen&&chosen.id||turn&&turn.intelligenceAnswerChosen||'',
+      priorityLayer:priority&&priority.selectedLayer||turn&&turn.routePriorityDecision&&turn.routePriorityDecision.selectedLayer||'',
+      priorityReason:priority&&priority.priorityReason||turn&&turn.routePriorityDecision&&turn.routePriorityDecision.priorityReason||'',
+      protectedBy:priority&&priority.protectedBy||turn&&turn.routePriorityDecision&&turn.routePriorityDecision.protectedBy||'',
+      allowMemory:priority?!!priority.allowMemory:null,
+      allowAccountability:priority?!!priority.allowAccountability:null,
+      memoryUsed:{
+        decision:!!(turn&&turn.decisionMemory&&turn.decisionMemory.shouldAnswer),
+        pattern:!!(turn&&turn.patternMemory&&turn.patternMemory.shouldAnswer),
+        thread:!!(turn&&turn.threadMemory&&turn.threadMemory.shouldAnswer)
+      },
+      truthLedgerState:truth?{
+        sessionBooked:truth.session&&truth.session.booked||0,
+        sessionPaid:truth.session&&truth.session.paid||0,
+        dpcBooked:truth.confirmed&&truth.confirmed.dpc&&truth.confirmed.dpc.booked||0,
+        dpcMoney:truth.confirmed&&truth.confirmed.dpc&&truth.confirmed.dpc.money||0,
+        discrepancies:truth.discrepancies||[]
+      }:null,
+      accountabilityMode:turn&&turn.actionAccountability&&turn.actionAccountability.mode||'',
+      dataConfidence:turn&&turn.dataConfidence&&turn.dataConfidence.level||'',
+      syncRisk:turn&&turn.syncStatus&&turn.syncStatus.risk||'',
+      leakRisk:!!leakRisk,
+      traceCount:turn&&turn.decisionTrace&&turn.decisionTrace.length||0,
+      traceTail:(turn&&turn.decisionTrace||[]).slice(-5).map(function(item){return item.message||'';}),
+      stack:stack,
+      warnings:(turn&&turn.warnings||[]).map(function(item){return item.message||'';}),
+      errors:turn&&turn.errors||[]
+    };
+    window.__missionLastInternalQADebugProbeV1=probe;
+    return probe;
+  }catch(err){
+    return {id:'mission_internal_qa_probe_failed',rawInput:raw,error:err&&err.message?err.message:String(err),leakRisk:false};
+  }finally{
+    try{
+      if(priorSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorSession);
+      if(priorContextMode===null)setMissionContextMode('general',{silent:true});else setMissionContextMode(priorContextMode,{silent:true});
+      if(typeof setStore==='function'&&Array.isArray(priorCheckpoints))setStore(MISSION_TURN_CHECKPOINTS_KEY,priorCheckpoints);
+    }catch(e){}
+    window.__missionLastTurnObjectV2=priorLastTurn;
+    window.__missionCommandSelfCheckActive=priorSelfCheck;
+  }
+}
+
+var MISSION_INTERNAL_QA_STRESS_PROMPTS_V1=[
+  {q:'/pipeline',route:'leads'},
+  {q:'/dpc',route:'dpc'},
+  {q:'what should i say',route:'sales'},
+  {q:'he said too expensive',route:'sales'},
+  {q:'read the brief card',route:'report'},
+  {q:'what should i do on the content card',route:'content'},
+  {q:'what should i do on the beat card',route:'production'},
+  {q:'what should i check on the manager card',route:'calendar'},
+  {q:'what should i track every week',route:'weekly'},
+  {q:'sync check',route:'sync'},
+  {q:'what data are you using',route:'sync'},
+  {q:'what changed today',route:'report'},
+  {q:'how much money are we making',route:'report'},
+  {q:'where do i click to find the hit list',route:'leads'},
+  {q:'i meant sales not pipeline',route:'sales'}
+];
+
+function runMissionInternalQADebugStressRunnerV1(cases,ctx){
+  cases=Array.isArray(cases)&&cases.length?cases:MISSION_INTERNAL_QA_STRESS_PROMPTS_V1;
+  ctx=ctx||{};
+  var failures=[];
+  var probes=cases.map(function(item){
+    var spec=typeof item==='string'?{q:item}:item||{};
+    var probe=getMissionInternalQADebugProbeV1(spec.q,ctx,spec.options||{});
+    if(spec.route&&probe.selectedRoute!==spec.route)failures.push({prompt:spec.q,expectedRoute:spec.route,actualRoute:probe.selectedRoute,reason:'route_mismatch'});
+    if(spec.layer&&probe.priorityLayer!==spec.layer)failures.push({prompt:spec.q,expectedLayer:spec.layer,actualLayer:probe.priorityLayer,reason:'layer_mismatch'});
+    if(probe.leakRisk)failures.push({prompt:spec.q,reason:'internal_leak_risk'});
+    if(probe.error)failures.push({prompt:spec.q,reason:'probe_error',error:probe.error});
+    return probe;
+  });
+  return {
+    passed:!failures.length,
+    total:cases.length,
+    failures:failures,
+    probes:probes.map(function(probe){return {rawInput:probe.rawInput,selectedRoute:probe.selectedRoute,priorityLayer:probe.priorityLayer,selectedResponseLayer:probe.selectedResponseLayer,accountabilityMode:probe.accountabilityMode,dataConfidence:probe.dataConfidence,leakRisk:probe.leakRisk};})
+  };
 }
 
 /* =========================================================
