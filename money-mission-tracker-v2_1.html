@@ -15824,8 +15824,9 @@ function runMissionMasterIntelligenceQASweepV1(){
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{pendingAction:{label:'Open Hit List',action:'Open Hit List',route:'leads',suggestedAt:new Date().toISOString()},history:[]},lastActionPlan:{label:'Open Hit List',action:'Open Hit List',route:'leads',suggestedAt:new Date().toISOString()},lastActionStatus:'suggested'}));
   var accountability=getMissionActionAccountabilityV1({rawInput:'what next',route:'now'},{});
   if(!accountability.shouldAnswer||accountability.reason!=='pending_action_check')failures.push('qa_action_accountability_signal');
+  if(accountability.mode!=='block'||accountability.shouldNudge)failures.push('qa_action_accountability_block_mode');
   var accountabilityPrompt=buildMissionActionAccountabilityResponseV1({actionAccountability:accountability},{});
-  if(accountabilityPrompt.indexOf('did you do this yet')<0||accountabilityPrompt.indexOf('Open Hit List')<0)failures.push('qa_action_accountability_prompt');
+  if(accountabilityPrompt.indexOf('Before we open another move')<0||accountabilityPrompt.indexOf('did you do this yet')<0||accountabilityPrompt.indexOf('Open Hit List')<0)failures.push('qa_action_accountability_prompt');
   var accountabilityStack=getMissionIntelligenceAnswerStackV1({rawInput:'what should i do today',route:'now',actionAccountability:accountability},{});
   var accountabilityStackItem=accountabilityStack.find(function(item){return item.id==='action_accountability';});
   if(!accountabilityStackItem||accountabilityStackItem.opts.actionLayer!==false)failures.push('qa_action_accountability_action_layer_guard');
@@ -15924,9 +15925,17 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(cardStack&&cardStack.id==='action_accountability')failures.push('qa_card_prompt_arbiter_guard');
   var accountabilityProtected=getMissionActionAccountabilityV1({rawInput:'/pipeline',route:'leads'},{});
   if(accountabilityProtected.shouldAnswer)failures.push('qa_action_accountability_data_guard');
+  var accountabilityDataAsk=getMissionActionAccountabilityV1({rawInput:'what data are you using',route:'sync'},{});
+  if(accountabilityDataAsk.shouldAnswer||accountabilityDataAsk.mode!=='silent')failures.push('qa_action_accountability_data_question_guard');
+  var accountabilitySalesAsk=getMissionActionAccountabilityV1({rawInput:'what should i say',route:'sales'},{});
+  if(accountabilitySalesAsk.shouldAnswer||accountabilitySalesAsk.mode!=='silent')failures.push('qa_action_accountability_sales_question_guard');
+  var accountabilityNudge=getMissionActionAccountabilityV1({rawInput:'show me',route:'now'},{});
+  if(accountabilityNudge.shouldAnswer||accountabilityNudge.mode!=='nudge'||!accountabilityNudge.shouldNudge)failures.push('qa_action_accountability_nudge_mode');
+  var accountabilityNudgeLine=getMissionActionAccountabilityNudgeV2(accountabilityNudge);
+  if(accountabilityNudgeLine.indexOf('Quick check before we drift')<0||accountabilityNudgeLine.indexOf('Open Hit List')<0)failures.push('qa_action_accountability_nudge_line');
   window.__missionIntegritySelfCheckActive=priorIntegrityFlag;
   if(priorActionSession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorActionSession);
-  return {passed:!failures.length,failures:failures,total:56};
+  return {passed:!failures.length,failures:failures,total:60};
 }
 
 /* =========================================================
@@ -17083,32 +17092,94 @@ function applyMissionActionLayerV1(html,turn,ctx,question,opts){
 }
 
 /* =========================================================
-   MISSION ACTION ACCOUNTABILITY — v1.1
+   MISSION ACTION ACCOUNTABILITY — v2
 ========================================================= */
+var MISSION_ACTION_ACCOUNTABILITY_POLICY_V2={
+  blockMinutes:90,
+  nudgeMinutes:240,
+  version:'2.0'
+};
+
+function getMissionActionAccountabilityFlagsV2(q,route){
+  q=normalizeMissionQuestion(q||'');
+  route=route||'';
+  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(q):null;
+  var explicitCard=typeof isMissionExplicitCardPromptV1==='function'?isMissionExplicitCardPromptV1(q):false;
+  var directNext=/\b(what next|what now|what should i do|what do i do|what should i do today|call the move|pick one|just tell me one thing|one thing|help me get started|lock in)\b/.test(q);
+  var vagueSwitch=/\b(show me|run it|let'?s go|start|continue|more ideas|what else)\b/.test(q);
+  var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|where can i check sync|what changed|what moved|what did i log|how much money|how many booked|report|pipeline|who hot|content|production|calendar|data stale|data current|is this data current|what data|what is loaded|what'?s loaded|what is missing|what'?s missing|what should i trust|do i trust|webhook|web hook|backup|source|where is that coming from)\b/.test(q);
+  var navigationAsk=/\b(where do i click|where do i find|where is|what card|which card|what button|which button|where do i go|open what|what do i press|what do i log|where do i check)\b/.test(q);
+  var contextBridgeAsk=/\b(what does that mean|what do you mean|make it make sense|clean read|real read|why are you telling me|how does this connect|connect it back|what lane|what mode|what are you reading|what is the os looking at)\b/.test(q);
+  var salesAsk=route==='sales'||/\b(what should i say|what do i say|too expensive|cant afford|can't afford|he said|she said|they said|ghosted|payment plan|roleplay|score my answer|prep me for a call|call is done|warm follow|send a bump|mix master|break even|atl studio|rappreneur|objection|discovery question)\b/.test(q);
+  var mentorAsk=/\b(how do i|how can i|teach me|explain|break down|framework|principle|make my offer better|not converting)\b/.test(q);
+  var correctionAsk=!!(getMissionCorrectionTargetRouteV2(q)||/\b(nah not that|wrong read|wrong lane|not that|i meant|not pipeline|not sales|not content|not production|answer the wrong thing)\b/.test(q));
+  var shortFollowup=/^(good morning|gm|morning|why|why again|more|more again|run it back|tell me more)$/i.test(q);
+  return {
+    directNext:directNext,
+    vagueSwitch:vagueSwitch,
+    explicitData:explicitData,
+    explicitCard:explicitCard,
+    navigationAsk:navigationAsk,
+    contextBridgeAsk:contextBridgeAsk,
+    salesAsk:salesAsk,
+    mentorAsk:mentorAsk,
+    correctionAsk:correctionAsk,
+    resultSignal:resultSignal,
+    shortFollowup:shortFollowup,
+    protectedAsk:!!(explicitData||explicitCard||navigationAsk||contextBridgeAsk||salesAsk||mentorAsk||correctionAsk||resultSignal||shortFollowup)
+  };
+}
+
+function getMissionActionAccountabilityModeV2(args){
+  args=args||{};
+  if(!args.pending)return 'silent';
+  if(args.protectedAsk)return 'silent';
+  if(args.recentResult)return 'silent';
+  if(!args.sameDomain)return 'silent';
+  if(!args.freshPending)return 'silent';
+  if(args.directNext&&args.age!==null&&args.age<=MISSION_ACTION_ACCOUNTABILITY_POLICY_V2.blockMinutes)return 'block';
+  if(args.directNext)return 'nudge';
+  if(args.vagueSwitch&&args.age!==null&&args.age<=MISSION_ACTION_ACCOUNTABILITY_POLICY_V2.nudgeMinutes)return 'nudge';
+  return 'silent';
+}
+
+function getMissionActionAccountabilityNudgeV2(read){
+  if(!read||!read.shouldNudge)return '';
+  var pending=read.pendingAction||{};
+  var action=formatMissionActionAccountabilityActionLineV1(pending.action||pending.label||'the last move');
+  return 'Quick check before we drift: '+escapeHtml(action)+'. If that is not the move anymore, say wrong lane.';
+}
+
 function getMissionActionAccountabilityV1(turn,ctx){
   var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||'');
   var session=getMissionBrainSessionV2();
   var loop=session.resultLoop||{};
   var pending=loop.pendingAction||session.lastActionPlan||null;
   var lastResult=loop.lastResult||null;
-  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(q):null;
   var route=turn&&turn.route||session.lastRoute||'now';
   var pendingRoute=pending&&pending.route||'';
   var age=getMissionAgeMinutes(pending&&pending.suggestedAt||'');
-  var directNext=/\b(what next|what now|what should i do|what do i do|what should i do today|call the move|pick one|just tell me one thing|one thing|help me get started|lock in)\b/.test(q);
-  var vagueSwitch=/\b(show me|run it|let'?s go|start|continue|more ideas|what else)\b/.test(q);
-  var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|how many booked|report|pipeline|who hot|content|production|calendar|data stale)\b/.test(q);
-  var explicitCard=typeof isMissionExplicitCardPromptV1==='function'?isMissionExplicitCardPromptV1(q):false;
-  var protectedAsk=explicitData||explicitCard||resultSignal||getMissionCorrectionTargetRouteV2(q)||/^(good morning|gm|morning|why|why again|more|more again|run it back|tell me more)$/i.test(q);
-  var salesAsk=/\b(what should i say|what do i say|too expensive|cant afford|can't afford|he said|she said|they said|ghosted|payment plan|roleplay|score my answer|prep me for a call|call is done)\b/.test(q);
-  var mentorAsk=/\b(how do i|how can i|teach me|explain|break down|framework|principle|make my offer better|not converting)\b/.test(q);
+  var flags=getMissionActionAccountabilityFlagsV2(q,route);
   var sameDomain=!pendingRoute||!route||route==='now'||pendingRoute===route||(pendingRoute==='leads'&&route==='sales')||(pendingRoute==='sales'&&route==='leads');
   var freshPending=!!(pending&&(age===null||age<=120));
   var resultAge=getMissionAgeMinutes(lastResult&&lastResult.recordedAt||'');
   var recentResult=!!(lastResult&&lastResult.type&&(resultAge===null||resultAge<=120));
-  var shouldAnswer=!!(freshPending&&!recentResult&&sameDomain&&(directNext||vagueSwitch)&&!protectedAsk&&!salesAsk&&!mentorAsk);
+  var mode=getMissionActionAccountabilityModeV2({
+    pending:pending,
+    protectedAsk:flags.protectedAsk,
+    recentResult:recentResult,
+    sameDomain:sameDomain,
+    freshPending:freshPending,
+    directNext:flags.directNext,
+    vagueSwitch:flags.vagueSwitch,
+    age:age
+  });
+  var shouldAnswer=mode==='block';
+  var shouldNudge=mode==='nudge';
   return {
     shouldAnswer:shouldAnswer,
+    shouldNudge:shouldNudge,
+    mode:mode,
     hasPending:!!pending,
     pendingAction:pending,
     pendingAgeMinutes:age,
@@ -17116,7 +17187,9 @@ function getMissionActionAccountabilityV1(turn,ctx){
     currentRoute:route,
     recentResult:recentResult,
     sameDomain:sameDomain,
-    reason:shouldAnswer?'pending_action_check':'',
+    protectedAsk:flags.protectedAsk,
+    flags:flags,
+    reason:shouldAnswer?'pending_action_check':(shouldNudge?'pending_action_nudge':''),
     responseDepth:'micro',
     responseShape:'action_accountability',
     suppressBubbles:shouldAnswer
@@ -17128,7 +17201,7 @@ function buildMissionActionAccountabilityResponseV1(turn,ctx){
   if(!read||!read.shouldAnswer)return '';
   var pending=read.pendingAction||{};
   var action=formatMissionActionAccountabilityActionLineV1(pending.action||pending.label||'the last move');
-  return 'Before we switch lanes, did you do this yet?<br><br><strong>'+escapeHtml(action)+'</strong><br><br>Reply with: done, no reply, reply, booked, paid, or wrong lane.';
+  return 'Before we open another move, did you do this yet?<br><br><strong>'+escapeHtml(action)+'</strong><br><br>Reply with: done, no reply, reply, booked, paid, or wrong lane.';
 }
 
 function formatMissionActionAccountabilityActionLineV1(action){
