@@ -8650,6 +8650,141 @@ var MISSION_SKILL_RESPONSE_POOLS={};
 var MISSION_SKILL_REGRESSION_TESTS=[];
 var MISSION_SKILL_PACK_VALIDATION_REPORTS=[];
 
+/* =========================================================
+   MISSION BRAIN ARCHITECTURE MAP — v1
+   Documentation-only boundary map for future extraction.
+========================================================= */
+var MISSION_BRAIN_ARCHITECTURE_MAP_V1=[
+  {
+    id:'input_and_skill_packs',
+    label:'Input Normalization + Skill Packs',
+    section:'Input language banks / skill pack registry / skill pack validator',
+    owns:['A1XX phrase banks','skill pack registration','skill validation','protected route conflict checks'],
+    inspect:['A1XX_INPUT_LANGUAGE_BANK','MISSION_SKILL_PACKS','installMissionSkillPack','validateMissionSkillPackV1'],
+    mustNotOwn:['final route arbitration','confirmed app data truth','visible answer polish']
+  },
+  {
+    id:'router_and_priority',
+    label:'Router + Route Priority',
+    section:'Mission router v2 / direct route overrides / central route priority matrix',
+    owns:['slash commands','explicit route overrides','correction routing','protected route decisions','selected visible route'],
+    inspect:['getMissionRoutePriorityDecisionV1','scoreMissionRoutesV2','getMissionRoutePlan','getMissionDirectRouteOverrideV1'],
+    mustNotOwn:['card answer content','sales objection wording','memory persistence']
+  },
+  {
+    id:'truth_and_data_confidence',
+    label:'Truth Ledger + Data Confidence',
+    section:'Context truth ledger / data confidence / sync status',
+    owns:['session truth vs confirmed truth','DPC/CRM/calendar/weekly confirmation','data confidence','sync risk'],
+    inspect:['getMissionContextTruthLedgerV1','missionTruthLedgerHasDiscrepancyV1','getMissionDataConfidenceV2','getMissionSyncStatusV2'],
+    mustNotOwn:['route selection','sales scripts','response-frame variety']
+  },
+  {
+    id:'memory_and_result_loop',
+    label:'Memory + Result Loop',
+    section:'Result loop / decision memory / pattern memory / thread memory',
+    owns:['booked/paid/done session results','last useful thread','why/more continuation','pattern coaching','pending action memory'],
+    inspect:['completeMissionResultLoopV1','getMissionDecisionMemoryV1','getMissionPatternBasedCoachingMemoryV1','getMissionThreadMemoryV1'],
+    mustNotOwn:['explicit card prompts','sync/data questions','raw confirmed counts']
+  },
+  {
+    id:'planning_and_focus',
+    label:'Planning + Focus Engines',
+    section:'Cognitive load / execution mode / decision intent / action composer / accountability',
+    owns:['one-thing mode','execution posture','action plans','soft accountability','constraint-aware guidance'],
+    inspect:['getMissionCognitiveLoadV1','getMissionExecutionModeV1','getMissionDecisionIntentV1','getMissionActionComposerV1','getMissionActionAccountabilityV1'],
+    mustNotOwn:['protected sales replies','data trust answers','explicit card ownership']
+  },
+  {
+    id:'sales_intelligence',
+    label:'Sales Intelligence',
+    section:'Sales coach / sales deep packs / live call mode / offer-specific replies',
+    owns:['what should I say','objection handling','follow-ups','call prep','roleplay','offer-specific DMs'],
+    inspect:['getMissionSalesReplyOverrideV1','getMissionSalesCoachResponse','getMissionSalesDeepOutputResponseV1','getMissionSalesEdgeCaseResponseV1'],
+    mustNotOwn:['production asset status','weekly scorecard','sync diagnostics']
+  },
+  {
+    id:'card_intelligence',
+    label:'Card Intelligence',
+    section:'Brief / Outreach / Content / Production / Manager / Weekly / Resources card intelligence',
+    owns:['explicit card reads','card-owned next moves','cross-card handoffs','weekly/resources/card cohesion'],
+    inspect:['getMissionThisWeekCardResponseV1','getMissionOutreachCardIntelligenceResponseV11','getMissionContentCardIntelligenceResponseV11','getMissionProductionCardIntelligenceResponseV11','getMissionManagerCardIntelligenceResponseV11','getMissionBriefIntelligenceResponseV1'],
+    mustNotOwn:['general fallback routing','chat-only result confirmation','debug output rendering']
+  },
+  {
+    id:'communication_and_output',
+    label:'Communication + Output Framing',
+    section:'Communication cohesion / OS-aware output / answer quality / frame variety / presence',
+    owns:['context bridges','clean-read wording','output polish','anti-debug/source leak guard','response variety','visible bubble shaping'],
+    inspect:['getMissionCommunicationCohesionResponseV1','applyMissionAnswerQualityGuardsV1','applyMissionResponseFrameVarietyGuardV1','applyMissionPresenceLayer'],
+    mustNotOwn:['truth ledger calculation','route scoring','data writes']
+  },
+  {
+    id:'qa_and_debug',
+    label:'QA + Internal Debug',
+    section:'Self checks / broad regression / internal QA debug probe / QA panel',
+    owns:['route regression','leak checks','internal routing probes','future stress runner work'],
+    inspect:['runMissionMasterIntelligenceQASweepV1','runMissionBroadRegressionHardeningV1','getMissionInternalQADebugProbeV1','runMissionQAPanelCheck'],
+    mustNotOwn:['normal user-visible answers','automatic writes','production data mutation']
+  }
+];
+
+var MISSION_BRAIN_EXTRACTION_READINESS_V1={
+  version:'1.0',
+  behaviorChange:false,
+  nextSafeExtractionOrder:[
+    'qa_and_debug',
+    'communication_and_output',
+    'card_intelligence',
+    'sales_intelligence',
+    'memory_and_result_loop',
+    'truth_and_data_confidence',
+    'router_and_priority',
+    'input_and_skill_packs'
+  ],
+  extractionRules:[
+    'Do not split files until regression checks pass before and after extraction.',
+    'Do not move route priority without moving its protected-route tests.',
+    'Do not move memory layers without preserving sessionStorage/localStorage keys.',
+    'Do not let skill packs override protected sales, card, sync, money, or what-changed routes.',
+    'Do not expose internal QA/debug objects in normal Mission Command chat.'
+  ]
+};
+
+function getMissionBrainArchitectureMapV1(sectionId){
+  var list=MISSION_BRAIN_ARCHITECTURE_MAP_V1.slice();
+  if(!sectionId)return list;
+  sectionId=String(sectionId||'').toLowerCase().trim();
+  return list.filter(function(item){
+    return item.id===sectionId||String(item.label||'').toLowerCase()===sectionId;
+  })[0]||null;
+}
+
+function getMissionBrainArchitectureSectionForFunctionV1(functionName){
+  var needle=String(functionName||'').trim();
+  if(!needle)return null;
+  for(var i=0;i<MISSION_BRAIN_ARCHITECTURE_MAP_V1.length;i++){
+    var section=MISSION_BRAIN_ARCHITECTURE_MAP_V1[i];
+    if((section.inspect||[]).indexOf(needle)>=0)return section;
+  }
+  return null;
+}
+
+function runMissionBrainArchitectureMapCheckV1(){
+  var failures=[];
+  var required=['input_and_skill_packs','router_and_priority','truth_and_data_confidence','memory_and_result_loop','planning_and_focus','sales_intelligence','card_intelligence','communication_and_output','qa_and_debug'];
+  required.forEach(function(id){
+    var section=getMissionBrainArchitectureMapV1(id);
+    if(!section)failures.push('missing_section_'+id);
+    else if(!section.inspect||!section.inspect.length)failures.push('missing_inspect_'+id);
+  });
+  if(!getMissionBrainArchitectureSectionForFunctionV1('getMissionRoutePriorityDecisionV1'))failures.push('route_priority_lookup_failed');
+  if(!getMissionBrainArchitectureSectionForFunctionV1('getMissionSalesCoachResponse'))failures.push('sales_lookup_failed');
+  if(!getMissionBrainArchitectureSectionForFunctionV1('runMissionBroadRegressionHardeningV1'))failures.push('qa_lookup_failed');
+  if(MISSION_BRAIN_EXTRACTION_READINESS_V1.behaviorChange!==false)failures.push('architecture_map_behavior_flag');
+  return {passed:!failures.length,failures:failures,total:required.length+4};
+}
+
 function missionUniqueList(list){
   var seen={},out=[];
   (list||[]).forEach(function(item){
@@ -15947,7 +16082,9 @@ function runMissionMasterIntelligenceQASweepV1(){
     {q:'what changed today',route:'report'}
   ],{crm:[{name:'Lead'}]});
   if(!qaStress.passed)failures.push('qa_internal_debug_stress_runner');
-  return {passed:!failures.length,failures:failures,total:63};
+  var architectureMap=runMissionBrainArchitectureMapCheckV1();
+  if(!architectureMap.passed)failures.push('qa_brain_architecture_map');
+  return {passed:!failures.length,failures:failures,total:76};
 }
 
 /* =========================================================
