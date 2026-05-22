@@ -15700,6 +15700,12 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'sync_trust_data',q:'do i trust this data',must:/Data read|Clean enough|Partial|loaded/i},
       {name:'production_studio_session',q:'production studio session',must:/Production|studio|asset|song|beat/i},
       {name:'data_loaded_status',q:'what is loaded',must:/Data read|Clean enough|Partial|loaded/i},
+      {name:'cohesion_meaning',q:'what does that mean',must:/clean read|reading|useful read|move/i},
+      {name:'cohesion_money_bridge',q:'how does that connect to money',must:/connection|money|move|matters/i},
+      {name:'cohesion_card_owner',q:'what card owns this',must:/Card|belongs to|Open|Come back/i},
+      {name:'cohesion_data_source',q:'what data are you using',must:/looking at|Money|DPC|Lane|Card/i},
+      {name:'cohesion_clean_read',q:'give me the clean read',must:/Cleaner read|clean read|Move/i},
+      {name:'cohesion_app_context',q:'answer like the app knows what I’m doing',must:/Cleaner read|card|trackable|Move/i},
       {name:'sales_correction',q:'i meant sales not pipeline',must:/Sales lane, not pipeline|Ask:/i},
       {name:'changed_today',q:'what changed today',must:/Since the last saved checkpoint|Current read|changed/i},
       {name:'booked_count',q:'how many booked calls do i have',must:/booked/i}
@@ -15737,7 +15743,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:25,meta:failures.length?failures.join(', '):'25 regression prompts · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · leak guard'};
+  return {passed:!failures.length,failures:failures,total:31,meta:failures.length?failures.join(', '):'31 regression prompts · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -20812,6 +20818,104 @@ function getMissionSplitPromptResponseV1(ctx,question){
   return '';
 }
 
+/* =========================================================
+   MISSION COMMAND COMMUNICATION COHESION LAYER — v1
+========================================================= */
+var MISSION_COMMUNICATION_COHESION_SKILL_V1={
+  id:'mission_command_communication_cohesion_v1',
+  name:'Mission Command Communication Cohesion Layer v1',
+  purpose:'Connect route, data, memory, card ownership, and next action into one clear Mission Command answer.',
+  triggerCategories:{
+    context_connection:[
+      'what does that mean','what do you mean','what u mean','what you mean by that','how does that connect','how does this connect','what are you basing that on','why are you telling me that','what does the app see','what are we reading right now','what lane is this','what card owns this','where is this coming from','where that coming from','what is the read','what is the clean read','what is the real read','give me the clean read','give me the real read','what is the point','why does that matter','what does that have to do with today','what does that have to do with money','what that got to do with money','how this help','how does this help','how does this help me make money','what are you looking at','what are we looking at','what is the OS seeing','what is Mission Command seeing','what is this based on','what is the signal','what is the takeaway','ok so what','bet so what now'
+    ],
+    lane_bridge:[
+      'how does this affect sales','does this connect to content','does this connect to sales','should this go in outreach or sales','is this a production thing or a money thing','is this content or sales','is this pipeline or production','what does this mean for today','what do i do with this information','what we doing with that','what is the play off that','what is the move off that','connect this to money','connect this to content','connect this to sales','connect this to production','connect this to outreach','connect this back to the OS','bring this back to the app','tie this back to the move','tie this to the mission','where does this fit','what lane owns this','which worker owns this','which card handles this','what system handles this','which part of the app is this','where should this live','what does this change','what does this unlock','what does this block','what matters here','what is primary here','what is secondary here','what can wait','what should move first'
+    ],
+    clearer_explanation:[
+      'say that cleaner','say it cleaner','make that make sense','make it make sense','explain that like the app','explain it like the app','give me the simple version','what is the simple version','what is the point','why should i care','what is the takeaway','cleaner read','clean read','simple read','real read','break that down','translate that','put that in plain english','say less but clearer','answer cleaner','that sounds generic','that sounds disconnected','that sounds random','that does not sound connected','that does not sound like the app','make it sound more like Mission Command','answer like Mission Command','answer like the app knows what i am doing','answer like you know what i am doing','do not just give me advice','do not give me a dashboard answer','what are you really saying','what is the actual read','what is the useful read','what should i take from that','what is the bottom line','what is the operator read','what is the business read'
+    ],
+    next_step_translation:[
+      'turn that into the move','turn this into the move','what button do i press','what card do i open','what do i log','what changes after i do that','what should i come back and tell you','what result are we looking for','what result are we trying to create','what do i do after that','where do i go from here','where do we go from here','what is the next status change','what do i update','where do i update it','what do i check after this','what should i report back','what do i say after i do it','what counts as done','what counts as a result','what should change in the app','what card should change','where should i click next','what tab should i open','what lane do i move','what should i finish first','what is the smallest visible move','what is the logged result','what should i log after this','what does done mean here','what happens when i finish','what should i bring back','what is the success signal','what is the next clean action'
+    ],
+    correction_repair:[
+      'that is not what i meant','thats not what i meant','wrong read','you are answering the wrong thing','that answer is disconnected','that sounds disconnected','connect it back to the app','make it sound more like Mission Command','answer like you know what i am doing','do not just give me advice','wrong lane','not that','nah not that','no not that','that missed it','you missed it','wrong thing','try again but connected','try again but with the app context','say that with the OS context','answer from the OS','answer from the app','connect the answer','that felt random','that felt generic','too generic','too much advice','not enough app context','where is the app in that answer','what is the actual app move','bring it back to the card','bring it back to the data','bring it back to money','bring it back to the mission','make the answer useful','make it operational','make it actionable'
+    ],
+    context_awareness:[
+      'what mode are we in','what card are we on','what card am i on','what is the OS looking at','what data do you have','what data are you using','what data is missing','what memory are you using','what was the last move','what is the active loop','what is the last result','what is the active route','what lane are we in','what worker is answering','what is the context','what is the current context','what is active right now','what did you carry over','what are you remembering','are you using memory','are you using the last thread','what did i just ask','what are we still on','what did we leave open','what is the open loop','what is the current card','what is the current lane','what is the app state','what is the loaded packet','what can you see','what can you not see','what is partial','what is trusted','what is stale','what is safe to act on','what should not be assumed'
+    ]
+  }
+};
+
+function getMissionCommunicationCohesionCategoryV1(question){
+  var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  if(!q)return '';
+  if(/\b(what mode are we in|what card are we on|what card am i on|what is the os looking at|what data do you have|what data are you using|what data is missing|what memory are you using|what was the last move|what is the active loop|what lane are we in|what worker is answering|what is the current context|what are you remembering|what did you carry over|what is stale|what is trusted|what can you see|what can you not see)\b/.test(q))return 'context_awareness';
+  if(/\b(that is not what i meant|thats not what i meant|wrong read|answering the wrong thing|sounds disconnected|connect it back|answer like you know|answer like the app knows|app knows what i|app know what i|do not just give me advice|wrong lane|nah not that|no not that|you missed it|too generic|felt random|bring it back)\b/.test(q))return 'correction_repair';
+  if(/\b(turn that into the move|turn this into the move|what button do i press|what card do i open|what do i log|what changes after|what should i come back|what result are we|where do i go from here|what counts as done|what should i log after this|what is the success signal)\b/.test(q))return 'next_step_translation';
+  if(/\b(say that cleaner|make that make sense|make it make sense|explain that like the app|give me the simple version|what is the simple version|why should i care|cleaner read|clean read|real read|break that down|translate that|plain english|bottom line|operator read|business read)\b/.test(q))return 'clearer_explanation';
+  if(/\b(affect sales|connect to content|connect to sales|outreach or sales|production thing or a money thing|content or sales|pipeline or production|mean for today|do i do with this information|connect this to|connect this back|tie this|where does this fit|what lane owns|which worker owns|which card handles|what system handles|where should this live|what is primary|what can wait)\b/.test(q))return 'lane_bridge';
+  if(/\b(what does that mean|what do you mean|what u mean|what you mean|how does that connect|what are you basing|why are you telling|what does the app see|what are we reading|what lane is this|what card owns this|where is this coming from|where that coming from|what is the read|what is the point|what does that have to do|how this help|what are you looking at|what is the signal|what is the takeaway|ok so what|bet so what now|so what|so what now)\b/.test(q))return 'context_connection';
+  return '';
+}
+
+function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,turn){
+  ctx=ctx||{};
+  var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  var activeRoute=route||turn&&turn.route||getMissionDirectRouteOverrideV1(q)||'now';
+  var cardSignal=typeof getMissionCardSignalV1==='function'?getMissionCardSignalV1(q,activeRoute):null;
+  var card=cardSignal&&cardSignal.card||({leads:'outreach',sales:'outreach',dpc:'outreach',report:'brief',money:'brief',content:'content',production:'production',calendar:'manager',weekly:'manager',sync:'manager',resources:'resources'}[activeRoute]||'command');
+  var mode=typeof getMissionContextMode==='function'?getMissionContextMode():'general';
+  var routeLabel=typeof getMissionRouteLabelV2==='function'?getMissionRouteLabelV2(activeRoute):activeRoute;
+  var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var missing=[];
+  if(!(window.__crmLeads&&window.__crmLeads.length))missing.push('CRM');
+  if(!((window.__contentPipelinePieces&&window.__contentPipelinePieces.length)||(window.__contentPieces&&window.__contentPieces.length)))missing.push('content');
+  if(!(window.__productionPieces&&window.__productionPieces.length))missing.push('production');
+  var lastResult='';
+  try{
+    var session=getMissionBrainSession&&getMissionBrainSession()||{};
+    lastResult=session&&session.resultLoop&&session.resultLoop.lastResult&&(session.resultLoop.lastResult.label||session.resultLoop.lastResult.type)||'';
+  }catch(e){}
+  var nextMove=brainState&&brainState.nextBestMove||ctx.nowText||'make one visible move and log what changed';
+  return {
+    q:q,
+    route:activeRoute,
+    routeLabel:routeLabel||'Mission Command',
+    card:card,
+    cardLabel:{brief:'Mission Brief',outreach:'Outreach',content:'Content',production:'Production',manager:'Manager',resources:'Rolodex',command:'Mission Command'}[card]||card,
+    mode:mode==='general'?'General Mode':mode,
+    moneyLine:'$'+Number(ctx.rev||0)+' of $'+Number(ctx.wk||0)+' loaded',
+    gap:Number(ctx.gap||0),
+    dpcLine:Number(daily.dms||0)+' DMs, '+Number(daily.coldCalls||0)+' calls, '+Number(daily.calls||0)+' booked, '+Number(daily.closes||0)+' closes',
+    missing:missing,
+    lastResult:lastResult,
+    nextMove:nextMove
+  };
+}
+
+function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,turn){
+  var category=getMissionCommunicationCohesionCategoryV1(question||'');
+  if(!category)return '';
+  var c=getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,turn);
+  if(/\b(what card owns this|what lane owns this|which card handles|what card should change|what card do i open|where should this live)\b/.test(c.q)){
+    return 'This belongs to '+escapeHtml(c.cardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open: '+escapeHtml(c.cardLabel)+'.<br><br>Come back with: done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+  }
+  if(category==='context_awareness'){
+    return 'I am looking at:<br><br>- Lane: '+escapeHtml(c.routeLabel)+'<br>- Card: '+escapeHtml(c.cardLabel)+'<br>- Mode: '+escapeHtml(c.mode)+'<br>- Money: '+escapeHtml(c.moneyLine)+'<br>- DPC: '+escapeHtml(c.dpcLine)+(c.lastResult?'<br>- Last result: '+escapeHtml(c.lastResult):'')+(c.missing.length?'<br>- Missing: '+escapeHtml(c.missing.join(', ')):'')+'<br><br>The useful read is: '+escapeHtml(c.nextMove)+'.';
+  }
+  if(category==='lane_bridge'){
+    return 'Here is the connection:<br><br>'+escapeHtml(c.routeLabel)+' is pointing at '+escapeHtml(c.cardLabel)+'.<br><br>That matters because this app needs the work to land as a card action, not just advice.<br><br>So the move is: '+escapeHtml(c.nextMove)+'.';
+  }
+  if(category==='next_step_translation'){
+    return 'This belongs to '+escapeHtml(c.cardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open: '+escapeHtml(c.cardLabel)+'.<br><br>Come back with: done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+  }
+  if(category==='correction_repair'||category==='clearer_explanation'){
+    return 'Cleaner read:<br><br>'+escapeHtml(c.nextMove)+'.<br><br>Why:<br>'+escapeHtml(c.cardLabel)+' is the surface that turns this from advice into a trackable result.<br><br>Move:<br>Do the smallest visible step there, then tell me what changed.';
+  }
+  return 'I am reading '+escapeHtml(c.cardLabel)+' plus the current '+escapeHtml(c.routeLabel)+' lane.<br><br>The clean read is: '+escapeHtml(c.nextMove)+'.<br><br>'+(c.missing.length?'The part I do not know yet: '+escapeHtml(c.missing.join(', '))+'.<br><br>':'')+'I would trust this enough to take one safe next action, but not enough to invent missing numbers.';
+}
+
 function getMissionMoneyReadResponseV1(ctx,question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
   if(!/\b(how much money|how much have i made|what came in|what cam in|any new sales|money check|revenue report|how far off|what can i do to make some money|what should i do to make money today|make some money today|make money today|why am i not making money|what's keeping me broke|whats keeping me broke)\b/.test(q))return '';
@@ -20911,6 +21015,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   }
   var moneyReadResponse=getMissionMoneyReadResponseV1(ctx,cleanQuestion||question||'');
   if(moneyReadResponse)return finishMissionAnswer(moneyReadResponse,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false});
+  var cohesionAnswer=getMissionCommunicationCohesionAnswerV1(ctx,question||cleanQuestion||'',route,brainState,turnV2);
+  if(cohesionAnswer)return finishMissionAnswer(cohesionAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(rawQ)||/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
     route='dpc';
     return finishMissionAnswer(getMissionBookedCallsCountAnswerV1(ctx),{sessionArc:false,closer:false,presence:false});
