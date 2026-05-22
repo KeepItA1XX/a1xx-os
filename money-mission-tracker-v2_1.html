@@ -11964,6 +11964,7 @@ function getMissionResultLoopSessionV1(){
 function rememberMissionSuggestedActionV1(turn,action){
   if(!turn||!action)return;
   var session=sanitizeMissionBrainSessionForFreshStarterV12(getMissionResultLoopSessionV1(),turn&&turn.rawInput||turn&&turn.normalizedInput||'');
+  if(missionContextArbitrationBlocksStaleBookedV11(turn&&turn.contextArbitration)&&missionPendingLooksBookedPrepV12(action))return;
   session.resultLoop=session.resultLoop||{};
   session.resultLoop.history=Array.isArray(session.resultLoop.history)?session.resultLoop.history:[];
   session.resultLoop.pendingAction={
@@ -12542,6 +12543,17 @@ function sanitizeMissionSessionByArbitrationV11(session,arbitration){
   return next;
 }
 
+function missionContextArbitrationBlocksStaleBookedV11(arbitration){
+  return !!(arbitration&&(arbitration.staleSignals||[]).indexOf('blocked_booked_carry')>=0);
+}
+
+function getMissionContextFreshStartFallbackV11(turn,arbitration){
+  var q=normalizeMissionQuestion(arbitration&&arbitration.currentPrompt||turn&&turn.rawInput||turn&&turn.normalizedInput||'');
+  if(/\b(why|why again)\b/.test(q))return 'Because this is a fresh thread.<br><br>I am not carrying the old booked-call prep into this answer unless booked happened in this chat.<br><br>Right now, choose one visible move and log the result.';
+  if(/\b(what next|what now|what should i do|what should i do today|where we at|lock in|run it)\b/.test(q))return 'You are starting from the current OS state.<br><br>I am not using old booked-call prep here.<br><br>First move: log one measurable outreach or sales action so the day has a real trail.';
+  return 'Clean start.<br><br>I am not using old booked-call prep in this chat.<br><br>Ask for the lane you want next: pipeline, sales, content, production, manager, or sync.';
+}
+
 function applyMissionContextArbitrationToTurnV11(turn,arbitration){
   if(!turn)return turn;
   turn.contextArbitration=arbitration||null;
@@ -12573,6 +12585,7 @@ function applyMissionContextAnswerGuardV11(html,turn,arbitration){
     arbitration.reintroducedFieldsDetected=arbitration.reintroducedFieldsDetected||[];
     if(arbitration.reintroducedFieldsDetected.indexOf('visible_booked_context')<0)arbitration.reintroducedFieldsDetected.push('visible_booked_context');
     captureMissionContextArbitrationFailureV11(turn,out,arbitration);
+    return getMissionContextFreshStartFallbackV11(turn,arbitration);
   }
   return out;
 }
@@ -12593,6 +12606,94 @@ function captureMissionContextArbitrationFailureV11(turn,html,arbitration){
     });
     sessionStorage.setItem(MISSION_CONTEXT_ARBITRATION_QA_KEY,JSON.stringify(list.slice(0,25)));
   }catch(e){}
+}
+
+function runMissionLivePathContextArbitrationRegressionV11(){
+  var failures=[];
+  var priorSessions=null,priorActive=null,priorAlias=null,priorBrain=null,priorCtx=window.__missionCommandContext||null,priorLastArb=window.__missionLastContextArbitrationV11||null;
+  try{
+    priorSessions=localStorage.getItem(MISSION_CHAT_SESSIONS_KEY);
+    priorActive=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY);
+    priorAlias=localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);
+    priorBrain=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+    var now=new Date().toISOString();
+    var old=new Date(Date.now()-3600000).toISOString();
+    var ctx={rev:999,wk:500,gap:0,dpc:{dms:0,coldCalls:0,calls:0,booked:0,closes:0,money:0},crm:[{},{}]};
+    window.__missionCommandContext=ctx;
+    var staleBrain={
+      resultLoop:{
+        lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:old},
+        pendingAction:{label:'Prep Call',action:'prep the booked call and add the calendar detail',target:'sales_coach',reason:'thread_memory_booked',suggestedAt:old},
+        history:[{type:'booked',label:'Booked Call',recordedAt:old}]
+      },
+      lastActionPlan:{label:'Prep Call',action:'prep the booked call and add the calendar detail',target:'sales_coach',reason:'decision_memory_booked',suggestedAt:old},
+      threadMemory:{activeRoute:'sales',turns:[{question:'booked',route:'sales',timestamp:old}],lastUpdatedAt:old},
+      lastRoute:'sales',
+      sessionTopic:'sales'
+    };
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{
+      id:'qa_context_arb_fresh',
+      title:'New Chat',
+      createdAt:now,
+      updatedAt:now,
+      tags:['new'],
+      messages:[{role:'user',body:'good morning',ts:now},{role:'assistant',body:'Current mode is General Mode.',ts:now}],
+      memory:{brainSession:staleBrain}
+    }]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_context_arb_fresh');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_context_arb_fresh');
+    var freshAnswer=String(getMissionCommandResponse('ask',ctx,'what should i do today',{})||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    var freshArb=window.__missionLastContextArbitrationV11||{};
+    var rawAfter=getMissionRawBrainSessionForArbitrationV11();
+    if(/Last result was booked|booked-call thread|prep the booked call/i.test(freshAnswer))failures.push('fresh_chat_visible_booked_prep');
+    if(freshArb.finalContextMode!=='blocked_stale_memory')failures.push('fresh_chat_context_mode_'+(freshArb.finalContextMode||'none'));
+    if((freshArb.staleSignals||[]).indexOf('blocked_booked_carry')<0)failures.push('fresh_chat_missing_blocked_booked_signal');
+    if(rawAfter.resultLoop&&rawAfter.resultLoop.lastResult&&rawAfter.resultLoop.lastResult.type==='booked')failures.push('fresh_chat_saved_stale_booked_result');
+    if(rawAfter.resultLoop&&missionPendingLooksBookedPrepV12(rawAfter.resultLoop.pendingAction))failures.push('fresh_chat_saved_stale_booked_pending');
+
+    var bookedAt=new Date(Date.now()+1).toISOString();
+    var activeBrain={
+      resultLoop:{
+        lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:bookedAt,chatId:'qa_context_arb_booked'},
+        pendingAction:{label:'Prep Call',action:'prep the booked call and add the calendar detail',target:'sales_coach',reason:'thread_memory_booked',suggestedAt:bookedAt},
+        history:[{type:'booked',label:'Booked Call',recordedAt:bookedAt,chatId:'qa_context_arb_booked'}]
+      },
+      lastActionPlan:{label:'Prep Call',action:'prep the booked call and add the calendar detail',target:'sales_coach',reason:'decision_memory_booked',suggestedAt:bookedAt},
+      threadMemory:{activeRoute:'sales',turns:[{question:'booked',route:'sales',timestamp:bookedAt}],lastUpdatedAt:bookedAt},
+      lastRoute:'sales',
+      sessionTopic:'sales'
+    };
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{
+      id:'qa_context_arb_booked',
+      title:'Sales',
+      createdAt:now,
+      updatedAt:bookedAt,
+      tags:['new'],
+      messages:[
+        {role:'user',body:'good morning',ts:now},
+        {role:'assistant',body:'Current mode is General Mode.',ts:now},
+        {role:'user',body:'booked',ts:bookedAt},
+        {role:'assistant',body:'Booked call logged.',ts:bookedAt}
+      ],
+      memory:{brainSession:activeBrain}
+    }]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_context_arb_booked');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_context_arb_booked');
+    var bookedAnswer=String(getMissionCommandResponse('ask',ctx,'what next',{})||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    var bookedArb=window.__missionLastContextArbitrationV11||{};
+    if(!/prep|calendar detail|opening question/i.test(bookedAnswer))failures.push('active_booked_prep_not_allowed');
+    if((bookedArb.staleSignals||[]).length)failures.push('active_booked_false_stale_signal');
+  }catch(e){
+    failures.push('exception_'+(e&&e.message?e.message:String(e)));
+  }finally{
+    if(priorSessions===null)localStorage.removeItem(MISSION_CHAT_SESSIONS_KEY);else localStorage.setItem(MISSION_CHAT_SESSIONS_KEY,priorSessions);
+    if(priorActive===null)localStorage.removeItem(MISSION_CHAT_ACTIVE_SESSION_KEY);else localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,priorActive);
+    if(priorAlias===null)localStorage.removeItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);else localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,priorAlias);
+    if(priorBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorBrain);
+    window.__missionCommandContext=priorCtx;
+    window.__missionLastContextArbitrationV11=priorLastArb;
+  }
+  return {passed:!failures.length,failures:failures,total:2};
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
@@ -14601,6 +14702,9 @@ function getMissionBrainSessionV2(){
 function setMissionBrainSessionV2(session){
   try{
     session=session||{};
+    if(missionContextArbitrationBlocksStaleBookedV11(window.__missionLastContextArbitrationV11)){
+      session=sanitizeMissionSessionByArbitrationV11(session,window.__missionLastContextArbitrationV11);
+    }
     sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify(session));
     patchMissionActiveChatMemory('memory',function(memory){
       memory=memory||{};
