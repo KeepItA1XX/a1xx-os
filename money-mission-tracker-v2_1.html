@@ -10511,6 +10511,7 @@ var MISSION_TURN_CHECKPOINTS_KEY='a1xx_mc_turn_checkpoints_v1';
 var MISSION_BRAIN_SESSION_V2_KEY='a1xx_mc_brain_session_v2';
 var MISSION_PRESENCE_LOG_KEY='a1xx_mc_presence_log';
 var MISSION_CONTEXT_MODE_KEY='a1xx_mc_context_mode_v1';
+var MISSION_CONTEXT_ARBITRATION_QA_KEY='a1xx_mc_context_arbitration_qa_v11';
 var MISSION_CONTEXT_MODE_LABELS={general:'General',brief:'Brief',outreach:'Outreach',content:'Content',production:'Production',manager:'Manager'};
 var MISSION_CONTEXT_MODE_ROUTES={brief:'now',outreach:'leads',content:'content',production:'production',manager:'calendar'};
 window.__missionActiveCard=window.__missionActiveCard||'command';
@@ -10567,6 +10568,7 @@ function createMissionTurn(rawInput,kind,options){
     bubblePacket:null,
     integrityFlags:[],
     integrityOverrides:[],
+    contextArbitration:null,
     decisionTrace:[],
     warnings:[],
     errors:[],
@@ -12334,6 +12336,263 @@ function missionResultIsFreshForActiveChatV12(result){
   }catch(e){
     return true;
   }
+}
+
+/* =========================================================
+   MISSION CONTEXT ARBITRATION — v1.1
+========================================================= */
+function getMissionActiveChatMetaV11(){
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    return {
+      activeChatId:active&&active.id||'',
+      activeChatCreatedAt:active&&active.createdAt||'',
+      activeChatUpdatedAt:active&&active.updatedAt||'',
+      activeMessageCount:active&&Array.isArray(active.messages)?active.messages.length:0
+    };
+  }catch(e){
+    return {activeChatId:'',activeChatCreatedAt:'',activeChatUpdatedAt:'',activeMessageCount:0};
+  }
+}
+
+function getMissionRawBrainSessionForArbitrationV11(){
+  try{
+    var scoped=getMissionActiveChatMemory('memory')||{};
+    if(scoped.brainSession&&Object.keys(scoped.brainSession).length)return scoped.brainSession;
+  }catch(e){}
+  try{
+    return JSON.parse(sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY)||'{}')||{};
+  }catch(e){
+    return {};
+  }
+}
+
+function missionSessionHasBookedBaggageV11(session){
+  session=session||{};
+  var loop=session.resultLoop||{};
+  return !!(loop.lastResult&&loop.lastResult.type==='booked')||
+    !!(Array.isArray(loop.history)&&loop.history.some(function(item){return item&&item.type==='booked';}))||
+    missionPendingLooksBookedPrepV12(loop.pendingAction)||
+    missionPendingLooksBookedPrepV12(session.lastActionPlan);
+}
+
+function getMissionContextBoundaryModeV11(turn,ctx){
+  turn=turn||{};
+  var q=normalizeMissionQuestion(turn.rawInput||turn.normalizedInput||'');
+  var activeMeta=getMissionActiveChatMetaV11();
+  var session=null;
+  session=getMissionRawBrainSessionForArbitrationV11();
+  var explicitRoute=(typeof getMissionThreadExplicitRouteFromQuestionV1==='function'?getMissionThreadExplicitRouteFromQuestionV1(q):'')||
+    (typeof getMissionDirectRouteOverrideV1==='function'?getMissionDirectRouteOverrideV1(q):'');
+  var isDataTrust=typeof isMissionDataTrustPromptV12==='function'?isMissionDataTrustPromptV12(q):/\b(what data|data current|data missing|what do you see|what should i trust|sync check)\b/.test(q);
+  var isCardRead=typeof isMissionExplicitCardPromptV1==='function'?isMissionExplicitCardPromptV1(q):/\b(brief card|outreach card|content card|beat card|manager card|weekly)\b/.test(q);
+  var isCorrection=!!(typeof getMissionCorrectionTargetRouteV2==='function'&&getMissionCorrectionTargetRouteV2(q))||/\b(wrong read|nah not that|not that|i meant|wrong lane)\b/.test(q);
+  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(q):null;
+  var freshStarter=missionQuestionIsFreshStarterV12(q);
+  var hasFreshBoundary=!isNaN(missionLatestActiveChatFreshStarterTimeV12());
+  var bookedBaggage=missionSessionHasBookedBaggageV11(session);
+  var shouldBlockBooked=bookedBaggage&&missionShouldBlockStaleBookedCarryV12(q);
+  var lastUpdatedAt=session&&((session.threadMemory&&session.threadMemory.lastUpdatedAt)||session.lastTurnAt)||'';
+  var gapMinutes=typeof getMissionAgeMinutes==='function'?getMissionAgeMinutes(lastUpdatedAt):null;
+  if(shouldBlockBooked)return 'blocked_stale_memory';
+  if(freshStarter)return 'clean_start';
+  if(activeMeta.activeMessageCount<=1)return 'first_turn';
+  if(explicitRoute)return 'explicit_route';
+  if(isCorrection)return 'correction';
+  if(resultSignal)return 'result_signal';
+  if(isDataTrust)return 'data_trust';
+  if(isCardRead)return 'card_read';
+  if(gapMinutes!==null&&gapMinutes>=120)return 'long_gap_reentry';
+  if(hasFreshBoundary&&!missionActiveChatHasBookedAfterFreshStarterV12()&&bookedBaggage)return 'blocked_stale_memory';
+  return 'same_thread';
+}
+
+function classifyMissionMemoryEligibilityV11(session,arbitration){
+  session=session||{};
+  arbitration=arbitration||{};
+  var mode=arbitration.promptBoundaryMode||'same_thread';
+  var result=session.resultLoop&&session.resultLoop.lastResult||null;
+  var pending=session.resultLoop&&session.resultLoop.pendingAction||session.lastActionPlan||null;
+  var pendingBooked=missionPendingLooksBookedPrepV12(pending);
+  var bookedStale=!!(result&&result.type==='booked'&&!missionResultIsFreshForActiveChatV12(result));
+  var blockedBookedCarry=missionShouldBlockStaleBookedCarryV12(arbitration.currentPrompt||'')&&((result&&result.type==='booked')||pendingBooked);
+  var cleanStartLike=/^(clean_start|first_turn|blocked_stale_memory)$/.test(mode);
+  var sources=[
+    'result_loop','pending_action','thread_memory','decision_memory','pattern_memory','silence_intelligence',
+    'action_accountability','communication_cohesion','scoped_chat_memory','sessionStorage_brain_state',
+    'localStorage_durable_memory','dashboard_data','confirmed_dpc_crm_calendar'
+  ];
+  var allowed=[],blocked=[],downgraded=[],chatOnly=[],internalOnly=['context_arbitration_qa'];
+  sources.forEach(function(source){
+    if(source==='dashboard_data'||source==='confirmed_dpc_crm_calendar'||source==='localStorage_durable_memory'){
+      allowed.push(source);
+      return;
+    }
+    if(cleanStartLike&&/^(result_loop|pending_action|thread_memory|decision_memory|silence_intelligence|action_accountability)$/.test(source)){
+      blocked.push(source);
+      return;
+    }
+    if(mode==='data_trust'&&/^(silence_intelligence|action_accountability|pattern_memory)$/.test(source)){
+      blocked.push(source);
+      return;
+    }
+    if(mode==='explicit_route'&&/^(silence_intelligence|action_accountability)$/.test(source)){
+      blocked.push(source);
+      return;
+    }
+    if(mode==='long_gap_reentry'&&/^(pending_action|action_accountability)$/.test(source)){
+      downgraded.push(source);
+      return;
+    }
+    allowed.push(source);
+  });
+  if(blockedBookedCarry||bookedStale){
+    ['result_loop','pending_action','thread_memory','decision_memory','action_accountability','communication_cohesion'].forEach(function(source){
+      if(blocked.indexOf(source)<0)blocked.push(source);
+      allowed=allowed.filter(function(item){return item!==source;});
+    });
+  }
+  if(result&&result.type&&!bookedStale&&mode==='result_signal')chatOnly.push('result_loop');
+  return {
+    allowed:allowed,
+    blocked:Array.from(new Set(blocked)),
+    downgraded:downgraded,
+    chatOnly:chatOnly,
+    internalOnly:internalOnly,
+    staleSignals:{
+      bookedResultStale:bookedStale,
+      bookedPendingStale:!!(pendingBooked&&blockedBookedCarry),
+      blockedBookedCarry:!!blockedBookedCarry
+    }
+  };
+}
+
+function buildMissionContextArbitrationV11(turn,ctx){
+  turn=turn||{};
+  var session=null;
+  session=getMissionRawBrainSessionForArbitrationV11();
+  var activeMeta=getMissionActiveChatMetaV11();
+  var prompt=turn.rawInput||turn.normalizedInput||'';
+  var mode=getMissionContextBoundaryModeV11(turn,ctx);
+  var eligibility=classifyMissionMemoryEligibilityV11(session,{
+    promptBoundaryMode:mode,
+    currentPrompt:prompt
+  });
+  var loop=session&&session.resultLoop||{};
+  var pending=loop.pendingAction||session.lastActionPlan||null;
+  var explicitRoute=(typeof getMissionThreadExplicitRouteFromQuestionV1==='function'?getMissionThreadExplicitRouteFromQuestionV1(prompt):'')||
+    (typeof getMissionDirectRouteOverrideV1==='function'?getMissionDirectRouteOverrideV1(prompt):'');
+  var staleSignals=[];
+  if(eligibility.staleSignals.bookedResultStale)staleSignals.push('booked_result_stale');
+  if(eligibility.staleSignals.bookedPendingStale)staleSignals.push('booked_pending_stale');
+  if(eligibility.staleSignals.blockedBookedCarry)staleSignals.push('blocked_booked_carry');
+  return {
+    version:'1.1',
+    activeChatId:activeMeta.activeChatId,
+    activeChatCreatedAt:activeMeta.activeChatCreatedAt,
+    activeChatUpdatedAt:activeMeta.activeChatUpdatedAt,
+    activeMessageCount:activeMeta.activeMessageCount,
+    currentPrompt:String(prompt||''),
+    currentPromptAt:new Date().toISOString(),
+    latestFreshStarterAt:(function(){var t=missionLatestActiveChatFreshStarterTimeV12();return isNaN(t)?'':new Date(t).toISOString();})(),
+    promptBoundaryMode:mode,
+    route:turn.route||'',
+    explicitRoute:explicitRoute||'',
+    lastResult:loop.lastResult||null,
+    lastResultStatus:loop.lastResult?(missionResultIsFreshForActiveChatV12(loop.lastResult)?'active_context':'stale_or_unconfirmed'):'none',
+    pendingAction:pending,
+    pendingActionStatus:pending?(missionPendingLooksBookedPrepV12(pending)&&eligibility.staleSignals.blockedBookedCarry?'blocked_stale':'eligible_or_unclassified'):'none',
+    allowedMemorySources:eligibility.allowed,
+    blockedMemorySources:eligibility.blocked,
+    downgradedMemorySources:eligibility.downgraded,
+    chatOnlyMemorySources:eligibility.chatOnly,
+    staleSignals:staleSignals,
+    scrubbedFields:[],
+    reintroducedFieldsDetected:[],
+    finalContextMode:mode,
+    reasonForContextMode:staleSignals.length?'stale_context_detected':'boundary_classified',
+    finalAnswerLayer:'',
+    visibleAnswerGuards:staleSignals.length?['stale_booked_prep_watch'] : [],
+    qaNotes:[]
+  };
+}
+
+function sanitizeMissionSessionByArbitrationV11(session,arbitration){
+  session=session||{};
+  arbitration=arbitration||{};
+  if((arbitration.blockedMemorySources||[]).indexOf('result_loop')<0&&(arbitration.blockedMemorySources||[]).indexOf('pending_action')<0)return session;
+  var next=Object.assign({},session);
+  var loop=Object.assign({},next.resultLoop||{});
+  if((arbitration.staleSignals||[]).indexOf('blocked_booked_carry')>=0){
+    if(loop.lastResult&&loop.lastResult.type==='booked'){loop.lastResult=null;arbitration.scrubbedFields.push('resultLoop.lastResult.booked');}
+    if(Array.isArray(loop.history)){
+      var before=loop.history.length;
+      loop.history=loop.history.filter(function(item){return !(item&&item.type==='booked');});
+      if(loop.history.length!==before)arbitration.scrubbedFields.push('resultLoop.history.booked');
+    }
+    if(missionPendingLooksBookedPrepV12(loop.pendingAction)){loop.pendingAction=null;arbitration.scrubbedFields.push('resultLoop.pendingAction.booked_prep');}
+    if(missionPendingLooksBookedPrepV12(next.lastActionPlan)){
+      next.lastActionPlan=null;
+      next.lastActionSuggested='';
+      next.lastActionStatus='none';
+      arbitration.scrubbedFields.push('lastActionPlan.booked_prep');
+    }
+    next.resultLoop=loop;
+  }
+  return next;
+}
+
+function applyMissionContextArbitrationToTurnV11(turn,arbitration){
+  if(!turn)return turn;
+  turn.contextArbitration=arbitration||null;
+  window.__missionLastContextArbitrationV11=arbitration||null;
+  if(turn&&typeof addMissionTrace==='function')addMissionTrace(turn,'context_arbitration_v11',summarizeMissionContextArbitrationV11(arbitration));
+  return turn;
+}
+
+function summarizeMissionContextArbitrationV11(arbitration){
+  if(!arbitration)return {};
+  return {
+    mode:arbitration.finalContextMode||arbitration.promptBoundaryMode||'',
+    route:arbitration.route||'',
+    activeChatId:arbitration.activeChatId||'',
+    allowed:(arbitration.allowedMemorySources||[]).length,
+    blocked:arbitration.blockedMemorySources||[],
+    staleSignals:arbitration.staleSignals||[],
+    pendingActionStatus:arbitration.pendingActionStatus||'',
+    lastResultStatus:arbitration.lastResultStatus||''
+  };
+}
+
+function applyMissionContextAnswerGuardV11(html,turn,arbitration){
+  arbitration=arbitration||turn&&turn.contextArbitration||window.__missionLastContextArbitrationV11||null;
+  if(!arbitration)return html;
+  var out=String(html||'');
+  var hasBlockedBooked=(arbitration.staleSignals||[]).indexOf('blocked_booked_carry')>=0;
+  if(hasBlockedBooked&&/\b(Last result was booked|booked-call thread|prep the booked call|prep the call|calendar detail|opening question|Conversation moved to calendar)\b/i.test(out)){
+    arbitration.reintroducedFieldsDetected=arbitration.reintroducedFieldsDetected||[];
+    if(arbitration.reintroducedFieldsDetected.indexOf('visible_booked_context')<0)arbitration.reintroducedFieldsDetected.push('visible_booked_context');
+    captureMissionContextArbitrationFailureV11(turn,out,arbitration);
+  }
+  return out;
+}
+
+function captureMissionContextArbitrationFailureV11(turn,html,arbitration){
+  try{
+    var list=JSON.parse(sessionStorage.getItem(MISSION_CONTEXT_ARBITRATION_QA_KEY)||'[]');
+    list.unshift({
+      ts:new Date().toISOString(),
+      prompt:turn&&turn.rawInput||arbitration&&arbitration.currentPrompt||'',
+      visibleAnswer:String(html||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,500),
+      chosenRoute:turn&&turn.route||arbitration&&arbitration.route||'',
+      contextMode:arbitration&&arbitration.finalContextMode||'',
+      allowedMemorySources:arbitration&&arbitration.allowedMemorySources||[],
+      blockedMemorySources:arbitration&&arbitration.blockedMemorySources||[],
+      staleSignals:arbitration&&arbitration.staleSignals||[],
+      reason:'blocked_context_visible_in_answer'
+    });
+    sessionStorage.setItem(MISSION_CONTEXT_ARBITRATION_QA_KEY,JSON.stringify(list.slice(0,25)));
+  }catch(e){}
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
@@ -14776,7 +15035,7 @@ function saveMissionTurnCheckpoint(turn){
     if(!Array.isArray(list))list=[];
     var sessionCache=turn.sessionDataCache||getMissionSessionDataCacheV1(turn.options&&turn.options.ctx,{reason:'checkpoint'});
     var snapshot=turn.changeSnapshot||(sessionCache&&sessionCache.snapshot)||(typeof getMissionCurrentAppSnapshotV1==='function'?getMissionCurrentAppSnapshotV1(turn.options&&turn.options.ctx):null);
-    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,decisionIntent:turn.decisionIntent||null,decisionMemory:turn.decisionMemory||null,patternMemory:turn.patternMemory||null,threadMemory:turn.threadMemory||null,silenceIntelligence:turn.silenceIntelligence||null,unsaidQuestion:turn.unsaidQuestion||null,resourceRecommendation:turn.resourceRecommendation||null,constraintGuidance:turn.constraintGuidance||null,tooMuchAdvice:turn.tooMuchAdvice||null,sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:summarizeMissionDecisionTraceForCheckpointV1(turn.decisionTrace||[])};
+    var checkpoint={turnId:turn.id,timestamp:turn.timestamp,rawInput:turn.rawInput,normalizedInput:turn.normalizedInput,inputEnergy:turn.inputEnergy,selectedRoute:turn.route,selectedWorker:turn.workerId,conversationType:turn.conversationType,liveContext:turn.liveContext||null,executionMode:turn.executionMode||null,decisionIntent:turn.decisionIntent||null,decisionMemory:turn.decisionMemory||null,patternMemory:turn.patternMemory||null,threadMemory:turn.threadMemory||null,silenceIntelligence:turn.silenceIntelligence||null,unsaidQuestion:turn.unsaidQuestion||null,resourceRecommendation:turn.resourceRecommendation||null,constraintGuidance:turn.constraintGuidance||null,tooMuchAdvice:turn.tooMuchAdvice||null,contextArbitration:summarizeMissionContextArbitrationV11(turn.contextArbitration),sessionCacheSummary:summarizeMissionSessionDataCacheV1(sessionCache),appSnapshot:snapshot,scratchpadSummary:summarizeMissionScratchpadV1(turn.scratchpad),decisionSummary:turn.decisionSummary||null,brainStateSummary:summarizeMissionBrainStateV2(turn.brainState),contextSliceSummary:summarizeMissionContextSlices(turn.contextSlices),dataConfidence:turn.dataConfidence,syncStatus:turn.syncStatus,responseDepth:turn.responseDepth,responseShape:turn.responseShape,energyGuidance:turn.responsePlan&&turn.responsePlan.energyGuidance||null,nextBestMove:turn.brainState&&turn.brainState.nextBestMove||'',actionSuggested:turn.responsePlan&&turn.responsePlan.actionPlan||null,sourcesUsed:turn.dataNeeds||[],integrityFlags:turn.integrityFlags||[],integrityOverrides:turn.integrityOverrides||[],syncWarnings:turn.warnings||[],decisionTrace:summarizeMissionDecisionTraceForCheckpointV1(turn.decisionTrace||[])};
     list.unshift(checkpoint);
     list=list.slice(0,80);
     setMissionActiveChatMemory('checkpoints',list);
@@ -14886,6 +15145,8 @@ function runMissionTurn(kind,rawInput,options){
     turn.intent=turn.routePlan&&turn.routePlan.intent||null;
     turn.conversationType=turn.routePlan&&turn.routePlan.conversationType||'';
     addMissionTrace(turn,'route_plan_selected',turn.routePlan);
+    turn.contextArbitration=buildMissionContextArbitrationV11(turn,options&&options.ctx||{});
+    applyMissionContextArbitrationToTurnV11(turn,turn.contextArbitration);
     turn.decisionMemory=getMissionDecisionMemoryV1(turn,options&&options.ctx||{});
     addMissionTrace(turn,'decision_memory_read',{hasMemory:turn.decisionMemory&&turn.decisionMemory.hasMemory,reason:turn.decisionMemory&&turn.decisionMemory.reason,shouldAnswer:turn.decisionMemory&&turn.decisionMemory.shouldAnswer});
     turn.patternMemory=getMissionPatternBasedCoachingMemoryV1(turn,options&&options.ctx||{});
@@ -22129,6 +22390,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     shaped=cleanMissionVisibleAnswerText(applyMissionB1ProseGuard(shaped,{route:route,question:cleanQuestion||question||'',turn:turnV2,opts:opts}));
     shaped=cleanMissionCardRouteGarnishV1(shaped,opts);
     shaped=applyMissionCardCohesionV1(shaped,opts);
+    shaped=applyMissionContextAnswerGuardV11(shaped,turnV2,turnV2&&turnV2.contextArbitration||window.__missionLastContextArbitrationV11);
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
   var dataTrustQuestion=isMissionDataTrustPromptV12(cleanQuestion||question||'');
