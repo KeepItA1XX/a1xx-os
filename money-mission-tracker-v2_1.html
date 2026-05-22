@@ -10767,10 +10767,14 @@ function getMissionCorrectionTargetRouteV2(q){
   var raw=String(q||'').toLowerCase();
   if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who|not pipeline.*sales|sales.*not pipeline|no not pipeline sales|not pipeline sales)\b/.test(raw))return 'sales';
   if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say|not sales.*pipeline|pipeline.*not sales|no not sales pipeline|not sales pipeline)\b/.test(raw))return 'leads';
+  if(/\b(i meant content not sales|content not sales|not sales.*content|content.*not sales|no not sales content|not sales content)\b/.test(raw))return 'content';
+  if(/\b(i meant sales not content|sales not content|not content.*sales|sales.*not content|no not content sales|not content sales)\b/.test(raw))return 'sales';
   q=normalizeMissionQuestion(q||'');
   if(!isMissionWrongLaneCorrectionSignal(q))return '';
   if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say|not sales.*pipeline|pipeline.*not sales)\b/.test(q))return 'leads';
   if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who|not pipeline.*sales|sales.*not pipeline)\b/.test(q))return 'sales';
+  if(/\b(i meant content not sales|content not sales|not sales.*content|content.*not sales)\b/.test(q))return 'content';
+  if(/\b(i meant sales not content|sales not content|not content.*sales|sales.*not content)\b/.test(q))return 'sales';
   if(/\b(i meant production not content|production not content|not content.*production|production.*not content)\b/.test(q))return 'production';
   if(/\b(i meant content not production|content not production|not production.*content|content.*not production)\b/.test(q))return 'content';
   if(/\b(sales|closer|call|objection|discovery|what should i say|what do i say|reply|dm|follow up|follow-up|script)\b/.test(q))return 'sales';
@@ -11627,14 +11631,25 @@ function getMissionBookedCallsCountAnswerV1(ctx){
   var callEvents=calendarEvents.filter(function(event){
     return /call|session|consult|meeting/i.test([event&&event.title,event&&event.summary,event&&event.description].join(' '));
   });
+  var sessionBooked=0;
+  try{
+    var session=getMissionBrainSessionV2()||{};
+    var loop=session.resultLoop||{};
+    if(loop.lastResult&&loop.lastResult.type==='booked')sessionBooked++;
+    if(Array.isArray(loop.history)){
+      sessionBooked=Math.max(sessionBooked,loop.history.filter(function(item){return item&&item.type==='booked';}).length);
+    }
+  }catch(e){}
   var lines=[
     'Booked-call read.',
     '',
     'DPC logged today: '+dpcBooked+' booked.',
+    'Session result memory: '+sessionBooked+' booked.',
     'CRM booked/session signals: '+bookedLeads.length+'.',
     'Calendar call/session events loaded: '+callEvents.length+'.'
   ];
-  if(!dpcBooked&&!bookedLeads.length&&!callEvents.length)lines.push('I do not see a booked call loaded yet. If one happened, log it in DPC and update the lead.');
+  if(!dpcBooked&&!sessionBooked&&!bookedLeads.length&&!callEvents.length)lines.push('I do not see a booked call loaded yet. If one happened, log it in DPC and update the lead.');
+  else if(sessionBooked&&!dpcBooked&&!bookedLeads.length&&!callEvents.length)lines.push('I see the booked result in this chat, but it is not in DPC, CRM, or Calendar yet. Log it there so the dashboard count can carry it forward.');
   else lines.push('Use the freshest source first: calendar for schedule, CRM for lead status, DPC for today’s logged result.');
   return lines.map(escapeHtml).join('<br>');
 }
@@ -19321,14 +19336,15 @@ function applyMissionB1ProseGuard(html,routeContext){
     if(routeContext&&routeContext.b1ProseGuard===false)return html;
     var out=String(html||'');
     if(!out)return out;
-    var route=routeContext.route||'';
-    var q=normalizeMissionQuestion(routeContext.question||'');
-    var plain=missionVoicePlainTextV1(out);
-    if(/Booked-call read/i.test(plain)){
-      var nums=plain.match(/DPC logged today:\s*(\d+)\s*booked/i);
-      var count=nums?Number(nums[1]||0):0;
-      var pool=count>0?MISSION_DATA_VOICE_TEMPLATES.booked_present:MISSION_DATA_VOICE_TEMPLATES.booked_none;
-      out=pickMissionVoiceTemplateV1(pool,q||plain).replace('{{count}}',String(count)).replace('{{plural}}',count===1?'':'s');
+  var route=routeContext.route||'';
+  var q=normalizeMissionQuestion(routeContext.question||'');
+  var plain=missionVoicePlainTextV1(out);
+  if(/Booked-call read/i.test(plain)){
+    var nums=plain.match(/DPC logged today:\s*(\d+)\s*booked/i);
+    var sessionNums=plain.match(/Session result memory:\s*(\d+)\s*booked/i);
+    var count=Math.max(nums?Number(nums[1]||0):0,sessionNums?Number(sessionNums[1]||0):0);
+    var pool=count>0?MISSION_DATA_VOICE_TEMPLATES.booked_present:MISSION_DATA_VOICE_TEMPLATES.booked_none;
+    out=pickMissionVoiceTemplateV1(pool,q||plain).replace('{{count}}',String(count)).replace('{{plural}}',count===1?'':'s');
     }else if(/\bwhat changed|what moved|what happened today\b/.test(q)&&/Since the last saved checkpoint, I do not see/i.test(plain)){
       out=pickMissionVoiceTemplateV1(MISSION_DATA_VOICE_TEMPLATES.changed_none,q);
     }else{
@@ -20827,7 +20843,7 @@ var MISSION_COMMUNICATION_COHESION_SKILL_V1={
   purpose:'Connect route, data, memory, card ownership, and next action into one clear Mission Command answer.',
   triggerCategories:{
     context_connection:[
-      'what does that mean','what do you mean','what u mean','what you mean by that','how does that connect','how does this connect','what are you basing that on','why are you telling me that','what does the app see','what are we reading right now','what lane is this','what card owns this','where is this coming from','where that coming from','what is the read','what is the clean read','what is the real read','give me the clean read','give me the real read','what is the point','why does that matter','what does that have to do with today','what does that have to do with money','what that got to do with money','how this help','how does this help','how does this help me make money','what are you looking at','what are we looking at','what is the OS seeing','what is Mission Command seeing','what is this based on','what is the signal','what is the takeaway','ok so what','bet so what now'
+      'what does that mean','what do you mean','what u mean','what you mean by that','how does that connect','how does this connect','how does this connect to money','what are you basing that on','why are you telling me that','what does the app see','what are we reading right now','what lane is this','what card owns this','where is this coming from','where is that coming from','where that coming from','what is the read','what is the clean read','what is the real read','give me the clean read','give me the real read','what is the point','why does that matter','what does that have to do with today','what does that have to do with money','what that got to do with money','how this help','how does this help','how does this help me make money','what are you looking at','what are we looking at','what is the OS seeing','what is Mission Command seeing','what is this based on','what is the signal','what is the takeaway','what should i trust from this','ok so what','bet so what now'
     ],
     lane_bridge:[
       'how does this affect sales','does this connect to content','does this connect to sales','should this go in outreach or sales','is this a production thing or a money thing','is this content or sales','is this pipeline or production','what does this mean for today','what do i do with this information','what we doing with that','what is the play off that','what is the move off that','connect this to money','connect this to content','connect this to sales','connect this to production','connect this to outreach','connect this back to the OS','bring this back to the app','tie this back to the move','tie this to the mission','where does this fit','what lane owns this','which worker owns this','which card handles this','what system handles this','which part of the app is this','where should this live','what does this change','what does this unlock','what does this block','what matters here','what is primary here','what is secondary here','what can wait','what should move first'
@@ -20842,7 +20858,7 @@ var MISSION_COMMUNICATION_COHESION_SKILL_V1={
       'that is not what i meant','thats not what i meant','wrong read','you are answering the wrong thing','that answer is disconnected','that sounds disconnected','connect it back to the app','make it sound more like Mission Command','answer like you know what i am doing','do not just give me advice','wrong lane','not that','nah not that','no not that','that missed it','you missed it','wrong thing','try again but connected','try again but with the app context','say that with the OS context','answer from the OS','answer from the app','connect the answer','that felt random','that felt generic','too generic','too much advice','not enough app context','where is the app in that answer','what is the actual app move','bring it back to the card','bring it back to the data','bring it back to money','bring it back to the mission','make the answer useful','make it operational','make it actionable'
     ],
     context_awareness:[
-      'what mode are we in','what card are we on','what card am i on','what is the OS looking at','what data do you have','what data are you using','what data is missing','what memory are you using','what was the last move','what is the active loop','what is the last result','what is the active route','what lane are we in','what worker is answering','what is the context','what is the current context','what is active right now','what did you carry over','what are you remembering','are you using memory','are you using the last thread','what did i just ask','what are we still on','what did we leave open','what is the open loop','what is the current card','what is the current lane','what is the app state','what is the loaded packet','what can you see','what can you not see','what is partial','what is trusted','what is stale','what is safe to act on','what should not be assumed'
+      'what mode are we in','what card are we on','what card am i on','what is the OS looking at','what data do you have','what data are you using','what data is missing','what memory are you using','what was the last move','what is the active loop','what is the last result','what is the active route','what lane are we in','what worker is answering','what is the context','what is the current context','what is active right now','what did you carry over','what are you remembering','are you using memory','are you using the last thread','what did i just ask','what are we still on','what did we leave open','what is the open loop','what is the current card','what is the current lane','what is the app state','what is the loaded packet','what can you see','what can you not see','what is partial','what is trusted','what should i trust from this','what is stale','what is safe to act on','what should not be assumed'
     ]
   }
 };
@@ -20850,12 +20866,12 @@ var MISSION_COMMUNICATION_COHESION_SKILL_V1={
 function getMissionCommunicationCohesionCategoryV1(question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
   if(!q)return '';
-  if(/\b(what mode are we in|what card are we on|what card am i on|what is the os looking at|what data do you have|what data are you using|what data is missing|what memory are you using|what was the last move|what is the active loop|what lane are we in|what worker is answering|what is the current context|what are you remembering|what did you carry over|what is stale|what is trusted|what can you see|what can you not see)\b/.test(q))return 'context_awareness';
+  if(/\b(what mode are we in|what card are we on|what card am i on|what is the os looking at|what data do you have|what data are you using|what data is missing|what memory are you using|what was the last move|what is the active loop|what lane are we in|what worker is answering|what is the current context|what are you remembering|what did you carry over|what is stale|what is trusted|what should i trust from this|what can you see|what can you not see)\b/.test(q))return 'context_awareness';
   if(/\b(that is not what i meant|thats not what i meant|wrong read|answering the wrong thing|sounds disconnected|connect it back|answer like you know|answer like the app knows|app knows what i|app know what i|do not just give me advice|wrong lane|nah not that|no not that|you missed it|too generic|felt random|bring it back)\b/.test(q))return 'correction_repair';
   if(/\b(turn that into the move|turn this into the move|what button do i press|what card do i open|what do i log|what changes after|what should i come back|what result are we|where do i go from here|what counts as done|what should i log after this|what is the success signal)\b/.test(q))return 'next_step_translation';
   if(/\b(say that cleaner|make that make sense|make it make sense|explain that like the app|give me the simple version|what is the simple version|why should i care|cleaner read|clean read|real read|break that down|translate that|plain english|bottom line|operator read|business read)\b/.test(q))return 'clearer_explanation';
   if(/\b(affect sales|connect to content|connect to sales|outreach or sales|production thing or a money thing|content or sales|pipeline or production|mean for today|do i do with this information|connect this to|connect this back|tie this|where does this fit|what lane owns|which worker owns|which card handles|what system handles|where should this live|what is primary|what can wait)\b/.test(q))return 'lane_bridge';
-  if(/\b(what does that mean|what do you mean|what u mean|what you mean|how does that connect|what are you basing|why are you telling|what does the app see|what are we reading|what lane is this|what card owns this|where is this coming from|where that coming from|what is the read|what is the point|what does that have to do|how this help|what are you looking at|what is the signal|what is the takeaway|ok so what|bet so what now|so what|so what now)\b/.test(q))return 'context_connection';
+  if(/\b(what does that mean|what do you mean|what u mean|what you mean|how does that connect|how does this connect|what are you basing|why are you telling|what does the app see|what are we reading|what lane is this|what card owns this|where is this coming from|where is that coming from|where that coming from|what is the read|what is the point|what does that have to do|how this help|what are you looking at|what is the signal|what is the takeaway|ok so what|bet so what now|so what|so what now)\b/.test(q))return 'context_connection';
   return '';
 }
 
@@ -21004,19 +21020,19 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     shaped=applyMissionCardCohesionV1(shaped,opts);
     return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
   }
-  var earlyBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
-  if(earlyBriefIntel)return finishMissionAnswer(earlyBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,cardAlignment:'brief'});
   var splitPromptAnswer=getMissionSplitPromptResponseV1(ctx,cleanQuestion||question||'');
   if(splitPromptAnswer)return finishMissionAnswer(splitPromptAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+  var cohesionAnswer=getMissionCommunicationCohesionAnswerV1(ctx,question||cleanQuestion||'',route,brainState,turnV2);
+  if(cohesionAnswer)return finishMissionAnswer(cohesionAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+  var moneyReadResponse=getMissionMoneyReadResponseV1(ctx,cleanQuestion||question||'');
+  if(moneyReadResponse)return finishMissionAnswer(moneyReadResponse,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false});
+  var earlyBriefIntel=getMissionBriefIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);
+  if(earlyBriefIntel)return finishMissionAnswer(earlyBriefIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,cardAlignment:'brief'});
   var protectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
   if(protectedRouteAnswer){
     var protectedCard={leads:'outreach',content:'content',production:'production',calendar:'manager',weekly:'weekly',report:'brief'}[directRouteOverride]||'';
     return finishMissionAnswer(protectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,cardAlignment:protectedCard});
   }
-  var moneyReadResponse=getMissionMoneyReadResponseV1(ctx,cleanQuestion||question||'');
-  if(moneyReadResponse)return finishMissionAnswer(moneyReadResponse,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false});
-  var cohesionAnswer=getMissionCommunicationCohesionAnswerV1(ctx,question||cleanQuestion||'',route,brainState,turnV2);
-  if(cohesionAnswer)return finishMissionAnswer(cohesionAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(rawQ)||/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
     route='dpc';
     return finishMissionAnswer(getMissionBookedCallsCountAnswerV1(ctx),{sessionArc:false,closer:false,presence:false});
