@@ -10871,7 +10871,21 @@ function cleanMissionVisibleAnswerText(html){
     .replace(/(^|<br\s*\/?>\s*)(Start with|Ask|Send|Say):\s*(?=&quot;|")/gi,function(_,prefix,label){return prefix+label.charAt(0).toUpperCase()+label.slice(1).toLowerCase()+' this. ';})
     .replace(/(^|<br\s*\/?>\s*)Mirror,\s*ask,\s*pause:\s*/gi,'$1Keep it simple. Mirror them, ask one question, then pause. ')
     .replace(/\bMirror,\s*ask,\s*pause:\s*/gi,'Mirror them, ask one question, then pause. ')
-    .replace(/(^|<br\s*\/?>\s*)Pattern read:\s*/gi,'$1Here is the pattern. ')
+    .replace(/(^|<br\s*\/?>\s*)Pattern read:\s*/gi,'$1I keep seeing this pattern. ')
+    .replace(/(^|<br\s*\/?>\s*)Pipeline read:\s*/gi,'$1Pipeline is showing ')
+    .replace(/(^|<br\s*\/?>\s*)Hit List read:\s*/gi,'$1I checked the Hit List. ')
+    .replace(/(^|<br\s*\/?>\s*)Manager block read:\s*/gi,'$1I checked the active block. ')
+    .replace(/(^|<br\s*\/?>\s*)Mission Brief read:\s*/gi,'$1I checked the Brief. ')
+    .replace(/(^|<br\s*\/?>\s*)Outreach card read:\s*/gi,'$1I checked Outreach. ')
+    .replace(/(^|<br\s*\/?>\s*)Content card read:\s*/gi,'$1I checked Content. ')
+    .replace(/(^|<br\s*\/?>\s*)Production card read:\s*/gi,'$1I checked Production. ')
+    .replace(/(^|<br\s*\/?>\s*)Manager card read:\s*/gi,'$1I checked Manager. ')
+    .replace(/(^|<br\s*\/?>\s*)Weekly scorecard read:\s*/gi,'$1I checked the weekly scorecard. ')
+    .replace(/(^|<br\s*\/?>\s*)Calendar read:\s*/gi,'$1I checked the calendar. ')
+    .replace(/(^|<br\s*\/?>\s*)Prep read:\s*/gi,'$1I checked the next prep point. ')
+    .replace(/(^|<br\s*\/?>\s*)Admin task read:\s*/gi,'$1I checked the admin lane. ')
+    .replace(/(^|<br\s*\/?>\s*)Manager review read:\s*/gi,'$1I checked Manager. ')
+    .replace(/(^|<br\s*\/?>\s*)Day mode read:\s*/gi,'$1I checked the day mode. ')
     .replace(/(^|<br\s*\/?>\s*)Cleaner read:\s*/gi,'$1Clean read. ')
     .replace(/(^|<br\s*\/?>\s*)Clean read:\s*/gi,'$1Clean read. ')
     .replace(/(^|<br\s*\/?>\s*)Data read:\s*/gi,'$1I checked the data. ')
@@ -10883,9 +10897,14 @@ function cleanMissionVisibleAnswerText(html){
     .replace(/(^|<br\s*\/?>\s*)Why:\s*/gi,'$1Why. ')
     .replace(/(^|<br\s*\/?>\s*)Move:\s*/gi,'$1Move. ')
     .replace(/\bDo this next:\s*/gi,'Next, ')
-    .replace(/\bDo this now:\s*/gi,'Do this now. ')
+    .replace(/\bDo this now:\s*/gi,'Move now. ')
+    .replace(/\bComplete the current block step:\s*/gi,'Finish the current block step. ')
+    .replace(/\bBefore switching:\s*/gi,'Before you switch lanes, ')
+    .replace(/\bBefore you switch lanes,\s*close the loop:\s*/gi,'Before you switch lanes, ')
+    .replace(/\bQuick check before we add another move:\s*/gi,'Quick check before we add another move. ')
     .replace(/\s+([.,!?;:])/g,'$1')
     .replace(/([.!?])([A-Z])/g,'$1 $2')
+    .replace(/([.!?])\s*(<br\s*\/?>\s*)?([a-z])/g,function(match,punc,br,letter){return punc+(br||' ')+letter.toUpperCase();})
     .replace(/(^|[.!?]\s+)open the current work card/g,function(match,prefix){return prefix+'Open the current work card';})
     .replace(/(^|[.!?]\s+)([a-z])/g,function(match,prefix,letter){return prefix+letter.toUpperCase();});
 }
@@ -11111,13 +11130,13 @@ var MISSION_PRESENCE_PHRASES={
     content:['Want to block the next piece now?','What post needs to go out first?','What proof can you show today?'],
     production:['What deliverable needs to move next?','What can you finish today?'],
     calendar:['What needs prep before that hits?','What do you need ready for that?'],
-    sync:['Anything you need to log before you close this check?'],
+    sync:['Need a quick trust check before you move on?'],
     memory:['What do you want to carry into the next session?'],
     sales:['Want to practice the next line?','What did they say back?','Want to roleplay the next objection?'],
     win:['What is the next one after this?','Who else can you move this week?','Keep that energy. What is next?'],
     stuck:['What is the smallest move you can make on this today?','What is the one thing you can control right now?','What would make this feel less stuck?'],
     'no-data':['Once that is logged, I will have a real read for you.','Drop that in when you get a chance and I will have more for you.'],
-    general:['What do you want to do with that?','Anything else before you move?','What is the next move from here?','You need anything else right now?']
+    general:['Want the next clean move from here?','Want me to tighten this into one action?','Should we keep this lane or switch?','Need anything else right now?']
   },
   fallback:{
     low_confidence:['I do not have the full picture on that right now. Here is what I do see:','That is not fully in my view yet. Here is what I can tell you:','I have a partial read on that. Here is what I see:'],
@@ -15916,9 +15935,9 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(directSyncPattern.shouldAnswer)failures.push('qa_direct_sync_pattern_guard');
   var actionTurn={rawInput:'what next',route:'now',responsePlan:{actionPlan:{label:'Log DPC',action:'Log one measurable DPC action',reason:'qa_action_layer'}},brainState:{}};
   var actionFirst=applyMissionActionLayerV1('The day is still invisible to the OS.',actionTurn,{},'what next',{});
-  if(actionFirst.indexOf('Do this now')<0||actionFirst.indexOf('Log one measurable DPC action')<0)failures.push('qa_action_layer_action_first');
+  if(actionFirst.indexOf('Move now')<0||actionFirst.indexOf('Log one measurable DPC action')<0)failures.push('qa_action_layer_action_first');
   var salesProtected=applyMissionActionLayerV1('Ask: "What made this worth taking a call about?"',{rawInput:'what should i say',route:'sales',responsePlan:{actionPlan:{label:'Open Sales Coach',action:'Open Sales Coach'}}},{},'what should i say',{});
-  if(salesProtected.indexOf('Next move')>=0||salesProtected.indexOf('Do this now')>=0)failures.push('qa_action_layer_sales_guard');
+  if(salesProtected.indexOf('Next move')>=0||salesProtected.indexOf('Move now')>=0)failures.push('qa_action_layer_sales_guard');
   var alreadyActionable=applyMissionActionLayerV1('First move: log one measurable outreach action.',actionTurn,{},'what next',{});
   if((alreadyActionable.match(/Log one measurable/gi)||[]).length>1)failures.push('qa_action_layer_duplicate_guard');
   var priorActionSession=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
@@ -15929,14 +15948,14 @@ function runMissionMasterIntelligenceQASweepV1(){
   if(!accountability.shouldAnswer||accountability.reason!=='pending_action_check')failures.push('qa_action_accountability_signal');
   if(accountability.mode!=='block'||accountability.shouldNudge)failures.push('qa_action_accountability_block_mode');
   var accountabilityPrompt=buildMissionActionAccountabilityResponseV1({actionAccountability:accountability},{});
-  if(accountabilityPrompt.indexOf('Before we open another move')<0||accountabilityPrompt.indexOf('did you do this yet')<0||accountabilityPrompt.indexOf('Open Hit List')<0)failures.push('qa_action_accountability_prompt');
+  if(accountabilityPrompt.indexOf('Quick check before we add another move.')<0||accountabilityPrompt.indexOf('Did this happen yet')<0||accountabilityPrompt.indexOf('Open Hit List')<0)failures.push('qa_action_accountability_prompt');
   var accountabilityStack=getMissionIntelligenceAnswerStackV1({rawInput:'what should i do today',route:'now',actionAccountability:accountability},{});
   var accountabilityStackItem=accountabilityStack.find(function(item){return item.id==='action_accountability';});
   if(!accountabilityStackItem||accountabilityStackItem.opts.actionLayer!==false)failures.push('qa_action_accountability_action_layer_guard');
   var priorTurnObject=window.__missionLastTurnObjectV2;
   window.__missionLastTurnObjectV2={id:'qa_accountability_presence_turn',turnCount:12,rawInput:'what should i do today',route:'now',actionAccountability:accountability};
   var accountabilityPresence=applyMissionPresenceLayer(accountabilityPrompt,'now','what should i do today',{});
-  if(/Anything else before you move|What is the next move from here|You need anything else right now/i.test(accountabilityPresence))failures.push('qa_action_accountability_closer_guard');
+  if(/Anything else before you move|What is the next move from here|What do you want to do with that|You need anything else right now/i.test(accountabilityPresence))failures.push('qa_action_accountability_closer_guard');
   window.__missionLastTurnObjectV2=priorTurnObject;
   var spacingClean=applyMissionAnswerQualityGuardsV1('Result read: <strong>Booked Call </strong>.','sales','booked',{identicalResponseGuard:false});
   if(/Booked Call\s+\./.test(spacingClean))failures.push('qa_punctuation_spacing_guard');
@@ -17300,7 +17319,7 @@ function getMissionActionComposerV1(ctx,route,question,brainBase){
   }else if(selectedRoute==='weekly'){
     set('Capture what moved, what dragged, and tomorrow’s first move', 'weekly_review_needs_lesson', 'Open Weekly Review', 'open_card', 'weekly_review', 0.78);
   }else if(activeStep&&block&&['money','maker','manager','finale'].indexOf(block.phase)>=0){
-    set('Complete the current block step: '+activeStep, 'current_block_has_active_step', 'Do Current Step', 'next_best_move', activeStep, 0.86);
+    set('Complete the current block step: '+activeStep, 'current_block_has_active_step', 'Finish Current Step', 'next_best_move', activeStep, 0.86);
   }else if(mode==='outreach'){
     set('Open the Hit List and touch one lead', 'outreach_mode_active', 'Open Hit List', 'open_card', 'hit_list', 0.82);
   }else if(mode==='content'){
@@ -17310,7 +17329,7 @@ function getMissionActionComposerV1(ctx,route,question,brainBase){
   }else if(mode==='manager'){
     set('Open Manager and clear one decision that unlocks action', 'manager_mode_active', 'Open Manager', 'open_card', 'manager', 0.78);
   }else if(activeStep){
-    set(activeStep, 'mission_journey_active_step', 'Do Current Step', 'next_best_move', activeStep, 0.76);
+    set(activeStep, 'mission_journey_active_step', 'Finish Current Step', 'next_best_move', activeStep, 0.76);
   }else{
     set('Pick one lane, take one visible action, then log the result', 'general_mode_needs_lane', 'Open Mission Command', 'next_best_move', 'mission_command', 0.7);
   }
@@ -17388,7 +17407,7 @@ function applyMissionActionLayerV1(html,turn,ctx,question,opts){
   var alreadyActionable=missionAnswerAlreadyActionableV1(out);
   if(directAsk&&!alreadyActionable){
     if(turn&&typeof addMissionTrace==='function')addMissionTrace(turn,'action_layer_applied',{mode:'action_first',action:actionText,reason:action&&action.reason||''});
-    return '<strong>Do this now:</strong> '+escapeHtml(actionText)+'.<br><br>'+out;
+    return '<strong>Move now:</strong> '+escapeHtml(actionText)+'.<br><br>'+out;
   }
   if((powerRoute||directAsk)&&!alreadyActionable&&out.length<900){
     if(turn&&typeof addMissionTrace==='function')addMissionTrace(turn,'action_layer_applied',{mode:'next_move',action:actionText,reason:action&&action.reason||''});
@@ -17510,7 +17529,7 @@ function buildMissionActionAccountabilityResponseV1(turn,ctx){
   if(!read||!read.shouldAnswer)return '';
   var pending=read.pendingAction||{};
   var action=formatMissionActionAccountabilityActionLineV1(pending.action||pending.label||'the last move');
-  return 'Before we open another move, did you do this yet?<br><br><strong>'+escapeHtml(action)+'</strong><br><br>Reply with: done, no reply, reply, booked, paid, or wrong lane.';
+  return 'Quick check before we add another move. Did this happen yet?<br><br><strong>'+escapeHtml(action)+'</strong><br><br>Reply with: done, no reply, reply, booked, paid, or wrong lane.';
 }
 
 function formatMissionActionAccountabilityActionLineV1(action){
@@ -18965,7 +18984,7 @@ function applyMissionCardCohesionV1(html,opts){
   if(!out)return out;
   out=out.replace(/(<br\s*\/?>\s*){2,}/gi,'<br><br>');
   out=applyMissionCrossCardAlignmentV1(out,Object.assign({},opts,{cardAlignment:card}));
-  return out.replace(/(<br\s*\/?>\s*){2,}Before switching:/i,'<br><br>Before you switch lanes,');
+  return out.replace(/(<br\s*\/?>\s*){2,}Before switching:/i,'<br><br>Before you switch lanes, ');
 }
 
 function cleanMissionCardRouteGarnishV1(html,opts){
@@ -19818,8 +19837,8 @@ function getMissionRepeatCarryLineV1(route,recent){
     content:['Same content lane:','Still the proof lane:','Cleaner proof read:'],
     production:['Same production lane:','Still the asset lane:','Cleaner delivery read:'],
     sync:['Same sync lane:','Still the trust check:','Cleaner system read:'],
-    now:['Same lane:','Still on this:','Cleaner read:']
-  }[route]||['Same lane:','Still on this:','Cleaner read:'];
+    now:['Same route:','Still on the move:','Clean pass:']
+  }[route]||['Same route:','Still on the move:','Clean pass:'];
   recent=recent||[];
   for(var i=0;i<pool.length;i++){
     if(recent.indexOf(pool[i].toLowerCase())<0)return pool[i];
@@ -19879,12 +19898,12 @@ function getMissionResponseFrameSignatureV1(html){
 
 function getMissionFrameReplacementV1(frame,route,count){
   var pools={
-    cleaner_read:['Clean version:','Simple version:','The useful read:'],
-    pattern_read:['Pattern:','What keeps repeating:','The loop:'],
-    looking_at:['I am reading:','The app view:','Current view:'],
-    card_ownership:['Card owner:','This lives in:','Use this card:'],
-    money_read:['Money view:','Number read:','Cash read:'],
-    continuation_opener:['Same thread:','Still here:','Back to the thread:']
+    cleaner_read:['Clean version.','Simple version.','The useful read.'],
+    pattern_read:['Pattern.','What keeps repeating.','The loop.'],
+    looking_at:['I am reading.','The app view.','Current view.'],
+    card_ownership:['Card owner.','This lives in.','Use this card.'],
+    money_read:['Money view.','Number read.','Cash read.'],
+    continuation_opener:['Same thread.','Still with you.','Back on the point.']
   };
   var pool=pools[frame]||[];
   if(!pool.length)return '';
@@ -20164,7 +20183,7 @@ function getMissionContinuationResponse(signal,ctx,question){
     else if(route==='production')layer=pickMissionLibraryLineAntiRepeat('production_move',vars);
     else layer='Deeper breakdown: separate the signal from the noise, then act on the one item closest to the result.';
   }else if(q==='do that again'||q==='run that back'){
-    layer='Same lane, cleaner pass: stay on this route until the next result is logged.';
+    layer='Clean pass: stay with this route until the next result is logged.';
   }else{
     layer=getMissionWhatElseRead(route,ctx);
   }
@@ -20346,7 +20365,7 @@ function getMissionOutputContextV1_1(route,ctx,question,brainState){
   var contextMode=typeof getMissionContextMode==='function'?getMissionContextMode():'general';
   var contextModeLabel=(typeof MISSION_CONTEXT_MODE_LABELS!=='undefined'&&MISSION_CONTEXT_MODE_LABELS[contextMode])||'General';
   var routeLabels={now:'Mission Command',leads:'Outreach',sales:'Sales Coach',report:'Money',money:'Money',content:'Content',production:'Production',sync:'System Hub',memory:'Memory',help:'Command Guide',dpc:'DPC',calendar:'Calendar',weekly:'Weekly Review',resources:'Rolodex',community:'Community',live:'Live'};
-  var buttonLabels={now:'the Current Work Card',leads:'Hit List',sales:'Sales Coach',report:'Report',money:'Report',content:'Content Tracker',production:'Production',sync:'System Hub',memory:'Memory',help:'Command Guide',dpc:'DPC',calendar:'Calendar',weekly:'Weekly Review',resources:'Rolodex',community:'Community',live:'Live'};
+  var buttonLabels={now:'the current work card',leads:'Hit List',sales:'Sales Coach',report:'Report',money:'Report',content:'Content Tracker',production:'Production',sync:'System Hub',memory:'Memory',help:'Command Guide',dpc:'DPC',calendar:'Calendar',weekly:'Weekly Review',resources:'Rolodex',community:'Community',live:'Live'};
   var whereMap={now:'the day-bar card tied to the move',leads:'Day Bar → Outreach → Hit List',sales:'Mission Command → Sales Coach',report:'Report tab or Mission Brief money slide',money:'Report tab or Mission Brief money slide',content:'Day Bar → Content',production:'Day Bar → Production',sync:'System Hub → Health → Sync Check',memory:'Mission Command → Memory',help:'Mission Command → Command Guide',dpc:'This Week → Daily Profit Campaign',calendar:'Manager → Calendar',weekly:'Activities → Weekly Review',resources:'Rolodex',community:'Community lane',live:'Live lane'};
   var moneyFeeling=gapRaw<=0?'You are doing good on the weekly target. Now protect delivery and stack the next cycle.':pctRaw>=70?'You are close enough that one clean buyer-facing move matters.':'You still have pressure on the target, so admin can wait.';
   var targetState=gapRaw<=0?'Weekly target is covered':'You still have '+fmt(gapRaw)+' left';
@@ -22193,7 +22212,7 @@ function runMissionIntegritySelfCheck(){
   var patternNoReply=getMissionPatternBasedCoachingMemoryV1({rawInput:'what next',route:'now',inputSignals:{}},actionCtx);
   if(!patternNoReply.shouldAnswer||patternNoReply.reason!=='repeated_no_reply'||patternNoReply.message.indexOf('not producing replies')<0)failures.push('pattern_no_reply');
   var patternNoReplyPrompt=buildMissionPatternCoachingResponseV1({patternMemory:patternNoReply},actionCtx);
-  if(!/The issue is not needing another move|Pattern read/i.test(patternNoReplyPrompt))failures.push('pattern_prompt');
+  if(!/The issue is not needing another move|I keep seeing this pattern/i.test(patternNoReplyPrompt))failures.push('pattern_prompt');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact GARY RAOGUY',route:'leads',suggestedAt:new Date().toISOString()},history:[]},threadMemory:{turns:[
     {question:'why',route:'leads',timestamp:new Date().toISOString()},
     {question:'more',route:'leads',timestamp:new Date().toISOString()},
@@ -22811,7 +22830,7 @@ function runMissionLongMemoryPanelCheckV1(){
     var formatted=formatMissionLongMemorySummaryV1(summary);
     if(formatted.indexOf('Pipeline / Leads')<0||formatted.indexOf('Carry-forward')<0)failures.push('formatted summary incomplete');
     var nudge=getMissionLongMemoryOpeningNudgeV1({sessionArc:'opening'},summary,'good morning');
-    if(!/Pattern read|coming back to/i.test(nudge))failures.push('opening nudge missing');
+    if(!/same pull toward|coming back to/i.test(nudge))failures.push('opening nudge missing');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -23909,7 +23928,7 @@ function getMissionLongMemoryOpeningNudgeV1(brainState,summary,question){
   var opening=brainState&&brainState.sessionArc==='opening';
   var askedForCarry=/\b(good morning|what should i do|what next|help me get started|where were we|pick it back up|start|let'?s go|lock in)\b/.test(q);
   if(!opening&&!askedForCarry)return '';
-  if(summary.repeatedIntent)return 'Pattern read: you keep coming back to '+getMissionRouteLabelV2(summary.repeatedIntent)+'. Pick one result before opening a new lane.';
+  if(summary.repeatedIntent)return 'I keep seeing the same pull toward '+getMissionRouteLabelV2(summary.repeatedIntent)+'. Pick one result before opening a new lane.';
   if(summary.endedOnFrustration)return 'Carry-forward: last session ended with friction, so I will keep this tighter.';
   if(summary.lastNextBestMove)return 'Carry-forward: last useful move was '+summary.lastNextBestMove+'.';
   return '';
