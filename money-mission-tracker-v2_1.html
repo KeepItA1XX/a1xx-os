@@ -11961,7 +11961,9 @@ function getMissionResultLoopSessionV1(){
 
 function rememberMissionSuggestedActionV1(turn,action){
   if(!turn||!action)return;
-  var session=getMissionResultLoopSessionV1();
+  var session=sanitizeMissionBrainSessionForFreshStarterV12(getMissionResultLoopSessionV1(),turn&&turn.rawInput||turn&&turn.normalizedInput||'');
+  session.resultLoop=session.resultLoop||{};
+  session.resultLoop.history=Array.isArray(session.resultLoop.history)?session.resultLoop.history:[];
   session.resultLoop.pendingAction={
     label:action.label||'Do Next Move',
     action:action.action||action.target||action.label||'',
@@ -12249,6 +12251,10 @@ function missionActiveChatHasBookedAfterFreshStarterV12(){
   }
 }
 
+function missionQuestionIsFreshStarterV12(question){
+  return /^(good morning|gm|morning|yo|yo let'?s go|let'?s go|lock in)$/i.test(String(question||'').trim());
+}
+
 function missionLatestActiveChatFreshStarterTimeV12(){
   try{
     var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
@@ -12268,6 +12274,11 @@ function missionLatestActiveChatFreshStarterTimeV12(){
   }
 }
 
+function missionShouldBlockStaleBookedCarryV12(question){
+  if(missionQuestionIsFreshStarterV12(question||''))return true;
+  return !isNaN(missionLatestActiveChatFreshStarterTimeV12())&&!missionActiveChatHasBookedAfterFreshStarterV12();
+}
+
 function missionThreadTurnIsBeforeFreshStarterV12(turn,fallbackAt){
   try{
     var starterTime=missionLatestActiveChatFreshStarterTimeV12();
@@ -12277,6 +12288,37 @@ function missionThreadTurnIsBeforeFreshStarterV12(turn,fallbackAt){
   }catch(e){
     return false;
   }
+}
+
+function missionPendingLooksBookedPrepV12(pending){
+  var text=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
+  return /\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(text);
+}
+
+function sanitizeMissionBrainSessionForFreshStarterV12(session,question){
+  if(!session||!missionShouldBlockStaleBookedCarryV12(question||''))return session||{};
+  var next=Object.assign({},session);
+  var loop=Object.assign({},next.resultLoop||{});
+  var hasBookedBaggage=!!(loop.lastResult&&loop.lastResult.type==='booked')||
+    !!(Array.isArray(loop.history)&&loop.history.some(function(item){return item&&item.type==='booked';}))||
+    missionPendingLooksBookedPrepV12(loop.pendingAction)||
+    missionPendingLooksBookedPrepV12(next.lastActionPlan);
+  if(!hasBookedBaggage)return session||{};
+  if(loop.lastResult&&loop.lastResult.type==='booked')loop.lastResult=null;
+  if(Array.isArray(loop.history)){
+    loop.history=loop.history.filter(function(item){return !(item&&item.type==='booked');});
+  }
+  if(missionPendingLooksBookedPrepV12(loop.pendingAction))loop.pendingAction=null;
+  if(missionPendingLooksBookedPrepV12(next.lastActionPlan)){
+    next.lastActionPlan=null;
+    next.lastActionSuggested='';
+    next.lastActionStatus='none';
+  }
+  next.threadMemory=Object.assign({},next.threadMemory||{},{turns:[],activeRoute:'',lastRoute:'',lastQuestion:''});
+  next.lastRoute='';
+  next.sessionTopic='';
+  next.resultLoop=loop;
+  return next;
 }
 
 function missionResultIsFreshForActiveChatV12(result){
@@ -12688,7 +12730,7 @@ function updateMissionThreadMemoryV1(turn){
 ========================================================= */
 function getMissionSilenceIntelligenceV1(turn,ctx){
   var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||'');
-  var session=getMissionThreadMemorySessionV1();
+  var session=sanitizeMissionBrainSessionForFreshStarterV12(getMissionThreadMemorySessionV1(),turn&&turn.rawInput||turn&&turn.normalizedInput||q);
   var thread=session.threadMemory||{};
   var lastAt=thread.lastUpdatedAt||session.lastTurnAt||'';
   var gapMinutes=getMissionAgeMinutes(lastAt);
@@ -14291,7 +14333,7 @@ function getMissionBrainSessionV2(){
     if(window.__missionCommandSelfCheckActive||window.__missionIntegritySelfCheckActive)return JSON.parse(sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY)||'{}')||{};
     var scoped=getMissionActiveChatMemory('memory')||{};
     var scopedBrain=scoped.brainSession||{};
-    if(scopedBrain&&Object.keys(scopedBrain).length)return scopedBrain;
+    if(scopedBrain&&Object.keys(scopedBrain).length)return sanitizeMissionBrainSessionForFreshStarterV12(scopedBrain,'');
     if(typeof missionHasActiveChatSessionV11==='function'&&missionHasActiveChatSessionV11())return {};
     return JSON.parse(sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY)||'{}')||{};
   }catch(e){return {};}
@@ -14705,7 +14747,7 @@ function getMissionOpenEndedWorkStartResponseV2(turn,ctx){
    MISSION TURN CHECKPOINTS
 ========================================================= */
 function updateMissionBrainSessionV2(turn){
-  var session=getMissionBrainSessionV2();
+  var session=sanitizeMissionBrainSessionForFreshStarterV12(getMissionBrainSessionV2(),turn&&turn.rawInput||turn&&turn.normalizedInput||'');
   session.turnCount=(session.turnCount||0)+1;
   session.lastRoute=turn.route||session.lastRoute||'';
   session.sessionTopic=turn.route||session.sessionTopic||'';
@@ -22033,7 +22075,9 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     if(preTurnBrainSession&&preTurnBrainSession.resultLoop&&preTurnBrainSession.resultLoop.lastResult){
       var postTurnSession=getMissionBrainSessionV2();
       postTurnSession.resultLoop=postTurnSession.resultLoop||{};
-      if(!postTurnSession.resultLoop.lastResult){
+      var preTurnResult=preTurnBrainSession.resultLoop.lastResult;
+      var blockStaleBookedCarry=preTurnResult&&preTurnResult.type==='booked'&&missionShouldBlockStaleBookedCarryV12(cleanQuestion||question||'');
+      if(!postTurnSession.resultLoop.lastResult&&!blockStaleBookedCarry){
         postTurnSession.resultLoop.lastResult=preTurnBrainSession.resultLoop.lastResult;
         postTurnSession.resultLoop.history=Array.isArray(postTurnSession.resultLoop.history)?postTurnSession.resultLoop.history:[];
         if(Array.isArray(preTurnBrainSession.resultLoop.history)&&preTurnBrainSession.resultLoop.history.length){
