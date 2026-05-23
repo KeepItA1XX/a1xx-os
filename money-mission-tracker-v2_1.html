@@ -11304,10 +11304,11 @@ function applyMissionTransitionAckDedupeV18(html,question){
 
 function getMissionRecentCorrectionFollowupAnswerV18(question,ctx){
   var q=normalizeMissionQuestion(question||'');
+  var whyAsk=typeof missionIsWhyRequestV1==='function'&&missionIsWhyRequestV1(q);
   var repairAsk=/\b(wrong read|nah not that|no not that|that sounds disconnected|disconnected|not what i meant|give me the clean version|clean version|make it make sense)\b/.test(q);
   var logAsk=typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(q);
   var cardAsk=typeof missionIsResultCardOwnerAskV14==='function'&&missionIsResultCardOwnerAskV14(q);
-  if(!repairAsk&&!logAsk&&!cardAsk)return '';
+  if(!whyAsk&&!repairAsk&&!logAsk&&!cardAsk)return '';
   var priorQ=normalizeMissionQuestion(window.__missionCommandActiveTopicQuestion||'');
   var priorRoute=window.__missionCommandActiveTopicRoute||'';
   var priorAt=Number(window.__missionCommandActiveTopicAt||0);
@@ -11320,6 +11321,12 @@ function getMissionRecentCorrectionFollowupAnswerV18(question,ctx){
   else if(priorRoute==='production')label='Production, not content.';
   else if(priorRoute==='leads')label='Pipeline, not sales.';
   else label=getMissionRouteLabelV2(priorRoute)+' lane.';
+  if(whyAsk){
+    if(priorRoute==='sales')return label+'<br><br>Because you corrected the lane to the sales conversation. The useful move is one clean line that gets the prospect to name the real problem.';
+    if(priorRoute==='content')return label+'<br><br>Because you corrected the lane to content. The useful move is turning today’s work into proof, not forcing a sales follow-up.';
+    if(priorRoute==='production')return label+'<br><br>Because you corrected the lane to production. The useful move is moving one asset closer to finished, shipped, or usable.';
+    if(priorRoute==='leads')return label+'<br><br>Because you corrected the lane to Pipeline / Outreach. The useful move is one lead touch, then a logged outcome.';
+  }
   if(logAsk){
     if(priorRoute==='sales')return label+'<br><br>Log the sales touch by outcome: reply, no reply, booked, paid, follow-up, or wrong lane.';
     if(priorRoute==='content')return label+'<br><br>Log the content move on Content: idea captured, draft started, draft done, posted, shipped, or wrong lane.';
@@ -18436,6 +18443,9 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'paid',{});
     var paidAfterCorrectionNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Last result was paid|log the money|protect delivery/i.test(paidAfterCorrectionNextVisible)||/Production, not content|Content, not sales|Sales lane, not pipeline/i.test(paidAfterCorrectionNextVisible))failures.push('correction_result_reownership_guard');
+    getMissionCommandResponse('ask',ctx,'content not sales',{});
+    var correctionWhyVisible=String(getMissionCommandResponse('ask',ctx,'why',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Content, not sales|corrected the lane to content|turning today.?s work into proof/i.test(correctionWhyVisible)||/sale already happened|protecting delivery|booked call|calendar detail/i.test(correctionWhyVisible))failures.push('correction_why_result_memory_guard');
     getMissionCommandResponse('ask',ctx,'i meant pipeline not sales',{});
     getMissionCommandResponse('ask',ctx,'wrong read',{});
     var pipelineCorrectionCardVisible=String(getMissionCommandResponse('ask',ctx,'where should this live',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
@@ -18551,7 +18561,7 @@ function runMissionBroadRegressionHardeningV1(){
     restoreMissionStorageForQaV1(localStorage,savedLocalAll);
     restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:143,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 93 sales/result/data/mixed-lane/storage checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:144,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 94 sales/result/data/mixed-lane/storage checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
