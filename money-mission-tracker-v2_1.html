@@ -12356,6 +12356,10 @@ function getMissionResultTruthNextMoveV15(ctx){
   if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_paid_not_confirmed'))return 'log the money in DPC, update the lead in CRM, then protect delivery';
   if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_booked_not_confirmed'))return 'log the booked call in DPC, update the lead, and add the calendar detail';
   if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_reply_not_confirmed'))return 'log the reply in DPC or Outreach, update the lead, then qualify intent';
+  var latest=typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(latest&&latest.type==='follow_up')return 'note the follow-up as unresolved, isolate money, timing, trust, or fit, then set the next touch';
+  if(latest&&latest.type==='no_reply')return 'log no reply, set one bump if it is worth it, then move to the next warm signal';
+  if(latest&&latest.type==='done')return 'capture the actual result: no reply, reply, booked, paid, shipped, posted, or wrong lane';
   return '';
 }
 
@@ -17810,6 +17814,33 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/Result trust: paid result is chat-only until DPC or CRM confirms it/i.test(paidTrustVisible)||/booked call is chat-only|reply is chat-only/i.test(paidTrustVisible))failures.push('paid_data_trust_truth_guard');
     var paidDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/log the money in DPC|update the lead in CRM|protect delivery/i.test(paidDataMoveVisible)||/one outreach or sales action/i.test(paidDataMoveVisible))failures.push('paid_data_trust_move_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Soft Result Data Trust',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'follow-up',{});
+    var followUpDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/follow-up as unresolved|isolate money, timing, trust, or fit|next touch/i.test(followUpDataMoveVisible)||/one outreach or sales action/i.test(followUpDataMoveVisible))failures.push('follow_up_data_trust_move_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Soft Result No Reply Data Trust',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'no reply',{});
+    var noReplyDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/log no reply|set one bump|next warm signal/i.test(noReplyDataMoveVisible)||/one outreach or sales action/i.test(noReplyDataMoveVisible))failures.push('no_reply_data_trust_move_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Soft Result Done Data Trust',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'done',{});
+    var doneDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/capture the actual result|no reply, reply, booked, paid/i.test(doneDataMoveVisible)||/one outreach or sales action/i.test(doneDataMoveVisible))failures.push('done_data_trust_move_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17823,7 +17854,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:82,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 35 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:85,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 38 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
