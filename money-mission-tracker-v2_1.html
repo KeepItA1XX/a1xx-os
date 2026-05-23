@@ -12350,6 +12350,15 @@ function getMissionResultTruthTrustLineV15(ctx){
   return 'Result trust: '+notes.join('; ')+'.';
 }
 
+function getMissionResultTruthNextMoveV15(ctx){
+  var ledger=typeof getMissionContextTruthLedgerV1==='function'?getMissionContextTruthLedgerV1(ctx||{}):null;
+  if(!ledger)return '';
+  if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_paid_not_confirmed'))return 'log the money in DPC, update the lead in CRM, then protect delivery';
+  if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_booked_not_confirmed'))return 'log the booked call in DPC, update the lead, and add the calendar detail';
+  if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_reply_not_confirmed'))return 'log the reply in DPC or Outreach, update the lead, then qualify intent';
+  return '';
+}
+
 function getMissionResultCountAnswerV15(ctx,question){
   var q=normalizeMissionQuestion(question||'');
   if(!missionIsResultCountAskV15(q))return '';
@@ -17788,6 +17797,8 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'reply',{});
     var replyTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust from this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Result trust: reply is chat-only until DPC or Outreach confirms it/i.test(replyTrustVisible)||/booked call is chat-only|paid result is chat-only/i.test(replyTrustVisible))failures.push('reply_data_trust_truth_guard');
+    var replyDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/log the reply in DPC or Outreach|qualify intent/i.test(replyDataMoveVisible)||/one outreach or sales action/i.test(replyDataMoveVisible))failures.push('reply_data_trust_move_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Trust Paid',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -17797,6 +17808,8 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'paid',{});
     var paidTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust from this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Result trust: paid result is chat-only until DPC or CRM confirms it/i.test(paidTrustVisible)||/booked call is chat-only|reply is chat-only/i.test(paidTrustVisible))failures.push('paid_data_trust_truth_guard');
+    var paidDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/log the money in DPC|update the lead in CRM|protect delivery/i.test(paidDataMoveVisible)||/one outreach or sales action/i.test(paidDataMoveVisible))failures.push('paid_data_trust_move_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17810,7 +17823,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:80,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 33 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:82,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 35 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -17861,8 +17874,10 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var trustLine=missing.length?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
   var resultTrustLine=typeof getMissionResultTruthTrustLineV15==='function'?getMissionResultTruthTrustLineV15(ctx):'';
   var resultTrustBlock=resultTrustLine?'<br><br>'+escapeHtml(resultTrustLine):'';
+  var resultTrustMove=typeof getMissionResultTruthNextMoveV15==='function'?getMissionResultTruthNextMoveV15(ctx):'';
+  var safeMove=resultTrustMove||'one outreach or sales action, then log the result';
   if(/\b(show me the data.*tell me the move|show me data.*tell me the move|data.*then.*move)\b/.test(q)){
-    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Move from the cleanest loaded signal: one outreach or sales action, then log the result.';
+    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Move from the cleanest loaded signal: '+escapeHtml(safeMove)+'.';
   }
   if(/\b(where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth)\b/.test(q)){
     return 'That read is coming from the current app packet and sync health.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
