@@ -12127,6 +12127,7 @@ function getMissionResultSignalV1(question){
   if(/\b(paid|got paid|collected|collected money|invoice paid|closed|closed one|sale made|sold)\b/.test(q))return {type:'paid',label:'Collected Money',confidence:0.9};
   if(/\b(got a reply|they replied|he replied|she replied|reply came in|got replies|they responded|responded)\b/.test(q))return {type:'reply',label:'Got Reply',confidence:0.88};
   if(/\b(no reply|no replies|no answer|nothing yet|ghosted|left me on read|did not respond|didn'?t respond)\b/.test(q))return {type:'no_reply',label:'No Reply Yet',confidence:0.86};
+  if(/^(follow up|follow-up|followup)$/.test(q))return {type:'follow_up',label:'Follow-Up Needed',confidence:0.84};
   if(/\b(follow up|follow-up|circle back|check back|they said later|need to think|thinking about it)\b/.test(q)&&/\b(done|result|call|said|asked|told|needs?|need)\b/.test(q))return {type:'follow_up',label:'Follow-Up Needed',confidence:0.82};
   if(/\b(sent it|sent|handled it|done|logged it|posted|called|uploaded|finished|knocked it out)\b/.test(q))return {type:'done',label:'Action Done',confidence:0.8};
   return null;
@@ -17399,6 +17400,14 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionSalesDeepOutputResponseV1('sales',ctx,'he needs to think',{route:'sales'}, {});
     var contextualSalesMarkerReply=getMissionOutputPackResponseV1('sales',ctx,'help me reply',{type:CONV_DATA_REQUEST,route:'sales'}, {});
     if(!/thinking through|money, the timing|whether this solves the problem/i.test(contextualSalesMarkerReply)||/Before I explain anything/i.test(contextualSalesMarkerReply))failures.push('sales_marker_reply_context_objection_guard');
+    getMissionSalesDeepOutputResponseV1('sales',ctx,'he ghosted',{route:'sales'}, {});
+    var contextualSalesGhostReply=getMissionOutputPackResponseV1('sales',ctx,'help me reply',{type:CONV_DATA_REQUEST,route:'sales'}, {});
+    if(!/close the loop|Still want me to help you map this out/i.test(contextualSalesGhostReply)||/thinking through|Before I explain anything/i.test(contextualSalesGhostReply))failures.push('sales_ghost_reply_context_guard');
+    if(!getMissionResultSignalV1('follow-up')||getMissionResultSignalV1('follow-up').type!=='follow_up')failures.push('bare_follow_up_result_signal');
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString(),chatId:salesReplyChatId},history:[]}}));
+    buildMissionResultLoopPromptV1({route:'sales',rawInput:'follow-up'},getMissionResultSignalV1('follow-up'));
+    var followUpMemory=getMissionDecisionMemoryV1({rawInput:'what next',route:'sales'},ctx);
+    if(!followUpMemory.shouldAnswer||!/follow-up|unresolved concern|money, timing, trust, or fit/i.test(followUpMemory.message||''))failures.push('follow_up_result_overrides_booked_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17411,7 +17420,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:51,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 4 sales reply context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:54,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 7 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -21725,6 +21734,7 @@ function getMissionSalesDeepOutputResponseV1(route,ctx,question,conv,brainState)
   var objectionKey=(inputMatch&&inputMatch.objectionKey)||getMissionSalesDeepObjectionKeyV1(q);
   if(objectionKey&&typeof rememberMissionSalesObjectionContextV1==='function')rememberMissionSalesObjectionContextV1(objectionKey,q);
   var subtype=(inputMatch&&inputMatch.subroute)||getMissionSalesDeepSubtypeV1(q);
+  if(subtype==='ghosted'&&typeof rememberMissionSalesObjectionContextV1==='function')rememberMissionSalesObjectionContextV1('ghosted',q);
   var offerIntent=getMissionSalesOfferIntentV1(q);
   if(liveMode&&!subtype)subtype='live_call';
   if(subtype==='roleplay')subtype='roleplay_start';
@@ -22820,6 +22830,9 @@ function getMissionSalesEdgeCaseResponseV1(question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
   var contextualReply=getMissionContextualSalesReplyV1(question||'');
   if(contextualReply)return contextualReply;
+  if(/\b(ghosted|left me on read|no reply)\b/.test(q)){
+    rememberMissionSalesObjectionContextV1('ghosted',q);
+  }
   if(/\b(needs to think|need to think|he needs to think|she needs to think|they need to think)\b/.test(q)){
     rememberMissionSalesObjectionContextV1('need_to_think',q);
     return 'Say this. "Totally fair. What part are you still thinking through: the money, the timing, or whether this solves the problem?"';
