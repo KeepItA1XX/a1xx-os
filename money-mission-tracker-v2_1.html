@@ -17922,10 +17922,48 @@ function runMissionBroadRegressionHardeningV1(){
   var priorContent=window.__contentPieces;
   var priorProduction=window.__productionPieces;
   var priorCalendar=window.__calEvents;
-  var localKeys=[MISSION_CHAT_HISTORY_KEY,MISSION_CHAT_ACTIVE_SESSION_KEY,MISSION_CHAT_ACTIVE_ALIAS_KEY,MISSION_RESULT_EVENT_LEDGER_KEY_V12].filter(Boolean);
+  var priorLastArb=window.__missionLastContextArbitrationV11;
+  var priorSilentBoundary=window.__missionLastSilentFreshBoundaryV17;
+  var priorLastTurnObject=window.__missionLastTurnObjectV2;
+  var priorLastTurnV2=window.__missionLastTurnV2;
+  var priorRoutePriorityDecision=window.__missionLastRoutePriorityDecisionV1;
+  var priorLastInputDebug=window.__missionLastInputDebug;
+  var priorLastTruthLedger=window.__missionLastTruthLedgerV1;
+  var priorSessionDataCache=window.__missionSessionDataCacheV1;
+  var priorSalesDeepTemplate=window.__missionLastSalesDeepTemplateV1;
+  var priorActiveTopicRoute=window.__missionCommandActiveTopicRoute;
+  var priorActiveTopicQuestion=window.__missionCommandActiveTopicQuestion;
+  var priorActiveTopicAt=window.__missionCommandActiveTopicAt;
+  var localKeys=[MISSION_CHAT_HISTORY_KEY,MISSION_CHAT_SESSIONS_KEY,MISSION_CHAT_ACTIVE_SESSION_KEY,MISSION_CHAT_ACTIVE_ALIAS_KEY,MISSION_RESULT_EVENT_LEDGER_KEY_V12].filter(Boolean);
   var sessionKeys=[MISSION_BRAIN_SESSION_V2_KEY,MISSION_CONTEXT_MODE_KEY,MISSION_RESULT_EVENT_LEDGER_KEY_V12,MISSION_FRESH_STARTER_MARKER_KEY_V12].filter(Boolean);
   var savedLocal={};
   var savedSession={};
+  function snapshotMissionStorageForQaV1(storage){
+    var snapshot={};
+    try{
+      for(var i=0;i<storage.length;i++){
+        var key=storage.key(i);
+        if(key)snapshot[key]=storage.getItem(key);
+      }
+    }catch(e){}
+    return snapshot;
+  }
+  function restoreMissionStorageForQaV1(storage,snapshot){
+    try{
+      var keys=[];
+      for(var i=0;i<storage.length;i++){
+        var key=storage.key(i);
+        if(key)keys.push(key);
+      }
+      keys.forEach(function(key){storage.removeItem(key);});
+      Object.keys(snapshot||{}).forEach(function(key){
+        if(snapshot[key]===null||snapshot[key]===undefined)storage.removeItem(key);
+        else storage.setItem(key,snapshot[key]);
+      });
+    }catch(e){}
+  }
+  var savedLocalAll=snapshotMissionStorageForQaV1(localStorage);
+  var savedSessionAll=snapshotMissionStorageForQaV1(sessionStorage);
   localKeys.forEach(function(key){try{savedLocal[key]=localStorage.getItem(key);}catch(e){savedLocal[key]=null;}});
   sessionKeys.forEach(function(key){try{savedSession[key]=sessionStorage.getItem(key);}catch(e){savedSession[key]=null;}});
   function restoreStorage(storage,key,value){
@@ -18432,20 +18470,88 @@ function runMissionBroadRegressionHardeningV1(){
     ].forEach(function(prompt){getMissionCommandResponse('ask',ctx,prompt,{});});
     var longSessionReturnVisible=String(getMissionCommandResponse('ask',ctx,'what should i come back with',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/paid result|money collected|delivery protected|lead updated/i.test(longSessionReturnVisible)||/Content, not sales|Pipeline, not sales|Sales lane, not pipeline|booked call|calendar detail/i.test(longSessionReturnVisible))failures.push('long_session_paid_log_target_guard');
+    var reloadOldAt=new Date(Date.now()-6*3600000).toISOString();
+    var reloadNow=new Date().toISOString();
+    var reloadStaleBookedBrain={
+      resultLoop:{
+        lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:reloadOldAt,chatId:'qa_reload_old_chat'},
+        pendingAction:{label:'Prep Call',action:'prep the booked call and add the calendar detail',route:'sales',suggestedAt:reloadOldAt},
+        history:[{type:'booked',label:'Booked Call',route:'sales',recordedAt:reloadOldAt,chatId:'qa_reload_old_chat'}]
+      },
+      lastActionPlan:{label:'Prep Call',action:'prep the booked call and add the calendar detail',route:'sales',suggestedAt:reloadOldAt},
+      threadMemory:{activeRoute:'sales',lastQuestion:'what next',lastUpdatedAt:reloadOldAt,turns:[{question:'booked',route:'sales',timestamp:reloadOldAt}]},
+      lastRoute:'sales',
+      sessionTopic:'sales'
+    };
+    setStore(MISSION_CHAT_SESSIONS_KEY,[
+      {id:'qa_reload_old_chat',title:'QA Reload Old',createdAt:reloadOldAt,updatedAt:reloadOldAt,messages:[{role:'user',body:'booked',ts:reloadOldAt}],memory:{brainSession:reloadStaleBookedBrain}},
+      {id:'qa_reload_new_chat',title:'QA Reload New',createdAt:reloadNow,updatedAt:reloadNow,messages:[],memory:{brainSession:{}}}
+    ]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_reload_new_chat');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_reload_new_chat');
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify(reloadStaleBookedBrain));
+    setMissionResultEventLedgerV12([{type:'booked',label:'Booked Call',route:'sales',recordedAt:reloadOldAt,chatId:'qa_reload_old_chat'}]);
+    var reloadTodayVisible=String(getMissionCommandResponse('ask',ctx,'what should i do today',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(/Last result was booked|prep the call|calendar detail|opening question/i.test(reloadTodayVisible))failures.push('reload_new_chat_stale_booked_today_leak');
+    var reloadBookedCountVisible=String(getMissionCommandResponse('ask',ctx,'how many booked calls do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Chat-only result memory:\s*0 booked/i.test(reloadBookedCountVisible))failures.push('reload_new_chat_old_booked_count_leak');
+    var reloadLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(/DPC: booked call|Calendar: call detail added|Lead: status updated/i.test(reloadLogVisible))failures.push('reload_new_chat_booked_log_target_leak');
+    var reloadPaidAt=new Date().toISOString();
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:'qa_reload_paid_chat',title:'QA Reload Paid',createdAt:new Date(Date.now()-1000).toISOString(),updatedAt:reloadPaidAt,messages:[{role:'user',body:'paid',ts:reloadPaidAt}],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_reload_paid_chat');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_reload_paid_chat');
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',recordedAt:reloadPaidAt,chatId:'qa_reload_paid_chat'},history:[]}}));
+    setMissionResultEventLedgerV12([{type:'paid',label:'Collected Money',route:'sales',recordedAt:reloadPaidAt,chatId:'qa_reload_paid_chat'}]);
+    var reloadPaidNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Last result was paid|log the money|protect delivery/i.test(reloadPaidNextVisible)||/Last result was booked|prep the call|calendar detail/i.test(reloadPaidNextVisible))failures.push('reload_active_paid_result_not_preserved');
+    var reloadStalePaidBrain={
+      resultLoop:{
+        lastResult:{type:'paid',label:'Collected Money',route:'sales',recordedAt:reloadOldAt,chatId:'qa_reload_old_paid'},
+        pendingAction:{label:'Protect Delivery',action:'protect delivery',route:'sales',suggestedAt:reloadOldAt},
+        history:[{type:'paid',label:'Collected Money',route:'sales',recordedAt:reloadOldAt,chatId:'qa_reload_old_paid'}]
+      },
+      lastActionPlan:{label:'Protect Delivery',action:'protect delivery',route:'sales',suggestedAt:reloadOldAt},
+      threadMemory:{activeRoute:'sales',lastQuestion:'paid',lastUpdatedAt:reloadOldAt,turns:[{question:'paid',route:'sales',timestamp:reloadOldAt}]}
+    };
+    setStore(MISSION_CHAT_SESSIONS_KEY,[
+      {id:'qa_reload_old_paid',title:'QA Reload Old Paid',createdAt:reloadOldAt,updatedAt:reloadOldAt,messages:[{role:'user',body:'paid',ts:reloadOldAt}],memory:{brainSession:reloadStalePaidBrain}},
+      {id:'qa_reload_new_paid',title:'QA Reload New Paid',createdAt:reloadNow,updatedAt:reloadNow,messages:[],memory:{brainSession:{}}}
+    ]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_reload_new_paid');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_reload_new_paid');
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify(reloadStalePaidBrain));
+    setMissionResultEventLedgerV12([{type:'paid',label:'Collected Money',route:'sales',recordedAt:reloadOldAt,chatId:'qa_reload_old_paid'}]);
+    var reloadStalePaidNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(/Last result was paid|log the money|protect delivery/i.test(reloadStalePaidNextVisible))failures.push('reload_new_chat_stale_paid_next_leak');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
     window.__missionIntegritySelfCheckActive=priorIntegrity;
     window.__missionCommandSelfCheckActive=priorSelfCheck;
     window.__missionAllowLatestResultDuringRegressionV1=priorLatestRegression;
+    window.__missionLastContextArbitrationV11=priorLastArb;
+    window.__missionLastSilentFreshBoundaryV17=priorSilentBoundary;
+    window.__missionLastTurnObjectV2=priorLastTurnObject;
+    window.__missionLastTurnV2=priorLastTurnV2;
+    window.__missionLastRoutePriorityDecisionV1=priorRoutePriorityDecision;
+    window.__missionLastInputDebug=priorLastInputDebug;
+    window.__missionLastTruthLedgerV1=priorLastTruthLedger;
+    window.__missionSessionDataCacheV1=priorSessionDataCache;
+    window.__missionLastSalesDeepTemplateV1=priorSalesDeepTemplate;
+    window.__missionCommandActiveTopicRoute=priorActiveTopicRoute;
+    window.__missionCommandActiveTopicQuestion=priorActiveTopicQuestion;
+    window.__missionCommandActiveTopicAt=priorActiveTopicAt;
     window.__crmLeads=priorCrm;
     window.__contentPieces=priorContent;
     window.__productionPieces=priorProduction;
     window.__calEvents=priorCalendar;
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
+    restoreMissionStorageForQaV1(localStorage,savedLocalAll);
+    restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:138,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 88 sales/result/data/mixed-lane checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:143,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 93 sales/result/data/mixed-lane/storage checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -24398,6 +24504,64 @@ function runMissionIntegritySelfCheck(){
   var failures=[];
   var priorIntegrityLocalState={};
   var priorIntegritySessionState={};
+  function snapshotMissionIntegrityStorageV1(storage){
+    var snapshot={};
+    try{
+      for(var i=0;i<storage.length;i++){
+        var key=storage.key(i);
+        if(key)snapshot[key]=storage.getItem(key);
+      }
+    }catch(e){}
+    return snapshot;
+  }
+  function restoreMissionIntegrityStorageV1(storage,snapshot){
+    try{
+      var keys=[];
+      for(var i=0;i<storage.length;i++){
+        var key=storage.key(i);
+        if(key)keys.push(key);
+      }
+      keys.forEach(function(key){storage.removeItem(key);});
+      Object.keys(snapshot||{}).forEach(function(key){
+        if(snapshot[key]===null||snapshot[key]===undefined)storage.removeItem(key);
+        else storage.setItem(key,snapshot[key]);
+      });
+    }catch(e){}
+  }
+  var priorIntegrityLocalAll=snapshotMissionIntegrityStorageV1(localStorage);
+  var priorIntegritySessionAll=snapshotMissionIntegrityStorageV1(sessionStorage);
+  restoreMissionIntegrityStorageV1(localStorage,{});
+  restoreMissionIntegrityStorageV1(sessionStorage,{});
+  var priorIntegrityGlobals={
+    activeTopicRoute:window.__missionCommandActiveTopicRoute,
+    activeTopicQuestion:window.__missionCommandActiveTopicQuestion,
+    activeTopicAt:window.__missionCommandActiveTopicAt,
+    lastTurnObject:window.__missionLastTurnObjectV2,
+    currentSalesMode:window.__missionCurrentSalesMode,
+    contextMode:window.__missionContextMode,
+    lastContextArbitration:window.__missionLastContextArbitrationV11,
+    lastSilentFreshBoundary:window.__missionLastSilentFreshBoundaryV17,
+    lastTurnV2:window.__missionLastTurnV2,
+    lastRoutePriorityDecision:window.__missionLastRoutePriorityDecisionV1,
+    lastInputDebug:window.__missionLastInputDebug,
+    lastTruthLedger:window.__missionLastTruthLedgerV1,
+    sessionDataCache:window.__missionSessionDataCacheV1,
+    salesDeepTemplate:window.__missionLastSalesDeepTemplateV1
+  };
+  window.__missionCommandActiveTopicRoute='';
+  window.__missionCommandActiveTopicQuestion='';
+  window.__missionCommandActiveTopicAt=0;
+  window.__missionLastTurnObjectV2=null;
+  window.__missionCurrentSalesMode='normal';
+  window.__missionContextMode='general';
+  window.__missionLastContextArbitrationV11=null;
+  window.__missionLastSilentFreshBoundaryV17=null;
+  window.__missionLastTurnV2=null;
+  window.__missionLastRoutePriorityDecisionV1=null;
+  window.__missionLastInputDebug=null;
+  window.__missionLastTruthLedgerV1=null;
+  window.__missionSessionDataCacheV1=null;
+  window.__missionLastSalesDeepTemplateV1=null;
   var integrityIsolationKeys=[
     MISSION_CHAT_ACTIVE_SESSION_KEY,
     MISSION_CHAT_ACTIVE_ALIAS_KEY,
@@ -24413,7 +24577,7 @@ function runMissionIntegritySelfCheck(){
       localStorage.removeItem(key);
     }catch(e){}
   });
-  [MISSION_RESULT_EVENT_LEDGER_KEY_V12,MISSION_RESULT_SESSION_COUNTS_KEY_V1,MISSION_FRESH_STARTER_MARKER_KEY_V12].filter(Boolean).forEach(function(key){
+  [MISSION_BRAIN_SESSION_V2_KEY,MISSION_RESULT_EVENT_LEDGER_KEY_V12,MISSION_RESULT_SESSION_COUNTS_KEY_V1,MISSION_FRESH_STARTER_MARKER_KEY_V12].filter(Boolean).forEach(function(key){
     try{
       priorIntegritySessionState[key]=sessionStorage.getItem(key);
       sessionStorage.removeItem(key);
@@ -24423,7 +24587,7 @@ function runMissionIntegritySelfCheck(){
     integrityIsolationKeys.forEach(function(key){
       try{localStorage.removeItem(key);}catch(e){}
     });
-    [MISSION_RESULT_EVENT_LEDGER_KEY_V12,MISSION_RESULT_SESSION_COUNTS_KEY_V1,MISSION_FRESH_STARTER_MARKER_KEY_V12].filter(Boolean).forEach(function(key){
+    [MISSION_BRAIN_SESSION_V2_KEY,MISSION_RESULT_EVENT_LEDGER_KEY_V12,MISSION_RESULT_SESSION_COUNTS_KEY_V1,MISSION_FRESH_STARTER_MARKER_KEY_V12].filter(Boolean).forEach(function(key){
       try{sessionStorage.removeItem(key);}catch(e){}
     });
   }
@@ -24473,6 +24637,7 @@ function runMissionIntegritySelfCheck(){
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'leads',turns:[{question:'/pipeline',route:'leads',timestamp:new Date().toISOString()}]},lastActionPlan:{label:'Prep Call',target:'sales_coach',reason:'thread_memory_booked',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Prep Call',target:'sales_coach',reason:'thread_memory_booked',suggestedAt:new Date().toISOString()},history:[]}}));
   var staleSalesPendingThread=getMissionThreadMemoryV1({rawInput:'why',route:'now',inputSignals:{}},actionCtx);
   if(staleSalesPendingThread.pendingAction||(staleSalesPendingThread.message||'').indexOf('Prep Call')>=0)failures.push('thread_memory_stale_sales_pending_guard');
+  resetMissionIntegrityLocalContextV1();
   var bookedCountAnswer=getMissionCommandResponse('ask',actionCtx,'how many booked calls do i have',{});
   if(!/booked call/i.test(bookedCountAnswer)||/Booked-call read|DPC logged today|CRM booked\/session signals|Calendar call\/session events loaded|Start the DPC/i.test(bookedCountAnswer))failures.push('booked_call_count_answer');
   var bookedCountBubble=buildMissionBubblePacket('dpc',{type:'CONV_DATA_REQUEST',route:'dpc'},actionCtx,'how many booked calls do i have','Booked-call read.','','',{});
@@ -24823,6 +24988,22 @@ function runMissionIntegritySelfCheck(){
       else sessionStorage.setItem(key,priorIntegritySessionState[key]);
     }catch(e){}
   });
+  restoreMissionIntegrityStorageV1(localStorage,priorIntegrityLocalAll);
+  restoreMissionIntegrityStorageV1(sessionStorage,priorIntegritySessionAll);
+  window.__missionCommandActiveTopicRoute=priorIntegrityGlobals.activeTopicRoute;
+  window.__missionCommandActiveTopicQuestion=priorIntegrityGlobals.activeTopicQuestion;
+  window.__missionCommandActiveTopicAt=priorIntegrityGlobals.activeTopicAt;
+  window.__missionLastTurnObjectV2=priorIntegrityGlobals.lastTurnObject;
+  window.__missionCurrentSalesMode=priorIntegrityGlobals.currentSalesMode;
+  window.__missionContextMode=priorIntegrityGlobals.contextMode;
+  window.__missionLastContextArbitrationV11=priorIntegrityGlobals.lastContextArbitration;
+  window.__missionLastSilentFreshBoundaryV17=priorIntegrityGlobals.lastSilentFreshBoundary;
+  window.__missionLastTurnV2=priorIntegrityGlobals.lastTurnV2;
+  window.__missionLastRoutePriorityDecisionV1=priorIntegrityGlobals.lastRoutePriorityDecision;
+  window.__missionLastInputDebug=priorIntegrityGlobals.lastInputDebug;
+  window.__missionLastTruthLedgerV1=priorIntegrityGlobals.lastTruthLedger;
+  window.__missionSessionDataCacheV1=priorIntegrityGlobals.sessionDataCache;
+  window.__missionLastSalesDeepTemplateV1=priorIntegrityGlobals.salesDeepTemplate;
   window.__missionIntegritySelfCheckActive=false;
   return {passed:!failures.length,failures:failures,total:111};
 }
