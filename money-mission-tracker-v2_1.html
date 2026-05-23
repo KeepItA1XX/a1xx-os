@@ -11959,6 +11959,19 @@ function missionHasFreshBookedContextV12(){
   }
 }
 
+function missionIsBookedLogTargetAskV13(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for|what result are we trying to create)\b/.test(q);
+}
+
+function getMissionBookedLogTargetAnswerV13(){
+  return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
+}
+
+function missionShouldProtectBookedLogTargetV13(question){
+  return missionIsBookedLogTargetAskV13(question||'')&&typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12();
+}
+
 function getMissionFreshBookedResultV12(fallback){
   if(fallback&&fallback.type==='booked'&&missionResultIsFreshForActiveChatV12(fallback))return fallback;
   var event=getMissionFreshResultEventV12('booked');
@@ -12859,9 +12872,8 @@ function summarizeMissionContextArbitrationV11(arbitration){
 function applyMissionContextAnswerGuardV11(html,turn,arbitration){
   arbitration=arbitration||turn&&turn.contextArbitration||window.__missionLastContextArbitrationV11||null;
   var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||arbitration&&arbitration.currentPrompt||'');
-  var bookedLogAsk=/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for)\b/.test(q);
-  if(bookedLogAsk&&typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12()){
-    return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
+  if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(q)){
+    return getMissionBookedLogTargetAnswerV13();
   }
   if(!arbitration)return html;
   var out=String(html||'');
@@ -13041,7 +13053,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
       var eventOnlyCard=plainMissionQaAnswer('what card owns this');
       if(!/Sales and Manager|Sales owns the call prep|Manager owns the calendar/i.test(eventOnlyCard)||/Content/i.test(eventOnlyCard))failures.push('active_booked_event_card_owner');
       var eventOnlyLog=plainMissionQaAnswer('what do i log after this');
-      if(!/DPC: booked call|Lead: status updated|Calendar: call detail added/i.test(eventOnlyLog)||/Production tracker|Content tracker|saved IG collections|theme pages/i.test(eventOnlyLog))failures.push('active_booked_event_log_target');
+      if(!/DPC: booked call|Lead: status updated|Calendar: call detail added/i.test(eventOnlyLog)||/Production tracker|Content tracker|saved IG collections|theme pages|Mark Step Done|Save Note/i.test(eventOnlyLog))failures.push('active_booked_event_log_target');
     }
   }catch(e){
     failures.push('exception_'+(e&&e.message?e.message:String(e)));
@@ -18271,6 +18283,7 @@ function missionActionLayerShouldSkipV1(turn,question,opts){
   var q=normalizeMissionQuestion(question||turn&&turn.rawInput||turn&&turn.normalizedInput||'');
   var route=turn&&turn.route||'';
   if(!q)return true;
+  if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(q))return true;
   if(/^(good morning|gm|morning|good afternoon|good evening)$/i.test(q))return true;
   if(getMissionCloseSignal(q))return true;
   if(getMissionCorrectionTargetRouteV2(q))return true;
@@ -22250,6 +22263,7 @@ function getMissionHumanBubble(route,conv,ctx,question){
 }
 
 function getMissionDataBubble(route,ctx,question){
+  if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(question||''))return '';
   var block=getMissionBlockIntel();
   var journey=getCurrentJourneyMove(ctx);
   if(route==='leads'){
@@ -22311,6 +22325,7 @@ function missionActionButton(id,label,data){
 }
 
 function getMissionActionButtons(route,ctx,question){
+  if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(question||''))return '';
   var buttons=[];
   if(route==='leads'){
     buttons.push(missionActionButton('followup','Log Follow-Up',{route:route}));
@@ -22403,6 +22418,9 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   if(turnV2&&turnV2.responseDepth)depth=turnV2.responseDepth;
   var guidedProfile=getMissionGuidanceProfile(question||'',route,conv&&conv.type,brainState||{});
   function withWorker(html){return html?(missionPromptIsWorkerMention(question)?getMissionWorkerLabelHtml(route):'')+html:html;}
+  if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(question||'')){
+    return {b1:withWorker(getMissionBookedLogTargetAnswerV13()),b2:'',b3:''};
+  }
   var protectedCorrectionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(question||''):'';
   var protectedResultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(question||''):null;
   var protectedResultTypes=/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/;
@@ -22747,6 +22765,9 @@ function getMissionCohesionCardLabelFromMoveV1(label,nextMove){
 function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,turn){
   var category=getMissionCommunicationCohesionCategoryV1(question||'');
   if(!category)return '';
+  if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(question||'')){
+    return getMissionBookedLogTargetAnswerV13();
+  }
   if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||'',ctx)){
     if(/\b(where we at|where are we|where do i stand)\b/.test(normalizeMissionQuestion(question||'')))return getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,'where');
     return getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,'clean');
@@ -22759,8 +22780,8 @@ function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,t
     }
     return 'That lives on '+escapeHtml(naturalCardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open '+escapeHtml(naturalCardLabel)+', do the smallest step, then come back with done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   }
-  if(/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for|what result are we trying to create)\b/.test(c.q)&&c.bookedContext){
-    return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
+  if(typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(c.q)&&c.bookedContext){
+    return getMissionBookedLogTargetAnswerV13();
   }
   if(category==='context_awareness'){
     return 'I am looking at:<br><br>- Lane: '+escapeHtml(c.routeLabel)+'<br>- Card: '+escapeHtml(c.cardLabel)+'<br>- Mode: '+escapeHtml(c.mode)+'<br>- Money: '+escapeHtml(c.moneyLine)+'<br>- DPC: '+escapeHtml(c.dpcLine)+(c.lastResult?'<br>- Last result: '+escapeHtml(c.lastResult):'')+(c.missing.length?'<br>- Missing: '+escapeHtml(c.missing.join(', ')):'')+'<br><br>The useful read is: '+escapeHtml(c.nextMove)+'.';
@@ -22809,6 +22830,9 @@ function getMissionMoneyReadResponseV1(ctx,question){
 function getMissionFreshBookedFollowupAnswerV12(question){
   var q=normalizeMissionQuestion(question||'');
   if(!q||!(typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12()))return '';
+  if(typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(q)){
+    return getMissionBookedLogTargetAnswerV13();
+  }
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q))return '';
   if(/\b(what next|what now|next move|what should i do|what do i do)\b/.test(q)){
     return 'Last result was booked.<br><br>Next, prep the call, add the calendar detail, and update the lead.<br><br>Open with one discovery question.';
@@ -22821,9 +22845,6 @@ function getMissionFreshBookedFollowupAnswerV12(question){
   }
   if(/\b(what card owns this|what lane owns this|which card handles|what card do i open|where should this live)\b/.test(q)){
     return 'That split lives in Sales and Manager.<br><br>Sales owns the call prep. Manager owns the calendar detail.<br><br>Open Sales Coach for the question, then Manager/Calendar to save the call.';
-  }
-  if(/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for)\b/.test(q)){
-    return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
   }
   return '';
 }
@@ -22922,8 +22943,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     shaped=cleanMissionVisibleAnswerText(applyMissionB1ProseGuard(shaped,{route:route,question:cleanQuestion||question||'',turn:turnV2,opts:opts}));
     shaped=cleanMissionCardRouteGarnishV1(shaped,opts);
     shaped=applyMissionCardCohesionV1(shaped,opts);
-    if(/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for)\b/.test(normalizeMissionQuestion(cleanQuestion||question||''))&&typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12()){
-      shaped='Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
+    if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(cleanQuestion||question||'')){
+      shaped=getMissionBookedLogTargetAnswerV13();
     }
     shaped=applyMissionContextAnswerGuardV11(shaped,turnV2,turnV2&&turnV2.contextArbitration||window.__missionLastContextArbitrationV11);
 	    return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
@@ -25244,6 +25265,9 @@ function renderMissionCommand(kind,question,forceCurrent){
   }
   var bubblePacket=buildMissionBubblePacket(route,conv,ctx,question||'',answer,followUp,actionLinks,brainState);
   bubblePacket=runMissionResponseIntegrityCheck(window.__missionLastTurnObjectV2||null,bubblePacket);
+  if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(question||'')){
+    bubblePacket={b1:getMissionBookedLogTargetAnswerV13(),b2:'',b3:''};
+  }
   updateMissionTurnCheckpointIntegrity(window.__missionLastTurnObjectV2||null);
   answer=bubblePacket.b1||'';
   followUp=bubblePacket.b3||'';
