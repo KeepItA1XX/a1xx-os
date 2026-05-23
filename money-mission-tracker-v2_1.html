@@ -10961,16 +10961,16 @@ function isMissionWrongLaneCorrectionSignal(q){
 
 function getMissionCorrectionTargetRouteV2(q){
   var raw=String(q||'').toLowerCase();
-  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who|not pipeline.*sales|sales.*not pipeline|no not pipeline sales|not pipeline sales)\b/.test(raw))return 'sales';
-  if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say|not sales.*pipeline|pipeline.*not sales|no not sales pipeline|not sales pipeline)\b/.test(raw))return 'leads';
-  if(/\b(i meant content not sales|content not sales|not sales.*content|content.*not sales|no not sales content|not sales content)\b/.test(raw))return 'content';
-  if(/\b(i meant sales not content|sales not content|not content.*sales|sales.*not content|no not content sales|not content sales)\b/.test(raw))return 'sales';
+  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who|not pipeline.*sales|sales.*not pipeline|pipeline but (i mean |i meant )?sales|leads but (i mean |i meant )?sales|no not pipeline sales|not pipeline sales)\b/.test(raw))return 'sales';
+  if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say|not sales.*pipeline|pipeline.*not sales|sales but (i mean |i meant )?(pipeline|leads)|no not sales pipeline|not sales pipeline)\b/.test(raw))return 'leads';
+  if(/\b(i meant content not sales|content not sales|not sales.*content|content.*not sales|sales but (i mean |i meant )?content|no not sales content|not sales content)\b/.test(raw))return 'content';
+  if(/\b(i meant sales not content|sales not content|not content.*sales|sales.*not content|content but (i mean |i meant )?sales|no not content sales|not content sales)\b/.test(raw))return 'sales';
   q=normalizeMissionQuestion(q||'');
   if(!isMissionWrongLaneCorrectionSignal(q))return '';
-  if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say|not sales.*pipeline|pipeline.*not sales)\b/.test(q))return 'leads';
-  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who|not pipeline.*sales|sales.*not pipeline)\b/.test(q))return 'sales';
-  if(/\b(i meant content not sales|content not sales|not sales.*content|content.*not sales)\b/.test(q))return 'content';
-  if(/\b(i meant sales not content|sales not content|not content.*sales|sales.*not content)\b/.test(q))return 'sales';
+  if(/\b(i meant pipeline not sales|pipeline not sales|who to move not what to say|not sales.*pipeline|pipeline.*not sales|sales but (i mean |i meant )?(pipeline|leads))\b/.test(q))return 'leads';
+  if(/\b(i meant sales not pipeline|sales not pipeline|what to say not who|not pipeline.*sales|sales.*not pipeline|pipeline but (i mean |i meant )?sales|leads but (i mean |i meant )?sales)\b/.test(q))return 'sales';
+  if(/\b(i meant content not sales|content not sales|not sales.*content|content.*not sales|sales but (i mean |i meant )?content)\b/.test(q))return 'content';
+  if(/\b(i meant sales not content|sales not content|not content.*sales|sales.*not content|content but (i mean |i meant )?sales)\b/.test(q))return 'sales';
   if(/\b(i meant production not content|production not content|not content.*production|production.*not content)\b/.test(q))return 'production';
   if(/\b(i meant content not production|content not production|not production.*content|content.*not production)\b/.test(q))return 'content';
   if(/\b(sales|closer|call|objection|discovery|what should i say|what do i say|reply|dm|follow up|follow-up|script)\b/.test(q))return 'sales';
@@ -12412,7 +12412,7 @@ function getMissionResultSignalV1(question){
   if(/\b(wrong resource|wrong script|not the right resource|not the right script|didn'?t fit|did not fit|that resource missed|that script missed)\b/.test(q))return {type:'resource_mismatch',label:'Resource Did Not Fit',confidence:0.82};
   if(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/.test(q))return {type:'booked',label:'Booked Call',confidence:0.9};
   if(/\b(paid|got paid|collected|collected money|invoice paid|closed|closed one|sale made|sold)\b/.test(q))return {type:'paid',label:'Collected Money',confidence:0.9};
-  if(/^(reply|replied|response|got reply)$/.test(q))return {type:'reply',label:'Got Reply',confidence:0.86};
+  if(/^(reply|replied|response|got reply)$/.test(q)||/^reply\b.*\b(not qualified|qualified|qualify|intent)\b/.test(q))return {type:'reply',label:'Got Reply',confidence:0.86};
   if(/\b(got a reply|they replied|he replied|she replied|reply came in|got replies|they responded|responded)\b/.test(q))return {type:'reply',label:'Got Reply',confidence:0.88};
   if(/\b(no reply|no replies|no answer|nothing yet|ghosted|left me on read|did not respond|didn'?t respond)\b/.test(q))return {type:'no_reply',label:'No Reply Yet',confidence:0.86};
   if(/^(follow up|follow-up|followup)$/.test(q))return {type:'follow_up',label:'Follow-Up Needed',confidence:0.84};
@@ -17558,6 +17558,9 @@ function runMissionBroadRegressionHardeningV1(){
     var routePriorityCases=[
       {name:'priority_pipeline',q:'/pipeline',route:'leads',layer:'slash_command'},
       {name:'priority_sales_correction',q:'i meant sales not pipeline',route:'sales',layer:'correction_route'},
+      {name:'priority_sales_but_pipeline_correction',q:'pipeline but I mean sales',route:'sales',layer:'correction_route'},
+      {name:'priority_sales_but_content_correction',q:'content but I mean sales',route:'sales',layer:'correction_route'},
+      {name:'priority_embedded_reply_result',q:'reply but not qualified yet',route:'sales',layer:'result_loop'},
       {name:'priority_sales_reply',q:'what should i say',route:'sales',layer:'sales_reply'},
       {name:'priority_sync_data',q:'what data is missing',route:'sync',layer:'sync_data_trust'},
       {name:'priority_content_card',q:'what should i do on the content card',route:'content',layer:'explicit_card'},
@@ -17973,6 +17976,21 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/I am looking at this right now|CRM leads|System health/i.test(shortLoadedVisible)||/voice or workflow memory/i.test(shortLoadedVisible))failures.push('short_loaded_data_trust_guard');
     var shortTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/I am looking at this right now|System health|Sync health|Result trust/i.test(shortTrustVisible)||/Finish the current block step|Open your saved IG/i.test(shortTrustVisible))failures.push('short_trust_data_trust_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Mixed Lane Corrections',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'/pipeline',{});
+    var pipelineButSalesVisible=String(getMissionCommandResponse('ask',ctx,'pipeline but I mean sales',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Sales lane|Ask this|what made you want to talk/i.test(pipelineButSalesVisible)||/Pipeline ·|Leads \(|Hit List read/i.test(pipelineButSalesVisible))failures.push('mixed_lane_pipeline_but_sales_guard');
+    var contentButSalesVisible=String(getMissionCommandResponse('ask',ctx,'content but I mean sales',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Sales lane|Ask this|what made you want to talk/i.test(contentButSalesVisible)||/Content card|Move content forward/i.test(contentButSalesVisible))failures.push('mixed_lane_content_but_sales_guard');
+    var dataPlusSalesVisible=String(getMissionCommandResponse('ask',ctx,'what data are you using and what should I say',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Two-part read|Data check|Sales line|Before I explain anything/i.test(dataPlusSalesVisible)||/Leads \(|Open Production|voice or workflow memory/i.test(dataPlusSalesVisible))failures.push('mixed_data_sales_two_part_guard');
+    var embeddedReplyVisible=String(getMissionCommandResponse('ask',ctx,'reply but not qualified yet',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Reply logged|qualify intent|before pitching/i.test(embeddedReplyVisible)||/Before I pitch anything|what made this worth taking a call/i.test(embeddedReplyVisible))failures.push('embedded_reply_result_guard');
     var nextMoveLeakVisible=String(getMissionCommandResponse('ask',ctx,"what's the play",{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(/Next move:/i.test(nextMoveLeakVisible))failures.push('mid_answer_next_move_label_guard');
   }catch(e){
@@ -17988,7 +18006,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:125,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 78 sales/result/data sibling checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:132,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 82 sales/result/data/mixed-lane checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -23433,6 +23451,9 @@ function getMissionSalesEdgeCaseResponseV1(question){
 
 function getMissionSplitPromptResponseV1(ctx,question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  if(/\b(data|loaded|source|trust|sync|what data are you using|what do you see)\b/.test(q)&&/\b(what should i say|what do i say|tell me what to say|help me reply|write.*(reply|response|dm|text))\b/.test(q)){
+    return 'Two-part read:<br><br>1) Data check: use the current app packet and sync health for the trust read.<br><br>2) Sales line: ask one clean question before pitching. "Before I explain anything, what made you want to talk today?"';
+  }
   if(/\bshould i post or follow up\b/.test(q)||/\bshould i work on content or sales\b/.test(q)){
     return 'Split read:<br><br>Sales first if there is a warm conversation open.<br><br>Content first if there is no buyer signal and you need proof for the next ask.<br><br>Default move: send one clean follow-up, then turn the result into today’s proof post.';
   }
@@ -23757,6 +23778,10 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||cleanQuestion||'',ctx)){
 	    var freshAnchorKind=/\b(where we at|where are we|where do i stand)\b/.test(rawQ)?'where':(/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(rawQ)?'time':(/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|nah not that|no not that|clean version|clean read)\b/.test(rawQ)?'clean':(/\b(why|why again)\b/.test(rawQ)?'why':'')));
 	    if(freshAnchorKind)return finishMissionAnswer(getMissionFreshStarterDpcAnchorAnswerV12(cleanQuestion||question||'',ctx,freshAnchorKind),{sessionArc:false,closer:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+	  }
+	  var mixedDataSalesPromptAnswer=getMissionSplitPromptResponseV1(ctx,cleanQuestion||question||'');
+	  if(mixedDataSalesPromptAnswer&&/\b(data|loaded|source|trust|sync|what data are you using|what do you see)\b/.test(normalizeMissionUserPromptForRoutingV1(cleanQuestion||question||''))&&/\b(what should i say|what do i say|tell me what to say|help me reply|write.*(reply|response|dm|text))\b/.test(normalizeMissionUserPromptForRoutingV1(cleanQuestion||question||''))){
+	    return finishMissionAnswer(mixedDataSalesPromptAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
 	  }
 	  var dataTrustQuestion=isMissionDataTrustPromptV12(cleanQuestion||question||'');
   if(dataTrustQuestion){
