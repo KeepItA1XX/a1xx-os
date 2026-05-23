@@ -11808,6 +11808,7 @@ function getMissionDecisionExplainerLineV1(explainer){
 ========================================================= */
 var MISSION_RESULT_SESSION_COUNTS_KEY_V1='a1xx_mc_result_session_counts_v1';
 var MISSION_RESULT_EVENT_LEDGER_KEY_V12='a1xx_mc_result_event_ledger_v12';
+var MISSION_FRESH_STARTER_MARKER_KEY_V12='a1xx_mc_fresh_starter_marker_v12';
 
 function countMissionResultHistoryTypeV1(history,type){
   return (Array.isArray(history)?history:[]).filter(function(item){return item&&item.type===type;}).length;
@@ -12385,7 +12386,8 @@ function missionActiveChatHasBookedAfterFreshStarterV12(){
     var starterRe=/^(good morning|gm|morning|yo|yo let'?s go|let'?s go|lock in)$/i;
     var bookedRe=/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/i;
     var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
-    var latestStarterTime=NaN;
+    var markerTime=typeof getMissionFreshStarterMarkerTimeV12==='function'?getMissionFreshStarterMarkerTimeV12():NaN;
+    var latestStarterTime=isNaN(markerTime)?NaN:markerTime;
     var sawStarter=false;
     messages.forEach(function(msg){
       if(!msg||msg.role!=='user')return;
@@ -12397,7 +12399,7 @@ function missionActiveChatHasBookedAfterFreshStarterV12(){
       }
     });
     var boundaryTime=!isNaN(latestStarterTime)?latestStarterTime:activeCreatedAt;
-    if(sawStarter&&isNaN(latestStarterTime))return false;
+    if((sawStarter||!isNaN(markerTime))&&isNaN(latestStarterTime))return false;
     return messages.some(function(msg){
       if(!msg||msg.role!=='user'||!bookedRe.test(String(msg.body||'')))return false;
       var msgTime=Date.parse(msg.ts||msg.at||msg.timestamp||msg.createdAt||'');
@@ -12438,12 +12440,41 @@ function missionQuestionIsFreshStarterV12(question){
   return /^(good morning|gm|morning|yo|yo let'?s go|let'?s go|lock in)$/i.test(String(question||'').trim());
 }
 
+function rememberMissionFreshStarterMarkerV12(question){
+  if(!missionQuestionIsFreshStarterV12(question||''))return null;
+  try{
+    var marker={
+      chatId:localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'',
+      recordedAt:new Date().toISOString(),
+      prompt:String(question||'').trim()
+    };
+    sessionStorage.setItem(MISSION_FRESH_STARTER_MARKER_KEY_V12,JSON.stringify(marker));
+    return marker;
+  }catch(e){
+    return null;
+  }
+}
+
+function getMissionFreshStarterMarkerTimeV12(){
+  try{
+    var raw=sessionStorage.getItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
+    var marker=raw?JSON.parse(raw):null;
+    if(!marker||!marker.recordedAt)return NaN;
+    var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'';
+    if(activeId&&marker.chatId!==activeId)return NaN;
+    return Date.parse(marker.recordedAt||'');
+  }catch(e){
+    return NaN;
+  }
+}
+
 function missionLatestActiveChatFreshStarterTimeV12(){
   try{
     var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
     var messages=active&&Array.isArray(active.messages)?active.messages:[];
     var starterRe=/^(good morning|gm|morning|yo|yo let'?s go|let'?s go|lock in)$/i;
-    var latest=NaN;
+    var markerTime=getMissionFreshStarterMarkerTimeV12();
+    var latest=isNaN(markerTime)?NaN:markerTime;
     messages.forEach(function(msg){
       if(!msg||msg.role!=='user')return;
       var body=String(msg.body||'').trim();
@@ -22687,6 +22718,7 @@ function getMissionFreshBookedFollowupAnswerV12(question){
 }
 
 function getMissionCommandResponse(kind,ctx,question,brainState){
+  rememberMissionFreshStarterMarkerV12(question||'');
   brainState=brainState||getMissionBrainState(ctx,question||'','');
   var preTurnBrainSession=null;
   try{preTurnBrainSession=typeof getMissionBrainSessionV2==='function'?getMissionBrainSessionV2():null;brainState._preTurnBrainSession=preTurnBrainSession;}catch(e){}
