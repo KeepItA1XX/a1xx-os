@@ -11821,6 +11821,11 @@ var MISSION_RESULT_SESSION_COUNTS_KEY_V1='a1xx_mc_result_session_counts_v1';
 var MISSION_RESULT_EVENT_LEDGER_KEY_V12='a1xx_mc_result_event_ledger_v12';
 var MISSION_FRESH_STARTER_MARKER_KEY_V12='a1xx_mc_fresh_starter_marker_v12';
 
+function missionInternalSelfCheckIsActiveV1(){
+  if(window.__missionAllowLatestResultDuringRegressionV1)return false;
+  return !!(window.__missionCommandSelfCheckActive||window.__missionIntegritySelfCheckActive);
+}
+
 function countMissionResultHistoryTypeV1(history,type){
   return (Array.isArray(history)?history:[]).filter(function(item){return item&&item.type===type;}).length;
 }
@@ -11959,8 +11964,50 @@ function getMissionFreshResultEventV12(type){
   }
 }
 
+function getMissionLatestFreshResultV12(){
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var activeId=active&&active.id||localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'';
+    var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+    var starterTime=typeof missionLatestActiveChatFreshStarterTimeV12==='function'?missionLatestActiveChatFreshStarterTimeV12():NaN;
+    var boundaryAt=!isNaN(starterTime)?starterTime:activeCreatedAt;
+    var candidates=[];
+    function addCandidate(item,source,timeField){
+      if(!item||!item.type)return;
+      if(activeId&&item.chatId&&item.chatId!==activeId)return;
+      var recordedAt=Date.parse(item[timeField||'recordedAt']||item.recordedAt||item.ts||'');
+      if(!isNaN(boundaryAt)&&(isNaN(recordedAt)||recordedAt<boundaryAt))return;
+      candidates.push(Object.assign({source:source||item.source||'result_context'},item,{recordedAt:!isNaN(recordedAt)?new Date(recordedAt).toISOString():(item.recordedAt||'')}));
+    }
+    var session=typeof getMissionBrainSessionV2==='function'?getMissionBrainSessionV2():{};
+    var loop=session&&session.resultLoop||{};
+    addCandidate(loop.lastResult,'result_loop_last','recordedAt');
+    (Array.isArray(loop.history)?loop.history:[]).forEach(function(item){addCandidate(item,'result_loop_history','recordedAt');});
+    getMissionResultEventLedgerV12().forEach(function(item){addCandidate(item,'result_event_ledger','recordedAt');});
+    var messages=active&&Array.isArray(active.messages)?active.messages:[];
+    messages.forEach(function(msg){
+      if(!msg||msg.role!=='user')return;
+      var signal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(msg.body||''):null;
+      if(!signal||signal.type==='call_done')return;
+      addCandidate({
+        type:signal.type,
+        label:signal.label,
+        route:'sales',
+        chatId:activeId,
+        recordedAt:msg.ts||msg.at||msg.timestamp||msg.createdAt||''
+      },'active_chat_message','recordedAt');
+    });
+    candidates.sort(function(a,b){return Date.parse(b.recordedAt||'')-Date.parse(a.recordedAt||'');});
+    return candidates[0]||null;
+  }catch(e){
+    return null;
+  }
+}
+
 function missionHasFreshBookedContextV12(){
   try{
+    var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+    if(latest&&latest.type)return latest.type==='booked';
     return missionActiveChatHasBookedAfterFreshStarterV12()||
       missionActiveResultLoopHasBookedAfterFreshStarterV12()||
       !!getMissionFreshResultEventV12('booked');
@@ -11983,6 +12030,9 @@ function missionShouldProtectBookedLogTargetV13(question){
 }
 
 function getMissionFreshBookedResultV12(fallback){
+  var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(latest&&latest.type&&latest.type!=='booked')return null;
+  if(latest&&latest.type==='booked')return Object.assign({label:'Booked Call',route:'sales',truthStatus:'session_only',confirmed:false},latest);
   if(fallback&&fallback.type==='booked'&&missionResultIsFreshForActiveChatV12(fallback))return fallback;
   var event=getMissionFreshResultEventV12('booked');
   if(event)return Object.assign({label:'Booked Call',route:'sales',truthStatus:'session_only',confirmed:false},event);
@@ -13103,6 +13153,8 @@ function getMissionDecisionMemoryV1(turn,ctx){
   var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||'');
   var session=getMissionDecisionMemorySessionV1();
   var result=session.lastResult||null;
+  var latestFreshResult=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(latestFreshResult&&latestFreshResult.type)result=latestFreshResult;
   if(result&&result.type==='booked'&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive&&!missionActiveChatHasBookedAfterFreshStarterV12())result=null;
   var action=null;
   var message='';
@@ -13302,6 +13354,8 @@ function getMissionThreadMemoryV1(turn,ctx){
   }
   var loop=session.resultLoop||{};
   var lastResult=loop.lastResult||null;
+  var latestFreshResult=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(latestFreshResult&&latestFreshResult.type)lastResult=latestFreshResult;
   var pending=loop.pendingAction||session.lastActionPlan||null;
   var bookedAfterFreshStarter=typeof missionHasFreshBookedContextV12==='function'?missionHasFreshBookedContextV12():(typeof missionActiveChatHasBookedAfterFreshStarterV12==='function'?missionActiveChatHasBookedAfterFreshStarterV12():true);
   if(bookedAfterFreshStarter)lastResult=getMissionFreshBookedResultV12(lastResult)||lastResult;
@@ -13404,6 +13458,8 @@ function getMissionWhyResponseV1(turn,ctx){
   }
   var memory=turn&&turn.threadMemory||{};
   var lastResult=memory.lastResult||(getMissionBrainSessionV2().resultLoop||{}).lastResult||null;
+  var latestFreshResult=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(latestFreshResult&&latestFreshResult.type)lastResult=latestFreshResult;
   var hasFreshStarterBoundary=!isNaN(missionLatestActiveChatFreshStarterTimeV12());
   if(lastResult&&!missionResultBelongsToActiveChatV12(lastResult))lastResult=null;
   var hasBookedContext=typeof missionHasFreshBookedContextV12==='function'?missionHasFreshBookedContextV12():missionActiveChatHasBookedAfterFreshStarterV12();
@@ -16827,6 +16883,7 @@ function scoreMissionArbiterCandidateV1(item,signal){
   if(signal.shortFollowup&&id==='action_accountability')score-=20;
   if(signal.directNext&&id==='action_accountability')score=117;
   if(signal.directNext&&signal.hasResultMemory&&id==='decision_memory')score=116;
+  if(signal.directNext&&signal.hasResultMemory&&id==='action_accountability')score-=45;
   if(signal.directNext&&signal.hasResultMemory&&id==='pattern_memory')score-=18;
   if(signal.explicitStrategy&&id==='mission_mentor')score=122;
   if(signal.explicitStrategy&&id==='thread_memory')score-=30;
@@ -17227,6 +17284,7 @@ function runMissionBroadRegressionHardeningV1(){
   var failures=[];
   var priorIntegrity=window.__missionIntegritySelfCheckActive;
   var priorSelfCheck=window.__missionCommandSelfCheckActive;
+  var priorLatestRegression=window.__missionAllowLatestResultDuringRegressionV1;
   var priorCrm=window.__crmLeads;
   var priorContent=window.__contentPieces;
   var priorProduction=window.__productionPieces;
@@ -17245,6 +17303,7 @@ function runMissionBroadRegressionHardeningV1(){
   }
   window.__missionIntegritySelfCheckActive=true;
   window.__missionCommandSelfCheckActive=false;
+  window.__missionAllowLatestResultDuringRegressionV1=true;
   try{
     window.__crmLeads=[{name:'QA HOT LEAD',stage:'active',hot:true,followUpDate:new Date().toISOString(),phone:'555'}];
     window.__contentPieces=[{title:'QA Proof Post',status:'Idea'}];
@@ -17418,11 +17477,23 @@ function runMissionBroadRegressionHardeningV1(){
     var afterFollowUpVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/follow-up loop|unresolved|money, timing, trust, or fit/i.test(followUpVisible)||/Still want help mapping that out|did you pause on it/i.test(followUpVisible))failures.push('follow_up_live_path_result_guard');
     if(!/follow-up|unresolved|money, timing, trust, or fit/i.test(afterFollowUpVisible)||/Last result was booked|prep the call/i.test(afterFollowUpVisible))failures.push('follow_up_live_path_next_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Paid Latest Result',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'booked',{});
+    getMissionCommandResponse('ask',ctx,'paid',{});
+    var afterPaidVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/paid|sale|protect delivery|log the money/i.test(afterPaidVisible)||/Last result was booked|prep the call|calendar detail|opening question/i.test(afterPaidVisible))failures.push('paid_live_path_overrides_booked_guard');
+    if(getMissionFreshBookedFollowupAnswerV12('what next'))failures.push('paid_latest_blocks_booked_followup_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
     window.__missionIntegritySelfCheckActive=priorIntegrity;
     window.__missionCommandSelfCheckActive=priorSelfCheck;
+    window.__missionAllowLatestResultDuringRegressionV1=priorLatestRegression;
     window.__crmLeads=priorCrm;
     window.__contentPieces=priorContent;
     window.__productionPieces=priorProduction;
@@ -17430,7 +17501,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:57,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 10 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:59,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 12 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -18569,6 +18640,16 @@ function getMissionActionAccountabilityV1(turn,ctx){
   var freshPending=!!(pending&&(age===null||age<=120));
   var resultAge=getMissionAgeMinutes(lastResult&&lastResult.recordedAt||'');
   var recentResult=!!(lastResult&&lastResult.type&&(resultAge===null||resultAge<=120));
+  var latestFreshResult=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(latestFreshResult&&latestFreshResult.type){
+    lastResult=latestFreshResult;
+    resultAge=getMissionAgeMinutes(lastResult&&lastResult.recordedAt||'');
+    recentResult=!!(resultAge===null||resultAge<=120);
+    if(flags.directNext){
+      pending=null;
+      freshPending=false;
+    }
+  }
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   var pendingNeedsBooked=/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(pendingText);
   var bookedResultFresh=lastResult&&lastResult.type==='booked'&&missionResultIsFreshForActiveChatV12(lastResult);
