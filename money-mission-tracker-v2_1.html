@@ -12858,6 +12858,11 @@ function summarizeMissionContextArbitrationV11(arbitration){
 
 function applyMissionContextAnswerGuardV11(html,turn,arbitration){
   arbitration=arbitration||turn&&turn.contextArbitration||window.__missionLastContextArbitrationV11||null;
+  var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||arbitration&&arbitration.currentPrompt||'');
+  var bookedLogAsk=/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for)\b/.test(q);
+  if(bookedLogAsk&&typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12()){
+    return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
+  }
   if(!arbitration)return html;
   var out=String(html||'');
   var hasBlockedBooked=(arbitration.staleSignals||[]).indexOf('blocked_booked_carry')>=0;
@@ -13036,7 +13041,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
       var eventOnlyCard=plainMissionQaAnswer('what card owns this');
       if(!/Sales and Manager|Sales owns the call prep|Manager owns the calendar/i.test(eventOnlyCard)||/Content/i.test(eventOnlyCard))failures.push('active_booked_event_card_owner');
       var eventOnlyLog=plainMissionQaAnswer('what do i log after this');
-      if(!/DPC: booked call|Lead: status updated|Calendar: call detail added/i.test(eventOnlyLog)||/Production tracker|Content tracker/i.test(eventOnlyLog))failures.push('active_booked_event_log_target');
+      if(!/DPC: booked call|Lead: status updated|Calendar: call detail added/i.test(eventOnlyLog)||/Production tracker|Content tracker|saved IG collections|theme pages/i.test(eventOnlyLog))failures.push('active_booked_event_log_target');
     }
   }catch(e){
     failures.push('exception_'+(e&&e.message?e.message:String(e)));
