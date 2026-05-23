@@ -12480,7 +12480,7 @@ function missionFreshStarterNeedsDpcAnchorV12(question,ctx){
   if(missionDpcActivityTotalV12(ctx)>0)return false;
   if(/^\/\w+/.test(q))return false;
   if(/\b(sync|data|current|trust|source|brief card|outreach card|content card|beat card|manager card|pipeline|who hot|what should i say|help me reply|too expensive|ghosted|booked|paid|call is done)\b/.test(q))return false;
-  return /\b(what should i do today|what next|what now|why|why again|more|run it back|make it make sense|where we at|where are we|where do i stand|i got \d+ minutes|i got twenty minutes|i got 20 minutes|i am tired|i'm tired|lock in)\b/.test(q);
+  return /\b(what should i do today|what next|what now|why|why again|more|run it back|make it make sense|wrong read|nah not that|no not that|that sounds disconnected|answer like.*know what|give me the clean version|give me the clean read|clean version|clean read|where we at|where are we|where do i stand|i got \d+ minutes|i got twenty minutes|i got 20 minutes|i am tired|i'm tired|lock in)\b/.test(q);
 }
 
 function getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,kind){
@@ -12978,6 +12978,10 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     if(answerHasBookedPrep(freshWhy))failures.push('fresh_chat_why_booked_prep');
     var freshNext=plainMissionQaAnswer('what next');
     if(answerHasBookedPrep(freshNext))failures.push('fresh_chat_next_booked_prep');
+    ['wrong read','nah not that','that sounds disconnected','answer like you know what I am doing','give me the clean version'].forEach(function(prompt){
+      var freshCorrection=plainMissionQaAnswer(prompt);
+      if(!/day has not produced|outreach or sales action|DPC|logged signal/i.test(freshCorrection)||/Production tracker|Content tracker|System Hub|booked call|Sales owns/i.test(freshCorrection))failures.push('fresh_chat_correction_anchor_'+prompt.replace(/\W+/g,'_'));
+    });
     setMissionResultEventLedgerV12([
       {type:'booked',label:'Booked Call',recordedAt:new Date(Date.now()+1).toISOString(),chatId:'qa_context_arb_old'},
       {type:'booked',label:'Booked Call',recordedAt:new Date(Date.now()+2).toISOString(),chatId:''}
@@ -13078,7 +13082,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     window.__missionCommandContext=priorCtx;
     window.__missionLastContextArbitrationV11=priorLastArb;
   }
-  return {passed:!failures.length,failures:failures,total:23};
+  return {passed:!failures.length,failures:failures,total:28};
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
@@ -22967,7 +22971,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  var bookedFollowupAnswer=getMissionFreshBookedFollowupAnswerV12(cleanQuestion||question||'');
 	  if(bookedFollowupAnswer)return finishMissionAnswer(bookedFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
 	  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||cleanQuestion||'',ctx)){
-	    var freshAnchorKind=/\b(where we at|where are we|where do i stand)\b/.test(rawQ)?'where':(/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(rawQ)?'time':(/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|clean version|clean read)\b/.test(rawQ)?'clean':(/\b(why|why again)\b/.test(rawQ)?'why':'')));
+	    var freshAnchorKind=/\b(where we at|where are we|where do i stand)\b/.test(rawQ)?'where':(/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(rawQ)?'time':(/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|nah not that|no not that|clean version|clean read)\b/.test(rawQ)?'clean':(/\b(why|why again)\b/.test(rawQ)?'why':'')));
 	    if(freshAnchorKind)return finishMissionAnswer(getMissionFreshStarterDpcAnchorAnswerV12(cleanQuestion||question||'',ctx,freshAnchorKind),{sessionArc:false,closer:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
 	  }
 	  var dataTrustQuestion=isMissionDataTrustPromptV12(cleanQuestion||question||'');
