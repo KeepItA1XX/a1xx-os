@@ -12468,6 +12468,33 @@ function getMissionFreshStarterMarkerTimeV12(){
   }
 }
 
+function missionPendingIsBeforeFreshStarterV12(pending){
+  if(!pending)return false;
+  try{
+    var boundary=missionLatestActiveChatFreshStarterTimeV12();
+    if(isNaN(boundary))return false;
+    var pendingAt=Date.parse(pending.suggestedAt||pending.createdAt||pending.updatedAt||pending.timestamp||'');
+    if(isNaN(pendingAt))return true;
+    return pendingAt<boundary;
+  }catch(e){
+    return false;
+  }
+}
+
+function missionFilterTurnsAfterFreshStarterV12(turns){
+  turns=Array.isArray(turns)?turns:[];
+  try{
+    var boundary=missionLatestActiveChatFreshStarterTimeV12();
+    if(isNaN(boundary))return turns;
+    return turns.filter(function(turn){
+      var turnAt=Date.parse(turn&&turn.timestamp||turn&&turn.ts||turn&&turn.createdAt||turn&&turn.updatedAt||'');
+      return !isNaN(turnAt)&&turnAt>=boundary;
+    });
+  }catch(e){
+    return turns;
+  }
+}
+
 function missionLatestActiveChatFreshStarterTimeV12(){
   try{
     var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
@@ -12895,6 +12922,17 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     if(!/Chat-only result memory:\s*0 booked/i.test(staleLedgerCount))failures.push('fresh_chat_stale_event_ledger_count_leak');
     var staleLedgerNext=plainMissionQaAnswer('what next');
     if(answerHasBookedPrep(staleLedgerNext))failures.push('fresh_chat_stale_event_ledger_next_leak');
+    setMissionBrainSessionV2({
+      turnCount:4,
+      lastActionStatus:'suggested',
+      lastActionPlan:{label:'Open Calendar',action:'Open Calendar',route:'calendar',suggestedAt:old},
+      resultLoop:{pendingAction:{label:'Open Calendar',action:'Open Calendar',route:'calendar',suggestedAt:old},history:[]},
+      threadMemory:{activeRoute:'calendar',turns:[{question:'why',route:'calendar',timestamp:old},{question:'more',route:'calendar',timestamp:old},{question:'run it back',route:'calendar',timestamp:old}],lastUpdatedAt:old}
+    });
+    var stalePendingStarter=plainMissionQaAnswer('good morning');
+    var stalePendingToday=plainMissionQaAnswer('what should i do today');
+    if(/Close this move first|Open Calendar|action is still open|one move is already open/i.test(stalePendingStarter))failures.push('fresh_chat_stale_pending_starter_leak');
+    if(/Close this move first|Open Calendar|action is still open|one move is already open/i.test(stalePendingToday))failures.push('fresh_chat_stale_pending_today_leak');
     var freshPipeline=plainMissionQaAnswer('/pipeline');
     if(answerHasBookedPrep(freshPipeline)||!/pipeline|lead|call-ready|call ready/i.test(freshPipeline))failures.push('fresh_chat_explicit_pipeline_drift');
 
@@ -12972,7 +13010,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     window.__missionCommandContext=priorCtx;
     window.__missionLastContextArbitrationV11=priorLastArb;
   }
-  return {passed:!failures.length,failures:failures,total:19};
+  return {passed:!failures.length,failures:failures,total:21};
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
@@ -13063,8 +13101,9 @@ function getMissionPatternBasedCoachingMemoryV1(turn,ctx){
   var loop=session.resultLoop||{};
   var history=Array.isArray(loop.history)?loop.history.slice(0,8):[];
   var thread=session.threadMemory||{};
-  var turns=Array.isArray(thread.turns)?thread.turns.slice(0,8):[];
+  var turns=missionFilterTurnsAfterFreshStarterV12(Array.isArray(thread.turns)?thread.turns.slice(0,8):[]);
   var pending=loop.pendingAction||session.lastActionPlan||null;
+  if(missionPendingIsBeforeFreshStarterV12(pending))pending=null;
   var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|pipeline|who hot|content|production|calendar|report|remember this)\b/.test(q);
   var salesAsk=/\b(what should i say|what do i say|too expensive|cant afford|can't afford|he said|she said|they said|ghosted|payment plan|roleplay|score my answer|call is done|booked|paid)\b/.test(q);
   var followupAsk=/\b(why|why again|more|more again|run it back|tell me more|make it make sense|what next|what now|what should i do|what do i do|call the move)\b/.test(q);
@@ -13287,8 +13326,10 @@ function getMissionWhyResponseV1(turn,ctx){
     lastTurn=null;
     memory=Object.assign({},memory,{activeRoute:'',lastRoute:'',lastTurn:null});
   }
+  if(memory&&memory.turns)memory=Object.assign({},memory,{turns:missionFilterTurnsAfterFreshStarterV12(memory.turns)});
   var stalePendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   if(hasFreshStarterBoundary&&/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(stalePendingText)&&!hasBookedContext)pending=null;
+  if(missionPendingIsBeforeFreshStarterV12(pending))pending=null;
   var lastTurnSlash=(lastTurn&&String(lastTurn.question||lastTurn.rawInput||'').match(/^\/([a-z0-9_]+)/i))||null;
   var lastTurnSlashRoute=lastTurnSlash?normalizeMissionSlashRouteV2(lastTurnSlash[1]):'';
   var route=(lastTurnSlashRoute||memory.activeRoute||memory.lastRoute||lastTurn&&lastTurn.route||turn&&turn.route||'now');
@@ -13440,6 +13481,7 @@ function getMissionTooMuchAdviceV1(turn,ctx){
   var session=getMissionBrainSessionV2();
   var loop=session.resultLoop||{};
   var pending=loop.pendingAction||session.lastActionPlan||null;
+  if(missionPendingIsBeforeFreshStarterV12(pending))pending=null;
   var history=Array.isArray(loop.history)?loop.history:[];
   var lastResult=loop.lastResult||null;
   var directNext=/\b(what next|what now|what should i do|what do i do|call the move|pick one|just tell me one thing|same thing|again|more)\b/.test(q);
@@ -13485,8 +13527,10 @@ function getMissionUnsaidQuestionV1(turn,ctx){
   var session=getMissionBrainSessionV2();
   var loop=session.resultLoop||{};
   var pending=loop.pendingAction||session.lastActionPlan||null;
+  if(missionPendingIsBeforeFreshStarterV12(pending))pending=null;
   var lastResult=loop.lastResult||null;
   var thread=session.threadMemory||{};
+  if(thread&&thread.turns)thread=Object.assign({},thread,{turns:missionFilterTurnsAfterFreshStarterV12(thread.turns)});
   var route=turn&&turn.route||thread.activeRoute||session.lastRoute||'now';
   var explicitCommand=/^\/\w+/.test(q);
   var protectedAsk=/\b(what should i say|too expensive|he said|she said|they said|roleplay|score my answer|sync check|where do i check sync|what changed|what did i log|remember this|call is done|booked|paid|got a reply|no reply)\b/.test(q);
@@ -13494,7 +13538,8 @@ function getMissionUnsaidQuestionV1(turn,ctx){
   var moneyPressure=!!(ctx&&typeof ctx.gap==='number'&&ctx.gap>0);
   var pendingAge=getMissionAgeMinutes(pending&&pending.suggestedAt||thread.lastUpdatedAt||'');
   var unresolvedPending=!!(pending&&!lastResult&&(pendingAge===null||pendingAge<=240));
-  var repeatedRoute=(thread.activeRoute&&route&&thread.activeRoute===route&&session.turnCount>2);
+  var freshTurnCount=Array.isArray(thread.turns)?thread.turns.length:Number(session.turnCount||0);
+  var repeatedRoute=(thread.activeRoute&&route&&thread.activeRoute===route&&freshTurnCount>2);
   var shouldNudge=!!(!explicitCommand&&!protectedAsk&&unresolvedPending&&surfaceIsSideLane&&(moneyPressure||route==='leads'||pending.route==='leads'||pending.route==='sales'));
   var reason='';
   var line='';
@@ -16407,7 +16452,7 @@ function getMissionConstraintSnapshotV1(turn,ctx){
     gap:typeof snap.gap==='number'?snap.gap:Number(ctx.gap||0),
     revenue:typeof snap.revenue==='number'?snap.revenue:Number(ctx.rev||ctx.revenue||0),
     target:typeof snap.weekTarget==='number'?snap.weekTarget:Number(ctx.wk||ctx.weekTarget||0),
-    pendingAction:(getMissionBrainSessionV2().resultLoop&&getMissionBrainSessionV2().resultLoop.pendingAction)||getMissionBrainSessionV2().lastActionPlan||null,
+    pendingAction:(function(){var s=getMissionBrainSessionV2();var p=(s.resultLoop&&s.resultLoop.pendingAction)||s.lastActionPlan||null;return missionPendingIsBeforeFreshStarterV12(p)?null:p;})(),
     dataConfidence:turn&&turn.dataConfidence&&turn.dataConfidence.level||'medium',
     syncRisk:turn&&turn.syncStatus&&turn.syncStatus.risk||'none',
     cognitiveLoad:turn&&turn.cognitiveLoad&&turn.cognitiveLoad.loadLevel||'normal'
@@ -18305,6 +18350,7 @@ function getMissionActionAccountabilityV1(turn,ctx){
   var session=getMissionBrainSessionV2();
   var loop=session.resultLoop||{};
   var pending=loop.pendingAction||session.lastActionPlan||null;
+  if(missionPendingIsBeforeFreshStarterV12(pending))pending=null;
   var lastResult=loop.lastResult||null;
   var route=turn&&turn.route||session.lastRoute||'now';
   var pendingRoute=pending&&pending.route||'';
