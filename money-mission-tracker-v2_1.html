@@ -12175,6 +12175,7 @@ function getMissionResultSignalV1(question){
   if(/\b(wrong resource|wrong script|not the right resource|not the right script|didn'?t fit|did not fit|that resource missed|that script missed)\b/.test(q))return {type:'resource_mismatch',label:'Resource Did Not Fit',confidence:0.82};
   if(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/.test(q))return {type:'booked',label:'Booked Call',confidence:0.9};
   if(/\b(paid|got paid|collected|collected money|invoice paid|closed|closed one|sale made|sold)\b/.test(q))return {type:'paid',label:'Collected Money',confidence:0.9};
+  if(/^(reply|replied|response|got reply)$/.test(q))return {type:'reply',label:'Got Reply',confidence:0.86};
   if(/\b(got a reply|they replied|he replied|she replied|reply came in|got replies|they responded|responded)\b/.test(q))return {type:'reply',label:'Got Reply',confidence:0.88};
   if(/\b(no reply|no replies|no answer|nothing yet|ghosted|left me on read|did not respond|didn'?t respond)\b/.test(q))return {type:'no_reply',label:'No Reply Yet',confidence:0.86};
   if(/^(follow up|follow-up|followup)$/.test(q))return {type:'follow_up',label:'Follow-Up Needed',confidence:0.84};
@@ -17488,6 +17489,16 @@ function runMissionBroadRegressionHardeningV1(){
     var afterPaidVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/paid|sale|protect delivery|log the money/i.test(afterPaidVisible)||/Last result was booked|prep the call|calendar detail|opening question/i.test(afterPaidVisible))failures.push('paid_live_path_overrides_booked_guard');
     if(getMissionFreshBookedFollowupAnswerV12('what next'))failures.push('paid_latest_blocks_booked_followup_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Reply Latest Result',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    var replyVisible=String(getMissionCommandResponse('ask',ctx,'reply',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    var afterReplyVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/reply|signal|qualify/i.test(replyVisible)||/Before I explain anything|What were you hoping/i.test(replyVisible))failures.push('bare_reply_live_path_result_guard');
+    if(!/reply|signal|qualify/i.test(afterReplyVisible)||/Quick check before we add another move|Did this happen yet|Last result was booked|prep the call/i.test(afterReplyVisible))failures.push('bare_reply_live_path_next_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17501,7 +17512,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:59,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 12 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:61,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 14 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
