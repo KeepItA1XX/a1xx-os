@@ -10906,6 +10906,8 @@ function cleanMissionVisibleAnswerText(html){
     .replace(/\bBefore switching:\s*/gi,'Before you switch lanes, ')
     .replace(/\bBefore you switch lanes,\s*close the loop:\s*/gi,'Before you switch lanes, ')
     .replace(/\bQuick check before we add another move:\s*/gi,'Quick check before we add another move. ')
+    .replace(/\bResult logged\.\s*(?:<strong>)?\s*Booked Call\s*(?:<\/strong>)?\s*\./gi,'Booked call logged.')
+    .replace(/\bBooked Call\s+\./gi,'Booked Call.')
     .replace(/\s+([.,!?;:])/g,'$1')
     .replace(/([.!?])([A-Z])/g,'$1 $2')
     .replace(/([.!?])((?:<br\s*\/?>\s*){2,})([a-z])/g,function(match,punc,brs,letter){return punc+brs+letter.toUpperCase();})
@@ -12469,7 +12471,7 @@ function missionFreshStarterNeedsDpcAnchorV12(question,ctx){
   var q=normalizeMissionQuestion(question||'');
   if(window.__missionCommandSelfCheckActive||window.__missionIntegritySelfCheckActive)return false;
   if(isNaN(missionLatestActiveChatFreshStarterTimeV12()))return false;
-  if(missionActiveChatHasBookedAfterFreshStarterV12()||missionActiveResultLoopHasBookedAfterFreshStarterV12())return false;
+  if(missionActiveChatHasBookedAfterFreshStarterV12()||!!getMissionFreshResultEventV12('booked'))return false;
   if(missionDpcActivityTotalV12(ctx)>0)return false;
   if(/^\/\w+/.test(q))return false;
   if(/\b(sync|data|current|trust|source|brief card|outreach card|content card|beat card|manager card|pipeline|who hot|what should i say|help me reply|too expensive|ghosted|booked|paid|call is done)\b/.test(q))return false;
@@ -17336,9 +17338,13 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   if(window.__calEvents&&window.__calEvents.length)loaded.push('calendar: '+window.__calEvents.length);
   if(ctx&&ctx.dpc)loaded.push('DPC today: '+(Number(ctx.dpc.dms||0)+Number(ctx.dpc.callsMade||0)+Number(ctx.dpc.booked||0)+Number(ctx.dpc.closes||0))+' logged actions');
   if(ctx&&(ctx.rev!==undefined||ctx.wk!==undefined))loaded.push('money: '+fmt(Number(ctx.rev||0))+' of '+fmt(Number(ctx.wk||0))+'.');
-  var usingLine=loaded.length?loaded.slice(0,6).join('<br>'):'No detailed app packet is loaded in this chat yet.';
-  var healthLine=serviceNames.length?serviceNames.slice(0,5).map(function(name){var s=services[name]||{};return escapeHtml(name+': '+(s.status||'checked'));}).join('<br>'):'Sync health has not been checked in detail yet.';
-  var healthRead=serviceNames.length?'&nbsp;System health is loaded like this:<br>'+healthLine:healthLine;
+  function blockLines(lines){
+    return (lines||[]).filter(Boolean).map(function(line){return '<div>'+escapeHtml(line)+'</div>';}).join('');
+  }
+  var usingLine=loaded.length?blockLines(loaded.slice(0,6)):'No detailed app packet is loaded in this chat yet.';
+  var healthItems=serviceNames.slice(0,5).map(function(name){var s=services[name]||{};return name+': '+(s.status||'checked');});
+  var healthLine=serviceNames.length?blockLines(healthItems):'Sync health has not been checked in detail yet.';
+  var healthRead=serviceNames.length?'System health is loaded like this:<br>'+healthLine:healthLine;
   var missingLine=missing.length?escapeHtml(missing.join(', ')):'nothing obvious from the current app packet';
   var trustLine=missing.length?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
   if(/\b(what data are you using|what data do you have|what do you see|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|what is trusted|what is safe to act on)\b/.test(q)){
