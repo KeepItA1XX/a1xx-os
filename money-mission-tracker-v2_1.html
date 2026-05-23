@@ -10512,6 +10512,7 @@ var MISSION_BRAIN_SESSION_V2_KEY='a1xx_mc_brain_session_v2';
 var MISSION_PRESENCE_LOG_KEY='a1xx_mc_presence_log';
 var MISSION_CONTEXT_MODE_KEY='a1xx_mc_context_mode_v1';
 var MISSION_CONTEXT_ARBITRATION_QA_KEY='a1xx_mc_context_arbitration_qa_v11';
+var MISSION_SALES_OBJECTION_CONTEXT_KEY='a1xx_mc_sales_objection_context_v1';
 var MISSION_CONTEXT_MODE_LABELS={general:'General',brief:'Brief',outreach:'Outreach',content:'Content',production:'Production',manager:'Manager'};
 var MISSION_CONTEXT_MODE_ROUTES={brief:'now',outreach:'leads',content:'content',production:'production',manager:'calendar'};
 window.__missionActiveCard=window.__missionActiveCard||'command';
@@ -12307,6 +12308,7 @@ function completeMissionResultLoopV1(signal,turn){
 }
 
 function buildMissionResultLoopPromptV1(turn,signal){
+  if(signal&&/^(booked|paid|call_done|done|no_reply|follow_up)$/i.test(signal.type||'')&&typeof clearMissionSalesObjectionContextV1==='function')clearMissionSalesObjectionContextV1();
   var session=getMissionBrainSessionV2();
   var pending=session.resultLoop&&session.resultLoop.pendingAction||session.lastActionPlan||null;
   var actionLabel=pending&&pending.label||session.lastActionSuggested||'the last move';
@@ -17388,6 +17390,11 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/thinking through|money, the timing|whether this solves the problem/i.test(contextualSalesDeepReply)||/Before I explain anything/i.test(contextualSalesDeepReply))failures.push('sales_deep_reply_context_objection_guard');
     var contextualSalesPackReply=getMissionOutputPackResponseV1('sales',ctx,'help me reply',{type:CONV_DATA_REQUEST,route:'sales'}, {});
     if(!/thinking through|money, the timing|whether this solves the problem/i.test(contextualSalesPackReply)||/Before I explain anything/i.test(contextualSalesPackReply))failures.push('sales_output_pack_reply_context_objection_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Reply Marker',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    getMissionSalesDeepOutputResponseV1('sales',ctx,'he said too expensive',{route:'sales'}, {});
+    getMissionSalesDeepOutputResponseV1('sales',ctx,'he needs to think',{route:'sales'}, {});
+    var contextualSalesMarkerReply=getMissionOutputPackResponseV1('sales',ctx,'help me reply',{type:CONV_DATA_REQUEST,route:'sales'}, {});
+    if(!/thinking through|money, the timing|whether this solves the problem/i.test(contextualSalesMarkerReply)||/Before I explain anything/i.test(contextualSalesMarkerReply))failures.push('sales_marker_reply_context_objection_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17400,7 +17407,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:50,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 3 sales reply context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:51,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 4 sales reply context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -21712,6 +21719,7 @@ function getMissionSalesDeepOutputResponseV1(route,ctx,question,conv,brainState)
   if(inputMatch&&inputMatch.normalizedInput)q=inputMatch.normalizedInput;
   var offerKey=(inputMatch&&inputMatch.offerKey)||getMissionSalesDeepOfferKeyV1(q);
   var objectionKey=(inputMatch&&inputMatch.objectionKey)||getMissionSalesDeepObjectionKeyV1(q);
+  if(objectionKey&&typeof rememberMissionSalesObjectionContextV1==='function')rememberMissionSalesObjectionContextV1(objectionKey,q);
   var subtype=(inputMatch&&inputMatch.subroute)||getMissionSalesDeepSubtypeV1(q);
   var offerIntent=getMissionSalesOfferIntentV1(q);
   if(liveMode&&!subtype)subtype='live_call';
@@ -22741,6 +22749,15 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
 }
 
 function getMissionRecentSalesObjectionContextV1(){
+  var activeId='';
+  try{activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'';}catch(e){}
+  try{
+    var stamped=JSON.parse(sessionStorage.getItem(MISSION_SALES_OBJECTION_CONTEXT_KEY)||'null');
+    if(stamped&&stamped.type&&(!stamped.chatId||!activeId||stamped.chatId===activeId)){
+      var age=Date.now()-new Date(stamped.at||0).getTime();
+      if(!isNaN(age)&&age<30*60*1000)return stamped.type;
+    }
+  }catch(e){}
   var hist=[];
   try{hist=getMissionChatHistory();}catch(e){hist=[];}
   for(var i=(hist||[]).length-1;i>=Math.max(0,(hist||[]).length-8);i--){
@@ -22755,6 +22772,22 @@ function getMissionRecentSalesObjectionContextV1(){
     if(/\b(send more info|send info|more information)\b/.test(q))return 'send_more_info';
   }
   return '';
+}
+
+function rememberMissionSalesObjectionContextV1(type,question){
+  if(!type)return;
+  try{
+    sessionStorage.setItem(MISSION_SALES_OBJECTION_CONTEXT_KEY,JSON.stringify({
+      type:type,
+      question:question||'',
+      chatId:localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'',
+      at:new Date().toISOString()
+    }));
+  }catch(e){}
+}
+
+function clearMissionSalesObjectionContextV1(){
+  try{sessionStorage.removeItem(MISSION_SALES_OBJECTION_CONTEXT_KEY);}catch(e){}
 }
 
 function getMissionContextualSalesReplyV1(question){
@@ -22784,6 +22817,7 @@ function getMissionSalesEdgeCaseResponseV1(question){
   var contextualReply=getMissionContextualSalesReplyV1(question||'');
   if(contextualReply)return contextualReply;
   if(/\b(needs to think|need to think|he needs to think|she needs to think|they need to think)\b/.test(q)){
+    rememberMissionSalesObjectionContextV1('need_to_think',q);
     return 'Say this. "Totally fair. What part are you still thinking through: the money, the timing, or whether this solves the problem?"';
   }
   if(/\b(wants to start smaller|want to start smaller|start smaller)\b/.test(q)){
