@@ -11123,15 +11123,15 @@ function updateMissionTurnCheckpointIntegrity(turn){
 ========================================================= */
 var MISSION_PRESENCE_PHRASES={
   acknowledgment:{
-    punchy:['Say less.','Straight to it.','Got it.','On it.'],
-    direct:['Good question.','Right call to check.','Let me look at it.','On it.'],
+    punchy:['Got it.','On it.','I am with you.','Clean switch.'],
+    direct:['Good question.','Right call to check.','Let me look at it.','I have you.'],
     casual:['Got you.','Alright.','I am with you.','Let me check.'],
     'checking-in':['Good time to check.','Let me look.','Here is where things are.'],
-    detailed:['A lot in that. Let me sort it.','Okay, I got the full picture.','I got you.','That is a real one.'],
-    charged:['I hear that.','Real talk.','Okay, let us get clear.','That is worth addressing.'],
-    stuck:['I hear that.','Real talk.','Let us get this smaller.','We can work with that.'],
+    detailed:['A lot in that. Let me sort it.','Okay, I got the full picture.','I got you.','That is worth a clean read.'],
+    charged:['I hear that.','Okay, let us get clear.','That is worth addressing.','I am with you.'],
+    stuck:['I hear that.','Let us get this smaller.','We can work with that.','Okay, smaller move.'],
     win:['That is the one.','Build on that.','Yes.','That hit.'],
-    returning:['Back on this.','Picking it back up.','Still on this. Let us dig in.','Alright, where did we leave it?']
+    returning:['Back on this.','Picking it back up.','Same thread.','I am with you.']
   },
   closer:{
     leads:['Want to go through one lead at a time?','Which lead do you want to move first?','Who is closest to a real decision?'],
@@ -11141,13 +11141,13 @@ var MISSION_PRESENCE_PHRASES={
     content:['Want to block the next piece now?','What post needs to go out first?','What proof can you show today?'],
     production:['What deliverable needs to move next?','What can you finish today?'],
     calendar:['What needs prep before that hits?','What do you need ready for that?'],
-    sync:['Need a quick trust check before you move on?'],
+    sync:['Want the trust read or the move?'],
     memory:['What do you want to carry into the next session?'],
-    sales:['Want to practice the next line?','What did they say back?','Want to roleplay the next objection?'],
+    sales:['What did they say back?','Want the next line?','Want to practice the next objection?'],
     win:['What is the next one after this?','Who else can you move this week?','Keep that energy. What is next?'],
     stuck:['What is the smallest move you can make on this today?','What is the one thing you can control right now?','What would make this feel less stuck?'],
     'no-data':['Once that is logged, I will have a real read for you.','Drop that in when you get a chance and I will have more for you.'],
-    general:['Want the next clean move from here?','Want me to tighten this into one action?','Should we keep this lane or switch?','Need anything else right now?']
+    general:['Want the next clean move from here?','Want me to tighten this into one action?']
   },
   fallback:{
     low_confidence:['I do not have the full picture on that right now. Here is what I do see:','That is not fully in my view yet. Here is what I can tell you:','I have a partial read on that. Here is what I see:'],
@@ -11258,6 +11258,23 @@ function getMissionAcknowledgment(turn,log){
   return pickMissionPresencePhrase(pool,log.usedAcks||[]);
 }
 
+function getMissionLightConversationOpeningV18(question,route,html,turn,opts){
+  opts=opts||{};
+  if(opts.lightOpening===false||opts.presence===false||window.__missionCommandSelfCheckActive||window.__missionIntegritySelfCheckActive)return '';
+  var q=normalizeMissionQuestion(question||'');
+  var plain=missionPresencePlainText(html||'');
+  if(!q||!plain)return '';
+  if(/^(good morning|gm|morning)$/.test(q))return q==='gm'?'Good morning, A1XX.':'Good morning, Executive Producer.';
+  if(/^yo$/.test(q))return 'I am here, A1XX.';
+  if(/^lock in$/.test(q))return 'Locked in.';
+  if(/\b(i meant sales not pipeline|sales not pipeline|pipeline but i mean sales|pipeline but i meant sales)\b/.test(q))return 'Sales, not pipeline.';
+  if(/\b(i meant content not sales|content not sales|sales but i mean content|sales but i meant content)\b/.test(q))return 'Content, not sales.';
+  if(/\b(i meant sales not content|sales not content|content but i mean sales|content but i meant sales)\b/.test(q))return 'Sales, not content.';
+  if(/\b(that sounds disconnected)\b/.test(q))return 'Fair.';
+  if(/\b(wrong read|nah not that|no not that|that'?s not it|not what i meant)\b/.test(q))return 'Got it.';
+  return '';
+}
+
 function getMissionTurnCloser(turn,log){
   if(!turn||turn.inputEnergy==='punchy')return null;
   if(missionIsLiveCallModeActive(turn))return null;
@@ -11308,7 +11325,11 @@ function applyMissionPresenceLayer(html,route,question,opts){
   var quietPresence=slashCommand||dpcStarterAnswer||dataTrustAnswer||bookedFollowthroughAnswer||salesScriptAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
   if(!quietPresence&&!accountabilityAnswer&&plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
   if(!quietPresence&&!freshDpcAnchor&&!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
+  var opening=getMissionLightConversationOpeningV18(question||'',route,html,turn,opts);
   var out=String(html||'');
+  if(opening&&missionPresencePlainText(out).indexOf(opening)!==0){
+    out=escapeHtml(opening)+'<br><br>'+out;
+  }
   if(ack){
     out=escapeHtml(ack)+'<br><br>'+out;
     log.lastAckTurn=turn.turnCount||1;
@@ -11323,7 +11344,7 @@ function applyMissionPresenceLayer(html,route,question,opts){
     log.usedClosers.push(closer);
     log.usedClosers=log.usedClosers.slice(-30);
   }
-  if(ack||closer){
+  if(opening||ack||closer){
     log.appliedTurnId=turn.id;
     setMissionPresenceLog(log);
   }
@@ -11583,7 +11604,13 @@ function getMissionFocusGuardOutputV1(subtype,dayType,timeBlock,tabState,ctx,rou
   var pack=MISSION_FOCUS_GUARD_DAY_INTEL_V1;
   var q=normalizeMissionQuestion(question||'');
   var vars=getMissionFocusGuardVarsV1(dayType,timeBlock,tabState,ctx||{},route||'now',question||'',brainState||{});
-  if(subtype==='session_open')return getMissionFocusSessionOpenLineV1(dayType,timeBlock,ctx||{});
+  if(subtype==='session_open'){
+    var sessionOpen=getMissionFocusSessionOpenLineV1(dayType,timeBlock,ctx||{});
+    if(sessionOpen&&/^(good morning|gm|morning)$/.test(q)){
+      return (q==='gm'?'Good morning, A1XX.':'Good morning, Executive Producer.')+'<br><br>'+sessionOpen;
+    }
+    return sessionOpen;
+  }
   if(subtype==='day_type_read')return fillMissionFocusGuardTemplateV1(pack.dayTypePools.read,route||'calendar',q,vars);
   if(subtype==='time_block_read')return fillMissionFocusGuardTemplateV1(pack.dayTypePools.time,route||'calendar',q,vars);
   if(subtype==='tab_narration')return fillMissionFocusGuardTemplateV1(pack.tabNarrationPools[tabState]||pack.tabNarrationPools.main,route||tabState,q,vars);
@@ -12117,11 +12144,11 @@ function getMissionResultCardOwnerAnswerV14(result){
 function getMissionResultCleanReadAnswerV14(result){
   if(!result||!result.type)return '';
   if(result.type==='booked')return 'Clean read. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
-  if(result.type==='paid')return 'Clean read. The sale moved past conversation and into delivery.<br><br>Log the money, update the lead, then protect what needs to be delivered.';
-  if(result.type==='reply')return 'Clean read. You have signal now.<br><br>Do not pitch yet. Qualify intent with one clean question, then log what they say back.';
-  if(result.type==='no_reply')return 'Clean read. That touch did not create signal yet.<br><br>Log no reply, set one bump if it is worth it, then move to the next warm lead.';
-  if(result.type==='follow_up')return 'Clean read. This is still alive, but unresolved.<br><br>Isolate the real concern: money, timing, trust, or fit. Then set the next touch.';
-  if(result.type==='done')return 'Clean read. The action is done, but the result is not clear yet.<br><br>Tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+  if(result.type==='paid')return 'You are right to keep the read clean. The sale moved past conversation and into delivery.<br><br>Log the money, update the lead, then protect what needs to be delivered.';
+  if(result.type==='reply')return 'You have signal now.<br><br>Do not pitch yet. Qualify intent with one clean question, then log what they say back.';
+  if(result.type==='no_reply')return 'That touch did not create signal yet.<br><br>Log no reply, set one bump if it is worth it, then move to the next warm lead.';
+  if(result.type==='follow_up')return 'This is still alive, but unresolved.<br><br>Isolate the real concern: money, timing, trust, or fit. Then set the next touch.';
+  if(result.type==='done')return 'The action is done, but the result is not clear yet.<br><br>Tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   return '';
 }
 
@@ -23915,6 +23942,15 @@ function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,t
     if(c.bookedContext){
       return 'Clean read. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
     }
+    if(/\b(that sounds disconnected)\b/.test(c.q)){
+      return 'Fair. Here is the connection.<br><br>'+escapeHtml(c.nextMove)+'.<br><br>That belongs in '+escapeHtml(naturalCardLabel)+' because the app needs a visible status change.';
+    }
+    if(/\b(answer like.*know what)\b/.test(c.q)){
+      return 'I am with you.<br><br>'+escapeHtml(c.nextMove)+'.<br><br>Do the smallest visible step in '+escapeHtml(naturalCardLabel)+', then tell me what changed.';
+    }
+    if(/\b(wrong read|nah not that|no not that|not what i meant)\b/.test(c.q)){
+      return 'Got it. Different read.<br><br>'+escapeHtml(c.nextMove)+'.<br><br>That should happen in '+escapeHtml(naturalCardLabel)+' so the app can see the status change.';
+    }
     return 'Clean read. '+escapeHtml(c.nextMove)+'.<br><br>That should happen in '+escapeHtml(naturalCardLabel)+' so the app can see the status change.<br><br>Do the smallest visible step there, then tell me what changed.';
   }
   return 'I am reading '+escapeHtml(c.cardLabel)+' plus the current '+escapeHtml(c.routeLabel)+' lane.<br><br>The clean read is: '+escapeHtml(c.nextMove)+'.<br><br>'+(c.missing.length?'The part I do not know yet: '+escapeHtml(c.missing.join(', '))+'.<br><br>':'')+'I would trust this enough to take one safe next action, but not enough to invent missing numbers.';
@@ -23960,6 +23996,8 @@ function getMissionFreshBookedFollowupAnswerV12(question){
     return 'Because the conversation already moved to a booked call.<br><br>The next useful move is prep, calendar detail, and one clean opening question.';
   }
   if(/\b(make it make sense|give me the clean version|give me the clean read|that sounds disconnected|answer like you know|wrong read)\b/.test(q)){
+    if(/\b(that sounds disconnected)\b/.test(q))return 'Fair. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
+    if(/\b(wrong read|answer like you know)\b/.test(q))return 'Got it. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
     return 'Clean read. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
   }
   if(/\b(what card owns this|what lane owns this|which card handles|what card do i open|where should this live)\b/.test(q)){
