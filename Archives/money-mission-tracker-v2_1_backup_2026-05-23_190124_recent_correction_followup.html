@@ -11302,25 +11302,6 @@ function applyMissionTransitionAckDedupeV18(html,question){
   return out;
 }
 
-function getMissionRecentCorrectionFollowupAnswerV18(question,ctx){
-  var q=normalizeMissionQuestion(question||'');
-  if(!/\b(wrong read|nah not that|no not that|that sounds disconnected|disconnected|not what i meant|give me the clean version|clean version|make it make sense)\b/.test(q))return '';
-  var priorQ=normalizeMissionQuestion(window.__missionCommandActiveTopicQuestion||'');
-  var priorRoute=window.__missionCommandActiveTopicRoute||'';
-  var priorAt=Number(window.__missionCommandActiveTopicAt||0);
-  if(!priorQ||!priorRoute||!getMissionCorrectionTargetRouteV2(priorQ))return '';
-  if(priorAt&&Date.now()-priorAt>15*60*1000)return '';
-  var routeAnswer=getMissionCommandRouteAnswer(priorRoute,ctx||{},priorQ)||'';
-  var label='';
-  if(priorRoute==='sales')label=/\b(content|not content)\b/.test(priorQ)?'Sales, not content.':'Sales, not pipeline.';
-  else if(priorRoute==='content')label='Content, not sales.';
-  else if(priorRoute==='production')label='Production, not content.';
-  else if(priorRoute==='leads')label='Pipeline, not sales.';
-  else label=getMissionRouteLabelV2(priorRoute)+' lane.';
-  var lead=/\b(that sounds disconnected|disconnected)\b/.test(q)?'Fair.':'Got it.';
-  return lead+'<br><br>'+label+(routeAnswer?'<br><br>'+routeAnswer:'');
-}
-
 function getMissionTurnCloser(turn,log){
   if(!turn||turn.inputEnergy==='punchy')return null;
   if(missionIsLiveCallModeActive(turn))return null;
@@ -21576,7 +21557,6 @@ function setMissionCommandActiveTopic(route,question){
   if(/^(why|why tho|why though|quick read|quick|short version|what else|anything else|anything else i should know|tell me more|what next|next|deeper breakdown|deep breakdown|break it down)$/.test(q))return;
   window.__missionCommandActiveTopicRoute=route;
   window.__missionCommandActiveTopicQuestion=question||'';
-  window.__missionCommandActiveTopicAt=Date.now();
 }
 
 function getMissionRenderRoute(question,brainState){
@@ -24161,8 +24141,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  }
 	  var bookedFollowupAnswer=getMissionFreshBookedFollowupAnswerV12(cleanQuestion||question||'');
 	  if(bookedFollowupAnswer)return finishMissionAnswer(bookedFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
-	  var recentCorrectionFollowupAnswer=typeof getMissionRecentCorrectionFollowupAnswerV18==='function'?getMissionRecentCorrectionFollowupAnswerV18(cleanQuestion||question||'',ctx):'';
-	  if(recentCorrectionFollowupAnswer)return finishMissionAnswer(recentCorrectionFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var latestResultFollowthroughAnswer=typeof getMissionLatestResultFollowthroughAnswerV14==='function'?getMissionLatestResultFollowthroughAnswerV14(cleanQuestion||question||''):'';
 	  if(latestResultFollowthroughAnswer)return finishMissionAnswer(latestResultFollowthroughAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var latestResultSalesReplyAnswer=typeof getMissionLatestResultSalesReplyAnswerV16==='function'?getMissionLatestResultSalesReplyAnswerV16(cleanQuestion||question||''):'';
@@ -24188,7 +24166,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var earlyResultSignal=preflightResultSignal||getMissionResultSignalV1(question||cleanQuestion||'');
   if(earlyResultSignal&&earlyResultSignal.type!=='call_done'&&missionResultLoopShouldAnswerV1(earlyResultSignal,question||cleanQuestion||'',turnV2)){
     route=(turnV2&&turnV2.route)||route||'now';
-    setMissionCommandActiveTopic(route,question||cleanQuestion||'');
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,earlyResultSignal),{sessionArc:false,closer:false,presence:false});
   }
   var earlyProtectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
@@ -24214,7 +24191,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var resultSignal=earlyResultSignal||preflightResultSignal||getMissionResultSignalV1(question||cleanQuestion||'');
   if(resultSignal&&resultSignal.type!=='call_done'&&missionResultLoopShouldAnswerV1(resultSignal,question||cleanQuestion||'',turnV2)){
     route=(turnV2&&turnV2.route)||route||'now';
-    setMissionCommandActiveTopic(route,question||cleanQuestion||'');
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
   }
   if(isMissionSalesModeExitSignal(rawQ)||isMissionSalesModeExitSignal(q)){
@@ -24236,7 +24212,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   }
   if(missionResultLoopShouldAnswerV1(resultSignal,question||cleanQuestion||'',turnV2)){
     route=turnV2.route||route||'now';
-    setMissionCommandActiveTopic(route,question||cleanQuestion||'');
     return finishMissionAnswer(buildMissionResultLoopPromptV1(turnV2,resultSignal),{sessionArc:false,closer:false,presence:false});
   }
   var outreachIntel=getMissionOutreachCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
