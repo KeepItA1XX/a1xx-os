@@ -24582,12 +24582,14 @@ function renderMissionHistoryPanel(){
     return '<button class="mission-project-chip '+(project===activeProject?'active':'')+'" onclick="setActiveMissionProject(decodeURIComponent(\''+encodeURIComponent(project)+'\'))">'+escapeHtml(project)+'</button>';
   }).join('')+'<button class="mission-project-add" onclick="toggleMissionProjectForm()" title="Add project">+</button>';
   var sessions=getMissionActiveSessions(activeProject);
+  var hiddenCount=Math.max(0,sessions.length-60);
+  if(hiddenCount)sessions=sessions.slice(0,60);
   var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';
   if(!sessions.length){
     list.innerHTML='<div class="mission-history-empty">No chats in this project yet.</div>';
     return;
   }
-  list.innerHTML=sessions.map(function(session){
+  list.innerHTML=(hiddenCount?'<div class="mission-history-empty">Showing the latest 60 chats. '+hiddenCount+' older chat(s) are still saved.</div>':'')+sessions.map(function(session){
     var tags=(session.tags||[]).join(', ')||'none';
     var meta='Date: '+formatContentDate(session.updatedAt||session.createdAt)+'<br>Project: '+escapeHtml(session.project||'')+'<br>Tags: '+escapeHtml(tags)+'<br>Context: '+escapeHtml(session.contextWindow||'Hidden context window will appear here after the first answer.').slice(0,260);
     var projectOptions=projects.map(function(project){return '<option value="'+escapeHtml(project)+'" '+(project===(session.project||activeProject)?'selected':'')+'>'+escapeHtml(project)+'</option>';}).join('');
