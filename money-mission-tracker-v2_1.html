@@ -11975,6 +11975,7 @@ function getMissionLatestFreshResultV12(){
     function addCandidate(item,source,timeField){
       if(!item||!item.type)return;
       if(activeId&&item.chatId&&item.chatId!==activeId)return;
+      if(activeId&&source==='result_event_ledger'&&!item.chatId)return;
       var recordedAt=Date.parse(item[timeField||'recordedAt']||item.recordedAt||item.ts||'');
       if(!isNaN(boundaryAt)&&(isNaN(recordedAt)||recordedAt<boundaryAt))return;
       candidates.push(Object.assign({source:source||item.source||'result_context'},item,{recordedAt:!isNaN(recordedAt)?new Date(recordedAt).toISOString():(item.recordedAt||'')}));
@@ -12023,6 +12024,82 @@ function missionIsBookedLogTargetAskV13(question){
 
 function getMissionBookedLogTargetAnswerV13(){
   return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
+}
+
+function missionIsResultCardOwnerAskV14(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(what card owns this|what lane owns this|which card handles|what card do i open|where should this live|what system handles this)\b/.test(q);
+}
+
+function missionIsResultCleanReadAskV14(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(make it make sense|give me the clean version|give me the clean read|that sounds disconnected|answer like you know|wrong read|nah not that|no not that|what does that mean|what counts as done)\b/.test(q);
+}
+
+function getMissionResultLogTargetAnswerV14(result,question){
+  if(!result||!result.type)return '';
+  var type=result.type;
+  if(type==='booked')return getMissionBookedLogTargetAnswerV13();
+  if(type==='paid'){
+    return 'Log the paid result in three places:<br><br>1) DPC: money collected.<br>2) Lead: status updated to paid or closed.<br>3) Delivery: what is owed and the first delivery step.<br><br>Come back with: money logged, lead updated, delivery protected, follow-up, problem, or wrong lane.';
+  }
+  if(type==='reply'){
+    return 'Log the reply, then qualify intent.<br><br>1) DPC or Outreach: reply received.<br>2) Lead: status updated.<br>3) Sales: one qualifying question asked.<br><br>Come back with: qualified, booked, follow-up, no, paid, or wrong lane.';
+  }
+  if(type==='no_reply'){
+    return 'Log the touch as no reply.<br><br>1) Outreach: no reply recorded.<br>2) Lead: bump later if still worth it.<br>3) Hit List: move to the next warm signal.<br><br>Come back with: no reply logged, bumped, reply, booked, paid, or wrong lane.';
+  }
+  if(type==='follow_up'){
+    return 'Log the follow-up as unresolved, not finished.<br><br>1) Lead: follow-up needed.<br>2) Sales: note the unresolved concern: money, timing, trust, or fit.<br>3) Calendar or Outreach: set the next touch.<br><br>Come back with: concern isolated, follow-up sent, booked, paid, no, or wrong lane.';
+  }
+  if(type==='done'){
+    return 'Log the action as done, then capture the result.<br><br>Come back with: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+  }
+  return '';
+}
+
+function getMissionResultCardOwnerAnswerV14(result){
+  if(!result||!result.type)return '';
+  if(result.type==='booked'){
+    return 'That split lives in Sales and Manager.<br><br>Sales owns the call prep. Manager owns the calendar detail.<br><br>Open Sales Coach for the question, then Manager/Calendar to save the call.';
+  }
+  if(result.type==='paid'){
+    return 'That split lives in DPC, Sales, and Delivery.<br><br>DPC owns the money log. Sales owns the lead status. Delivery owns what happens after the payment.';
+  }
+  if(result.type==='reply'){
+    return 'That lives in Sales and Outreach.<br><br>Sales owns the qualifying question. Outreach owns the lead status update.';
+  }
+  if(result.type==='no_reply'){
+    return 'That lives in Outreach.<br><br>Outreach owns the touch log, the bump decision, and the next warm lead.';
+  }
+  if(result.type==='follow_up'){
+    return 'That lives in Sales and Outreach.<br><br>Sales owns the unresolved concern. Outreach owns the next follow-up touch.';
+  }
+  if(result.type==='done'){
+    return 'That lives on the card where the action happened.<br><br>The next thing Mission Command needs is the result: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+  }
+  return '';
+}
+
+function getMissionResultCleanReadAnswerV14(result){
+  if(!result||!result.type)return '';
+  if(result.type==='booked')return 'Clean read. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
+  if(result.type==='paid')return 'Clean read. The sale moved past conversation and into delivery.<br><br>Log the money, update the lead, then protect what needs to be delivered.';
+  if(result.type==='reply')return 'Clean read. You have signal now.<br><br>Do not pitch yet. Qualify intent with one clean question, then log what they say back.';
+  if(result.type==='no_reply')return 'Clean read. That touch did not create signal yet.<br><br>Log no reply, set one bump if it is worth it, then move to the next warm lead.';
+  if(result.type==='follow_up')return 'Clean read. This is still alive, but unresolved.<br><br>Isolate the real concern: money, timing, trust, or fit. Then set the next touch.';
+  if(result.type==='done')return 'Clean read. The action is done, but the result is not clear yet.<br><br>Tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+  return '';
+}
+
+function getMissionLatestResultFollowthroughAnswerV14(question){
+  var q=normalizeMissionQuestion(question||'');
+  var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(!latest||!latest.type)return '';
+  if(typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(q))return getMissionResultLogTargetAnswerV14(latest,q);
+  if(missionIsResultCardOwnerAskV14(q))return getMissionResultCardOwnerAnswerV14(latest);
+  if(missionIsResultCleanReadAskV14(q))return getMissionResultCleanReadAnswerV14(latest);
+  return '';
 }
 
 function missionShouldProtectBookedLogTargetV13(question){
@@ -17499,6 +17576,41 @@ function runMissionBroadRegressionHardeningV1(){
     var afterReplyVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/reply|signal|qualify/i.test(replyVisible)||/Before I explain anything|What were you hoping/i.test(replyVisible))failures.push('bare_reply_live_path_result_guard');
     if(!/reply|signal|qualify/i.test(afterReplyVisible)||/Quick check before we add another move|Did this happen yet|Last result was booked|prep the call/i.test(afterReplyVisible))failures.push('bare_reply_live_path_next_guard');
+    var afterReplyLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/reply received|qualify intent|qualifying question/i.test(afterReplyLogVisible)||/booked call|calendar detail|delivery protected/i.test(afterReplyLogVisible))failures.push('reply_result_log_target_guard');
+    var afterReplyCardVisible=String(getMissionCommandResponse('ask',ctx,'what card owns this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Sales and Outreach|qualifying question|lead status/i.test(afterReplyCardVisible)||/Daily Profit Campaign|calendar detail|Delivery owns/i.test(afterReplyCardVisible))failures.push('reply_result_card_owner_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Result Followthrough Paid',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'booked',{});
+    getMissionCommandResponse('ask',ctx,'paid',{});
+    var paidLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/money collected|lead.*paid|delivery/i.test(paidLogVisible)||/booked call|calendar detail|qualify intent/i.test(paidLogVisible))failures.push('paid_result_log_target_guard');
+    var paidCleanVisible=String(getMissionCommandResponse('ask',ctx,'make it make sense',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/sale moved past conversation|Log the money|protect.*delivered|protect what needs/i.test(paidCleanVisible)||/booked call|calendar detail|Daily Profit Campaign/i.test(paidCleanVisible))failures.push('paid_result_clean_read_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Result Followthrough Follow Up',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'call is done',{});
+    getMissionCommandResponse('ask',ctx,'follow-up',{});
+    var followUpLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/follow-up needed|unresolved concern|next touch/i.test(followUpLogVisible)||/booked call|calendar detail|money collected/i.test(followUpLogVisible))failures.push('follow_up_result_log_target_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Result Followthrough No Reply',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'no reply',{});
+    var noReplyLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/no reply recorded|bump later|next warm signal/i.test(noReplyLogVisible)||/booked call|calendar detail|money collected/i.test(noReplyLogVisible))failures.push('no_reply_result_log_target_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17512,7 +17624,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:61,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 14 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:67,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 20 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -23270,6 +23382,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  }
 	  var bookedFollowupAnswer=getMissionFreshBookedFollowupAnswerV12(cleanQuestion||question||'');
 	  if(bookedFollowupAnswer)return finishMissionAnswer(bookedFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+	  var latestResultFollowthroughAnswer=typeof getMissionLatestResultFollowthroughAnswerV14==='function'?getMissionLatestResultFollowthroughAnswerV14(cleanQuestion||question||''):'';
+	  if(latestResultFollowthroughAnswer)return finishMissionAnswer(latestResultFollowthroughAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
 	  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||cleanQuestion||'',ctx)){
 	    var freshAnchorKind=/\b(where we at|where are we|where do i stand)\b/.test(rawQ)?'where':(/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(rawQ)?'time':(/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|nah not that|no not that|clean version|clean read)\b/.test(rawQ)?'clean':(/\b(why|why again)\b/.test(rawQ)?'why':'')));
 	    if(freshAnchorKind)return finishMissionAnswer(getMissionFreshStarterDpcAnchorAnswerV12(cleanQuestion||question||'',ctx,freshAnchorKind),{sessionArc:false,closer:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
