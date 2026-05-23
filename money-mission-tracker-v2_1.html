@@ -12497,7 +12497,11 @@ function buildMissionMicroWinResultPromptV1(turn,signal,completed){
   if(!ack)return '';
   if(ack.type==='booked')return escapeHtml(ack.acknowledgment)+'<br><br>Booked call logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
   if(ack.type==='paid')return escapeHtml(ack.acknowledgment)+'<br><br>Money result logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
-  return escapeHtml(ack.acknowledgment)+'<br><br>Result read: <strong>'+escapeHtml(ack.resultRead)+'</strong>.<br><br>Next: '+escapeHtml(ack.next)+'.';
+  if(ack.type==='reply')return escapeHtml(ack.acknowledgment)+'<br><br>Reply logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
+  if(ack.type==='no_reply')return escapeHtml(ack.acknowledgment)+'<br><br>No reply logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
+  if(ack.type==='follow_up')return escapeHtml(ack.acknowledgment)+'<br><br>Follow-up logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
+  if(ack.type==='done')return escapeHtml(ack.acknowledgment)+'<br><br>Action marked done.<br><br>Next, '+escapeHtml(ack.next)+'.';
+  return escapeHtml(ack.acknowledgment)+'<br><br>Result logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
 }
 
 /* =========================================================
@@ -17690,6 +17694,7 @@ function runMissionBroadRegressionHardeningV1(){
     var followUpVisible=String(getMissionCommandResponse('ask',ctx,'follow-up',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     var afterFollowUpVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/follow-up loop|unresolved|money, timing, trust, or fit/i.test(followUpVisible)||/Still want help mapping that out|did you pause on it/i.test(followUpVisible))failures.push('follow_up_live_path_result_guard');
+    if(/Result read|Follow-Up Needed\s+\./i.test(followUpVisible))failures.push('follow_up_result_confirmation_voice_guard');
     if(!/follow-up|unresolved|money, timing, trust, or fit/i.test(afterFollowUpVisible)||/Last result was booked|prep the call/i.test(afterFollowUpVisible))failures.push('follow_up_live_path_next_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Paid Latest Result',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
@@ -17854,7 +17859,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:85,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 38 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:86,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 39 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
