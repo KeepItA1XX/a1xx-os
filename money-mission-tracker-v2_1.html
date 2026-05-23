@@ -12665,7 +12665,7 @@ function missionResultBelongsToActiveChatV12(result){
     if(!result.chatId&&active&&active.createdAt&&result.recordedAt){
       var activeCreatedAt=Date.parse(active.createdAt);
       var resultRecordedAt=Date.parse(result.recordedAt);
-      if(!isNaN(activeCreatedAt)&&!isNaN(resultRecordedAt)&&resultRecordedAt<activeCreatedAt)return false;
+      if(!isNaN(activeCreatedAt)&&!isNaN(resultRecordedAt)&&resultRecordedAt<activeCreatedAt&&activeCreatedAt-resultRecordedAt>5000)return false;
     }
     var messages=active&&Array.isArray(active.messages)?active.messages:[];
     if(!messages.length)return true;
@@ -12749,7 +12749,9 @@ function missionActiveResultLoopHasBookedAfterFreshStarterV12(){
       if(!result||result.type!=='booked')return false;
       if(result.chatId&&activeId&&result.chatId!==activeId)return false;
       var recordedAt=Date.parse(result.recordedAt||'');
-      if(!isNaN(boundaryTime)&&(isNaN(recordedAt)||recordedAt<boundaryTime))return false;
+      if(!isNaN(boundaryTime)&&(isNaN(recordedAt)||recordedAt<boundaryTime)){
+        if(result.chatId||isNaN(recordedAt)||boundaryTime-recordedAt>5000)return false;
+      }
       return true;
     });
   }catch(e){
@@ -12831,6 +12833,97 @@ function rememberMissionFreshStarterMarkerV12(question){
       prompt:String(question||'').trim()
     };
     sessionStorage.setItem(MISSION_FRESH_STARTER_MARKER_KEY_V12,JSON.stringify(marker));
+    return marker;
+  }catch(e){
+    return null;
+  }
+}
+
+function getMissionDirectEntryModeV17(input,ctx,session,activeChat){
+  var q=normalizeMissionQuestion(input||'');
+  if(!q)return 'continuation_entry';
+  if(/^\/pipeline\b|^pipeline$|\b(who hot|hit list|call-ready|call ready|lead list|open leads)\b/.test(q))return 'direct_pipeline_entry';
+  if(typeof isMissionDataTrustPromptV12==='function'&&isMissionDataTrustPromptV12(q))return 'direct_data_trust_entry';
+  if(/\b(what data|what do you see|what can you see|what'?s loaded|what is loaded|sources? loaded|what are you reading|what is this based on|where did that come from|where is that coming from|what should i trust|what can i trust|do i trust this|can i trust this|safe to act on|not safe to assume|what can you not see|what is missing|data is missing|show me the data|data then move|source check|trust check|sync check)\b/.test(q))return 'direct_data_trust_entry';
+  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(q):null;
+  if(resultSignal&&resultSignal.type)return 'direct_result_entry';
+  if(/\b(call is done|i'?m on a call|im on a call|on a call|call just ended|call ended|sales call|discovery call)\b/.test(q))return 'direct_call_entry';
+  if(/\b(too expensive|too much|needs to think|need to think|maybe later|ghosted|no answer|left me on read|he said|she said|they said|objection|send a bump|bump him|bump her|bump them)\b/.test(q))return 'direct_sales_entry';
+  if(/\b(what should i say|what do i say|help me reply|reply for me|respond to that|what should i send|what do i send|text (him|her|them) back|dm (him|her|them) back|write (the )?(reply|response|dm|text)|what'?s the reply|how do i answer|what do i tell (him|her|them))\b/.test(q))return 'direct_sales_entry';
+  if(/\b(what should i post|what do i post|topic next|next topic|content idea|content not sales|make content|write a post|write the caption|caption|video idea|beat idea|what should i make|production tracker|content pipeline)\b/.test(q))return 'direct_content_entry';
+  if(/\b(brief card|outreach card|content card|beat card|manager card|calendar card|what card owns this|what lane owns this|where does this live|what tab do i open|where should i update it)\b/.test(q))return 'direct_card_entry';
+  if(/\b(what should i do today|what should i do now|where we at|where are we|where do i stand|what'?s the move today|start the day|i got \d+ minutes|i got twenty minutes|i got 20 minutes|i'?m tired|im tired|need money|lock in|start me|straight to it|say less)\b/.test(q))return 'silent_fresh_start';
+  if(/^(what next|what now|now what|next|more|help|run it|run it back|what'?s the move|what'?s the play|just tell me the move|tell me one thing|pick one|call it)$/.test(q))return 'ambiguous_reentry';
+  return 'continuation_entry';
+}
+
+function missionShouldCreateSilentFreshBoundaryV17(input,ctx,session,activeChat){
+  var mode=getMissionDirectEntryModeV17(input,ctx,session,activeChat);
+  var active=activeChat||null;
+  try{if(!active&&typeof getActiveMissionSession==='function')active=getActiveMissionSession();}catch(e){}
+  session=session||{};
+  var loop=session.resultLoop||{};
+  var latestFreshResult=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  var currentResult=loop.lastResult&&loop.lastResult.type&&missionResultIsFreshForActiveChatV12(loop.lastResult)?loop.lastResult:(latestFreshResult&&latestFreshResult.type&&missionResultIsFreshForActiveChatV12(latestFreshResult)?latestFreshResult:null);
+  var currentPending=loop.pendingAction||session.lastActionPlan||null;
+  var messageCount=active&&Array.isArray(active.messages)?active.messages.length:0;
+  var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+  var activeUpdatedAt=active&&active.updatedAt?Date.parse(active.updatedAt):NaN;
+  var firstTurn=messageCount<=1;
+  var emptyChat=messageCount<=0;
+  var longGap=!isNaN(activeUpdatedAt)&&(Date.now()-activeUpdatedAt)>=120*60000;
+  var staleReload=!isNaN(activeCreatedAt)&&messageCount<=2&&missionSessionHasBookedBaggageV11(session||getMissionRawBrainSessionForArbitrationV11());
+  if(currentResult&&mode!=='direct_result_entry')return {shouldCreate:false,mode:'continuation_entry',reason:'current_result_owns_thread'};
+  if(currentPending&&mode==='ambiguous_reentry'&&!staleReload)return {shouldCreate:false,mode:'continuation_entry',reason:'current_pending_owns_thread'};
+  if(mode==='continuation_entry'&&!emptyChat&&!firstTurn&&!longGap&&!staleReload)return {shouldCreate:false,mode:mode,reason:'same_chat_continuation'};
+  if(firstTurn||emptyChat||longGap||staleReload||mode!=='continuation_entry'){
+    return {shouldCreate:true,mode:mode==='continuation_entry'?'silent_fresh_start':mode,reason:firstTurn?'first_turn_direct_entry':(longGap?'long_gap_direct_entry':(staleReload?'stale_reload_direct_entry':'direct_entry'))};
+  }
+  return {shouldCreate:false,mode:mode,reason:'not_needed'};
+}
+
+function rememberMissionSilentFreshBoundaryV17(input,mode,reason){
+  try{
+    var marker={
+      chatId:localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'',
+      recordedAt:new Date().toISOString(),
+      prompt:String(input||'').trim(),
+      silent:true,
+      directEntryMode:mode||'silent_fresh_start',
+      reason:reason||'silent_boundary'
+    };
+    sessionStorage.setItem(MISSION_FRESH_STARTER_MARKER_KEY_V12,JSON.stringify(marker));
+    window.__missionLastSilentFreshBoundaryV17=marker;
+    return marker;
+  }catch(e){
+    return null;
+  }
+}
+
+function ensureMissionSilentFreshBoundaryV17(input,ctx){
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var session=getMissionRawBrainSessionForArbitrationV11();
+    var decision=missionShouldCreateSilentFreshBoundaryV17(input,ctx,session,active);
+    if(decision&&decision.shouldCreate){
+      var marker=rememberMissionSilentFreshBoundaryV17(input,decision.mode,decision.reason);
+      return Object.assign({},decision,{marker:marker});
+    }
+    window.__missionLastSilentFreshBoundaryV17=null;
+    return decision;
+  }catch(e){
+    window.__missionLastSilentFreshBoundaryV17=null;
+    return {shouldCreate:false,mode:'continuation_entry',reason:'silent_boundary_failed'};
+  }
+}
+
+function getMissionSilentFreshBoundaryMarkerV17(){
+  try{
+    var raw=sessionStorage.getItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
+    var marker=raw?JSON.parse(raw):null;
+    if(!marker||!marker.silent)return null;
+    var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'';
+    if(activeId&&marker.chatId!==activeId)return null;
     return marker;
   }catch(e){
     return null;
@@ -12955,6 +13048,7 @@ function missionResultIsFreshForActiveChatV12(result){
     if(isNaN(activeCreatedAt)||isNaN(resultRecordedAt))return true;
     var starterTime=typeof missionLatestActiveChatFreshStarterTimeV12==='function'?missionLatestActiveChatFreshStarterTimeV12():NaN;
     if(!isNaN(starterTime)&&resultRecordedAt<starterTime)return false;
+    if(!result.chatId&&resultRecordedAt<activeCreatedAt&&activeCreatedAt-resultRecordedAt<=5000)return true;
     return resultRecordedAt>=activeCreatedAt;
   }catch(e){
     return true;
@@ -12981,7 +13075,19 @@ function getMissionActiveChatMetaV11(){
 function getMissionRawBrainSessionForArbitrationV11(){
   try{
     var scoped=getMissionActiveChatMemory('memory')||{};
-    if(scoped.brainSession&&Object.keys(scoped.brainSession).length)return scoped.brainSession;
+    var stored={};
+    try{stored=JSON.parse(sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY)||'{}')||{};}catch(e){stored={};}
+    if(scoped.brainSession&&Object.keys(scoped.brainSession).length){
+      var scopedBrain=scoped.brainSession||{};
+      var merged=Object.assign({},stored,scopedBrain);
+      var scopedLoop=scopedBrain.resultLoop||{};
+      var scopedLoopHasSignal=!!(scopedLoop.lastResult||scopedLoop.pendingAction||(Array.isArray(scopedLoop.history)&&scopedLoop.history.length));
+      if(!scopedLoopHasSignal&&stored.resultLoop)merged.resultLoop=stored.resultLoop;
+      if(!(scopedBrain.threadMemory&&Object.keys(scopedBrain.threadMemory).length)&&stored.threadMemory)merged.threadMemory=stored.threadMemory;
+      if(!scopedBrain.lastActionPlan&&stored.lastActionPlan)merged.lastActionPlan=stored.lastActionPlan;
+      return merged;
+    }
+    return stored;
   }catch(e){}
   try{
     return JSON.parse(sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY)||'{}')||{};
@@ -13005,6 +13111,9 @@ function getMissionContextBoundaryModeV11(turn,ctx){
   var activeMeta=getMissionActiveChatMetaV11();
   var session=null;
   session=getMissionRawBrainSessionForArbitrationV11();
+  var silentMarker=getMissionSilentFreshBoundaryMarkerV17();
+  var markerPrompt=normalizeMissionQuestion(silentMarker&&silentMarker.prompt||'');
+  var directEntryMode=silentMarker&&markerPrompt===q&&silentMarker.directEntryMode||'';
   var explicitRoute=(typeof getMissionThreadExplicitRouteFromQuestionV1==='function'?getMissionThreadExplicitRouteFromQuestionV1(q):'')||
     (typeof getMissionDirectRouteOverrideV1==='function'?getMissionDirectRouteOverrideV1(q):'');
   var isDataTrust=typeof isMissionDataTrustPromptV12==='function'?isMissionDataTrustPromptV12(q):/\b(what data|data current|data missing|what do you see|what should i trust|sync check)\b/.test(q);
@@ -13017,6 +13126,11 @@ function getMissionContextBoundaryModeV11(turn,ctx){
   var shouldBlockBooked=bookedBaggage&&missionShouldBlockStaleBookedCarryV12(q);
   var lastUpdatedAt=session&&((session.threadMemory&&session.threadMemory.lastUpdatedAt)||session.lastTurnAt)||'';
   var gapMinutes=typeof getMissionAgeMinutes==='function'?getMissionAgeMinutes(lastUpdatedAt):null;
+  if(directEntryMode&&directEntryMode!=='continuation_entry'){
+    if(shouldBlockBooked&&directEntryMode==='silent_fresh_start')return 'blocked_stale_memory';
+    if(shouldBlockBooked&&directEntryMode==='ambiguous_reentry')return 'blocked_stale_memory';
+    return directEntryMode;
+  }
   if(shouldBlockBooked)return 'blocked_stale_memory';
   if(freshStarter)return 'clean_start';
   if(activeMeta.activeMessageCount<=1)return 'first_turn';
@@ -13040,6 +13154,7 @@ function classifyMissionMemoryEligibilityV11(session,arbitration){
   var bookedStale=!!(result&&result.type==='booked'&&!missionResultIsFreshForActiveChatV12(result));
   var blockedBookedCarry=missionShouldBlockStaleBookedCarryV12(arbitration.currentPrompt||'')&&((result&&result.type==='booked')||pendingBooked);
   var cleanStartLike=/^(clean_start|first_turn|blocked_stale_memory)$/.test(mode);
+  var directBoundaryLike=/^(silent_fresh_start|direct_sales_entry|direct_call_entry|direct_content_entry|direct_pipeline_entry|direct_result_entry|direct_data_trust_entry|direct_card_entry|ambiguous_reentry)$/.test(mode);
   var sources=[
     'result_loop','pending_action','thread_memory','decision_memory','pattern_memory','silence_intelligence',
     'action_accountability','communication_cohesion','scoped_chat_memory','sessionStorage_brain_state',
@@ -13053,6 +13168,22 @@ function classifyMissionMemoryEligibilityV11(session,arbitration){
     }
     if(cleanStartLike&&/^(result_loop|pending_action|thread_memory|decision_memory|silence_intelligence|action_accountability)$/.test(source)){
       blocked.push(source);
+      return;
+    }
+    if(directBoundaryLike&&/^(pending_action|thread_memory|decision_memory|silence_intelligence|action_accountability)$/.test(source)){
+      blocked.push(source);
+      return;
+    }
+    if(directBoundaryLike&&source==='result_loop'){
+      blocked.push(source);
+      return;
+    }
+    if(mode==='direct_data_trust_entry'&&/^(pattern_memory|communication_cohesion)$/.test(source)){
+      blocked.push(source);
+      return;
+    }
+    if((mode==='direct_sales_entry'||mode==='direct_call_entry')&&/^(pattern_memory|communication_cohesion)$/.test(source)){
+      downgraded.push(source);
       return;
     }
     if(mode==='data_trust'&&/^(silence_intelligence|action_accountability|pattern_memory)$/.test(source)){
@@ -13118,6 +13249,8 @@ function buildMissionContextArbitrationV11(turn,ctx){
     currentPrompt:String(prompt||''),
     currentPromptAt:new Date().toISOString(),
     latestFreshStarterAt:(function(){var t=missionLatestActiveChatFreshStarterTimeV12();return isNaN(t)?'':new Date(t).toISOString();})(),
+    silentFreshBoundary:getMissionSilentFreshBoundaryMarkerV17(),
+    directEntryMode:(getMissionSilentFreshBoundaryMarkerV17()||{}).directEntryMode||'',
     promptBoundaryMode:mode,
     route:turn.route||'',
     explicitRoute:explicitRoute||'',
@@ -13146,6 +13279,26 @@ function sanitizeMissionSessionByArbitrationV11(session,arbitration){
   if((arbitration.blockedMemorySources||[]).indexOf('result_loop')<0&&(arbitration.blockedMemorySources||[]).indexOf('pending_action')<0)return session;
   var next=Object.assign({},session);
   var loop=Object.assign({},next.resultLoop||{});
+  var blocksResultLoop=(arbitration.blockedMemorySources||[]).indexOf('result_loop')>=0;
+  var blocksPending=(arbitration.blockedMemorySources||[]).indexOf('pending_action')>=0;
+  var directBoundary=/^(silent_fresh_start|direct_sales_entry|direct_call_entry|direct_content_entry|direct_pipeline_entry|direct_result_entry|direct_data_trust_entry|direct_card_entry|ambiguous_reentry)$/.test(arbitration.finalContextMode||arbitration.promptBoundaryMode||'');
+  if(directBoundary&&blocksResultLoop){
+    if(loop.lastResult){loop.lastResult=null;arbitration.scrubbedFields.push('resultLoop.lastResult.direct_entry');}
+    if(Array.isArray(loop.history)&&loop.history.length){loop.history=[];arbitration.scrubbedFields.push('resultLoop.history.direct_entry');}
+  }
+  if(directBoundary&&blocksPending){
+    if(loop.pendingAction){loop.pendingAction=null;arbitration.scrubbedFields.push('resultLoop.pendingAction.direct_entry');}
+    if(next.lastActionPlan){
+      next.lastActionPlan=null;
+      next.lastActionSuggested='';
+      next.lastActionStatus='none';
+      arbitration.scrubbedFields.push('lastActionPlan.direct_entry');
+    }
+    next.threadMemory=Object.assign({},next.threadMemory||{},{turns:[],activeRoute:'',lastRoute:'',lastQuestion:''});
+    next.lastRoute='';
+    next.sessionTopic='';
+    next.resultLoop=loop;
+  }
   if((arbitration.staleSignals||[]).indexOf('blocked_booked_carry')>=0){
     if(loop.lastResult&&loop.lastResult.type==='booked'){loop.lastResult=null;arbitration.scrubbedFields.push('resultLoop.lastResult.booked');}
     if(Array.isArray(loop.history)){
@@ -13173,7 +13326,7 @@ function getMissionArbitratedBrainSessionV11(arbitration){
   try{
     var raw=getMissionBrainSessionV2();
     if(!arbitration)return raw;
-    if(missionContextArbitrationBlocksStaleBookedV11(arbitration)){
+    if(missionContextArbitrationBlocksStaleBookedV11(arbitration)||(arbitration.blockedMemorySources||[]).indexOf('result_loop')>=0||(arbitration.blockedMemorySources||[]).indexOf('pending_action')>=0){
       return sanitizeMissionSessionByArbitrationV11(raw,arbitration);
     }
     return raw;
@@ -13190,8 +13343,19 @@ function getMissionContextFreshStartFallbackV11(turn,arbitration){
 function applyMissionContextArbitrationToTurnV11(turn,arbitration){
   if(!turn)return turn;
   turn.contextArbitration=arbitration||null;
+  applyMissionDirectEntryContextV17(turn,arbitration);
   window.__missionLastContextArbitrationV11=arbitration||null;
   if(turn&&typeof addMissionTrace==='function')addMissionTrace(turn,'context_arbitration_v11',summarizeMissionContextArbitrationV11(arbitration));
+  return turn;
+}
+
+function applyMissionDirectEntryContextV17(turn,arbitration){
+  if(!turn||!arbitration)return turn;
+  var mode=arbitration.directEntryMode||arbitration.finalContextMode||arbitration.promptBoundaryMode||'';
+  if(!/^(silent_fresh_start|direct_sales_entry|direct_call_entry|direct_content_entry|direct_pipeline_entry|direct_result_entry|direct_data_trust_entry|direct_card_entry|ambiguous_reentry)$/.test(mode))return turn;
+  turn.directEntryMode=mode;
+  turn.isDirectEntry=true;
+  turn.directEntryReason=arbitration.silentFreshBoundary&&arbitration.silentFreshBoundary.reason||arbitration.reasonForContextMode||'direct_entry';
   return turn;
 }
 
@@ -13199,6 +13363,7 @@ function summarizeMissionContextArbitrationV11(arbitration){
   if(!arbitration)return {};
   return {
     mode:arbitration.finalContextMode||arbitration.promptBoundaryMode||'',
+    directEntryMode:arbitration.directEntryMode||'',
     route:arbitration.route||'',
     activeChatId:arbitration.activeChatId||'',
     allowed:(arbitration.allowedMemorySources||[]).length,
@@ -13218,6 +13383,8 @@ function applyMissionContextAnswerGuardV11(html,turn,arbitration){
   if(!arbitration)return html;
   var out=String(html||'');
   var hasBlockedBooked=(arbitration.staleSignals||[]).indexOf('blocked_booked_carry')>=0;
+  var isCurrentResultEntry=/^direct_result_entry$/.test(arbitration.finalContextMode||arbitration.promptBoundaryMode||'')&&!!(typeof getMissionResultSignalV1==='function'&&getMissionResultSignalV1(q));
+  if(isCurrentResultEntry)return out;
   if(hasBlockedBooked&&/\b(Last result was booked|booked-call thread|prep the booked call|prep the call|calendar detail|opening question|Conversation moved to calendar)\b/i.test(out)){
     arbitration.reintroducedFieldsDetected=arbitration.reintroducedFieldsDetected||[];
     if(arbitration.reintroducedFieldsDetected.indexOf('visible_booked_context')<0)arbitration.reintroducedFieldsDetected.push('visible_booked_context');
@@ -13416,6 +13583,112 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     window.__missionLastContextArbitrationV11=priorLastArb;
   }
   return {passed:!failures.length,failures:failures,total:28};
+}
+
+function runMissionDirectEntryRegressionV17(){
+  var failures=[];
+  var priorSessions=null,priorActive=null,priorAlias=null,priorBrain=null,priorMarker=null,priorEventLedgerSession=null,priorEventLedgerLocal=null,priorCtx=window.__missionCommandContext||null,priorLastArb=window.__missionLastContextArbitrationV11||null,priorSilent=window.__missionLastSilentFreshBoundaryV17||null;
+  try{
+    priorSessions=localStorage.getItem(MISSION_CHAT_SESSIONS_KEY);
+    priorActive=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY);
+    priorAlias=localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);
+    priorBrain=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+    priorMarker=sessionStorage.getItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
+    priorEventLedgerSession=sessionStorage.getItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    priorEventLedgerLocal=localStorage.getItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    var ctx={rev:999,wk:500,gap:0,dpc:{dms:0,coldCalls:0,calls:0,booked:0,closes:0,money:0},crm:[{name:'GARY RAOGUY'},{name:'Money Maker'}],content:[{title:'How to Turn Listeners into Fans'}],production:[{title:'DPC Slide'}],calendar:[{}]};
+    var old=new Date(Date.now()-3600000).toISOString();
+    window.__missionCommandContext=ctx;
+    function staleBrain(){
+      return {
+        resultLoop:{
+          lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:old,chatId:'old_chat'},
+          pendingAction:{label:'Prep Call',action:'prep the booked call and add the calendar detail',target:'sales_coach',reason:'thread_memory_booked',suggestedAt:old},
+          history:[{type:'booked',label:'Booked Call',recordedAt:old,chatId:'old_chat'}]
+        },
+        lastActionPlan:{label:'Prep Call',action:'prep the booked call and add the calendar detail',target:'sales_coach',reason:'decision_memory_booked',suggestedAt:old},
+        threadMemory:{activeRoute:'sales',turns:[{question:'booked',route:'sales',timestamp:old}],lastUpdatedAt:old},
+        lastRoute:'sales',
+        sessionTopic:'sales'
+      };
+    }
+    function makeChat(id,messages){
+      var now=new Date().toISOString();
+      setStore(MISSION_CHAT_SESSIONS_KEY,[{id:id,title:'QA Direct Entry',createdAt:now,updatedAt:now,tags:['new'],messages:messages||[],memory:{brainSession:staleBrain()}}]);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,id);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,id);
+      sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify(staleBrain()));
+      sessionStorage.removeItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
+      sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      window.__missionLastContextArbitrationV11=null;
+      window.__missionLastSilentFreshBoundaryV17=null;
+    }
+    function plain(prompt){
+      return String(getMissionCommandResponse('ask',ctx,prompt,{})||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    }
+    function mode(){
+      var arb=window.__missionLastContextArbitrationV11||{};
+      return arb.finalContextMode||arb.promptBoundaryMode||'';
+    }
+    function hasBookedPrep(text){
+      return /Last result was booked|prep the booked call|prep the call|calendar detail|opening question|Conversation moved to calendar/i.test(String(text||''));
+    }
+    function expectMode(prompt,expectedMode,check){
+      makeChat('qa_direct_'+prompt.replace(/\W+/g,'_').slice(0,20),[]);
+      var answer=plain(prompt);
+      var actual=mode();
+      if(actual!==expectedMode)failures.push('mode_'+prompt.replace(/\W+/g,'_')+'_'+actual);
+      if(hasBookedPrep(answer)&&!/booked|paid/.test(normalizeMissionQuestion(prompt)))failures.push('stale_booked_visible_'+prompt.replace(/\W+/g,'_'));
+      if(typeof check==='function')check(answer,actual);
+    }
+    expectMode('he said too expensive','direct_sales_entry',function(answer){
+      if(!/result was clear|investment|main issue|money|timing|solves/i.test(answer))failures.push('direct_sales_objection_answer');
+    });
+    expectMode('help me reply','direct_sales_entry',function(answer){
+      if(/Last result was booked/i.test(answer))failures.push('direct_sales_help_stale_result');
+    });
+    expectMode('what should i post','direct_content_entry',function(answer){
+      if(/DPC has nothing logged|outreach or sales action|prep the call/i.test(answer))failures.push('direct_content_forced_dpc_or_sales');
+    });
+    expectMode('what data are you using','direct_data_trust_entry',function(answer){
+      if(!/CRM leads|money|System health|sync/i.test(answer)||/Last result was booked/i.test(answer))failures.push('direct_data_trust_answer');
+    });
+    expectMode('/pipeline','direct_pipeline_entry',function(answer){
+      if(!/Pipeline|lead|call-ready|call ready/i.test(answer))failures.push('direct_pipeline_answer');
+    });
+    expectMode('what card owns this','direct_card_entry',function(answer){
+      if(/Last result was booked|prep the call/i.test(answer))failures.push('direct_card_stale_booked');
+    });
+    expectMode('what next','blocked_stale_memory',function(answer){
+      if(hasBookedPrep(answer))failures.push('ambiguous_next_stale_booked');
+    });
+    expectMode('booked','direct_result_entry',function(answer){
+      if(!/booked|calendar|call/i.test(answer))failures.push('direct_booked_not_logged');
+    });
+    var bookedCount=plain('how many booked calls do i have');
+    if(!/Chat-only result memory:\s*1 booked/i.test(bookedCount))failures.push('direct_booked_count_not_current');
+    makeChat('qa_direct_paid',[]);
+    var paidAnswer=plain('paid');
+    if(mode()!=='direct_result_entry')failures.push('direct_paid_mode_'+mode());
+    if(!/paid|money|delivery/i.test(paidAnswer))failures.push('direct_paid_answer');
+    var paidNext=plain('what next');
+    if(/Last result was booked|prep the call|calendar detail/i.test(paidNext)||!/paid|money|delivery|protect/i.test(paidNext))failures.push('direct_paid_next_not_owned');
+  }catch(e){
+    failures.push('exception_'+(e&&e.message?e.message:String(e)));
+  }finally{
+    if(priorSessions===null)localStorage.removeItem(MISSION_CHAT_SESSIONS_KEY);else localStorage.setItem(MISSION_CHAT_SESSIONS_KEY,priorSessions);
+    if(priorActive===null)localStorage.removeItem(MISSION_CHAT_ACTIVE_SESSION_KEY);else localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,priorActive);
+    if(priorAlias===null)localStorage.removeItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);else localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,priorAlias);
+    if(priorBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorBrain);
+    if(priorMarker===null)sessionStorage.removeItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);else sessionStorage.setItem(MISSION_FRESH_STARTER_MARKER_KEY_V12,priorMarker);
+    if(priorEventLedgerSession===null)sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);else sessionStorage.setItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12,priorEventLedgerSession);
+    if(priorEventLedgerLocal===null)localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);else localStorage.setItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12,priorEventLedgerLocal);
+    window.__missionCommandContext=priorCtx;
+    window.__missionLastContextArbitrationV11=priorLastArb;
+    window.__missionLastSilentFreshBoundaryV17=priorSilent;
+  }
+  return {passed:!failures.length,failures:failures,total:10};
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
@@ -23696,7 +23969,12 @@ function getMissionFreshBookedFollowupAnswerV12(question){
 }
 
 function getMissionCommandResponse(kind,ctx,question,brainState){
-  rememberMissionFreshStarterMarkerV12(question||'');
+  if(missionQuestionIsFreshStarterV12(question||'')){
+    rememberMissionFreshStarterMarkerV12(question||'');
+  }else{
+    ensureMissionSilentFreshBoundaryV17(question||'',ctx);
+    rememberMissionFreshStarterMarkerV12(question||'');
+  }
   brainState=brainState||getMissionBrainState(ctx,question||'','');
   var preTurnBrainSession=null;
   try{preTurnBrainSession=typeof getMissionBrainSessionV2==='function'?getMissionBrainSessionV2():null;brainState._preTurnBrainSession=preTurnBrainSession;}catch(e){}
@@ -24044,11 +24322,28 @@ function runMissionIntegritySelfCheck(){
   if(!/I am looking at this right now|safe next move|System health/i.test(dataTrustShortCommand)||/Open Content tracker|Current Work Card|Check system health only/i.test(dataTrustShortCommand))failures.push('data_trust_short_route_guard');
   var dataThenMoveCommand=getMissionCommandResponse('ask',liveCohesionCtx,'show me the data then tell me the move',{});
   if(!/data I can use|Move from the cleanest loaded signal/i.test(dataThenMoveCommand)||/Right now, money, DPC, pipeline/i.test(dataThenMoveCommand))failures.push('data_then_move_route_guard');
-  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString()},history:[]},lastActionPlan:{label:'Prep Call',action:'prep the booked call and add calendar detail',target:'sales_coach',reason:'decision_memory_booked'}}));
+  var priorIntegritySessions=localStorage.getItem(MISSION_CHAT_SESSIONS_KEY);
+  var priorIntegrityActive=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY);
+  var priorIntegrityAlias=localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);
+  var priorIntegrityBrain=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+  var priorIntegrityMarker=sessionStorage.getItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
+  var bookedIntegrityChatId='qa_integrity_booked_context';
+  var bookedIntegrityCreatedAt=new Date(Date.now()-1000).toISOString();
+  var bookedIntegrityRecordedAt=new Date().toISOString();
+  sessionStorage.removeItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
+  setStore(MISSION_CHAT_SESSIONS_KEY,[{id:bookedIntegrityChatId,title:'QA Booked Context',createdAt:bookedIntegrityCreatedAt,updatedAt:bookedIntegrityRecordedAt,messages:[{role:'user',body:'booked',ts:bookedIntegrityRecordedAt}],memory:{brainSession:{}}}]);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,bookedIntegrityChatId);
+  localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,bookedIntegrityChatId);
+  sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:bookedIntegrityRecordedAt,chatId:bookedIntegrityChatId},history:[]},lastActionPlan:{label:'Prep Call',action:'prep the booked call and add calendar detail',target:'sales_coach',reason:'decision_memory_booked'}}));
   var bookedCardOwner=getMissionCommandResponse('ask',liveCohesionCtx,'what card owns this',{});
   if(!/Sales and Manager|calendar detail|call prep/i.test(bookedCardOwner)||/Open Content tracker|This belongs to Mission Command/i.test(bookedCardOwner))failures.push('booked_card_owner_cohesion_guard');
   var bookedLogTarget=getMissionCommandResponse('ask',liveCohesionCtx,'what do i log after this',{});
   if(!/DPC|Lead|Calendar/i.test(bookedLogTarget)||/Open Content tracker/i.test(bookedLogTarget))failures.push('booked_log_target_cohesion_guard');
+  if(priorIntegritySessions===null)localStorage.removeItem(MISSION_CHAT_SESSIONS_KEY);else localStorage.setItem(MISSION_CHAT_SESSIONS_KEY,priorIntegritySessions);
+  if(priorIntegrityActive===null)localStorage.removeItem(MISSION_CHAT_ACTIVE_SESSION_KEY);else localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,priorIntegrityActive);
+  if(priorIntegrityAlias===null)localStorage.removeItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);else localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,priorIntegrityAlias);
+  if(priorIntegrityBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorIntegrityBrain);
+  if(priorIntegrityMarker===null)sessionStorage.removeItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);else sessionStorage.setItem(MISSION_FRESH_STARTER_MARKER_KEY_V12,priorIntegrityMarker);
   var longTrace=[];for(var traceIdx=0;traceIdx<40;traceIdx++)longTrace.push({timestamp:'t'+traceIdx,message:'message '+traceIdx,data:{text:'x'.repeat(400),list:[1,2,3,4,5,6,7,8,9,10]}});
   var compactTrace=summarizeMissionDecisionTraceForCheckpointV1(longTrace);
   if(compactTrace.length!==30||compactTrace[0].message!=='message 10'||compactTrace[0].data.text.length>240||compactTrace[0].data.list.length>8)failures.push('checkpoint_trace_compaction');
