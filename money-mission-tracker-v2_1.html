@@ -11912,7 +11912,7 @@ function countMissionFreshResultEventsV12(type){
     var count=0;
     getMissionResultEventLedgerV12().forEach(function(item){
       if(!item||item.type!==type)return;
-      if(item.chatId&&activeId&&item.chatId!==activeId)return;
+      if(activeId&&item.chatId!==activeId)return;
       var recordedAt=Date.parse(item.recordedAt||'');
       if(!isNaN(boundaryAt)&&(isNaN(recordedAt)||recordedAt<boundaryAt))return;
       var key=[item.type||'',item.recordedAt||'',item.chatId||'',item.label||''].join('|');
@@ -11936,7 +11936,7 @@ function getMissionFreshResultEventV12(type){
     var best=null;
     getMissionResultEventLedgerV12().forEach(function(item){
       if(!item||item.type!==type)return;
-      if(item.chatId&&activeId&&item.chatId!==activeId)return;
+      if(activeId&&item.chatId!==activeId)return;
       var recordedAt=Date.parse(item.recordedAt||'');
       if(!isNaN(boundaryAt)&&(isNaN(recordedAt)||recordedAt<boundaryAt))return;
       if(!best||recordedAt>Date.parse(best.recordedAt||''))best=item;
@@ -12856,6 +12856,14 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     if(answerHasBookedPrep(freshWhy))failures.push('fresh_chat_why_booked_prep');
     var freshNext=plainMissionQaAnswer('what next');
     if(answerHasBookedPrep(freshNext))failures.push('fresh_chat_next_booked_prep');
+    setMissionResultEventLedgerV12([
+      {type:'booked',label:'Booked Call',recordedAt:new Date(Date.now()+1).toISOString(),chatId:'qa_context_arb_old'},
+      {type:'booked',label:'Booked Call',recordedAt:new Date(Date.now()+2).toISOString(),chatId:''}
+    ]);
+    var staleLedgerCount=plainMissionQaAnswer('how many booked calls do i have');
+    if(!/Chat-only result memory:\s*0 booked/i.test(staleLedgerCount))failures.push('fresh_chat_stale_event_ledger_count_leak');
+    var staleLedgerNext=plainMissionQaAnswer('what next');
+    if(answerHasBookedPrep(staleLedgerNext))failures.push('fresh_chat_stale_event_ledger_next_leak');
     var freshPipeline=plainMissionQaAnswer('/pipeline');
     if(answerHasBookedPrep(freshPipeline)||!/pipeline|lead|call-ready|call ready/i.test(freshPipeline))failures.push('fresh_chat_explicit_pipeline_drift');
 
@@ -12933,7 +12941,7 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     window.__missionCommandContext=priorCtx;
     window.__missionLastContextArbitrationV11=priorLastArb;
   }
-  return {passed:!failures.length,failures:failures,total:17};
+  return {passed:!failures.length,failures:failures,total:19};
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
@@ -22771,6 +22779,9 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     shaped=cleanMissionVisibleAnswerText(applyMissionB1ProseGuard(shaped,{route:route,question:cleanQuestion||question||'',turn:turnV2,opts:opts}));
     shaped=cleanMissionCardRouteGarnishV1(shaped,opts);
     shaped=applyMissionCardCohesionV1(shaped,opts);
+    if(/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for)\b/.test(normalizeMissionQuestion(cleanQuestion||question||''))&&typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12()){
+      shaped='Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
+    }
     shaped=applyMissionContextAnswerGuardV11(shaped,turnV2,turnV2&&turnV2.contextArbitration||window.__missionLastContextArbitrationV11);
 	    return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
 	  }
