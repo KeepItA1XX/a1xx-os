@@ -12280,7 +12280,9 @@ function getMissionBookedCallsCountAnswerV1(ctx){
 
 function missionIsResultCountAskV15(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(how many|count|show|what are|any|do i have|where are|list|what .*logged)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|replies|responses)\b/.test(q);
+  return /\b(how many|count|show|what are|any|do i have|where are|list|what .*logged)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|replies|responses|results?)\b/.test(q)||
+    /\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|replies|responses|results?)\b.*\b(logged|saved|reported|counted)\b/.test(q)||
+    /\b(what is logged|what's logged|what have i logged|what results are logged|what results do you have|what results can you see)\b/.test(q);
 }
 
 function getMissionReplyCountAnswerV15(ctx){
@@ -12321,12 +12323,29 @@ function getMissionPaidCountAnswerV15(ctx){
   return lines.map(escapeHtml).join('<br>');
 }
 
+function getMissionLoggedResultsAnswerV15(ctx){
+  var ledger=getMissionContextTruthLedgerV1(ctx||{});
+  var lines=[
+    'Logged results:',
+    '',
+    'DPC today: '+Number(ledger.dpc&&ledger.dpc.replies||0)+' replies, '+Number(ledger.dpc&&ledger.dpc.booked||0)+' booked, '+Number(ledger.dpc&&ledger.dpc.closes||0)+' closes, $'+Number(ledger.dpc&&ledger.dpc.money||0)+' collected.',
+    'Chat-only memory: '+Number(ledger.session&&ledger.session.replies||0)+' replies, '+Number(ledger.session&&ledger.session.booked||0)+' booked, '+Number(ledger.session&&ledger.session.paid||0)+' paid.',
+    'CRM confirmed: '+Number(ledger.crm&&ledger.crm.booked||0)+' booked/session signals, '+Number(ledger.crm&&ledger.crm.paid||0)+' paid/closed leads.',
+    'Calendar confirmed: '+Number(ledger.calendar&&ledger.calendar.calls||0)+' call/session events.'
+  ];
+  if((ledger.discrepancies||[]).length)lines.push('Some chat-only results still need to be logged in DPC, CRM, or Calendar before they become official.');
+  else lines.push('Use DPC, CRM, and Calendar as official. Use chat-only memory as a reminder to finish logging.');
+  return lines.map(escapeHtml).join('<br>');
+}
+
 function getMissionResultCountAnswerV15(ctx,question){
   var q=normalizeMissionQuestion(question||'');
   if(!missionIsResultCountAskV15(q))return '';
+  if(/\b(results?|what is logged|what's logged|what have i logged)\b/.test(q)&&!/\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|replies|responses)\b/.test(q))return getMissionLoggedResultsAnswerV15(ctx);
   if(/\b(booked calls?|calls booked|bookings?)\b/.test(q))return getMissionBookedCallsCountAnswerV1(ctx);
   if(/\b(replies|reply|responses|response)\b/.test(q))return getMissionReplyCountAnswerV15(ctx);
   if(/\b(paid|payments?|paid results?|sales|closes)\b/.test(q))return getMissionPaidCountAnswerV15(ctx);
+  if(/\b(results?|logged|saved|reported|counted)\b/.test(q))return getMissionLoggedResultsAnswerV15(ctx);
   return '';
 }
 
@@ -17727,6 +17746,8 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'reply',{});
     var replyCountVisible=String(getMissionCommandResponse('ask',ctx,'how many replies do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Replies:|Chat-only result memory: 1 repl/i.test(replyCountVisible)||/current work card|Open that|Pick one lane/i.test(replyCountVisible))failures.push('reply_count_truth_guard');
+    var replyLoggedVisible=String(getMissionCommandResponse('ask',ctx,'what replies are logged',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Replies:|Chat-only result memory: 1 repl/i.test(replyLoggedVisible)||/current work card|Open that|Pick one lane/i.test(replyLoggedVisible))failures.push('reply_logged_phrase_truth_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Count Paid',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -17742,8 +17763,10 @@ function runMissionBroadRegressionHardeningV1(){
     sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
     var cleanReplyCountVisible=String(getMissionCommandResponse('ask',ctx,'how many replies do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     var cleanPaidCountVisible=String(getMissionCommandResponse('ask',ctx,'how many payments do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    var cleanLoggedVisible=String(getMissionCommandResponse('ask',ctx,'what results are logged',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Chat-only result memory: 0 repl/i.test(cleanReplyCountVisible)||/Chat-only result memory: 1 repl/i.test(cleanReplyCountVisible))failures.push('clean_chat_reply_count_boundary_guard');
     if(!/Chat-only result memory: 0 paid result/i.test(cleanPaidCountVisible)||/Chat-only result memory: 1 paid result/i.test(cleanPaidCountVisible))failures.push('clean_chat_paid_count_boundary_guard');
+    if(!/Logged results:|Chat-only memory: 0 replies, 0 booked, 0 paid/i.test(cleanLoggedVisible)||/Pick one lane|current work card/i.test(cleanLoggedVisible))failures.push('logged_results_summary_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17757,7 +17780,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:75,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 28 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:78,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 31 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
