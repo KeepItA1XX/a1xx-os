@@ -18344,6 +18344,28 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'follow-up',{});
     var mixedFollowUpNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Last result needs follow-up|money, timing, trust, or fit/i.test(mixedFollowUpNextVisible)||/Last result was paid|protect delivery|log the money/i.test(mixedFollowUpNextVisible))failures.push('mixed_paid_to_follow_up_latest_guard');
+    var mixedFollowUpReplyVisible=String(getMissionCommandResponse('ask',ctx,'help me reply',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/open concern|money, the timing, trust, or fit|Stay with/i.test(mixedFollowUpReplyVisible)||/post-sale|locking this in|delivery step/i.test(mixedFollowUpReplyVisible))failures.push('mixed_paid_to_follow_up_reply_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Mixed Result Done To Paid',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'done',{});
+    getMissionCommandResponse('ask',ctx,'paid',{});
+    var mixedDonePaidReplyVisible=String(getMissionCommandResponse('ask',ctx,'help me reply',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/post-sale|locking this in|delivery step/i.test(mixedDonePaidReplyVisible)||/First tell Mission Command|result is still missing|no reply, reply, booked, paid/i.test(mixedDonePaidReplyVisible))failures.push('mixed_done_to_paid_reply_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Mixed Result Booked To Paid Log',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'booked',{});
+    getMissionCommandResponse('ask',ctx,'paid',{});
+    var mixedBookedPaidLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/paid result|money collected|Delivery|delivery protected/i.test(mixedBookedPaidLogVisible)||/booked call in three places|calendar detail/i.test(mixedBookedPaidLogVisible))failures.push('mixed_booked_to_paid_log_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Aware Reply Paid',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18561,7 +18583,7 @@ function runMissionBroadRegressionHardeningV1(){
     restoreMissionStorageForQaV1(localStorage,savedLocalAll);
     restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:144,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 94 sales/result/data/mixed-lane/storage checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:147,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 97 sales/result/data/mixed-lane/storage checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
