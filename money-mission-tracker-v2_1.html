@@ -12166,6 +12166,7 @@ function getMissionContextTruthLedgerV1(ctx){
   try{d=typeof getDailyCoach==='function'?getDailyCoach()||{}:{};}catch(e){d={};}
   var session={};
   try{session=typeof getMissionBrainSessionV2==='function'?getMissionBrainSessionV2()||{}:{};}catch(e){session={};}
+  var hasActiveChat=typeof missionHasActiveChatSessionV11==='function'&&missionHasActiveChatSessionV11();
   var loop=session.resultLoop||{};
   var history=Array.isArray(loop.history)?loop.history:[];
   var lastResult=loop.lastResult||null;
@@ -12195,12 +12196,13 @@ function getMissionContextTruthLedgerV1(ctx){
   var sessionBooked=activeBooked!==null?Math.max(activeBooked,loopBooked,eventBooked):Math.max(loopBooked,eventBooked);
   var sessionPaid=activePaid!==null?Math.max(activePaid,loopPaid,eventPaid):Math.max(loopPaid,eventPaid);
   var sessionReply=activeReply!==null?Math.max(activeReply,loopReply,eventReply):Math.max(loopReply,eventReply);
-  if(activeBooked===null&&!sessionBooked)sessionBooked=Number(fallbackCounts.booked||0);
-  if(activePaid===null&&!sessionPaid)sessionPaid=Number(fallbackCounts.paid||0);
-  if(activeReply===null&&!sessionReply)sessionReply=Number(fallbackCounts.reply||0);
+  if(activeBooked===null&&!hasActiveChat&&!sessionBooked)sessionBooked=Number(fallbackCounts.booked||0);
+  if(activePaid===null&&!hasActiveChat&&!sessionPaid)sessionPaid=Number(fallbackCounts.paid||0);
+  if(activeReply===null&&!hasActiveChat&&!sessionReply)sessionReply=Number(fallbackCounts.reply||0);
   var dpcBooked=Number(d.calls||d.booked||0)||0;
   var dpcCloses=Number(d.closes||0)||0;
   var dpcMoney=Number((ctx.dpc&&ctx.dpc.money)||d.money||0)||0;
+  var dpcReplies=Number((ctx.dpc&&ctx.dpc.replies)||d.replies||d.leads||0)||0;
   var ledger={
     version:'context_truth_ledger_v1',
     session:{
@@ -12214,6 +12216,7 @@ function getMissionContextTruthLedgerV1(ctx){
     },
     dpc:{
       booked:dpcBooked,
+      replies:dpcReplies,
       closes:dpcCloses,
       money:dpcMoney,
       source:'DPC daily log',
@@ -12273,6 +12276,58 @@ function getMissionBookedCallsCountAnswerV1(ctx){
   else if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_booked_not_confirmed'))lines.push('I saw the booked result in this chat, but it is not confirmed in DPC, CRM, or Calendar yet. Log it there so the dashboard count can carry it forward.');
   else lines.push('Use the freshest source first: calendar for schedule, CRM for lead status, DPC for today’s logged result.');
   return lines.map(escapeHtml).join('<br>');
+}
+
+function missionIsResultCountAskV15(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(how many|count|show|what are|any|do i have|where are|list|what .*logged)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|replies|responses)\b/.test(q);
+}
+
+function getMissionReplyCountAnswerV15(ctx){
+  var ledger=getMissionContextTruthLedgerV1(ctx||{});
+  var dpcReplies=Number(ledger.dpc&&ledger.dpc.replies||0);
+  var sessionReplies=Number(ledger.session&&ledger.session.replies||0);
+  var lines=[
+    'Replies:',
+    '',
+    'Dashboard confirmed: '+dpcReplies+' repl'+(dpcReplies===1?'y':'ies')+' in DPC today.',
+    'Chat-only result memory: '+sessionReplies+' repl'+(sessionReplies===1?'y':'ies')+' reported here.'
+  ];
+  if(!dpcReplies&&!sessionReplies)lines.push('I do not see a confirmed reply yet. If one happened, log it in DPC or Outreach, then qualify intent.');
+  else if(sessionReplies&&!dpcReplies)lines.push('I saw the reply in this chat, but it is not confirmed in DPC yet. Log it so the dashboard can carry it forward.');
+  else lines.push('Use DPC for the official count, then Sales owns the next qualifying question.');
+  return lines.map(escapeHtml).join('<br>');
+}
+
+function getMissionPaidCountAnswerV15(ctx){
+  var ledger=getMissionContextTruthLedgerV1(ctx||{});
+  var dpcMoney=Number(ledger.dpc&&ledger.dpc.money||0);
+  var dpcCloses=Number(ledger.dpc&&ledger.dpc.closes||0);
+  var sessionPaid=Number(ledger.session&&ledger.session.paid||0);
+  var crmPaid=Number(ledger.crm&&ledger.crm.paid||0);
+  var weeklyRevenue=Number(ledger.weekly&&ledger.weekly.revenue||0);
+  var weeklyTarget=Number(ledger.weekly&&ledger.weekly.target||0);
+  var lines=[
+    'Paid results:',
+    '',
+    'Dashboard confirmed: '+dpcCloses+' close'+(dpcCloses===1?'':'s')+' and $'+dpcMoney+' logged in DPC today.',
+    'Chat-only result memory: '+sessionPaid+' paid result'+(sessionPaid===1?'':'s')+' reported here.',
+    'CRM confirmed: '+crmPaid+' paid/closed lead'+(crmPaid===1?'':'s')+'.',
+    'Weekly loaded: $'+weeklyRevenue+' of $'+weeklyTarget+'.'
+  ];
+  if(!dpcMoney&&!dpcCloses&&!sessionPaid&&!crmPaid)lines.push('I do not see a confirmed paid result yet. If one happened, log the money, update the lead, and protect delivery.');
+  else if(sessionPaid&&!dpcMoney&&!dpcCloses&&!crmPaid)lines.push('I saw the paid result in this chat, but it is not confirmed in DPC or CRM yet. Log it there so the dashboard can carry it forward.');
+  else lines.push('Use DPC/CRM for the official count. Use chat-only memory only as a prompt to finish logging.');
+  return lines.map(escapeHtml).join('<br>');
+}
+
+function getMissionResultCountAnswerV15(ctx,question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!missionIsResultCountAskV15(q))return '';
+  if(/\b(booked calls?|calls booked|bookings?)\b/.test(q))return getMissionBookedCallsCountAnswerV1(ctx);
+  if(/\b(replies|reply|responses|response)\b/.test(q))return getMissionReplyCountAnswerV15(ctx);
+  if(/\b(paid|payments?|paid results?|sales|closes)\b/.test(q))return getMissionPaidCountAnswerV15(ctx);
+  return '';
 }
 
 /* =========================================================
@@ -17663,6 +17718,32 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/action is done|result is still missing|no reply, reply, booked, paid/i.test(doneNextVisible)||/Log one measurable outreach|Open Production tracker|Last result was booked/i.test(doneNextVisible))failures.push('done_result_next_capture_guard');
     var doneWhyVisible=String(getMissionCommandResponse('ask',ctx,'why',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/done only closes the action|Mission Command still needs the result/i.test(doneWhyVisible)||/last useful thread|Production tracker|Last result was booked/i.test(doneWhyVisible))failures.push('done_result_why_capture_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Count Replies',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'reply',{});
+    var replyCountVisible=String(getMissionCommandResponse('ask',ctx,'how many replies do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Replies:|Chat-only result memory: 1 repl/i.test(replyCountVisible)||/current work card|Open that|Pick one lane/i.test(replyCountVisible))failures.push('reply_count_truth_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Count Paid',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'paid',{});
+    var paidCountVisible=String(getMissionCommandResponse('ask',ctx,'how many payments do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Paid results:|Chat-only result memory: 1 paid result/i.test(paidCountVisible)||/Ask this|payment structure worked/i.test(paidCountVisible))failures.push('paid_count_truth_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Count Clean Chat',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    var cleanReplyCountVisible=String(getMissionCommandResponse('ask',ctx,'how many replies do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    var cleanPaidCountVisible=String(getMissionCommandResponse('ask',ctx,'how many payments do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Chat-only result memory: 0 repl/i.test(cleanReplyCountVisible)||/Chat-only result memory: 1 repl/i.test(cleanReplyCountVisible))failures.push('clean_chat_reply_count_boundary_guard');
+    if(!/Chat-only result memory: 0 paid result/i.test(cleanPaidCountVisible)||/Chat-only result memory: 1 paid result/i.test(cleanPaidCountVisible))failures.push('clean_chat_paid_count_boundary_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17676,7 +17757,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:71,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 24 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:75,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 28 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -23446,6 +23527,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     var dataTrustAnswer=getMissionDataConfidenceResponse('sync',ctx,cleanQuestion||question||'');
     if(dataTrustAnswer)return finishMissionAnswer(dataTrustAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,stylePreference:false});
   }
+  var resultCountAnswer=typeof getMissionResultCountAnswerV15==='function'?getMissionResultCountAnswerV15(ctx,cleanQuestion||question||''):'';
+  if(resultCountAnswer)return finishMissionAnswer(resultCountAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
   var splitPromptAnswer=getMissionSplitPromptResponseV1(ctx,cleanQuestion||question||'');
   if(splitPromptAnswer)return finishMissionAnswer(splitPromptAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
   var earlyResultSignal=preflightResultSignal||getMissionResultSignalV1(question||cleanQuestion||'');
