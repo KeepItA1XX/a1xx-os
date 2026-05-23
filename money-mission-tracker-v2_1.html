@@ -11297,8 +11297,13 @@ function applyMissionPresenceLayer(html,route,question,opts){
   var ack=null,closer=null;
   var accountabilityAnswer=!!(turn&&turn.actionAccountability&&turn.actionAccountability.shouldAnswer)||/Reply with:\s*done,\s*no reply,\s*reply,\s*booked,\s*paid,\s*or wrong lane/i.test(plain);
   var freshDpcAnchor=typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||'',opts&&opts.ctx);
-  if(!accountabilityAnswer&&plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
-  if(!freshDpcAnchor&&!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
+  var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(question||''):null;
+  var slashCommand=/^\s*\/\w+/.test(String(question||''));
+  var dpcStarterAnswer=/nothing is logged in dpc yet|today is still invisible to the os|dpc has nothing logged yet|one measurable outreach or sales action/i.test(plain);
+  var dataTrustAnswer=/i am looking at this right now|system health is loaded like this|i cannot fully see this yet|only run sync if this decision needs current numbers/i.test(plain);
+  var quietPresence=slashCommand||dpcStarterAnswer||dataTrustAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
+  if(!quietPresence&&!accountabilityAnswer&&plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
+  if(!quietPresence&&!freshDpcAnchor&&!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
   var out=String(html||'');
   if(ack){
     out=escapeHtml(ack)+'<br><br>'+out;
