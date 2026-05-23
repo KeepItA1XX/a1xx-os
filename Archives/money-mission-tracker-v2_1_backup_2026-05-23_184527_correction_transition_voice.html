@@ -11276,26 +11276,15 @@ function getMissionLightConversationOpeningV18(question,route,html,turn,opts){
 function applyMissionTransitionAckDedupeV18(html,question){
   var q=normalizeMissionQuestion(question||'');
   var out=String(html||'');
-  out=out.replace(/^(Got it\.|On it\.|Clean switch\.|I am with you\.)\s*(<br\s*\/?>\s*){2}(Sales lane,\s*not pipeline\.|Sales,\s*not content\.|Content,\s*not sales\.|Production,\s*not content\.|Pipeline,\s*not sales\.)\s*(<br\s*\/?>\s*){2}/i,'$3<br><br>');
   if(/\b(i meant sales not pipeline|sales not pipeline|pipeline but i mean sales|pipeline but i meant sales)\b/.test(q)){
     out=out.replace(/^(Clean switch\.\s*)?Sales,\s*not pipeline\.\s*(<br\s*\/?>\s*){2}(Got it\.\s*)?Sales lane,\s*not pipeline\.\s*(<br\s*\/?>\s*){2}/i,'Sales, not pipeline.<br><br>');
   }
   if(/\b(i meant content not sales|content not sales|sales but i mean content|sales but i meant content)\b/.test(q)){
     out=out.replace(/^(Clean switch\.\s*)?Content,\s*not sales\.\s*(<br\s*\/?>\s*){2}(Got it\.\s*)?Content lane\.\s*(<br\s*\/?>\s*){2}/i,'Content, not sales.<br><br>');
-    out=out.replace(/^Got it\.\s*(<br\s*\/?>\s*){2}Got it\.\s*Content lane\.\s*(<br\s*\/?>\s*){2}/i,'Content, not sales.<br><br>');
-    out=out.replace(/^Clean switch\.\s*(<br\s*\/?>\s*){2}Got it\.\s*Content lane\.\s*(<br\s*\/?>\s*){2}/i,'Content, not sales.<br><br>');
-    out=out.replace(/^(Clean switch\.\s*)?(Got it\.|On it\.|I am with you\.)\s*(<br\s*\/?>\s*){2}?Content lane\.\s*(<br\s*\/?>\s*){2}/i,'Content, not sales.<br><br>');
-    out=out.replace(/^(Got it\.|On it\.|I am with you\.)\s*(<br\s*\/?>\s*){0,2}Content lane\.\s*(<br\s*\/?>\s*){2}/i,'Content, not sales.<br><br>');
+    out=out.replace(/^(Clean switch\.\s*)?Got it\.\s*Content lane\.\s*(<br\s*\/?>\s*){2}/i,'Content, not sales.<br><br>');
   }
   if(/\b(i meant sales not content|sales not content|content but i mean sales|content but i meant sales)\b/.test(q)){
     out=out.replace(/^(Clean switch\.\s*)?Sales,\s*not content\.\s*(<br\s*\/?>\s*){2}(Got it\.\s*)?Sales lane\.\s*(<br\s*\/?>\s*){2}/i,'Sales, not content.<br><br>');
-  }
-  if(/\b(i meant production not content|production not content|not content.*production|production.*not content|nah production not content|not content i mean production)\b/.test(q)){
-    out=out.replace(/^(Got it\.|On it\.|Clean switch\.)?\s*Production lane\.\s*(<br\s*\/?>\s*){2}/i,'Production, not content.<br><br>');
-  }
-  if(/\b(i meant pipeline not sales|pipeline not sales|sales but i mean pipeline|sales but i meant pipeline|sales but i mean leads|sales but i meant leads)\b/.test(q)){
-    out=out.replace(/^(Got it\.|On it\.|Clean switch\.|I am with you\.)?\s*(Pipeline lane\.|Leads lane\.|Leads\s*\([^)]*\):)\s*(<br\s*\/?>\s*){2}/i,'Pipeline, not sales.<br><br>');
-    out=out.replace(/^(Leads|Pipeline):\s*\.\s*(<br\s*\/?>\s*){1,2}/i,'Pipeline, not sales.<br><br>');
   }
   return out;
 }
@@ -11347,8 +11336,7 @@ function applyMissionPresenceLayer(html,route,question,opts){
   var dataTrustAnswer=/i am looking at this right now|system health is loaded like this|i cannot fully see this yet|only run sync if this decision needs current numbers/i.test(plain);
   var bookedFollowthroughAnswer=/conversation moved to a booked call|log the booked call in three places|sales owns the call prep|manager owns the calendar detail|sales owns the prep, and manager owns the calendar detail/i.test(plain);
   var salesScriptAnswer=route==='sales'&&/(Ask this\.|Say this\.|Send this\.|Start with this\.|Stay with the real concern\.|Close the loop cleanly\.|Do not defend the price yet\.|What did they say back\?)/i.test(plain);
-  var correctionSwitch=/\b(i meant|i mean|not sales|not pipeline|not content|not production|wrong lane|wrong read|nah not that|no not that|that'?s not it|not what i meant|that sounds disconnected|disconnected)\b/i.test(normalizeMissionQuestion(question||''));
-  var quietPresence=slashCommand||correctionSwitch||dpcStarterAnswer||dataTrustAnswer||bookedFollowthroughAnswer||salesScriptAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
+  var quietPresence=slashCommand||dpcStarterAnswer||dataTrustAnswer||bookedFollowthroughAnswer||salesScriptAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
   if(!quietPresence&&!accountabilityAnswer&&plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
   if(!quietPresence&&!freshDpcAnchor&&!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
   var opening=getMissionLightConversationOpeningV18(question||'',route,html,turn,opts);
