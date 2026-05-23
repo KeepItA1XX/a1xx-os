@@ -17373,6 +17373,17 @@ function runMissionBroadRegressionHardeningV1(){
       var duplicate=applyMissionCrossCardAlignmentV1(aligned,{cardAlignment:card});
       if((duplicate.match(/Before (?:switching:|you switch lanes,)/g)||[]).length!==1)failures.push(card+'_alignment_duplicate');
     });
+    var salesReplyChatId='qa_sales_reply_context';
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Reply Context',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[
+      {role:'user',body:'he said too expensive',ts:new Date().toISOString()},
+      {role:'assistant',body:'Ask this. "If the result was clear, would the investment still be the main issue?"',ts:new Date().toISOString()},
+      {role:'user',body:'he needs to think',ts:new Date().toISOString()},
+      {role:'assistant',body:'Say this. "Totally fair. What part are you still thinking through?"',ts:new Date().toISOString()}
+    ],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    var contextualSalesReply=getMissionSalesEdgeCaseResponseV1('help me reply');
+    if(!/thinking through|money, the timing|whether this solves the problem/i.test(contextualSalesReply)||/Before I explain anything/i.test(contextualSalesReply))failures.push('sales_reply_context_objection_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17385,7 +17396,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:47,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:48,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 1 sales reply context check · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -22721,8 +22732,49 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   return '';
 }
 
+function getMissionRecentSalesObjectionContextV1(){
+  var hist=[];
+  try{hist=getMissionChatHistory();}catch(e){hist=[];}
+  for(var i=(hist||[]).length-1;i>=Math.max(0,(hist||[]).length-8);i--){
+    var q=normalizeMissionQuestion((hist[i]&&hist[i].question)||'');
+    if(!q)continue;
+    if(/\b(booked|paid|call is done|close call mode)\b/.test(q))break;
+    if(/\b(ghosted|left me on read|no reply)\b/.test(q))return 'ghosted';
+    if(/\b(need|needs) to think|think about it|thinking through\b/.test(q))return 'need_to_think';
+    if(/\b(too expensive|price|costs too much)\b/.test(q))return 'too_expensive';
+    if(/\b(cant afford|can't afford|no budget)\b/.test(q))return 'cant_afford';
+    if(/\b(payment plan|split payment|installment)\b/.test(q))return 'payment_plan';
+    if(/\b(send more info|send info|more information)\b/.test(q))return 'send_more_info';
+  }
+  return '';
+}
+
+function getMissionContextualSalesReplyV1(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!/\b(help me reply|write (a )?reply|write (a )?response|what do i text back|what should i text|what should i dm|text back|dm back|how do i answer that)\b/.test(q))return '';
+  var last=getMissionRecentSalesObjectionContextV1();
+  if(last==='need_to_think'){
+    return 'Stay with the real concern.<br><br>Say this. "Totally fair. What part are you still thinking through: the money, the timing, or whether this solves the problem?"';
+  }
+  if(last==='too_expensive'||last==='cant_afford'){
+    return 'Do not defend the price yet.<br><br>Ask this. "I hear you. Is it the number itself, or are you not fully sure this solves the problem yet?"';
+  }
+  if(last==='payment_plan'){
+    return 'Keep control of the next step.<br><br>Say this. "We can talk structure. Before we do, are you clear this is the right fix?"';
+  }
+  if(last==='send_more_info'){
+    return 'Do not send a packet and disappear.<br><br>Say this. "I can send it. What are you trying to confirm from the info?"';
+  }
+  if(last==='ghosted'){
+    return 'Close the loop cleanly.<br><br>Send this. "Still want me to help you map this out, or should I close the loop for now?"';
+  }
+  return '';
+}
+
 function getMissionSalesEdgeCaseResponseV1(question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
+  var contextualReply=getMissionContextualSalesReplyV1(question||'');
+  if(contextualReply)return contextualReply;
   if(/\b(needs to think|need to think|he needs to think|she needs to think|they need to think)\b/.test(q)){
     return 'Say this. "Totally fair. What part are you still thinking through: the money, the timing, or whether this solves the problem?"';
   }
