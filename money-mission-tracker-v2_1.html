@@ -12249,6 +12249,7 @@ function getMissionContextTruthLedgerV1(ctx){
     discrepancies:[]
   };
   if(ledger.session.booked&&!ledger.dpc.booked&&!ledger.crm.booked&&!ledger.calendar.calls)ledger.discrepancies.push('session_booked_not_confirmed');
+  if(ledger.session.replies&&!ledger.dpc.replies)ledger.discrepancies.push('session_reply_not_confirmed');
   if(ledger.session.paid&&!ledger.dpc.money&&!ledger.dpc.closes&&!ledger.crm.paid)ledger.discrepancies.push('session_paid_not_confirmed');
   window.__missionLastTruthLedgerV1=ledger;
   return ledger;
@@ -12336,6 +12337,17 @@ function getMissionLoggedResultsAnswerV15(ctx){
   if((ledger.discrepancies||[]).length)lines.push('Some chat-only results still need to be logged in DPC, CRM, or Calendar before they become official.');
   else lines.push('Use DPC, CRM, and Calendar as official. Use chat-only memory as a reminder to finish logging.');
   return lines.map(escapeHtml).join('<br>');
+}
+
+function getMissionResultTruthTrustLineV15(ctx){
+  var ledger=typeof getMissionContextTruthLedgerV1==='function'?getMissionContextTruthLedgerV1(ctx||{}):null;
+  if(!ledger)return '';
+  var notes=[];
+  if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_booked_not_confirmed'))notes.push('booked call is chat-only until DPC, CRM, or Calendar confirms it');
+  if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_reply_not_confirmed'))notes.push('reply is chat-only until DPC or Outreach confirms it');
+  if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_paid_not_confirmed'))notes.push('paid result is chat-only until DPC or CRM confirms it');
+  if(!notes.length)return '';
+  return 'Result trust: '+notes.join('; ')+'.';
 }
 
 function getMissionResultCountAnswerV15(ctx,question){
@@ -17767,6 +17779,24 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/Chat-only result memory: 0 repl/i.test(cleanReplyCountVisible)||/Chat-only result memory: 1 repl/i.test(cleanReplyCountVisible))failures.push('clean_chat_reply_count_boundary_guard');
     if(!/Chat-only result memory: 0 paid result/i.test(cleanPaidCountVisible)||/Chat-only result memory: 1 paid result/i.test(cleanPaidCountVisible))failures.push('clean_chat_paid_count_boundary_guard');
     if(!/Logged results:|Chat-only memory: 0 replies, 0 booked, 0 paid/i.test(cleanLoggedVisible)||/Pick one lane|current work card/i.test(cleanLoggedVisible))failures.push('logged_results_summary_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Trust Reply',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'reply',{});
+    var replyTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust from this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Result trust: reply is chat-only until DPC or Outreach confirms it/i.test(replyTrustVisible)||/booked call is chat-only|paid result is chat-only/i.test(replyTrustVisible))failures.push('reply_data_trust_truth_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Trust Paid',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'paid',{});
+    var paidTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust from this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Result trust: paid result is chat-only until DPC or CRM confirms it/i.test(paidTrustVisible)||/booked call is chat-only|reply is chat-only/i.test(paidTrustVisible))failures.push('paid_data_trust_truth_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17780,7 +17810,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:78,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 31 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:80,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 33 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -17829,22 +17859,24 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var healthRead=serviceNames.length?'System health is loaded like this:<br>'+healthLine:healthLine;
   var missingLine=missing.length?escapeHtml(missing.join(', ')):'nothing obvious from the current app packet';
   var trustLine=missing.length?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
+  var resultTrustLine=typeof getMissionResultTruthTrustLineV15==='function'?getMissionResultTruthTrustLineV15(ctx):'';
+  var resultTrustBlock=resultTrustLine?'<br><br>'+escapeHtml(resultTrustLine):'';
   if(/\b(show me the data.*tell me the move|show me data.*tell me the move|data.*then.*move)\b/.test(q)){
-    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine)+'<br><br>Move from the cleanest loaded signal: one outreach or sales action, then log the result.';
+    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Move from the cleanest loaded signal: one outreach or sales action, then log the result.';
   }
   if(/\b(where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth)\b/.test(q)){
-    return 'That read is coming from the current app packet and sync health.<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine);
+    return 'That read is coming from the current app packet and sync health.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what data are you using|what data do you have|what do you see|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|do i trust this|trust this|what is trusted|what is safe to act on)\b/.test(q)){
-    return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine);
+    return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see)\b/.test(q)){
-    return 'I cannot fully see this yet:<br><br>'+missingLine+'<br><br>'+escapeHtml(trustLine)+'<br><br>Only run sync if this decision needs current numbers.';
+    return 'I cannot fully see this yet:<br><br>'+missingLine+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Only run sync if this decision needs current numbers.';
   }
   if(/\b(is this current|is this data current|current data|data current|is this live|calendar stale|data stale|stale data)\b/.test(q)){
-    return 'It is current enough for a safe next move, not final enough for locked numbers.<br><br>I am seeing:<br>'+usingLine+'<br><br>'+healthRead+'<br><br>Run sync first only if the decision depends on exact counts.';
+    return 'It is current enough for a safe next move, not final enough for locked numbers.<br><br>I am seeing:<br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>Run sync first only if the decision depends on exact counts.';
   }
-  return (missing.length?'The data is partial. I cannot fully see '+escapeHtml(missing.join(', '))+'.':'The current app packet is clean enough for the next move.')+'<br><br>'+escapeHtml(trustLine)+'<br><br>Run sync only if the decision needs current numbers.';
+  return (missing.length?'The data is partial. I cannot fully see '+escapeHtml(missing.join(', '))+'.':'The current app packet is clean enough for the next move.')+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Run sync only if the decision needs current numbers.';
 }
 
 function getMissionFriendlyActionTextV1(action,fallback){
