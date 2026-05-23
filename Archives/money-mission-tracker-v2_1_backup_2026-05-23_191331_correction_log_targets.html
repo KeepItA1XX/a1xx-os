@@ -11304,10 +11304,7 @@ function applyMissionTransitionAckDedupeV18(html,question){
 
 function getMissionRecentCorrectionFollowupAnswerV18(question,ctx){
   var q=normalizeMissionQuestion(question||'');
-  var repairAsk=/\b(wrong read|nah not that|no not that|that sounds disconnected|disconnected|not what i meant|give me the clean version|clean version|make it make sense)\b/.test(q);
-  var logAsk=typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(q);
-  var cardAsk=typeof missionIsResultCardOwnerAskV14==='function'&&missionIsResultCardOwnerAskV14(q);
-  if(!repairAsk&&!logAsk&&!cardAsk)return '';
+  if(!/\b(wrong read|nah not that|no not that|that sounds disconnected|disconnected|not what i meant|give me the clean version|clean version|make it make sense)\b/.test(q))return '';
   var priorQ=normalizeMissionQuestion(window.__missionCommandActiveTopicQuestion||'');
   var priorRoute=window.__missionCommandActiveTopicRoute||'';
   var priorAt=Number(window.__missionCommandActiveTopicAt||0);
@@ -11320,18 +11317,6 @@ function getMissionRecentCorrectionFollowupAnswerV18(question,ctx){
   else if(priorRoute==='production')label='Production, not content.';
   else if(priorRoute==='leads')label='Pipeline, not sales.';
   else label=getMissionRouteLabelV2(priorRoute)+' lane.';
-  if(logAsk){
-    if(priorRoute==='sales')return label+'<br><br>Log the sales touch by outcome: reply, no reply, booked, paid, follow-up, or wrong lane.';
-    if(priorRoute==='content')return label+'<br><br>Log the content move on Content: idea captured, draft started, draft done, posted, shipped, or wrong lane.';
-    if(priorRoute==='production')return label+'<br><br>Log the production move on Production: selected project, exported, assets ready, uploaded, shipped, or wrong lane.';
-    if(priorRoute==='leads')return label+'<br><br>Log the pipeline touch on Outreach: no reply, reply, booked, paid, follow-up, or wrong lane.';
-  }
-  if(cardAsk){
-    if(priorRoute==='sales')return label+'<br><br>That lives on Sales Coach. Use it for the conversation line and the lead status.';
-    if(priorRoute==='content')return label+'<br><br>That lives on Content. Use it for the post, proof piece, or content status change.';
-    if(priorRoute==='production')return label+'<br><br>That lives on Production. Use it for the project status, asset, export, or upload step.';
-    if(priorRoute==='leads')return label+'<br><br>That lives on Pipeline / Outreach. Use it for the lead touch and the next status.';
-  }
   var lead=/\b(that sounds disconnected|disconnected)\b/.test(q)?'Fair.':'Got it.';
   return lead+'<br><br>'+label+(routeAnswer?'<br><br>'+routeAnswer:'');
 }
@@ -18381,23 +18366,6 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/Reply logged|qualify intent|before pitching/i.test(embeddedReplyVisible)||/Before I pitch anything|what made this worth taking a call/i.test(embeddedReplyVisible))failures.push('embedded_reply_result_guard');
     var nextMoveLeakVisible=String(getMissionCommandResponse('ask',ctx,"what's the play",{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(/Next move:/i.test(nextMoveLeakVisible))failures.push('mid_answer_next_move_label_guard');
-    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Correction Log Targets',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
-    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
-    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
-    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
-    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
-    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
-    getMissionCommandResponse('ask',ctx,'content not sales',{});
-    getMissionCommandResponse('ask',ctx,'wrong read',{});
-    var contentCorrectionLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
-    if(!/Content, not sales|content move|idea captured|posted|shipped/i.test(contentCorrectionLogVisible)||/closest buyer|paid result|booked call|calendar detail/i.test(contentCorrectionLogVisible))failures.push('correction_content_log_target_guard');
-    getMissionCommandResponse('ask',ctx,'not content i mean production',{});
-    getMissionCommandResponse('ask',ctx,'that sounds disconnected',{});
-    var productionCorrectionLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
-    if(!/Production, not content|production move|selected project|exported|uploaded|shipped/i.test(productionCorrectionLogVisible)||/closest buyer|paid result|booked call|calendar detail/i.test(productionCorrectionLogVisible))failures.push('correction_production_log_target_guard');
-    getMissionCommandResponse('ask',ctx,'paid',{});
-    var paidAfterCorrectionNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
-    if(!/Last result was paid|log the money|protect delivery/i.test(paidAfterCorrectionNextVisible)||/Production, not content|Content, not sales|Sales lane, not pipeline/i.test(paidAfterCorrectionNextVisible))failures.push('correction_result_reownership_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -18411,7 +18379,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:135,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 85 sales/result/data/mixed-lane checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:132,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 82 sales/result/data/mixed-lane checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
