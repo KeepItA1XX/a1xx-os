@@ -11294,8 +11294,9 @@ function applyMissionPresenceLayer(html,route,question,opts){
   var plain=missionPresencePlainText(html);
   var ack=null,closer=null;
   var accountabilityAnswer=!!(turn&&turn.actionAccountability&&turn.actionAccountability.shouldAnswer)||/Reply with:\s*done,\s*no reply,\s*reply,\s*booked,\s*paid,\s*or wrong lane/i.test(plain);
+  var freshDpcAnchor=typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||'',opts&&opts.ctx);
   if(!accountabilityAnswer&&plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
-  if(!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
+  if(!freshDpcAnchor&&!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
   var out=String(html||'');
   if(ack){
     out=escapeHtml(ack)+'<br><br>'+out;
@@ -12440,6 +12441,45 @@ function missionQuestionIsFreshStarterV12(question){
   return /^(good morning|gm|morning|yo|yo let'?s go|let'?s go|lock in)$/i.test(String(question||'').trim());
 }
 
+function missionDpcActivityTotalV12(ctx){
+  var dpc=(ctx&&ctx.dpc)||{};
+  try{
+    var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
+    dpc=Object.assign({},dpc,daily||{});
+  }catch(e){}
+  return ['dms','coldCalls','callsMade','calls','booked','closes','money','leads','content'].reduce(function(total,key){
+    return total+(Number(dpc&&dpc[key]||0)||0);
+  },0);
+}
+
+function missionFreshStarterNeedsDpcAnchorV12(question,ctx){
+  var q=normalizeMissionQuestion(question||'');
+  if(window.__missionCommandSelfCheckActive||window.__missionIntegritySelfCheckActive)return false;
+  if(isNaN(missionLatestActiveChatFreshStarterTimeV12()))return false;
+  if(missionActiveChatHasBookedAfterFreshStarterV12()||missionActiveResultLoopHasBookedAfterFreshStarterV12())return false;
+  if(missionDpcActivityTotalV12(ctx)>0)return false;
+  if(/^\/\w+/.test(q))return false;
+  if(/\b(sync|data|current|trust|source|brief card|outreach card|content card|beat card|manager card|pipeline|who hot|what should i say|help me reply|too expensive|ghosted|booked|paid|call is done)\b/.test(q))return false;
+  return /\b(what should i do today|what next|what now|why|why again|more|run it back|make it make sense|where we at|where are we|where do i stand|i got \d+ minutes|i got twenty minutes|i got 20 minutes|i am tired|i'm tired|lock in)\b/.test(q);
+}
+
+function getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,kind){
+  var q=normalizeMissionQuestion(question||'');
+  if(kind==='why'||/^(why|why again|why tho|what'?s the reason|whats the reason)$/.test(q)){
+    return 'Because today is still invisible to the OS.<br><br>DPC has nothing logged yet, so the best next answer comes after one measurable outreach or sales action.';
+  }
+  if(kind==='where'||/\b(where we at|where are we|where do i stand)\b/.test(q)){
+    return 'You are at a clean starter read.<br><br>DPC is still at zero, so the OS is waiting for one real outreach or sales action to anchor the day.';
+  }
+  if(kind==='time'||/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(q)){
+    return 'Use that short window for one measurable move.<br><br>Send one DM or make one cold call, then log the result before opening another lane.';
+  }
+  if(kind==='clean'||/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|clean version|clean read)\b/.test(q)){
+    return 'Clean read. The day has not produced a logged signal yet.<br><br>Do one outreach or sales action, then log the result so Mission Command has something real to steer from.';
+  }
+  return 'You are trying to get the day moving.<br><br>Start with one measurable outreach or sales action, then log the result.';
+}
+
 function rememberMissionFreshStarterMarkerV12(question){
   if(!missionQuestionIsFreshStarterV12(question||''))return null;
   try{
@@ -13313,6 +13353,9 @@ function missionIsWhyRequestV1(input){
 
 function getMissionWhyResponseV1(turn,ctx){
   if(!missionIsWhyRequestV1(turn&&turn.rawInput||turn&&turn.normalizedInput||''))return '';
+  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(turn&&turn.rawInput||turn&&turn.normalizedInput||'',ctx)){
+    return getMissionFreshStarterDpcAnchorAnswerV12(turn&&turn.rawInput||turn&&turn.normalizedInput||'',ctx,'why');
+  }
   var memory=turn&&turn.threadMemory||{};
   var lastResult=memory.lastResult||(getMissionBrainSessionV2().resultLoop||{}).lastResult||null;
   var hasFreshStarterBoundary=!isNaN(missionLatestActiveChatFreshStarterTimeV12());
@@ -21714,6 +21757,11 @@ function getMissionOutputPackResponseV1(route,ctx,question,conv,brainState){
     setMissionLiveCallMode(false,false);
     return 'Call mode closed.<br><br>What happened: <strong>booked, no, follow-up, or paid?</strong><br><br>Give me the result and I will help log the next move.';
   }
+  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(q,ctx)){
+    if(/\b(where we at|where are we|where do i stand)\b/.test(q))return getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,'where');
+    if(/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(q))return getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,'time');
+    if(/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|clean version|clean read)\b/.test(q))return getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,'clean');
+  }
   if(/\b(where do i|how do i get|what tab|what card|what button|where is)\b/.test(q)&&/\b(sync|system hub|health|backup|notion|sheets|connection)\b/.test(q))return '';
   var outputRoute=typeof getMissionOutputRouteOverrideV1_1==='function'?getMissionOutputRouteOverrideV1_1(route,q):route;
   var priorState=getMissionOutputStateV1();
@@ -22646,6 +22694,13 @@ function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,
   var cardSignal=typeof getMissionCardSignalV1==='function'?getMissionCardSignalV1(q,activeRoute):null;
   var card=cardSignal&&cardSignal.card||({leads:'outreach',sales:'outreach',dpc:'outreach',report:'brief',money:'brief',content:'content',production:'production',calendar:'manager',weekly:'manager',sync:'manager',resources:'resources'}[activeRoute]||'command');
   if(bookedContext&&activeRoute==='sales'&&/\b(card owns|card do i open|what do i log|what should i log|where do i go|what counts as done|what result are we)\b/.test(q))card='manager';
+  var freshDpcAnchor=typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(q,ctx);
+  if(freshDpcAnchor){
+    activeRoute='dpc';
+    card='outreach';
+    lastResult=null;
+    pending=null;
+  }
   var mode=typeof getMissionContextMode==='function'?getMissionContextMode():'general';
   var routeLabel=typeof getMissionRouteLabelV2==='function'?getMissionRouteLabelV2(activeRoute):activeRoute;
   var daily=typeof getDailyCoach==='function'?getDailyCoach():{};
@@ -22654,6 +22709,7 @@ function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,
   if(!((window.__contentPipelinePieces&&window.__contentPipelinePieces.length)||(window.__contentPieces&&window.__contentPieces.length)))missing.push('content');
   if(!(window.__productionPieces&&window.__productionPieces.length))missing.push('production');
   var nextMove=brainState&&brainState.nextBestMove||ctx.nowText||'make one visible move and log what changed';
+  if(freshDpcAnchor)nextMove='do one measurable outreach or sales action, then log the result';
   if(bookedContext)nextMove='prep the call, add the calendar detail, update the lead, and open with one discovery question';
   return {
     q:q,
@@ -22686,6 +22742,10 @@ function getMissionCohesionCardLabelFromMoveV1(label,nextMove){
 function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,turn){
   var category=getMissionCommunicationCohesionCategoryV1(question||'');
   if(!category)return '';
+  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||'',ctx)){
+    if(/\b(where we at|where are we|where do i stand)\b/.test(normalizeMissionQuestion(question||'')))return getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,'where');
+    return getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,'clean');
+  }
   var c=getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,turn);
   var naturalCardLabel=getMissionCohesionCardLabelFromMoveV1(c.cardLabel,c.nextMove);
   if(/\b(what card owns this|what lane owns this|which card handles|what card should change|what card do i open|where should this live)\b/.test(c.q)){
@@ -22865,6 +22925,10 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  }
 	  var bookedFollowupAnswer=getMissionFreshBookedFollowupAnswerV12(cleanQuestion||question||'');
 	  if(bookedFollowupAnswer)return finishMissionAnswer(bookedFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+	  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||cleanQuestion||'',ctx)){
+	    var freshAnchorKind=/\b(where we at|where are we|where do i stand)\b/.test(rawQ)?'where':(/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(rawQ)?'time':(/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|clean version|clean read)\b/.test(rawQ)?'clean':(/\b(why|why again)\b/.test(rawQ)?'why':'')));
+	    if(freshAnchorKind)return finishMissionAnswer(getMissionFreshStarterDpcAnchorAnswerV12(cleanQuestion||question||'',ctx,freshAnchorKind),{sessionArc:false,closer:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+	  }
 	  var dataTrustQuestion=isMissionDataTrustPromptV12(cleanQuestion||question||'');
   if(dataTrustQuestion){
     route='sync';
