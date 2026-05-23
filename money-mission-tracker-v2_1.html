@@ -11301,7 +11301,8 @@ function applyMissionPresenceLayer(html,route,question,opts){
   var slashCommand=/^\s*\/\w+/.test(String(question||''));
   var dpcStarterAnswer=/nothing is logged in dpc yet|today is still invisible to the os|dpc has nothing logged yet|one measurable outreach or sales action/i.test(plain);
   var dataTrustAnswer=/i am looking at this right now|system health is loaded like this|i cannot fully see this yet|only run sync if this decision needs current numbers/i.test(plain);
-  var quietPresence=slashCommand||dpcStarterAnswer||dataTrustAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
+  var bookedFollowthroughAnswer=/conversation moved to a booked call|log the booked call in three places|sales owns the call prep|manager owns the calendar detail|sales owns the prep, and manager owns the calendar detail/i.test(plain);
+  var quietPresence=slashCommand||dpcStarterAnswer||dataTrustAnswer||bookedFollowthroughAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
   if(!quietPresence&&!accountabilityAnswer&&plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
   if(!quietPresence&&!freshDpcAnchor&&!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
   var out=String(html||'');
@@ -15795,6 +15796,7 @@ function runMissionPresenceSelfCheck(){
   var failures=[];
   var priorPresence=sessionStorage.getItem(MISSION_PRESENCE_LOG_KEY);
   var priorBrain=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+  var priorLastTurn=window.__missionLastTurnObjectV2;
   resetMissionPresenceLog();
   sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);
   if(getMissionInputEnergy('go')!=='punchy')failures.push('go energy');
@@ -15816,9 +15818,13 @@ function runMissionPresenceSelfCheck(){
   if(getMissionTurnCloser(clarifyTurn,{}))failures.push('clarify closer fired');
   var fallback=getMissionGracefulFallback({routePlan:{confidence:0.1},contextSlices:{_slices:[]}});
   if(!fallback)failures.push('fallback missing');
+  window.__missionLastTurnObjectV2=Object.assign({},turn1,{id:'presence_booked_followthrough',route:'sales',inputEnergy:'direct',turnCount:10});
+  var bookedFollowthrough=applyMissionPresenceLayer('That split lives in Sales and Manager.<br><br>Sales owns the call prep. Manager owns the calendar detail.<br><br>Open Sales Coach for the question, then Manager/Calendar to save the call.','sales','what card owns this',{});
+  if(/Need anything else right now|Should we keep this lane or switch|Want the next clean move|Want to practice the next line/i.test(missionPresencePlainText(bookedFollowthrough)))failures.push('booked followthrough closer fired');
+  window.__missionLastTurnObjectV2=priorLastTurn;
   if(priorPresence===null)sessionStorage.removeItem(MISSION_PRESENCE_LOG_KEY);else sessionStorage.setItem(MISSION_PRESENCE_LOG_KEY,priorPresence);
   if(priorBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorBrain);
-  return {passed:!failures.length,failures:failures,total:8};
+  return {passed:!failures.length,failures:failures,total:9};
 }
 
 /* 2026-05-19 (Claude): smarter intent matching helpers — typo tolerance via tight
