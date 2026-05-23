@@ -11267,12 +11267,26 @@ function getMissionLightConversationOpeningV18(question,route,html,turn,opts){
   if(/^(good morning|gm|morning)$/.test(q))return q==='gm'?'Good morning, A1XX.':'Good morning, Executive Producer.';
   if(/^yo$/.test(q))return 'I am here, A1XX.';
   if(/^lock in$/.test(q))return 'Locked in.';
-  if(/\b(i meant sales not pipeline|sales not pipeline|pipeline but i mean sales|pipeline but i meant sales)\b/.test(q))return 'Sales, not pipeline.';
-  if(/\b(i meant content not sales|content not sales|sales but i mean content|sales but i meant content)\b/.test(q))return 'Content, not sales.';
-  if(/\b(i meant sales not content|sales not content|content but i mean sales|content but i meant sales)\b/.test(q))return 'Sales, not content.';
+  if(/\b(i meant sales not pipeline|sales not pipeline|pipeline but i mean sales|pipeline but i meant sales|i meant content not sales|content not sales|sales but i mean content|sales but i meant content|i meant sales not content|sales not content|content but i mean sales|content but i meant sales)\b/.test(q))return '';
   if(/\b(that sounds disconnected)\b/.test(q))return 'Fair.';
   if(/\b(wrong read|nah not that|no not that|that'?s not it|not what i meant)\b/.test(q))return 'Got it.';
   return '';
+}
+
+function applyMissionTransitionAckDedupeV18(html,question){
+  var q=normalizeMissionQuestion(question||'');
+  var out=String(html||'');
+  if(/\b(i meant sales not pipeline|sales not pipeline|pipeline but i mean sales|pipeline but i meant sales)\b/.test(q)){
+    out=out.replace(/^(Clean switch\.\s*)?Sales,\s*not pipeline\.\s*(<br\s*\/?>\s*){2}(Got it\.\s*)?Sales lane,\s*not pipeline\.\s*(<br\s*\/?>\s*){2}/i,'Sales, not pipeline.<br><br>');
+  }
+  if(/\b(i meant content not sales|content not sales|sales but i mean content|sales but i meant content)\b/.test(q)){
+    out=out.replace(/^(Clean switch\.\s*)?Content,\s*not sales\.\s*(<br\s*\/?>\s*){2}(Got it\.\s*)?Content lane\.\s*(<br\s*\/?>\s*){2}/i,'Content, not sales.<br><br>');
+    out=out.replace(/^(Clean switch\.\s*)?Got it\.\s*Content lane\.\s*(<br\s*\/?>\s*){2}/i,'Content, not sales.<br><br>');
+  }
+  if(/\b(i meant sales not content|sales not content|content but i mean sales|content but i meant sales)\b/.test(q)){
+    out=out.replace(/^(Clean switch\.\s*)?Sales,\s*not content\.\s*(<br\s*\/?>\s*){2}(Got it\.\s*)?Sales lane\.\s*(<br\s*\/?>\s*){2}/i,'Sales, not content.<br><br>');
+  }
+  return out;
 }
 
 function getMissionTurnCloser(turn,log){
@@ -11348,7 +11362,7 @@ function applyMissionPresenceLayer(html,route,question,opts){
     log.appliedTurnId=turn.id;
     setMissionPresenceLog(log);
   }
-  return out;
+  return applyMissionTransitionAckDedupeV18(out,question||'');
 }
 
 /* =========================================================
@@ -24174,7 +24188,10 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   if(correctionTarget){
     route=correctionTarget;
     setMissionCommandActiveTopic(route,question||'');
-    if(route==='sales')return finishMissionAnswer('Got it. Sales lane, not pipeline.<br><br>Ask: "Before I explain anything, what made you want to talk today?"<br><br>What did they say back?',{sessionArc:false,closer:false,presence:false,identicalResponseGuard:false});
+    if(route==='sales'){
+      var salesCorrectionLine=/\b(content|not content)\b/.test(rawQ||q)?'Sales, not content.':'Sales lane, not pipeline.';
+      return finishMissionAnswer(salesCorrectionLine+'<br><br>Ask: "Before I explain anything, what made you want to talk today?"<br><br>What did they say back?',{sessionArc:false,closer:false,presence:false,identicalResponseGuard:false});
+    }
     var correctionRouteAnswer=getMissionCommandRouteAnswer(route,ctx,question||cleanQuestion||'');
     if(correctionRouteAnswer)return finishMissionAnswer('Got it. '+getMissionRouteLabelV2(route)+' lane.<br><br>'+correctionRouteAnswer,{sessionArc:false});
     return finishMissionAnswer('Got it. Wrong lane.<br><br>Pick the lane and I will rerun it: Pipeline, Money, Sales, Content, Production, or Sync.',{sessionArc:false,closer:false,presence:false});
