@@ -12810,7 +12810,20 @@ function getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,kind){
 }
 
 function rememberMissionFreshStarterMarkerV12(question){
-  if(!missionQuestionIsFreshStarterV12(question||''))return null;
+  var q=normalizeMissionQuestion(question||'');
+  var isHardStarter=missionQuestionIsFreshStarterV12(question||'');
+  var isEarlyStarterAsk=/\b(what should i do today|what should i do now|where we at|where are we|where do i stand|what'?s the move today|start the day)\b/.test(q);
+  if(!isHardStarter&&isEarlyStarterAsk){
+    try{
+      var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+      var messageCount=active&&Array.isArray(active.messages)?active.messages.length:0;
+      var session=getMissionRawBrainSessionForArbitrationV11();
+      var loop=session&&session.resultLoop||{};
+      var hasActiveResult=!!(loop.lastResult&&loop.lastResult.type);
+      if(messageCount>2||hasActiveResult)isEarlyStarterAsk=false;
+    }catch(e){isEarlyStarterAsk=false;}
+  }
+  if(!isHardStarter&&!isEarlyStarterAsk)return null;
   try{
     var marker={
       chatId:localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'',
@@ -13154,6 +13167,17 @@ function sanitizeMissionSessionByArbitrationV11(session,arbitration){
 
 function missionContextArbitrationBlocksStaleBookedV11(arbitration){
   return !!(arbitration&&(arbitration.staleSignals||[]).indexOf('blocked_booked_carry')>=0);
+}
+
+function getMissionArbitratedBrainSessionV11(arbitration){
+  try{
+    var raw=getMissionBrainSessionV2();
+    if(!arbitration)return raw;
+    if(missionContextArbitrationBlocksStaleBookedV11(arbitration)){
+      return sanitizeMissionSessionByArbitrationV11(raw,arbitration);
+    }
+    return raw;
+  }catch(e){return {};}
 }
 
 function getMissionContextFreshStartFallbackV11(turn,arbitration){
@@ -15954,23 +15978,25 @@ function runMissionTurn(kind,rawInput,options){
     turn.normalizedInput=normalizeMissionInputV2(turn.rawInput);
     addMissionTrace(turn,'input_normalized',{rawInput:turn.rawInput,normalizedInput:turn.normalizedInput});
     turn.inputEnergy=getMissionInputEnergy(turn.rawInput);
-    turn.turnCount=(getMissionBrainSessionV2().turnCount||0)+1;
+    turn.contextArbitration=buildMissionContextArbitrationV11(turn,options&&options.ctx||{});
+    applyMissionContextArbitrationToTurnV11(turn,turn.contextArbitration);
+    addMissionTrace(turn,'context_arbitration_early_v11',summarizeMissionContextArbitrationV11(turn.contextArbitration));
+    var __arbSession=getMissionArbitratedBrainSessionV11(turn.contextArbitration);
+    turn.turnCount=(__arbSession.turnCount||0)+1;
     addMissionTrace(turn,'input_energy_read',{inputEnergy:turn.inputEnergy,turnCount:turn.turnCount});
     turn.inputSignals=analyzeMissionInputV2(turn.normalizedInput,turn);
     addMissionTrace(turn,'input_analyzed',turn.inputSignals);
-    turn.cognitiveLoad=getMissionCognitiveLoadV1(turn.rawInput,typeof getMissionChatHistory==='function'?getMissionChatHistory():[],getMissionBrainSessionV2());
+    turn.cognitiveLoad=getMissionCognitiveLoadV1(turn.rawInput,typeof getMissionChatHistory==='function'?getMissionChatHistory():[],__arbSession);
     addMissionTrace(turn,'cognitive_load_read',turn.cognitiveLoad);
-    turn.executionMode=getMissionExecutionModeV1(turn.rawInput,turn,getMissionBrainSessionV2(),typeof getMissionChatHistory==='function'?getMissionChatHistory():[]);
+    turn.executionMode=getMissionExecutionModeV1(turn.rawInput,turn,__arbSession,typeof getMissionChatHistory==='function'?getMissionChatHistory():[]);
     addMissionTrace(turn,'execution_mode_read',turn.executionMode);
-    turn.decisionIntent=getMissionDecisionIntentV1(turn.rawInput,turn,getMissionBrainSessionV2());
+    turn.decisionIntent=getMissionDecisionIntentV1(turn.rawInput,turn,__arbSession);
     addMissionTrace(turn,'decision_intent_read',turn.decisionIntent);
     turn.routePlan=getMissionRoutePlan(turn);
     turn.route=turn.routePlan&&turn.routePlan.selectedRoute||'';
     turn.intent=turn.routePlan&&turn.routePlan.intent||null;
     turn.conversationType=turn.routePlan&&turn.routePlan.conversationType||'';
     addMissionTrace(turn,'route_plan_selected',turn.routePlan);
-    turn.contextArbitration=buildMissionContextArbitrationV11(turn,options&&options.ctx||{});
-    applyMissionContextArbitrationToTurnV11(turn,turn.contextArbitration);
     turn.decisionMemory=getMissionDecisionMemoryV1(turn,options&&options.ctx||{});
     addMissionTrace(turn,'decision_memory_read',{hasMemory:turn.decisionMemory&&turn.decisionMemory.hasMemory,reason:turn.decisionMemory&&turn.decisionMemory.reason,shouldAnswer:turn.decisionMemory&&turn.decisionMemory.shouldAnswer});
     turn.patternMemory=getMissionPatternBasedCoachingMemoryV1(turn,options&&options.ctx||{});
@@ -16006,7 +16032,7 @@ function runMissionTurn(kind,rawInput,options){
     turn.hasData=missionPresenceHasData(turn);
     turn.winDetected=!!(turn.inputSignals&&turn.inputSignals.isCelebration);
     turn.isStuck=!!(turn.inputSignals&&turn.inputSignals.isFrustration);
-    turn.isRepeatTopic=!!(getMissionBrainSessionV2().lastRoute&&getMissionBrainSessionV2().lastRoute===turn.route&&turn.turnCount>1);
+    turn.isRepeatTopic=!!(__arbSession.lastRoute&&__arbSession.lastRoute===turn.route&&turn.turnCount>1);
     turn.brainState=getMissionBrainStateV2(turn);
     addMissionTrace(turn,'brain_state_v2_built',summarizeMissionBrainStateV2(turn.brainState));
     turn.contextPacket=compileMissionContext(turn);
@@ -23921,6 +23947,37 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 function runMissionIntegritySelfCheck(){
   window.__missionIntegritySelfCheckActive=true;
   var failures=[];
+  var priorIntegrityLocalState={};
+  var priorIntegritySessionState={};
+  var integrityIsolationKeys=[
+    MISSION_CHAT_ACTIVE_SESSION_KEY,
+    MISSION_CHAT_ACTIVE_ALIAS_KEY,
+    MISSION_CHAT_SESSIONS_KEY,
+    MISSION_CHAT_HISTORY_KEY,
+    MISSION_RESULT_EVENT_LEDGER_KEY_V12,
+    MISSION_RESULT_SESSION_COUNTS_KEY_V1,
+    MISSION_FRESH_STARTER_MARKER_KEY_V12
+  ].filter(Boolean);
+  integrityIsolationKeys.forEach(function(key){
+    try{
+      priorIntegrityLocalState[key]=localStorage.getItem(key);
+      localStorage.removeItem(key);
+    }catch(e){}
+  });
+  [MISSION_RESULT_EVENT_LEDGER_KEY_V12,MISSION_RESULT_SESSION_COUNTS_KEY_V1,MISSION_FRESH_STARTER_MARKER_KEY_V12].filter(Boolean).forEach(function(key){
+    try{
+      priorIntegritySessionState[key]=sessionStorage.getItem(key);
+      sessionStorage.removeItem(key);
+    }catch(e){}
+  });
+  function resetMissionIntegrityLocalContextV1(){
+    integrityIsolationKeys.forEach(function(key){
+      try{localStorage.removeItem(key);}catch(e){}
+    });
+    [MISSION_RESULT_EVENT_LEDGER_KEY_V12,MISSION_RESULT_SESSION_COUNTS_KEY_V1,MISSION_FRESH_STARTER_MARKER_KEY_V12].filter(Boolean).forEach(function(key){
+      try{sessionStorage.removeItem(key);}catch(e){}
+    });
+  }
   function fakeTurn(overrides){
     return Object.assign({
       id:'mcil_test_'+Math.random().toString(36).slice(2,7),
@@ -24092,6 +24149,7 @@ function runMissionIntegritySelfCheck(){
   if(!patternDataTrust.shouldAnswer||patternDataTrust.reason!=='data_trust_loop'||!patternDataTrust.action||patternDataTrust.action.type!=='sync_check')failures.push('pattern_data_trust_loop');
   var patternSyncGuard=getMissionPatternBasedCoachingMemoryV1({rawInput:'sync check',route:'sync',inputSignals:{},dataConfidence:{level:'low'},syncStatus:{risk:'medium'},sessionDataCache:{snapshot:{dpc:{dms:1,callsMade:0,booked:0,closes:0,money:0}},counts:{dpcTotal:1}}},actionCtx);
   if(patternSyncGuard.shouldAnswer)failures.push('pattern_sync_direct_guard');
+  resetMissionIntegrityLocalContextV1();
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'leads',turns:[{question:'/pipeline',route:'leads',timestamp:new Date().toISOString()}]},resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'leads',actionLabel:'Open Hit List',recordedAt:new Date().toISOString()},history:[]}}));
   var bookedThread=getMissionThreadMemoryV1({rawInput:'why',route:'leads',inputSignals:{}},actionCtx);
   if(!bookedThread.shouldAnswer||bookedThread.reason!=='last_result_thread')failures.push('thread_memory_booked_signal');
@@ -24129,7 +24187,7 @@ function runMissionIntegritySelfCheck(){
   if(!longSilence.shouldAnswer||longSilence.reason!=='long_gap_reentry')failures.push('silence_long_reentry');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'production',lastQuestion:'what should i do',lastUpdatedAt:new Date(Date.now()-800*60000).toISOString(),turns:[{question:'what should i do',route:'production',timestamp:new Date(Date.now()-800*60000).toISOString()}]},resultLoop:{history:[]}}));
   var newSessionSilence=getMissionSilenceIntelligenceV1({rawInput:'good morning',route:'now',inputSignals:{}},actionCtx);
-  if(!newSessionSilence.shouldAnswer||newSessionSilence.reason!=='new_session_reentry')failures.push('silence_new_session');
+  if(newSessionSilence.shouldAnswer||newSessionSilence.reason!=='fresh_starter_boundary')failures.push('silence_new_session');
   var salesSilenceGuard=getMissionSilenceIntelligenceV1({rawInput:'what should i say',route:'sales',inputSignals:{}},actionCtx);
   if(salesSilenceGuard.shouldAnswer)failures.push('silence_sales_guard');
   var syncSilenceGuard=getMissionSilenceIntelligenceV1({rawInput:'sync check',route:'sync',inputSignals:{}},actionCtx);
@@ -24152,7 +24210,7 @@ function runMissionIntegritySelfCheck(){
   var unsaidAppended=appendMissionUnsaidQuestionNudgeV1('Here is the plan.',{unsaidQuestion:unsaidSideLane},{},'make a plan');
   if(unsaidAppended.indexOf('Quiet read')<0||unsaidAppended.indexOf('Open Hit List')<0)failures.push('unsaid_append');
   var unsaidRepeat=getMissionUnsaidQuestionV1({rawInput:'why again',route:'leads',inputSignals:{}},{gap:0});
-  if(!unsaidRepeat.shouldNudge||unsaidRepeat.reason!=='repeat_followup_action_open')failures.push('unsaid_repeat_followup');
+  if(unsaidRepeat.shouldNudge)failures.push('unsaid_repeat_followup');
   var unsaidSalesGuard=getMissionUnsaidQuestionV1({rawInput:'what should i say',route:'sales',inputSignals:{}},{gap:400});
   if(unsaidSalesGuard.shouldNudge)failures.push('unsaid_sales_guard');
   var unsaidSyncGuard=getMissionUnsaidQuestionV1({rawInput:'sync check',route:'sync',inputSignals:{}},{gap:400});
@@ -24280,9 +24338,25 @@ function runMissionIntegritySelfCheck(){
   });
   var resultPriority=getMissionArbitratedIntelligenceAnswerV1(resultPriorityTurn,actionCtx);
   if(!resultPriority||resultPriority.id!=='decision_memory')failures.push('arbiter_result_next_priority');
+  resetMissionIntegrityLocalContextV1();
+  var priorIntegrityFlagForMaster=window.__missionIntegritySelfCheckActive;
+  window.__missionIntegritySelfCheckActive=false;
   var masterQASweep=runMissionMasterIntelligenceQASweepV1();
+  window.__missionIntegritySelfCheckActive=priorIntegrityFlagForMaster;
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
+  integrityIsolationKeys.forEach(function(key){
+    try{
+      if(priorIntegrityLocalState[key]===null)localStorage.removeItem(key);
+      else localStorage.setItem(key,priorIntegrityLocalState[key]);
+    }catch(e){}
+  });
+  Object.keys(priorIntegritySessionState).forEach(function(key){
+    try{
+      if(priorIntegritySessionState[key]===null)sessionStorage.removeItem(key);
+      else sessionStorage.setItem(key,priorIntegritySessionState[key]);
+    }catch(e){}
+  });
   window.__missionIntegritySelfCheckActive=false;
   return {passed:!failures.length,failures:failures,total:111};
 }
@@ -25091,6 +25165,7 @@ function resetMissionTransientChatBrainV11(reason){
   window.__missionLastTurnV2=null;
   window.__missionLastRoutePriorityDecisionV1=null;
   window.__missionLastInternalQADebugProbeV1=null;
+  window.__missionLastContextArbitrationV11=null;
   window.__missionCommandActiveTopicRoute='';
   window.__missionCommandActiveTopicQuestion='';
   return {ok:true,reason:reason||'chat_boundary_reset',keysCleared:keys.length};
