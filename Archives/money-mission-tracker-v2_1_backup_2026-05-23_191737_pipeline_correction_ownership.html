@@ -18398,10 +18398,6 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'paid',{});
     var paidAfterCorrectionNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Last result was paid|log the money|protect delivery/i.test(paidAfterCorrectionNextVisible)||/Production, not content|Content, not sales|Sales lane, not pipeline/i.test(paidAfterCorrectionNextVisible))failures.push('correction_result_reownership_guard');
-    getMissionCommandResponse('ask',ctx,'i meant pipeline not sales',{});
-    getMissionCommandResponse('ask',ctx,'wrong read',{});
-    var pipelineCorrectionCardVisible=String(getMissionCommandResponse('ask',ctx,'where should this live',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
-    if(!/Pipeline, not sales|Pipeline \/ Outreach|lead touch|next status/i.test(pipelineCorrectionCardVisible)||/That lives on Content|Sales Coach|Production, not content|Delivery owns/i.test(pipelineCorrectionCardVisible))failures.push('correction_pipeline_card_target_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -18415,7 +18411,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:136,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 86 sales/result/data/mixed-lane checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:135,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 85 sales/result/data/mixed-lane checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -24230,7 +24226,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var earlyProtectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
   if(earlyProtectedRouteAnswer){
     var earlyProtectedCard={leads:'outreach',content:'content',production:'production',calendar:'manager',weekly:'weekly',report:'brief'}[directRouteOverride]||'';
-    if(preflightCorrectionTarget)setMissionCommandActiveTopic(preflightCorrectionTarget,question||cleanQuestion||'');
     return finishMissionAnswer(earlyProtectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,stylePreference:directRouteOverride==='sync'?false:undefined,cardAlignment:earlyProtectedCard});
   }
   var cohesionAnswer=getMissionCommunicationCohesionAnswerV1(ctx,question||cleanQuestion||'',route,brainState,turnV2);
@@ -24242,7 +24237,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var protectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
   if(protectedRouteAnswer){
     var protectedCard={leads:'outreach',content:'content',production:'production',calendar:'manager',weekly:'weekly',report:'brief'}[directRouteOverride]||'';
-    if(preflightCorrectionTarget)setMissionCommandActiveTopic(preflightCorrectionTarget,question||cleanQuestion||'');
     return finishMissionAnswer(protectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,stylePreference:directRouteOverride==='sync'?false:undefined,cardAlignment:protectedCard});
   }
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(rawQ)||/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q)){
