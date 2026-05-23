@@ -11926,6 +11926,44 @@ function countMissionFreshResultEventsV12(type){
   }
 }
 
+function getMissionFreshResultEventV12(type){
+  try{
+    var active=typeof getActiveMissionSession==='function'?getActiveMissionSession():null;
+    var activeId=active&&active.id||localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'';
+    var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+    var starterTime=typeof missionLatestActiveChatFreshStarterTimeV12==='function'?missionLatestActiveChatFreshStarterTimeV12():NaN;
+    var boundaryAt=!isNaN(starterTime)?starterTime:activeCreatedAt;
+    var best=null;
+    getMissionResultEventLedgerV12().forEach(function(item){
+      if(!item||item.type!==type)return;
+      if(item.chatId&&activeId&&item.chatId!==activeId)return;
+      var recordedAt=Date.parse(item.recordedAt||'');
+      if(!isNaN(boundaryAt)&&(isNaN(recordedAt)||recordedAt<boundaryAt))return;
+      if(!best||recordedAt>Date.parse(best.recordedAt||''))best=item;
+    });
+    return best;
+  }catch(e){
+    return null;
+  }
+}
+
+function missionHasFreshBookedContextV12(){
+  try{
+    return missionActiveChatHasBookedAfterFreshStarterV12()||
+      missionActiveResultLoopHasBookedAfterFreshStarterV12()||
+      !!getMissionFreshResultEventV12('booked');
+  }catch(e){
+    return false;
+  }
+}
+
+function getMissionFreshBookedResultV12(fallback){
+  if(fallback&&fallback.type==='booked'&&missionResultIsFreshForActiveChatV12(fallback))return fallback;
+  var event=getMissionFreshResultEventV12('booked');
+  if(event)return Object.assign({label:'Booked Call',route:'sales',truthStatus:'session_only',confirmed:false},event);
+  return null;
+}
+
 function bumpMissionResultSessionCountV1(type){
   if(!type)return;
   try{
@@ -12754,12 +12792,14 @@ function captureMissionContextArbitrationFailureV11(turn,html,arbitration){
 
 function runMissionLivePathContextArbitrationRegressionV11(){
   var failures=[];
-  var priorSessions=null,priorActive=null,priorAlias=null,priorBrain=null,priorCtx=window.__missionCommandContext||null,priorLastArb=window.__missionLastContextArbitrationV11||null;
+  var priorSessions=null,priorActive=null,priorAlias=null,priorBrain=null,priorEventLedgerSession=null,priorEventLedgerLocal=null,priorCtx=window.__missionCommandContext||null,priorLastArb=window.__missionLastContextArbitrationV11||null;
   try{
     priorSessions=localStorage.getItem(MISSION_CHAT_SESSIONS_KEY);
     priorActive=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY);
     priorAlias=localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);
     priorBrain=sessionStorage.getItem(MISSION_BRAIN_SESSION_V2_KEY);
+    priorEventLedgerSession=sessionStorage.getItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    priorEventLedgerLocal=localStorage.getItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     var now=new Date().toISOString();
     var old=new Date(Date.now()-3600000).toISOString();
     var ctx={rev:999,wk:500,gap:0,dpc:{dms:0,coldCalls:0,calls:0,booked:0,closes:0,money:0},crm:[{},{}]};
@@ -12870,6 +12910,16 @@ function runMissionLivePathContextArbitrationRegressionV11(){
       setMissionBrainSessionV2(eventOnlyBrain);
       var eventOnlyCountAnswer=plainMissionQaAnswer('how many booked calls do i have');
       if(!/Chat-only result memory:\s*1 booked/i.test(eventOnlyCountAnswer))failures.push('active_booked_count_event_ledger_fallback');
+      var eventOnlyNext=plainMissionQaAnswer('what next');
+      if(!/booked|prep|calendar|opening question/i.test(eventOnlyNext)||/Log one measurable outreach|Open Production tracker|Content tracker/i.test(eventOnlyNext))failures.push('active_booked_event_next_followup');
+      var eventOnlyWhy=plainMissionQaAnswer('why');
+      if(!/booked call|prep|calendar detail|opening question/i.test(eventOnlyWhy)||/pipeline is the closest|Hit List|Production tracker/i.test(eventOnlyWhy))failures.push('active_booked_event_why_followup');
+      var eventOnlyClean=plainMissionQaAnswer('make it make sense');
+      if(!/booked call|Sales owns the prep|Manager owns the calendar/i.test(eventOnlyClean)||/Open Production tracker|Content so the app/i.test(eventOnlyClean))failures.push('active_booked_event_clean_read');
+      var eventOnlyCard=plainMissionQaAnswer('what card owns this');
+      if(!/Sales and Manager|Sales owns the call prep|Manager owns the calendar/i.test(eventOnlyCard)||/Content/i.test(eventOnlyCard))failures.push('active_booked_event_card_owner');
+      var eventOnlyLog=plainMissionQaAnswer('what do i log after this');
+      if(!/DPC: booked call|Lead: status updated|Calendar: call detail added/i.test(eventOnlyLog)||/Production tracker|Content tracker/i.test(eventOnlyLog))failures.push('active_booked_event_log_target');
     }
   }catch(e){
     failures.push('exception_'+(e&&e.message?e.message:String(e)));
@@ -12878,10 +12928,12 @@ function runMissionLivePathContextArbitrationRegressionV11(){
     if(priorActive===null)localStorage.removeItem(MISSION_CHAT_ACTIVE_SESSION_KEY);else localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,priorActive);
     if(priorAlias===null)localStorage.removeItem(MISSION_CHAT_ACTIVE_ALIAS_KEY);else localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,priorAlias);
     if(priorBrain===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorBrain);
+    if(priorEventLedgerSession===null)sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);else sessionStorage.setItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12,priorEventLedgerSession);
+    if(priorEventLedgerLocal===null)localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);else localStorage.setItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12,priorEventLedgerLocal);
     window.__missionCommandContext=priorCtx;
     window.__missionLastContextArbitrationV11=priorLastArb;
   }
-  return {passed:!failures.length,failures:failures,total:12};
+  return {passed:!failures.length,failures:failures,total:17};
 }
 
 function getMissionDecisionMemoryV1(turn,ctx){
@@ -13087,7 +13139,8 @@ function getMissionThreadMemoryV1(turn,ctx){
   var loop=session.resultLoop||{};
   var lastResult=loop.lastResult||null;
   var pending=loop.pendingAction||session.lastActionPlan||null;
-  var bookedAfterFreshStarter=typeof missionActiveChatHasBookedAfterFreshStarterV12==='function'?missionActiveChatHasBookedAfterFreshStarterV12():true;
+  var bookedAfterFreshStarter=typeof missionHasFreshBookedContextV12==='function'?missionHasFreshBookedContextV12():(typeof missionActiveChatHasBookedAfterFreshStarterV12==='function'?missionActiveChatHasBookedAfterFreshStarterV12():true);
+  if(bookedAfterFreshStarter)lastResult=getMissionFreshBookedResultV12(lastResult)||lastResult;
   if(hasFreshStarterBoundary&&lastResult&&lastResult.type==='booked'&&!bookedAfterFreshStarter)lastResult=null;
   var explicitLastRoute=getMissionThreadExplicitRouteFromQuestionV1(lastTurn&&lastTurn.question||lastTurn&&lastTurn.normalizedInput||'');
   var lastRoute=explicitLastRoute||thread.activeRoute||lastTurn&&lastTurn.route||session.lastRoute||'';
@@ -13186,7 +13239,9 @@ function getMissionWhyResponseV1(turn,ctx){
   var lastResult=memory.lastResult||(getMissionBrainSessionV2().resultLoop||{}).lastResult||null;
   var hasFreshStarterBoundary=!isNaN(missionLatestActiveChatFreshStarterTimeV12());
   if(lastResult&&!missionResultBelongsToActiveChatV12(lastResult))lastResult=null;
-  if(hasFreshStarterBoundary&&lastResult&&lastResult.type==='booked'&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive&&!missionActiveChatHasBookedAfterFreshStarterV12())lastResult=null;
+  var hasBookedContext=typeof missionHasFreshBookedContextV12==='function'?missionHasFreshBookedContextV12():missionActiveChatHasBookedAfterFreshStarterV12();
+  if(hasBookedContext)lastResult=getMissionFreshBookedResultV12(lastResult)||lastResult;
+  if(hasFreshStarterBoundary&&lastResult&&lastResult.type==='booked'&&!window.__missionCommandSelfCheckActive&&!window.__missionIntegritySelfCheckActive&&!hasBookedContext)lastResult=null;
   var pending=memory.pendingAction||(getMissionBrainSessionV2().resultLoop||{}).pendingAction||getMissionBrainSessionV2().lastActionPlan||null;
   var lastTurn=memory.lastTurn||null;
   if(missionThreadTurnIsBeforeFreshStarterV12(lastTurn,memory.lastUpdatedAt||'')){
@@ -13194,7 +13249,7 @@ function getMissionWhyResponseV1(turn,ctx){
     memory=Object.assign({},memory,{activeRoute:'',lastRoute:'',lastTurn:null});
   }
   var stalePendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
-  if(hasFreshStarterBoundary&&/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(stalePendingText)&&!missionActiveChatHasBookedAfterFreshStarterV12())pending=null;
+  if(hasFreshStarterBoundary&&/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(stalePendingText)&&!hasBookedContext)pending=null;
   var lastTurnSlash=(lastTurn&&String(lastTurn.question||lastTurn.rawInput||'').match(/^\/([a-z0-9_]+)/i))||null;
   var lastTurnSlashRoute=lastTurnSlash?normalizeMissionSlashRouteV2(lastTurnSlash[1]):'';
   var route=(lastTurnSlashRoute||memory.activeRoute||memory.lastRoute||lastTurn&&lastTurn.route||turn&&turn.route||'now');
@@ -18223,7 +18278,15 @@ function getMissionActionAccountabilityV1(turn,ctx){
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   var pendingNeedsBooked=/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(pendingText);
   var bookedResultFresh=lastResult&&lastResult.type==='booked'&&missionResultIsFreshForActiveChatV12(lastResult);
-  if(pendingNeedsBooked&&!bookedResultFresh&&!missionActiveChatHasBookedAfterFreshStarterV12()){
+  var hasBookedContext=typeof missionHasFreshBookedContextV12==='function'?missionHasFreshBookedContextV12():(bookedResultFresh||missionActiveChatHasBookedAfterFreshStarterV12());
+  if(hasBookedContext){
+    recentResult=true;
+    if(pending&&!pendingNeedsBooked){
+      freshPending=false;
+      pending=null;
+    }
+  }
+  if(pendingNeedsBooked&&!bookedResultFresh&&!hasBookedContext){
     freshPending=false;
     recentResult=false;
   }
@@ -22490,7 +22553,8 @@ function getMissionCommunicationCohesionContextV1(ctx,question,route,brainState,
   }catch(e){}
   var pendingText=normalizeMissionQuestion([pending&&pending.label,pending&&pending.action,pending&&pending.target,pending&&pending.reason].filter(Boolean).join(' '));
   var freshBookedResult=!!(lastResult&&lastResult.type==='booked'&&missionResultIsFreshForActiveChatV12(lastResult));
-  var bookedContext=!!(freshBookedResult||(/\b(prep call|booked call|calendar detail|opening question|sales coach)\b/.test(pendingText)&&missionActiveChatHasBookedAfterFreshStarterV12()));
+  var bookedContext=!!(freshBookedResult||(typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12())||(/\b(prep call|booked call|calendar detail|opening question|sales coach)\b/.test(pendingText)&&missionActiveChatHasBookedAfterFreshStarterV12()));
+  if(bookedContext)lastResult=getMissionFreshBookedResultV12(lastResult)||lastResult;
   if(bookedContext&&/\b(what card owns this|what lane owns this|which card handles|what card do i open|what do i log|what should i log after this|what result are we|where do i go from here|what counts as done|make it make sense|that sounds disconnected|answer like the app knows|wrong read)\b/.test(q)){
     activeRoute='sales';
   }
@@ -22592,6 +22656,28 @@ function getMissionMoneyReadResponseV1(ctx,question){
   return 'I checked the money lane.<br><br>'+escapeHtml(firstLine)+' '+escapeHtml(read)+truthLine+'<br><br>Next, '+escapeHtml(next)+'.';
 }
 
+function getMissionFreshBookedFollowupAnswerV12(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!q||!(typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12()))return '';
+  if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q))return '';
+  if(/\b(what next|what now|next move|what should i do|what do i do)\b/.test(q)){
+    return 'Last result was booked.<br><br>Next, prep the call, add the calendar detail, and update the lead.<br><br>Open with one discovery question.';
+  }
+  if(/^(why|why again|y tho|why tho|why that|why this)$/.test(q)){
+    return 'Because the conversation already moved to a booked call.<br><br>The next useful move is prep, calendar detail, and one clean opening question.';
+  }
+  if(/\b(make it make sense|give me the clean version|give me the clean read|that sounds disconnected|answer like you know|wrong read)\b/.test(q)){
+    return 'Clean read. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
+  }
+  if(/\b(what card owns this|what lane owns this|which card handles|what card do i open|where should this live)\b/.test(q)){
+    return 'That split lives in Sales and Manager.<br><br>Sales owns the call prep. Manager owns the calendar detail.<br><br>Open Sales Coach for the question, then Manager/Calendar to save the call.';
+  }
+  if(/\b(what do i log|what should i log after this|what should i come back and tell you|what counts as done|what result are we looking for)\b/.test(q)){
+    return 'Log the booked call in three places:<br><br>1) DPC: booked call.<br>2) Lead: status updated.<br>3) Calendar: call detail added.<br><br>Come back with: call added, lead updated, paid, no, follow-up, or wrong lane.';
+  }
+  return '';
+}
+
 function getMissionCommandResponse(kind,ctx,question,brainState){
   brainState=brainState||getMissionBrainState(ctx,question||'','');
   var preTurnBrainSession=null;
@@ -22669,7 +22755,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var variant=getMissionResponseVariant(route,conv&&conv.type,ctx,responseMode);
   var quietAnswer=missionShouldKeepAnswerQuiet(route,conv,cleanQuestion||'');
   var visibleExplainer=getMissionDecisionExplainerV1(turnV2,ctx,cleanQuestion||question||'',brainState);
-  function finishMissionAnswer(html,opts){
+	  function finishMissionAnswer(html,opts){
     opts=opts||{};
     opts=protectMissionExplicitCardAnswerOptionsV1(opts);
     if(opts.explainDecision&&visibleExplainer&&visibleExplainer.shouldShow){
@@ -22686,9 +22772,11 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     shaped=cleanMissionCardRouteGarnishV1(shaped,opts);
     shaped=applyMissionCardCohesionV1(shaped,opts);
     shaped=applyMissionContextAnswerGuardV11(shaped,turnV2,turnV2&&turnV2.contextArbitration||window.__missionLastContextArbitrationV11);
-    return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
-  }
-  var dataTrustQuestion=isMissionDataTrustPromptV12(cleanQuestion||question||'');
+	    return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
+	  }
+	  var bookedFollowupAnswer=getMissionFreshBookedFollowupAnswerV12(cleanQuestion||question||'');
+	  if(bookedFollowupAnswer)return finishMissionAnswer(bookedFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+	  var dataTrustQuestion=isMissionDataTrustPromptV12(cleanQuestion||question||'');
   if(dataTrustQuestion){
     route='sync';
     var dataTrustAnswer=getMissionDataConfidenceResponse('sync',ctx,cleanQuestion||question||'');
