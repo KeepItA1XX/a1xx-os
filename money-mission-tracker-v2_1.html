@@ -10897,6 +10897,7 @@ function cleanMissionVisibleAnswerText(html){
     .replace(/(^|<br\s*\/?>\s*)Trust level:\s*/gi,'$1Trust check. ')
     .replace(/(^|<br\s*\/?>\s*)Current read:\s*/gi,'$1Right now, ')
     .replace(/(^|<br\s*\/?>\s*)Next move:\s*/gi,'$1Next, ')
+    .replace(/\bNext move:\s*/gi,'Next, ')
     .replace(/(^|<br\s*\/?>\s*)Result read:\s*/gi,'$1Result logged. ')
     .replace(/(^|<br\s*\/?>\s*)What it means:\s*/gi,'$1What this means. ')
     .replace(/(^|<br\s*\/?>\s*)Why:\s*/gi,'$1Why. ')
@@ -12138,7 +12139,7 @@ function getMissionLatestResultFollowthroughAnswerV14(question){
 
 function getMissionLatestResultSalesReplyAnswerV16(question){
   var q=normalizeMissionQuestion(question||'');
-  if(!/\b(help me reply|write (a )?reply|write (a )?response|what do i text back|what should i text|what should i dm|text back|dm back|how do i answer that)\b/.test(q))return '';
+  if(!/\b(help me reply|write (a |the )?(reply|response|dm|text)|what do i text back|what should i text|what should i dm|what should i say back|what do i say back|what do i send|what should i send|text (him|her|them)?\s*back|dm (him|her|them)?\s*back|send (him|her|them)?\s*(a )?(text|dm|reply|response)?|how do i answer that)\b/.test(q))return '';
   var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
   if(!latest||!latest.type)return '';
   if(latest.type==='paid'){
@@ -14427,7 +14428,7 @@ function getMissionDirectRouteOverrideV1(question){
     var slashRoute=normalizeMissionSlashRouteV2(slash[1]);
     if(slashRoute)return slashRoute;
   }
-  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|do i trust this|trust this|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what is loaded|what data is loaded|what sources are loaded|where is that coming from|where is this coming from|where did that come from|what is that based on|what source is this from|what database is this from|show me the data|show me data)\b/.test(q))return 'sync';
+  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|do i trust this|trust this|what should i trust(?: from this)?|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what(?:'|’|\s+)?s loaded|what is loaded|what data is loaded|what sources are loaded|where is that coming from|where is this coming from|where did that come from|what is that based on|what source is this from|what database is this from|show me the data|show me data)\b/.test(q))return 'sync';
   if(/\b(teach me dpc|explain dpc|daily profit campaign|quick.*dpc count|what is my dpc count|i sent \d+ dms|i sent dms)\b/.test(q))return 'dpc';
   if(/\b(why should i focus on leads|walk me through follow ups|walk me through followups|how do follow ups work|how do followups work)\b/.test(q))return 'leads';
   if(/\b(who is a1xx|what is a1xx|who am i in this os|what is my role here)\b/.test(q))return 'profile';
@@ -17929,6 +17930,23 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'no reply',{});
     var noReplyHelpReplyVisible=String(getMissionCommandResponse('ask',ctx,'help me reply',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/bump clean|Checking once|Still want help/i.test(noReplyHelpReplyVisible)||/Before I explain anything|what made you want to talk/i.test(noReplyHelpReplyVisible))failures.push('result_aware_no_reply_help_reply_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Aware Reply Variants',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'paid',{});
+    ['what should i say back','text him back','dm them back','write the response','what do I send'].forEach(function(replyPrompt){
+      var variantVisible=String(getMissionCommandResponse('ask',ctx,replyPrompt,{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+      if(!/post-sale|locking this in|delivery step/i.test(variantVisible)||/Before I explain anything|what made you want to talk|voice or workflow memory/i.test(variantVisible))failures.push('result_aware_paid_reply_variant_'+replyPrompt.replace(/\W+/g,'_'));
+    });
+    var shortLoadedVisible=String(getMissionCommandResponse('ask',ctx,"what's loaded",{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/I am looking at this right now|CRM leads|System health/i.test(shortLoadedVisible)||/voice or workflow memory/i.test(shortLoadedVisible))failures.push('short_loaded_data_trust_guard');
+    var shortTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/I am looking at this right now|System health|Result trust/i.test(shortTrustVisible)||/Finish the current block step|Open your saved IG/i.test(shortTrustVisible))failures.push('short_trust_data_trust_guard');
+    var nextMoveLeakVisible=String(getMissionCommandResponse('ask',ctx,"what's the play",{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(/Next move:/i.test(nextMoveLeakVisible))failures.push('mid_answer_next_move_label_guard');
   }catch(e){
     failures.push(e&&e.message?e.message:String(e));
   }finally{
@@ -17942,7 +17960,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:92,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 45 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:100,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 53 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -18001,7 +18019,7 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   if(/\b(where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth)\b/.test(q)){
     return 'That read is coming from the current app packet and sync health.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
   }
-  if(/\b(what data are you using|what data do you have|what do you see|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|do i trust this|trust this|what is trusted|what is safe to act on)\b/.test(q)){
+  if(/\b(what data are you using|what data do you have|what do you see|what(?:'|’|\s+)?s loaded|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust(?: from this)?|do i trust this|trust this|what is trusted|what is safe to act on)\b/.test(q)){
     return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see)\b/.test(q)){
@@ -18027,7 +18045,7 @@ function getMissionFriendlyActionTextV1(action,fallback){
 
 function isMissionDataTrustPromptV12(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|trust this data|do i trust this data|do i trust this|trust this|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what do you see|what can you not see|what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth|show me the data|show me data|data then move|calendar stale)\b/.test(q);
+  return /\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|trust this data|do i trust this data|do i trust this|trust this|what should i trust(?: from this)?|what is trusted|what is safe to act on|what is missing|what data is missing|what do you see|what can you not see|what data are you using|what data do you have|what(?:'|’|\s+)?s loaded|what is loaded|what data is loaded|what sources are loaded|what sources are you using|where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth|show me the data|show me data|data then move|calendar stale)\b/.test(q);
 }
 
 var MISSION_SALES_CLOSER_STAGES={
@@ -23266,7 +23284,7 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   if(route==='leads'&&/\b(walk me through follow ups|walk me through followups|how do follow ups work|how do followups work)\b/.test(q)){
     return 'Follow-up walkthrough:<br><br>1) Open Hit List.<br>2) Pick the warmest visible lead.<br>3) Send one clear check-in.<br>4) Log the result: no reply, reply, booked, paid, or wrong lane.<br><br>Keep the message short enough that the reply is easy.';
   }
-  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|do i trust this|trust this|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what is loaded|what data is loaded|what sources are loaded|where is that coming from|where is this coming from|where did that come from|what is that based on|what source is this from|what database is this from|show me the data|show me data)\b/.test(q)){
+  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|do i trust this|trust this|what should i trust(?: from this)?|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what(?:'|’|\s+)?s loaded|what is loaded|what data is loaded|what sources are loaded|where is that coming from|where is this coming from|where did that come from|what is that based on|what source is this from|what database is this from|show me the data|show me data)\b/.test(q)){
     if(/\b(where do i check sync|where|check sync)\b/.test(q)){
       return 'System Hub → Health → Run sync check.<br><br>Check Notion, Sheets, Calendar, and backup status.<br><br>If something fails, save locally first, then retry one source.';
     }
