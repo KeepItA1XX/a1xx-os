@@ -17181,6 +17181,35 @@ var MISSION_BROAD_REGRESSION_HARDENING_V1={
   installMode:'qa_guard_only'
 };
 
+var MISSION_CLUSTER_QA_SYSTEM_V1={
+  id:'mission_cluster_qa_system_v1',
+  version:'1.0',
+  sourceDoc:'docs/mission-command-cluster-qa-sop.md',
+  lifecycle:['charter','run_transcript','capture_visible_output','classify_failure','locate_owner_layer','patch_or_watchlist','add_regression','verify','live_retest','document'],
+  failureLabels:['route_drift','memory_leak','fresh_boundary_fail','result_context_fail','data_trust_fail','bubble_leak','card_owner_fail','voice_noise','formatting_fail','live_path_mismatch','qa_harness_fail','coverage_gap','over_blocking','under_blocking','regression_gap'],
+  priorityClusters:['context_boundary','sales_result','data_trust','correction','card_ownership','money','starter_dpc_anchor','wrap_review','voice_naturalness'],
+  requiredChecks:['syntax_extraction','git_diff_check','context_arbitration','master_qa','broad_regression','presence_self_check']
+};
+
+function runMissionClusterQASystemSelfCheckV1(){
+  var failures=[];
+  var qa=MISSION_CLUSTER_QA_SYSTEM_V1||{};
+  if(!qa.sourceDoc||qa.sourceDoc.indexOf('mission-command-cluster-qa-sop.md')<0)failures.push('qa_sop_doc_missing');
+  ['charter','classify_failure','add_regression','verify','document'].forEach(function(step){
+    if((qa.lifecycle||[]).indexOf(step)<0)failures.push('qa_lifecycle_'+step);
+  });
+  ['route_drift','memory_leak','fresh_boundary_fail','result_context_fail','data_trust_fail','live_path_mismatch','qa_harness_fail'].forEach(function(label){
+    if((qa.failureLabels||[]).indexOf(label)<0)failures.push('qa_failure_label_'+label);
+  });
+  ['context_boundary','sales_result','data_trust','correction'].forEach(function(cluster){
+    if((qa.priorityClusters||[]).indexOf(cluster)<0)failures.push('qa_priority_cluster_'+cluster);
+  });
+  ['context_arbitration','master_qa','broad_regression','presence_self_check'].forEach(function(check){
+    if((qa.requiredChecks||[]).indexOf(check)<0)failures.push('qa_required_check_'+check);
+  });
+  return {passed:!failures.length,failures:failures,total:5+7+4+4};
+}
+
 function runMissionBroadRegressionHardeningV1(){
   var failures=[];
   var priorIntegrity=window.__missionIntegritySelfCheckActive;

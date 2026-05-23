@@ -10,6 +10,8 @@ This is not a feature spec. This is the operating process for testing, diagnosin
 
 Test prompts are pressure points. The goal is not to make one phrase pass. The goal is to find the shared layer underneath the failure and improve the whole behavior class.
 
+Research-backed testing principle: exploratory testing finds the unknowns, regression testing preserves the fixes, and stateful conversational QA must test the actual sequence path, not only one prompt at a time.
+
 Every cluster pass should answer:
 
 - What did A1XX ask?
@@ -20,35 +22,90 @@ Every cluster pass should answer:
 - Which system layer owns the failure?
 - What regression prompt now protects it?
 
+## Research Findings Applied To Mission Command
+
+The current QA direction is right, but it needs to be treated like an operating loop instead of a pile of prompt checks.
+
+Key findings:
+
+- Exploratory testing should be timeboxed and charter-based. A test pass needs a target cluster, starting state, risk hypothesis, and notes on what changed during the session.
+- Every high-value exploratory bug should become either a permanent regression, a watchlist item, or a documented non-bug. Do not leave it as chat memory.
+- Conversational AI tests need multi-turn transcripts because a single answer can pass while state, memory, or follow-up behavior is broken.
+- Stateful assistant QA needs separate checks for route, memory, data, output wording, action buttons, and save/restore behavior.
+- Regression tests should assert behavior rules, not exact full paragraphs, unless the bug is specifically formatting or wording.
+- Test harnesses need clean setup and teardown. Several recent failures were not product bugs; they were QA-state contamination between fixtures.
+- Debug capture should be internal-only. The visible Mission Command chat should never expose source labels, truth ledgers, arbitration traces, or test names.
+
+What this means for Mission Command:
+
+- Run clusters as short QA sessions with a written charter.
+- Convert repeated failures into shared-layer fixes, not one-prompt patches.
+- Add permanent regressions for every fixed route, memory, context, bubble, or data-trust bug.
+- Keep live transcript testing even when VM tests pass, because live render and storage paths can still differ.
+- Keep a small watchlist for risky behavior that is not safe to patch yet.
+
+## Cluster QA Session Charter
+
+Before each cluster pass, write a short charter:
+
+```text
+Cluster:
+Starting state:
+Risk hypothesis:
+Prompts:
+Expected owner layer:
+Must not happen:
+Regression target if failure appears:
+```
+
+Example:
+
+```text
+Cluster: Correction
+Starting state: fresh starter, DPC zero, no booked after starter
+Risk hypothesis: correction prompts may reattach stale Production/System Hub context
+Prompts: wrong read, nah not that, that sounds disconnected, answer like you know what I am doing
+Expected owner layer: fresh starter DPC anchor + correction route guard
+Must not happen: Production tracker, System Hub, booked-call prep, stale card bubble
+Regression target if failure appears: fresh_chat_correction_anchor_<prompt>
+```
+
 ## Standard Cluster QA Loop
 
-1. Run one cluster transcript.
+1. Define the charter.
+   Pick one cluster, one starting state, one risk hypothesis, and one expected owner layer.
+
+2. Run one cluster transcript.
    Use 8 to 15 prompts in one behavior family.
 
-2. Capture actual output.
+3. Capture actual output.
    Save the exact visible answer, including secondary bubbles and action buttons.
 
-3. Label each failure.
+4. Label each failure.
    Use the failure labels below instead of vague notes.
 
-4. Locate the owning layer.
+5. Locate the owning layer.
    Fix the shared route, memory, composition, bubble, or guard layer instead of only patching one string.
 
-5. Add regression coverage.
-   Every fixed phrase or behavior needs a future test.
+6. Decide patch, test, or watchlist.
+   Use the decision rules below before editing.
 
-6. Run verification.
+7. Add regression coverage.
+   Every fixed phrase or behavior needs a future test unless it is explicitly marked watchlist.
+
+8. Run verification.
    Minimum checks:
    - syntax check
    - `git diff --check`
    - context arbitration regression
    - master intelligence QA
+   - broad regression hardening
    - presence self-check
 
-7. Live retest.
+9. Live retest.
    Run the original chain plus 2 to 3 wording variations.
 
-8. Promote the behavior standard.
+10. Promote the behavior standard.
    Write down the expected behavior so future installs do not overwrite it.
 
 ## Failure Labels
@@ -62,9 +119,75 @@ Every cluster pass should answer:
 - `card_owner_fail`: card/lane ownership answer picked the wrong surface.
 - `voice_noise`: unnecessary opener, closer, hype, or robotic wrapper was added.
 - `formatting_fail`: line breaks, punctuation, labels, or spacing made the response hard to read.
+- `live_path_mismatch`: helper/VM tests passed but the visible live chat path failed.
+- `qa_harness_fail`: the test fixture or setup was wrong, stale, or contaminated.
+- `coverage_gap`: the bug class exists but no cluster currently protects it.
 - `over_blocking`: a guard suppressed useful context.
 - `under_blocking`: a guard allowed stale or irrelevant context.
 - `regression_gap`: behavior was fixed but not added to a test harness.
+
+## Failure Report Format
+
+Use this format for every meaningful failure:
+
+```text
+Failure ID:
+Cluster:
+Prompt or chain:
+Starting state:
+Actual answer:
+Expected answer:
+Failure label:
+Owner layer:
+Root cause:
+Patch decision:
+Regression added:
+Live retest:
+Watchlist note:
+```
+
+Root cause must name the mechanism, not just the symptom.
+
+Good:
+
+```text
+Root cause: fresh starter correction phrases were not included in the DPC anchor matcher, so the response fell through to current journey state.
+```
+
+Weak:
+
+```text
+Root cause: answer was wrong.
+```
+
+## Patch / Test / Watchlist Decision Rules
+
+Patch code when:
+
+- The route is wrong.
+- Memory is stale or crossing chat boundaries.
+- The answer contradicts loaded data.
+- A secondary bubble or action button points at the wrong task.
+- A repeated wording issue comes from one shared template.
+
+Update tests when:
+
+- The product behavior is correct but the harness setup is stale.
+- A regression assertion expects old wording that is no longer the standard.
+- The test passes in isolation but fails after another fixture mutates state.
+
+Add to watchlist when:
+
+- The behavior is annoying but not clearly wrong.
+- Fixing it may weaken protected routes.
+- The root cause is unclear after one pass.
+- The issue depends on live data freshness that cannot be reproduced yet.
+
+Permanent regression rule:
+
+- If a bug affected route, memory, result, data trust, card ownership, or live render behavior, it becomes a permanent regression.
+- If a bug was only phrasing, add it to regression when the phrase is high-frequency or part of a protected cluster.
+- If a bug was only QA fixture contamination, update the harness and document the fixture rule.
 
 ## Owner Layer Map
 
@@ -78,6 +201,59 @@ Every cluster pass should answer:
 - Secondary bubbles: `buildMissionBubblePacket`, `getMissionDataBubble`, `getMissionActionButtons`.
 - Live render: `renderMissionCommand`, final packet integrity check, bubble append path.
 - QA harness: context arbitration regression, master intelligence sweep, focused transcript tests.
+
+## Cluster Priority Matrix
+
+Use this order unless A1XX points to a live failure:
+
+| Priority | Cluster | Why it matters | Minimum regression surface |
+| --- | --- | --- | --- |
+| P0 | Context boundary / fresh starter | Prevents stale brain state from driving new chats | `runMissionLivePathContextArbitrationRegressionV11` |
+| P0 | Sales / result | Protects booked, paid, follow-up, and money outcomes | result loop + booked count + log-target prompts |
+| P0 | Data trust | Prevents wrong decisions from stale or partial data | loaded/missing/current/source prompts |
+| P1 | Correction | Keeps A1XX in control when the read is wrong | fresh, booked, and explicit-lane correction prompts |
+| P1 | Card ownership | Keeps actions attached to the right app surface | brief/outreach/content/production/manager card prompts |
+| P1 | Money | Keeps money reads buyer-facing and truth-aware | today/weekly/action-to-money prompts |
+| P2 | Starter / DPC anchor | Keeps the day from drifting into dashboards | good morning + what today + why + short window |
+| P2 | Wrap / review | Keeps closeout honest about what moved | what changed/tomorrow/wrap prompts |
+| P3 | Voice / naturalness | Improves feel after logic is stable | high-frequency first-bubble wording |
+
+## Live Transcript Capture Format
+
+When A1XX sends live test output, convert it into this structure before patching:
+
+```text
+Cluster:
+Chat state:
+Prompt:
+Visible first bubble:
+Secondary bubble/action:
+Expected:
+Failure label:
+Likely owner:
+Regression name:
+```
+
+If the transcript includes multiple prompts, mark the first prompt where the behavior turned wrong. Do not patch the last visible symptom until the earlier state transition is understood.
+
+## Regression Naming Standard
+
+Use stable names that identify the boundary and behavior:
+
+```text
+<state>_<cluster>_<behavior>_<risk>
+```
+
+Examples:
+
+- `fresh_chat_correction_anchor_wrong_read`
+- `active_booked_event_log_target`
+- `fresh_chat_stale_event_ledger_next_leak`
+- `data_trust_current_spacing`
+- `card_outreach_handoff_missing`
+- `qa_fixture_truth_ledger_active_chat`
+
+Name the regression after the failure mode, not the implementation detail.
 
 ## Cluster Test Matrix
 
@@ -364,7 +540,61 @@ Then run the internal VM QA bundle:
 ```bash
 runMissionLivePathContextArbitrationRegressionV11()
 runMissionMasterIntelligenceQASweepV1()
+runMissionBroadRegressionHardeningV1()
 runMissionPresenceSelfCheck()
+```
+
+Optional QA metadata check:
+
+```bash
+runMissionClusterQASystemSelfCheckV1()
+```
+
+## Required Verification Summary
+
+After every cluster fix, report:
+
+```text
+Cluster:
+Failure found:
+Shared layer patched:
+Regression added:
+Syntax:
+Diff check:
+Context arbitration:
+Master QA:
+Broad regression:
+Presence:
+Live prompts to test next:
+Watchlist:
+```
+
+## Team Chat / Intelligence HQ Update Template
+
+Use this update shape:
+
+```text
+UPDATE - Mission Command QA cluster pass
+
+What changed:
+-
+
+Why it matters:
+-
+
+Tests passed:
+- syntax extraction
+- git diff check
+- context arbitration
+- master QA
+- broad regression
+- presence
+
+Next cluster:
+-
+
+Watchlist:
+-
 ```
 
 ## Commit Standard
@@ -392,4 +622,3 @@ Keep fresh starter read above beat day step
 - Session result memory and dashboard-confirmed data must stay separated.
 - Data trust formatting should stay line-based and readable.
 - Correction phrases need lane-aware context, not generic clean-read templates.
-
