@@ -17650,6 +17650,8 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/no reply recorded|bump later|next warm signal/i.test(noReplyLogVisible)||/booked call|calendar detail|money collected/i.test(noReplyLogVisible))failures.push('no_reply_result_log_target_guard');
     var noReplyNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Last result was no reply|bump later|next warm signal/i.test(noReplyNextVisible)||/Move now|booked call|calendar detail/i.test(noReplyNextVisible))failures.push('no_reply_result_next_guard');
+    var noReplyWhyVisible=String(getMissionCommandResponse('ask',ctx,'why',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ').trim();
+    if(!/^Because no reply is still useful signal/i.test(noReplyWhyVisible)||/Last result was booked|calendar detail/i.test(noReplyWhyVisible))failures.push('no_reply_result_why_order_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Result Followthrough Done',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -17674,7 +17676,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:70,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 23 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:71,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 24 sales reply/context checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -23433,7 +23435,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  var bookedFollowupAnswer=getMissionFreshBookedFollowupAnswerV12(cleanQuestion||question||'');
 	  if(bookedFollowupAnswer)return finishMissionAnswer(bookedFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
 	  var latestResultFollowthroughAnswer=typeof getMissionLatestResultFollowthroughAnswerV14==='function'?getMissionLatestResultFollowthroughAnswerV14(cleanQuestion||question||''):'';
-	  if(latestResultFollowthroughAnswer)return finishMissionAnswer(latestResultFollowthroughAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+	  if(latestResultFollowthroughAnswer)return finishMissionAnswer(latestResultFollowthroughAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||cleanQuestion||'',ctx)){
 	    var freshAnchorKind=/\b(where we at|where are we|where do i stand)\b/.test(rawQ)?'where':(/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(rawQ)?'time':(/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|nah not that|no not that|clean version|clean read)\b/.test(rawQ)?'clean':(/\b(why|why again)\b/.test(rawQ)?'why':'')));
 	    if(freshAnchorKind)return finishMissionAnswer(getMissionFreshStarterDpcAnchorAnswerV12(cleanQuestion||question||'',ctx,freshAnchorKind),{sessionArc:false,closer:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
