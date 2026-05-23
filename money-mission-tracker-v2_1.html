@@ -14122,7 +14122,7 @@ function getMissionDirectRouteOverrideV1(question){
     var slashRoute=normalizeMissionSlashRouteV2(slash[1]);
     if(slashRoute)return slashRoute;
   }
-  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what is loaded|what data is loaded|what sources are loaded)\b/.test(q))return 'sync';
+  if(/^\/(sync|health)\b/.test(q)||/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|do i trust this|trust this|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what is loaded|what data is loaded|what sources are loaded|where is that coming from|where is this coming from|where did that come from|what is that based on|what source is this from|what database is this from|show me the data|show me data)\b/.test(q))return 'sync';
   if(/\b(teach me dpc|explain dpc|daily profit campaign|quick.*dpc count|what is my dpc count|i sent \d+ dms|i sent dms)\b/.test(q))return 'dpc';
   if(/\b(why should i focus on leads|walk me through follow ups|walk me through followups|how do follow ups work|how do followups work)\b/.test(q))return 'leads';
   if(/\b(who is a1xx|what is a1xx|who am i in this os|what is my role here)\b/.test(q))return 'profile';
@@ -17331,6 +17331,9 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'money_make_today',q:'what can i do to make some money today',must:/I checked the money lane|Money read|Next/i},
       {name:'sync_calendar_stale',q:'calendar stale',must:/current enough|Data read|sync|missing|loaded/i},
       {name:'sync_trust_data',q:'do i trust this data',must:/safe next move|Data read|Clean enough|Partial|loaded/i},
+      {name:'sync_trust_short',q:'do I trust this',must:/I am looking at this right now|safe next move|loaded|System health/i},
+      {name:'sync_source_origin',q:'where is that coming from',must:/current app packet|System health|CRM leads|loaded/i},
+      {name:'sync_data_then_move',q:'show me the data then tell me the move',must:/data I can use|System health|Move from the cleanest loaded signal/i},
       {name:'production_studio_session',q:'production studio session',must:/Production|studio|asset|song|beat/i},
       {name:'data_loaded_status',q:'what is loaded',must:/I am looking at this right now|I am reading|Data read|Clean enough|Partial|loaded|Trust level/i},
       {name:'cohesion_meaning',q:'what does that mean',must:/clean read|reading|useful read|move/i},
@@ -17376,7 +17379,7 @@ function runMissionBroadRegressionHardeningV1(){
     localKeys.forEach(function(key){restoreStorage(localStorage,key,savedLocal[key]);});
     sessionKeys.forEach(function(key){restoreStorage(sessionStorage,key,savedSession[key]);});
   }
-  return {passed:!failures.length,failures:failures,total:44,meta:failures.length?failures.join(', '):'31 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:47,meta:failures.length?failures.join(', '):'34 regression prompts + 7 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -17425,7 +17428,13 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var healthRead=serviceNames.length?'System health is loaded like this:<br>'+healthLine:healthLine;
   var missingLine=missing.length?escapeHtml(missing.join(', ')):'nothing obvious from the current app packet';
   var trustLine=missing.length?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
-  if(/\b(what data are you using|what data do you have|what do you see|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|what is trusted|what is safe to act on)\b/.test(q)){
+  if(/\b(show me the data.*tell me the move|show me data.*tell me the move|data.*then.*move)\b/.test(q)){
+    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine)+'<br><br>Move from the cleanest loaded signal: one outreach or sales action, then log the result.';
+  }
+  if(/\b(where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth)\b/.test(q)){
+    return 'That read is coming from the current app packet and sync health.<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine);
+  }
+  if(/\b(what data are you using|what data do you have|what do you see|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust from this|do i trust this|trust this|what is trusted|what is safe to act on)\b/.test(q)){
     return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see)\b/.test(q)){
@@ -17451,7 +17460,7 @@ function getMissionFriendlyActionTextV1(action,fallback){
 
 function isMissionDataTrustPromptV12(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what do you see|what can you not see|what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|calendar stale)\b/.test(q);
+  return /\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|trust this data|do i trust this data|do i trust this|trust this|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what do you see|what can you not see|what data are you using|what data do you have|what is loaded|what data is loaded|what sources are loaded|what sources are you using|where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth|show me the data|show me data|data then move|calendar stale)\b/.test(q);
 }
 
 var MISSION_SALES_CLOSER_STAGES={
@@ -18448,7 +18457,7 @@ function getMissionActionAccountabilityFlagsV2(q,route){
   var explicitCard=typeof isMissionExplicitCardPromptV1==='function'?isMissionExplicitCardPromptV1(q):false;
   var directNext=/\b(what next|what now|what should i do|what do i do|what should i do today|call the move|pick one|just tell me one thing|one thing|help me get started|lock in)\b/.test(q);
   var vagueSwitch=/\b(show me|run it|let'?s go|start|continue|more ideas|what else)\b/.test(q);
-  var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|where can i check sync|what changed|what moved|what did i log|how much money|how many booked|report|pipeline|who hot|content|production|calendar|data stale|data current|is this data current|what data|what is loaded|what'?s loaded|what is missing|what'?s missing|what should i trust|do i trust|webhook|web hook|backup|source|where is that coming from)\b/.test(q);
+  var explicitData=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|where can i check sync|what changed|what moved|what did i log|how much money|how many booked|report|pipeline|who hot|content|production|calendar|data stale|data current|is this data current|what data|show me data|show me the data|what is loaded|what'?s loaded|what is missing|what'?s missing|what should i trust|do i trust|trust this|webhook|web hook|backup|source|where is that coming from|where is this coming from|what is that based on)\b/.test(q);
   var navigationAsk=/\b(where do i click|where do i find|where is|what card|which card|what button|which button|where do i go|open what|what do i press|what do i log|where do i check)\b/.test(q);
   var contextBridgeAsk=/\b(what does that mean|what do you mean|make it make sense|clean read|real read|why are you telling me|how does this connect|connect it back|what lane|what mode|what are you reading|what is the os looking at)\b/.test(q);
   var salesAsk=route==='sales'||/\b(what should i say|what do i say|too expensive|cant afford|can't afford|he said|she said|they said|ghosted|payment plan|roleplay|score my answer|prep me for a call|call is done|warm follow|send a bump|mix master|break even|atl studio|rappreneur|objection|discovery question)\b/.test(q);
@@ -22671,7 +22680,7 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
   if(route==='leads'&&/\b(walk me through follow ups|walk me through followups|how do follow ups work|how do followups work)\b/.test(q)){
     return 'Follow-up walkthrough:<br><br>1) Open Hit List.<br>2) Pick the warmest visible lead.<br>3) Send one clear check-in.<br>4) Log the result: no reply, reply, booked, paid, or wrong lane.<br><br>Keep the message short enough that the reply is easy.';
   }
-  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what is loaded|what data is loaded|what sources are loaded)\b/.test(q)){
+  if(route==='sync'&&/\b(where do i check sync|sync check|data stale|is this data current|current data|webhook|web hook|backup check|save backup|system health|calendar stale|data trust|trust this data|do i trust this data|do i trust this|trust this|what should i trust from this|what is trusted|what is safe to act on|what is missing|what data is missing|what data do you have|what data are you using|what do you see|what is loaded|what data is loaded|what sources are loaded|where is that coming from|where is this coming from|where did that come from|what is that based on|what source is this from|what database is this from|show me the data|show me data)\b/.test(q)){
     if(/\b(where do i check sync|where|check sync)\b/.test(q)){
       return 'System Hub → Health → Run sync check.<br><br>Check Notion, Sheets, Calendar, and backup status.<br><br>If something fails, save locally first, then retry one source.';
     }
@@ -23232,6 +23241,12 @@ function runMissionIntegritySelfCheck(){
   if(!/I cannot fully see|Missing or light data|Only run sync|Next: run sync/i.test(dataMissingCommand)||/Check system health only/i.test(dataMissingCommand))failures.push('data_missing_command_route_guard');
   var currentDataCommand=getMissionCommandResponse('ask',liveCohesionCtx,'is this data current',{});
   if(!/current enough|Currentness read|Trust level/i.test(currentDataCommand)||/Check system health only/i.test(currentDataCommand))failures.push('data_current_command_route_guard');
+  var dataSourceCommand=getMissionCommandResponse('ask',liveCohesionCtx,'where is that coming from',{});
+  if(!/current app packet|System health|safe next move/i.test(dataSourceCommand)||/Open Content tracker|Current Work Card|Check system health only/i.test(dataSourceCommand))failures.push('data_source_command_route_guard');
+  var dataTrustShortCommand=getMissionCommandResponse('ask',liveCohesionCtx,'do I trust this',{});
+  if(!/I am looking at this right now|safe next move|System health/i.test(dataTrustShortCommand)||/Open Content tracker|Current Work Card|Check system health only/i.test(dataTrustShortCommand))failures.push('data_trust_short_route_guard');
+  var dataThenMoveCommand=getMissionCommandResponse('ask',liveCohesionCtx,'show me the data then tell me the move',{});
+  if(!/data I can use|Move from the cleanest loaded signal/i.test(dataThenMoveCommand)||/Right now, money, DPC, pipeline/i.test(dataThenMoveCommand))failures.push('data_then_move_route_guard');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString()},history:[]},lastActionPlan:{label:'Prep Call',action:'prep the booked call and add calendar detail',target:'sales_coach',reason:'decision_memory_booked'}}));
   var bookedCardOwner=getMissionCommandResponse('ask',liveCohesionCtx,'what card owns this',{});
   if(!/Sales and Manager|calendar detail|call prep/i.test(bookedCardOwner)||/Open Content tracker|This belongs to Mission Command/i.test(bookedCardOwner))failures.push('booked_card_owner_cohesion_guard');
