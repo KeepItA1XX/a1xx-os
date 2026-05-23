@@ -12495,7 +12495,16 @@ function getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,kind){
     return 'Use that short window for one measurable move.<br><br>Send one DM or make one cold call, then log the result before opening another lane.';
   }
   if(kind==='clean'||/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|clean version|clean read)\b/.test(q)){
-    return 'Clean read. The day has not produced a logged signal yet.<br><br>Do one outreach or sales action, then log the result so Mission Command has something real to steer from.';
+    if(/\b(wrong read|nah not that|no not that)\b/.test(q)){
+      return 'Got it. Staying on the clean starter read.<br><br>Nothing is logged in DPC yet, so the next move is one outreach or sales action.<br><br>Log the result so Mission Command has something real to steer from.';
+    }
+    if(/\b(that sounds disconnected)\b/.test(q)){
+      return 'Fair. The connection is simple.<br><br>DPC is empty, so Mission Command is trying to create the first measurable money signal.<br><br>Do one outreach or sales action, then log what happened.';
+    }
+    if(/\b(answer like.*know what)\b/.test(q)){
+      return 'You are trying to get moving without opening every lane.<br><br>Start with one outreach or sales action and log the result.<br><br>That gives the OS a real signal instead of another guess.';
+    }
+    return 'Here is the clean version.<br><br>The day has not produced a logged signal yet.<br><br>Do one outreach or sales action, then log the result so Mission Command has something real to steer from.';
   }
   return 'You are trying to get the day moving.<br><br>Start with one measurable outreach or sales action, then log the result.';
 }
@@ -17180,8 +17189,8 @@ function runMissionBroadRegressionHardeningV1(){
   var priorContent=window.__contentPieces;
   var priorProduction=window.__productionPieces;
   var priorCalendar=window.__calEvents;
-  var localKeys=[MISSION_CHAT_HISTORY_KEY,MISSION_CHAT_ACTIVE_SESSION_KEY,MISSION_CHAT_ACTIVE_ALIAS_KEY].filter(Boolean);
-  var sessionKeys=[MISSION_BRAIN_SESSION_V2_KEY,MISSION_CONTEXT_MODE_KEY].filter(Boolean);
+  var localKeys=[MISSION_CHAT_HISTORY_KEY,MISSION_CHAT_ACTIVE_SESSION_KEY,MISSION_CHAT_ACTIVE_ALIAS_KEY,MISSION_RESULT_EVENT_LEDGER_KEY_V12].filter(Boolean);
+  var sessionKeys=[MISSION_BRAIN_SESSION_V2_KEY,MISSION_CONTEXT_MODE_KEY,MISSION_RESULT_EVENT_LEDGER_KEY_V12,MISSION_FRESH_STARTER_MARKER_KEY_V12].filter(Boolean);
   var savedLocal={};
   var savedSession={};
   localKeys.forEach(function(key){try{savedLocal[key]=localStorage.getItem(key);}catch(e){savedLocal[key]=null;}});
@@ -17220,13 +17229,30 @@ function runMissionBroadRegressionHardeningV1(){
     });
     var qaCalendarEvents=window.__calEvents;
     window.__calEvents=[];
-    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false},history:[{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false}]}}));
+    var qaTruthChatId='qa_truth_ledger_chat';
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{
+      id:qaTruthChatId,
+      title:'QA Truth Ledger',
+      createdAt:new Date(Date.now()-1000).toISOString(),
+      updatedAt:new Date().toISOString(),
+      messages:[
+        {role:'user',body:'booked',ts:new Date().toISOString()},
+        {role:'user',body:'paid',ts:new Date().toISOString()}
+      ],
+      memory:{brainSession:{}}
+    }]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,qaTruthChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,qaTruthChatId);
+    sessionStorage.removeItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false,chatId:qaTruthChatId},history:[{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false,chatId:qaTruthChatId}]}}));
     var truthLedger=getMissionContextTruthLedgerV1(ctx);
     if(!truthLedger||truthLedger.session.booked<1||!missionTruthLedgerHasDiscrepancyV1(truthLedger,'session_booked_not_confirmed'))failures.push('truth_ledger_session_booked_discrepancy');
     var bookedTruthAnswer=getMissionBookedCallsCountAnswerV1(ctx).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Chat-only result memory: 1 booked/i.test(bookedTruthAnswer)||!/not confirmed in DPC, CRM, or Calendar/i.test(bookedTruthAnswer))failures.push('truth_ledger_booked_count_copy');
     window.__calEvents=qaCalendarEvents;
-    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false},history:[{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false}]}}));
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false,chatId:qaTruthChatId},history:[{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString(),truthStatus:'session_only',confirmed:false,chatId:qaTruthChatId}]}}));
     var paidTruthAnswer=getMissionMoneyReadResponseV1(Object.assign({},ctx,{dpc:{money:0}}),'how much money have I made today').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/paid result in this chat/i.test(paidTruthAnswer)||!/does not confirm it yet/i.test(paidTruthAnswer))failures.push('truth_ledger_paid_money_copy');
     sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
@@ -17241,6 +17267,20 @@ function runMissionBroadRegressionHardeningV1(){
     var frameTwo=applyMissionResponseFrameVarietyGuardV1('Cleaner read:<br><br>Open Content.','now','make it make sense',{});
     if(!/^Cleaner read:/i.test(frameOne)||/^Cleaner read:/i.test(frameTwo))failures.push('response_frame_cleaner_rotation');
     try{sessionStorage.removeItem(MISSION_RESPONSE_FRAME_STORE_KEY_V1);}catch(e){}
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{
+      id:'qa_broad_prompt_chat',
+      title:'QA Broad Prompt Chat',
+      createdAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString(),
+      messages:[],
+      memory:{brainSession:{}}
+    }]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_broad_prompt_chat');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_broad_prompt_chat');
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    sessionStorage.removeItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
     var prompts=[
       {name:'brief_card',q:'read the brief card',must:/I checked the Brief|Mission Brief read/i,card:'brief'},
       {name:'outreach_card',q:'what should i do on the outreach card',must:/I checked Outreach|Outreach card read/i,card:'outreach'},
