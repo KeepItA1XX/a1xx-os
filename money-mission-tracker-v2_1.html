@@ -17331,7 +17331,7 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'money_make_today',q:'what can i do to make some money today',must:/I checked the money lane|Money read|Next/i},
       {name:'sync_calendar_stale',q:'calendar stale',must:/current enough|Data read|sync|missing|loaded/i},
       {name:'sync_trust_data',q:'do i trust this data',must:/safe next move|Data read|Clean enough|Partial|loaded/i},
-      {name:'sync_trust_short',q:'do I trust this',must:/I am looking at this right now|safe next move|loaded|System health/i},
+      {name:'sync_trust_short',q:'do I trust this',must:/I am looking at this right now|I'm looking at this right now|safe next move|clean enough|loaded|System health/i},
       {name:'sync_source_origin',q:'where is that coming from',must:/current app packet|System health|CRM leads|loaded/i},
       {name:'sync_data_then_move',q:'show me the data then tell me the move',must:/data I can use|System health|Move from the cleanest loaded signal/i},
       {name:'production_studio_session',q:'production studio session',must:/Production|studio|asset|song|beat/i},
@@ -22515,6 +22515,9 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   if(turnV2&&turnV2.responseDepth)depth=turnV2.responseDepth;
   var guidedProfile=getMissionGuidanceProfile(question||'',route,conv&&conv.type,brainState||{});
   function withWorker(html){return html?(missionPromptIsWorkerMention(question)?getMissionWorkerLabelHtml(route):'')+html:html;}
+  if(typeof isMissionDataTrustPromptV12==='function'&&isMissionDataTrustPromptV12(question||'')){
+    return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false,presence:false})),b2:'',b3:''};
+  }
   if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(question||'')){
     return {b1:withWorker(getMissionBookedLogTargetAnswerV13()),b2:'',b3:''};
   }
@@ -23243,6 +23246,8 @@ function runMissionIntegritySelfCheck(){
   if(!/current enough|Currentness read|Trust level/i.test(currentDataCommand)||/Check system health only/i.test(currentDataCommand))failures.push('data_current_command_route_guard');
   var dataSourceCommand=getMissionCommandResponse('ask',liveCohesionCtx,'where is that coming from',{});
   if(!/current app packet|System health|safe next move/i.test(dataSourceCommand)||/Open Content tracker|Current Work Card|Check system health only/i.test(dataSourceCommand))failures.push('data_source_command_route_guard');
+  var dataSourceBubble=buildMissionBubblePacket('sync',{type:'CONV_DATA_REQUEST',route:'sync'},liveCohesionCtx,'where is that coming from',dataSourceCommand,'<strong>Pattern:</strong> This has come up before.<br><br>Keep the next move small enough to log.','',{});
+  if(dataSourceBubble.b2||dataSourceBubble.b3||/Pattern:|This has come up before|Keep the next move small enough to log/i.test([dataSourceBubble.b1,dataSourceBubble.b2,dataSourceBubble.b3].join(' ')))failures.push('data_trust_pattern_bubble_guard');
   var dataTrustShortCommand=getMissionCommandResponse('ask',liveCohesionCtx,'do I trust this',{});
   if(!/I am looking at this right now|safe next move|System health/i.test(dataTrustShortCommand)||/Open Content tracker|Current Work Card|Check system health only/i.test(dataTrustShortCommand))failures.push('data_trust_short_route_guard');
   var dataThenMoveCommand=getMissionCommandResponse('ask',liveCohesionCtx,'show me the data then tell me the move',{});
@@ -23544,7 +23549,7 @@ function runMissionIntegritySelfCheck(){
   if(!masterQASweep.passed)failures=failures.concat(masterQASweep.failures);
   if(priorMemorySession===null)sessionStorage.removeItem(MISSION_BRAIN_SESSION_V2_KEY);else sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,priorMemorySession);
   window.__missionIntegritySelfCheckActive=false;
-  return {passed:!failures.length,failures:failures,total:110};
+  return {passed:!failures.length,failures:failures,total:111};
 }
 
 function runMissionCommandSelfCheck(){
