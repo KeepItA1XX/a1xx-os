@@ -12319,15 +12319,32 @@ function getMissionResultCardOwnerAnswerV14(result){
   return '';
 }
 
-function getMissionResultCleanReadAnswerV14(result){
+function getMissionResultCorrectionLeadV30(question){
+  var q=normalizeMissionQuestion(question||'');
+  if(/\b(that sounds disconnected|disconnected)\b/.test(q))return 'Fair.';
+  if(/\b(wrong read|nah not that|no not that|not what i meant)\b/.test(q))return 'Got it.';
+  if(/\b(make it make sense|give me the clean version|give me the clean read|clean version|clean read)\b/.test(q))return 'Clean read.';
+  return '';
+}
+
+function missionJoinResultCorrectionLeadV30(lead,body){
+  lead=String(lead||'').trim();
+  body=String(body||'').trim();
+  if(!lead)return body;
+  if(new RegExp('^'+lead.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(body))return body;
+  return lead+'<br><br>'+body;
+}
+
+function getMissionResultCleanReadAnswerV14(result,question){
   if(!result||!result.type)return '';
-  if(result.type==='booked')return 'Clean read. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
-  if(result.type==='paid')return 'You are right to keep the read clean. The sale moved past conversation and into delivery.<br><br>Log the money, update the lead, then protect what needs to be delivered.';
-  if(result.type==='reply')return 'You have signal now.<br><br>Do not pitch yet. Qualify intent with one clean question, then log what they say back.';
-  if(result.type==='no_reply')return 'That touch did not create signal yet.<br><br>Log no reply, set one bump if it is worth it, then move to the next warm lead.';
-  if(result.type==='no')return 'That one closed as a no.<br><br>Capture the reason, update the lead, then move to the next warm signal.';
-  if(result.type==='follow_up')return 'This is still alive, but unresolved.<br><br>Isolate the real concern: money, timing, trust, or fit. Then set the next touch.';
-  if(result.type==='done')return 'The action is done, but the result is not clear yet.<br><br>Tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+  var lead=getMissionResultCorrectionLeadV30(question||'');
+  if(result.type==='booked')return missionJoinResultCorrectionLeadV30(lead,'The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.');
+  if(result.type==='paid')return missionJoinResultCorrectionLeadV30(lead,'The sale moved past conversation and into delivery.<br><br>Log the money, update the lead, then protect what needs to be delivered.');
+  if(result.type==='reply')return missionJoinResultCorrectionLeadV30(lead,'You have signal now.<br><br>Do not pitch yet. Qualify intent with one clean question, then log what they say back.');
+  if(result.type==='no_reply')return missionJoinResultCorrectionLeadV30(lead,'That touch did not create signal yet.<br><br>Log no reply, set one bump if it is worth it, then move to the next warm lead.');
+  if(result.type==='no')return missionJoinResultCorrectionLeadV30(lead,'That one closed as a no.<br><br>Capture the reason, update the lead, then move to the next warm signal.');
+  if(result.type==='follow_up')return missionJoinResultCorrectionLeadV30(lead,'This is still alive, but unresolved.<br><br>Isolate the real concern: money, timing, trust, or fit. Then set the next touch.');
+  if(result.type==='done')return missionJoinResultCorrectionLeadV30(lead,'The action is done, but the result is not clear yet.<br><br>Tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane.');
   return '';
 }
 
@@ -12340,7 +12357,7 @@ function getMissionLatestResultFollowthroughAnswerV14(question){
   if(missionIsResultWhyAskV14(q))return getMissionResultWhyAnswerV14(latest);
   if(typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(q))return getMissionResultLogTargetAnswerV14(latest,q);
   if(missionIsResultCardOwnerAskV14(q))return getMissionResultCardOwnerAnswerV14(latest);
-  if(missionIsResultCleanReadAskV14(q))return getMissionResultCleanReadAnswerV14(latest);
+  if(missionIsResultCleanReadAskV14(q))return getMissionResultCleanReadAnswerV14(latest,q);
   return '';
 }
 
@@ -12758,6 +12775,11 @@ function getMissionResultTruthTrustLineV15(ctx){
   if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_booked_not_confirmed'))notes.push('booked call is chat-only until DPC, CRM, or Calendar confirms it');
   if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_reply_not_confirmed'))notes.push('reply is chat-only until DPC or Outreach confirms it');
   if(missionTruthLedgerHasDiscrepancyV1(ledger,'session_paid_not_confirmed'))notes.push('paid result is chat-only until DPC or CRM confirms it');
+  var latest=typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(latest&&latest.type==='follow_up')notes.push('follow-up is chat-only until the lead, calendar, or Outreach confirms the next touch');
+  if(latest&&latest.type==='no_reply')notes.push('no reply is chat-only until Outreach or DPC confirms the touch');
+  if(latest&&latest.type==='no')notes.push('no result is chat-only until the lead is marked closed, lost, or not a fit');
+  if(latest&&latest.type==='done')notes.push('done is action-only until the actual result is captured');
   if(!notes.length)return '';
   return 'Result trust: '+notes.join('; ')+'.';
 }
@@ -18810,6 +18832,8 @@ function runMissionBroadRegressionHardeningV1(){
     sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     getMissionCommandResponse('ask',ctx,'follow-up',{});
+    var followUpTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust from this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Result trust: follow-up is chat-only until the lead, calendar, or Outreach confirms the next touch/i.test(followUpTrustVisible)||/paid result is chat-only|booked call is chat-only/i.test(followUpTrustVisible))failures.push('follow_up_data_trust_truth_guard');
     var followUpDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/follow-up as unresolved|isolate money, timing, trust, or fit|next touch/i.test(followUpDataMoveVisible)||/one outreach or sales action/i.test(followUpDataMoveVisible))failures.push('follow_up_data_trust_move_guard');
     var followUpDataLogVisible=String(getMissionCommandResponse('ask',ctx,'what should I trust and what do I log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
@@ -18821,6 +18845,8 @@ function runMissionBroadRegressionHardeningV1(){
     sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     getMissionCommandResponse('ask',ctx,'no reply',{});
+    var noReplyTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust from this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Result trust: no reply is chat-only until Outreach or DPC confirms the touch/i.test(noReplyTrustVisible)||/paid result is chat-only|booked call is chat-only/i.test(noReplyTrustVisible))failures.push('no_reply_data_trust_truth_guard');
     var noReplyDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/log no reply|set one bump|next warm signal/i.test(noReplyDataMoveVisible)||/one outreach or sales action/i.test(noReplyDataMoveVisible))failures.push('no_reply_data_trust_move_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Soft Result Done Data Trust',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
@@ -18830,6 +18856,8 @@ function runMissionBroadRegressionHardeningV1(){
     sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     getMissionCommandResponse('ask',ctx,'done',{});
+    var doneTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust from this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Result trust: done is action-only until the actual result is captured/i.test(doneTrustVisible)||/paid result is chat-only|booked call is chat-only/i.test(doneTrustVisible))failures.push('done_data_trust_truth_guard');
     var doneDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/capture the actual result|no reply, reply, booked, paid/i.test(doneDataMoveVisible)||/one outreach or sales action/i.test(doneDataMoveVisible))failures.push('done_data_trust_move_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Mixed Result No Reply To Reply',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
@@ -18893,6 +18921,8 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'paid',{});
     var paidHelpReplyVisible=String(getMissionCommandResponse('ask',ctx,'help me reply',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/post-sale|locking this in|delivery step/i.test(paidHelpReplyVisible)||/Before I explain anything|what made you want to talk/i.test(paidHelpReplyVisible))failures.push('result_aware_paid_help_reply_guard');
+    var paidWrongReadVisible=String(getMissionCommandResponse('ask',ctx,'wrong read',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/^Got it\.\s+The sale moved past conversation and into delivery/i.test(paidWrongReadVisible)||/booked call|calendar detail|DPC is empty/i.test(paidWrongReadVisible))failures.push('result_clean_read_paid_ack_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Aware Reply Booked',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18902,6 +18932,9 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'booked',{});
     var bookedHelpReplyVisible=String(getMissionCommandResponse('ask',ctx,'help me reply',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/calendar|down for the call|Come ready/i.test(bookedHelpReplyVisible)||/Before I explain anything|what made you want to talk/i.test(bookedHelpReplyVisible))failures.push('result_aware_booked_help_reply_guard');
+    getMissionCommandResponse('ask',ctx,'follow-up',{});
+    var followUpDisconnectedVisible=String(getMissionCommandResponse('ask',ctx,'that sounds disconnected',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/^Fair\.\s+This is still alive, but unresolved/i.test(followUpDisconnectedVisible)||/Last result was booked|calendar detail|DPC is empty/i.test(followUpDisconnectedVisible))failures.push('result_clean_read_follow_up_ack_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Aware Reply No Reply',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -19180,7 +19213,7 @@ function runMissionBroadRegressionHardeningV1(){
     restoreMissionStorageForQaV1(localStorage,savedLocalAll);
     restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:173,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 3 output-integrity checks + 120 sales/result/data/mixed-lane/storage/legacy-watchlist/silence/accountability checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:178,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 3 output-integrity checks + 125 sales/result/data/mixed-lane/storage/legacy-watchlist/silence/accountability checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
