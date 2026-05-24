@@ -3497,9 +3497,9 @@ body:before{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.0 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
-var APP_BUILD_STAMP='2026-05-24 10:41 ET · call-prep lead-label polish';
-var APP_BRAIN_BUILD='Mission Command call-prep lead label guard';
-var APP_CACHE_TOKEN='mmos-20260524-1041';
+var APP_BUILD_STAMP='2026-05-24 10:47 ET · calendar prep sibling hardening';
+var APP_BRAIN_BUILD='Mission Command calendar prep sibling guards';
+var APP_CACHE_TOKEN='mmos-20260524-1047';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var TODOIST_KEY='a1xx_todoist_v1';
@@ -12465,7 +12465,7 @@ function getMissionTimePressureResultAnswerV20(question,ctx){
 
 function missionIsCalendarEventPrepAskV21(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(prep me for (a|the|this|my|next) call|prepare me for (a|the|this|my|next) call|prep this call|prep (before|for) (my|the|this|next) call|prep (before|for) (my|the|this) next call|call prep|call in \d+|call in ten|call in five|i have a call in \d+|i have a call in ten|i have a call in five|sales call in \d+|what do i need before (this|my|the|next) (meeting|call)|before (this|my|the|next) (meeting|call) what do i need|what should i prep before (my|the|this|next) next call|what should i prep before (my|the|this|next) call|what should i prep (for|before) (my|the|this) next call|what should i ask on the call|how do i start the call)\b/.test(q);
+  return /\b(prep me for (a|the|this|my|next) call|prepare me for (a|the|this|my|next) call|prep this call|prep (before|for) (my|the|this|next) call|prep (before|for) (my|the|this) next call|prep me before (calendar|the calendar|my calendar|next event|the next event|meeting|the meeting)|call prep|call in \d+|call in ten|call in five|i have a call in \d+|i have a call in ten|i have a call in five|sales call in \d+|what do i need before (this|my|the|next) (meeting|call|event)|what do i need before (my|the|this) next (meeting|call|event)|before (this|my|the|next) (meeting|call|event) what do i need|what should i prep before (my|the|this|next) next call|what should i prep before (my|the|this|next) call|what should i prep (for|before) (my|the|this) next call|what should i prep before (calendar|the calendar|my calendar|next event|the next event|meeting|the meeting)|what should i ask on (the|this|my|next) (call|meeting)|what should i ask before (the|this|my|next) (call|meeting)|what should i do before (my|the|this|next) next (meeting|call|event)|what should i do before (my|the|this|next) (meeting|call|event)|how do i start (the|this|my|next) (call|meeting))\b/.test(q);
 }
 
 function getMissionCalendarEventPrepLabelV21(ctx){
@@ -25454,8 +25454,13 @@ function runMissionIntegritySelfCheck(){
   if(getMissionRenderRoute('i meant sales not pipeline',{})!=='sales')failures.push('render_route_correction_sales');
   if(getMissionRenderRoute('booked',{})!=='sales')failures.push('render_route_booked_sales');
   if(getMissionRenderRoute('what should i prep before my next call',{})!=='calendar')failures.push('render_route_calendar_call_prep');
+  ['what do I need before my next call','prep me before calendar','what should I do before my next meeting','what should I ask before the meeting'].forEach(function(calendarPrepSibling){
+    if(getMissionRenderRoute(calendarPrepSibling,{})!=='calendar')failures.push('render_route_calendar_prep_sibling_'+calendarPrepSibling.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''));
+  });
   var callPrepBubble=buildMissionBubblePacket('leads',{type:'CONV_DATA_REQUEST',route:'leads'},actionCtx,'what should i prep before my next call','Prep 12:00 PM · PLAN WEEK around one outcome.<br><br>Opening question: "Before I explain anything, what made you want to talk today?"','','',{});
   if(callPrepBubble.b2||/Pipeline is showing|call-ready lead|open leads/i.test([callPrepBubble.b1,callPrepBubble.b2,callPrepBubble.b3].join(' ')))failures.push('bubble_protect_calendar_call_prep');
+  var calendarPrepSiblingBubble=buildMissionBubblePacket('leads',{type:'CONV_DATA_REQUEST',route:'leads'},actionCtx,'what do I need before my next call','Prep 12:00 PM · PLAN WEEK around one outcome.<br><br>Opening question: "Before I explain anything, what made you want to talk today?"','','',{});
+  if(calendarPrepSiblingBubble.b2||/Pipeline is showing|call-ready lead|open leads/i.test([calendarPrepSiblingBubble.b1,calendarPrepSiblingBubble.b2,calendarPrepSiblingBubble.b3].join(' ')))failures.push('bubble_protect_calendar_prep_sibling');
   var genericLeadPrep=sanitizeMissionCallPrepLeadLineV23('Unnamed lead · active · lead');
   if(/Unnamed lead|active · lead/i.test(genericLeadPrep)||genericLeadPrep!=='No specific lead selected yet')failures.push('call_prep_generic_lead_label_guard');
   if(getMissionThreadExplicitRouteFromQuestionV1('/pipeline')!=='leads'||getMissionThreadExplicitRouteFromQuestionV1('pipeline')!=='leads')failures.push('thread_explicit_pipeline_normalized');
