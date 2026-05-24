@@ -12102,6 +12102,46 @@ function getMissionLatestFreshResultV12(){
   }
 }
 
+function getMissionActiveResultIgnoringFreshBoundaryV23(session,activeChat){
+  try{
+    var active=activeChat||null;
+    if(!active&&typeof getActiveMissionSession==='function')active=getActiveMissionSession();
+    var activeId=active&&active.id||localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||localStorage.getItem(MISSION_CHAT_ACTIVE_ALIAS_KEY)||'';
+    var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
+    var candidates=[];
+    function addCandidate(item,source,timeField){
+      if(!item||!item.type||item.type==='call_done')return;
+      if(activeId&&item.chatId&&item.chatId!==activeId)return;
+      if(source==='result_event_ledger'&&activeId&&!item.chatId)return;
+      var recordedAt=Date.parse(item[timeField||'recordedAt']||item.recordedAt||item.ts||'');
+      if(!isNaN(activeCreatedAt)&&(isNaN(recordedAt)||recordedAt<activeCreatedAt))return;
+      if(isNaN(recordedAt))return;
+      candidates.push(Object.assign({source:source||item.source||'active_result'},item,{recordedAt:new Date(recordedAt).toISOString()}));
+    }
+    session=session||{};
+    var loop=session.resultLoop||{};
+    addCandidate(loop.lastResult,'result_loop_last','recordedAt');
+    (Array.isArray(loop.history)?loop.history:[]).forEach(function(item){addCandidate(item,'result_loop_history','recordedAt');});
+    getMissionResultEventLedgerV12().forEach(function(item){addCandidate(item,'result_event_ledger','recordedAt');});
+    (active&&Array.isArray(active.messages)?active.messages:[]).forEach(function(msg){
+      if(!msg||msg.role!=='user')return;
+      var signal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(msg.body||''):null;
+      if(!signal||signal.type==='call_done')return;
+      addCandidate({
+        type:signal.type,
+        label:signal.label,
+        route:'sales',
+        chatId:activeId,
+        recordedAt:msg.ts||msg.at||msg.timestamp||msg.createdAt||''
+      },'active_chat_message','recordedAt');
+    });
+    candidates.sort(function(a,b){return Date.parse(b.recordedAt||'')-Date.parse(a.recordedAt||'');});
+    return candidates[0]||null;
+  }catch(e){
+    return null;
+  }
+}
+
 function missionHasFreshBookedContextV12(){
   try{
     var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
@@ -13081,7 +13121,8 @@ function missionShouldCreateSilentFreshBoundaryV17(input,ctx,session,activeChat)
   session=session||{};
   var loop=session.resultLoop||{};
   var latestFreshResult=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
-  var currentResult=loop.lastResult&&loop.lastResult.type&&missionResultIsFreshForActiveChatV12(loop.lastResult)?loop.lastResult:(latestFreshResult&&latestFreshResult.type&&missionResultIsFreshForActiveChatV12(latestFreshResult)?latestFreshResult:null);
+  var activeResult=typeof getMissionActiveResultIgnoringFreshBoundaryV23==='function'?getMissionActiveResultIgnoringFreshBoundaryV23(session,active):null;
+  var currentResult=loop.lastResult&&loop.lastResult.type&&missionResultIsFreshForActiveChatV12(loop.lastResult)?loop.lastResult:(latestFreshResult&&latestFreshResult.type&&missionResultIsFreshForActiveChatV12(latestFreshResult)?latestFreshResult:(activeResult&&activeResult.type?activeResult:null));
   var currentPending=loop.pendingAction||session.lastActionPlan||null;
   var messageCount=active&&Array.isArray(active.messages)?active.messages.length:0;
   var activeCreatedAt=active&&active.createdAt?Date.parse(active.createdAt):NaN;
@@ -18618,6 +18659,17 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/paid loop|log the money|delivery step/i.test(paidBlockVisible)||/choose one outcome|open another lane|return to the active mission/i.test(paidBlockVisible))failures.push('calendar_block_paid_result_guard');
     var paidTimeSiblingVisible=String(getMissionCommandResponse('ask',ctx,'do I have time',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/paid loop|log the money|delivery step|protect delivery/i.test(paidTimeSiblingVisible)||/Deep window|Define the one result|production unless/i.test(paidTimeSiblingVisible))failures.push('calendar_sibling_paid_time_guard');
+    var paidSecondaryQuestion='do I have time';
+    var paidSecondaryBrain=getMissionBrainState(ctx,paidSecondaryQuestion,'');
+    var paidSecondaryAnswer=getMissionCommandResponse('ask',ctx,paidSecondaryQuestion,paidSecondaryBrain);
+    var paidSecondaryRoute=getMissionRenderRoute(paidSecondaryQuestion,paidSecondaryBrain);
+    var paidSecondaryConv=getMissionConversationType(paidSecondaryQuestion,ctx,null,paidSecondaryBrain);
+    var paidSecondaryShape=getMissionQuestionShape(paidSecondaryQuestion);
+    var paidSecondaryMode=getMissionResponseMode(paidSecondaryQuestion,paidSecondaryRoute,ctx,paidSecondaryBrain);
+    var paidSecondaryFollow=getMissionConversationEnding(paidSecondaryRoute,paidSecondaryShape,paidSecondaryMode,ctx,paidSecondaryQuestion);
+    var paidSecondaryPacket=buildMissionBubblePacket(paidSecondaryRoute,paidSecondaryConv,ctx,paidSecondaryQuestion,paidSecondaryAnswer,paidSecondaryFollow,extractMissionLinkRows(paidSecondaryAnswer),paidSecondaryBrain);
+    var paidSecondaryVisible=String([paidSecondaryPacket.b1,paidSecondaryPacket.b2,paidSecondaryPacket.b3].filter(Boolean).join(' ')).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/paid loop|log the money|delivery step|protect delivery/i.test(paidSecondaryVisible)||/Calendar:|Prep next event|Mark Step Done|Save Note|Start current block/i.test(paidSecondaryVisible))failures.push('secondary_bubble_paid_time_guard');
     getMissionCommandResponse('ask',ctx,'follow-up',{});
     var followUpPrepSiblingVisible=String(getMissionCommandResponse('ask',ctx,'what needs prep',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/follow.?up loop|money, timing, trust, or fit|next touch/i.test(followUpPrepSiblingVisible)||/write the outcome|prep the one result|calendar detail/i.test(followUpPrepSiblingVisible))failures.push('calendar_sibling_follow_up_prep_guard');
@@ -23882,6 +23934,21 @@ function getMissionActionButtons(route,ctx,question){
   return buttons.length?'<div class="mission-action-row">'+buttons.slice(0,3).join('')+'</div>':'';
 }
 
+function missionShouldSuppressSecondaryBubblesForResultTruthV23(question,answer){
+  try{
+    if(typeof isMissionDataTrustPromptV12==='function'&&isMissionDataTrustPromptV12(question||''))return true;
+    var q=normalizeMissionQuestion(question||'');
+    var text=String(answer||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+    if(!latest||!latest.type)return false;
+    if(/\b(Last result was|Last result needs|booked loop|paid loop|reply loop|no reply loop|follow.?up loop|Conversation moved to calendar|Money result logged|Log the booked call|Log the paid result|That split lives|sale moved past conversation|past the sale)\b/i.test(text))return true;
+    if(/\b(what next|what now|now what|what should i log|what do i log|what card owns this|what lane owns this|what counts as done|what should i come back with|how much time|do i have time|am i free|what is on my calendar|what needs prep)\b/.test(q)&&/\b(booked|paid|reply|no reply|follow.?up|done|calendar detail|log the money|protect delivery|qualify intent|next warm signal)\b/i.test(text))return true;
+    return false;
+  }catch(e){
+    return false;
+  }
+}
+
 function appendMissionConfirmation(actionId,data){
   var row=appendMissionBubble('assistant','<span style="color:#8f9aa3">Confirm local action?</span><div class="mission-action-row"><button class="mission-action-btn confirm" onclick="mcConfirmAction(\''+escapeHtml(actionId)+'\',\''+encodeURIComponent(JSON.stringify(data||{}))+'\')">Confirm</button><button class="mission-action-btn cancel" onclick="mcCancelAction()">Cancel</button></div>',true,'suggest-row');
   return row;
@@ -23971,6 +24038,9 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   if(protectedCorrectionRoute||protectedCountQuestion||protectedResultSignal&&protectedResultTypes.test(protectedResultSignal.type||'')){
     if(protectedCorrectionRoute)route=protectedCorrectionRoute;
     return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false})),b2:'',b3:''};
+  }
+  if(typeof missionShouldSuppressSecondaryBubblesForResultTruthV23==='function'&&missionShouldSuppressSecondaryBubblesForResultTruthV23(question||'',answer||'')){
+    return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false,presence:false})),b2:'',b3:''};
   }
   var allowSuggestions=missionQuestionAllowsSuggestionBubbleV2(route,conv,question||'',links||[],turnV2);
   var allowActions=missionQuestionAllowsActionButtons(route,question||'');
