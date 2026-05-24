@@ -1996,7 +1996,8 @@ body:before{
             </div>
             <div class="setup-row" style="gap:8px;display:flex;flex-wrap:wrap;">
               <button class="setup-btn" onclick="missionFlushSheetsRetryQueue();updateMissionSyncStatusUI();">Flush Queue</button>
-              <button class="setup-btn" onclick="missionBackupAppMemoryToSheets();">Manual Backup</button>
+              <button class="setup-btn" onclick="missionBackupAppMemoryToSheets(false);">Manual Backup</button>
+              <button class="setup-btn" onclick="missionSheetsSendTestEventV11();">Test Event</button>
             </div>
           </div>
           <div class="setup-panel" id="setup-todoist">
@@ -3513,9 +3514,9 @@ body:before{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.0 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
-var APP_BUILD_STAMP='2026-05-24 11:43 ET · System Hub subtab click fix';
+var APP_BUILD_STAMP='2026-05-24 12:00 ET · Sheets write verification';
 var APP_BRAIN_BUILD='Mission Command Sheets sync prep';
-var APP_CACHE_TOKEN='mmos-20260524-1143';
+var APP_CACHE_TOKEN='mmos-20260524-1200';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -3888,6 +3889,22 @@ function postToAppsScript(url,payload,options){
   },options||{}));
 }
 
+function waitMs(ms){
+  return new Promise(function(resolve){setTimeout(resolve,ms||800);});
+}
+
+async function getAppsScriptJson(action,params){
+  var appUrl=localStorage.getItem(SHEETS_KEY);
+  if(!appUrl)throw new Error('Missing Apps Script URL.');
+  var query=Object.assign({action:action,_:Date.now()},params||{});
+  var qs=Object.keys(query).map(function(key){return encodeURIComponent(key)+'='+encodeURIComponent(query[key]);}).join('&');
+  var sep=appUrl.indexOf('?')>=0?'&':'?';
+  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
+  var text=await res.text();
+  try{return JSON.parse(text);}
+  catch(e){throw new Error('Apps Script returned unreadable data. Check deployment URL.');}
+}
+
 async function safeLoad(label,loader,fallback,ms){
   try{
     return await Promise.race([
@@ -4167,9 +4184,20 @@ function saveSheets(){
 function testSheets(){
   var url=localStorage.getItem(SHEETS_KEY);
   if(!url){document.getElementById('sheets-status').textContent='Enter URL first.';return;}
-  document.getElementById('sheets-status').textContent='Sending test...';
-  postToAppsScript(url,{type:'test',date:new Date().toLocaleDateString()});
-  setTimeout(function(){document.getElementById('sheets-status').style.color='#639922';document.getElementById('sheets-status').textContent='Sent — check Activity Log in your Sheet.';},800);
+  var status=document.getElementById('sheets-status');
+  if(status){status.style.color='';status.textContent='Checking bridge...';}
+  getAppsScriptJson('health').then(function(res){
+    var health=res&&res.health||{};
+    if(status){
+      status.style.color=(health.sheets==='ok')?'#639922':'#d4a017';
+      status.textContent=(health.sheets==='ok')?'Bridge verified — Sheets is readable.':'Bridge responded, but Sheets health needs review.';
+    }
+  }).catch(function(e){
+    if(status){
+      status.style.color='#e05555';
+      status.textContent='Bridge check failed: '+(e&&e.message?e.message:'check URL/deployment');
+    }
+  });
 }
 
 function setBackupStatus(state,title,detail,badge){
@@ -4233,15 +4261,34 @@ async function sendBackup(silent){
     setBackupBusy(true);
   }
   try{
+    var startedAt=Date.now();
     await postToAppsScript(appUrl,{type:'backup_save',payload:json,keyCount:keyCount,size:json.length});
-    if(!silent)setBackupStatus('ok','Backup saved','Saved '+keyCount+' keys to Google Sheets. Activity Log should show the backup event shortly.','Done');
+    var verified=await verifyBackupSavedToSheetsV1(keyCount,json.length,startedAt);
+    if(!verified.ok)throw new Error(verified.error||'Backup was sent, but the newest Sheet row could not be verified.');
+    if(!silent)setBackupStatus('ok','Backup verified','Saved '+keyCount+' keys to Google Sheets and read the newest backup row back.','Done');
     if(!silent)logDevChange('Claude (A1XX OS)','data → Sheets','Manual backup: '+keyCount+' keys, '+Math.round(json.length/1000)+'KB');
-    return {ok:true,keyCount:keyCount,size:json.length};
+    return {ok:true,keyCount:keyCount,size:json.length,verified:true};
   }catch(e){
-    if(!silent)setBackupStatus('err','Backup failed',e.message||'The backup request did not complete. Check your Apps Script URL and try again.','Error');
+    if(!silent)setBackupStatus('err','Backup not verified',e.message||'The backup request did not verify. Check Apps Script deployment, webhook token, and target Sheet.','Review');
     return {ok:false,error:e.message};
   }finally{
     if(!silent)setBackupBusy(false);
+  }
+}
+
+async function verifyBackupSavedToSheetsV1(keyCount,size,startedAt){
+  try{
+    await waitMs(1400);
+    var res=await getAppsScriptJson('get_backup');
+    var backup=res&&res.backup;
+    if(!backup)return {ok:false,error:'No backup row came back from Sheets.'};
+    var savedAtMs=Date.parse(backup.savedAt||'');
+    if(savedAtMs&&savedAtMs+30000<startedAt)return {ok:false,error:'Sheets still shows an old backup row from '+backup.savedAt+'.'};
+    if(Number(backup.keyCount||0)!==Number(keyCount||0))return {ok:false,error:'Backup row came back, but key count did not match.'};
+    if(Math.abs(Number(backup.size||0)-Number(size||0))>25)return {ok:false,error:'Backup row came back, but payload size did not match.'};
+    return {ok:true,backup:backup};
+  }catch(e){
+    return {ok:false,error:e&&e.message?e.message:'Backup readback failed.'};
   }
 }
 
@@ -14238,6 +14285,49 @@ function missionWriteToSheets(dataType,payload){
   }
 }
 
+function missionSheetsSendTestEventV11(){
+  try{
+    var config=getMissionSheetsConfig();
+    if(!config.enabled||!config.webhookUrl){
+      alert('Turn on Mission Command Sync first.');
+      return false;
+    }
+    var marker='sync_test_'+Date.now();
+    var sent=missionWriteToSheets('mission_dpc_log',{
+      ts:new Date().toISOString(),
+      source:'mission_command_sync_test',
+      action:'sync_test',
+      route:'sync',
+      status:'test',
+      summary:'Mission Command Sync test event',
+      sessionId:marker
+    });
+    if(!sent){
+      alert('Mission Command Sync did not send. Check the URL and enabled state.');
+      return false;
+    }
+    setTimeout(function(){
+      getAppsScriptJson('mission_events',{limit:10}).then(function(res){
+        var rows=Array.isArray(res&&res.rows)?res.rows:[];
+        var found=rows.some(function(row){return row.sessionId===marker||row.action==='sync_test';});
+        if(found){
+          setMissionSheetsConfig({lastSynced:new Date().toISOString()});
+          updateMissionSyncStatusUI();
+          alert('Mission Command Events verified. Check the Mission Command Events tab.');
+        }else{
+          alert('Event sent, but not verified. Deploy Apps Script v1.8 and confirm the Web App URL points to that deployment.');
+        }
+      }).catch(function(e){
+        alert('Event readback failed. This usually means Apps Script v1.8 is not deployed yet. '+(e&&e.message?e.message:''));
+      });
+    },1600);
+    return true;
+  }catch(e){
+    alert('Mission Command Sync test failed: '+(e&&e.message?e.message:e));
+    return false;
+  }
+}
+
 function missionFlushSheetsRetryQueue(){
   try{
     var config=getMissionSheetsConfig();
@@ -14266,9 +14356,9 @@ function missionFlushSheetsRetryQueue(){
   }
 }
 
-function missionBackupAppMemoryToSheets(){
+function missionBackupAppMemoryToSheets(silent){
   try{
-    if(typeof sendBackup==='function')return sendBackup(true);
+    if(typeof sendBackup==='function')return sendBackup(silent!==false);
   }catch(e){}
   return null;
 }
