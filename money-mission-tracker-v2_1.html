@@ -18477,6 +18477,28 @@ function runMissionBroadRegressionHardeningV1(){
       if(!test.must.test(silenceVisible)||test.mustNot.test(silenceVisible))failures.push(test.name+'_silence_reentry_guard');
     });
     [
+      {name:'accountability_empty_fresh_pending_silent',messages:[],brain:{lastActionPlan:{label:'Open Hit List',action:'Open Hit List',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Open Hit List',action:'Open Hit List',route:'leads',suggestedAt:new Date().toISOString()},history:[]},lastActionStatus:'suggested',threadMemory:{activeRoute:'leads',turns:[{question:'who hot',route:'leads',timestamp:new Date().toISOString()}]}},q:'what next',must:/trying to get the day moving|cleanest first move|one outreach|one lane|one action|Define the one result/i,mustNot:/Quick check before we add another move|Did this happen yet|Open Hit List/i},
+      {name:'accountability_paid_result_blocks_pending',messages:[{role:'user',body:'paid',ts:new Date().toISOString()}],brain:{lastActionPlan:{label:'Open Hit List',action:'Open Hit List',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString()},pendingAction:{label:'Open Hit List',action:'Open Hit List',route:'leads',suggestedAt:new Date().toISOString()},history:[{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date().toISOString()}]},lastActionStatus:'suggested',threadMemory:{activeRoute:'leads',turns:[{question:'who hot',route:'leads',timestamp:new Date().toISOString()}]}},q:'what next',must:/Last result was paid|log the money|protect delivery/i,mustNot:/Quick check before we add another move|Did this happen yet|Open Hit List|calendar detail/i},
+      {name:'action_layer_follow_up_result_guard',messages:[],brain:{lastActionPlan:{label:'Open Hit List',action:'Open Hit List',route:'leads',suggestedAt:new Date().toISOString()},resultLoop:{pendingAction:{label:'Open Hit List',action:'Open Hit List',route:'leads',suggestedAt:new Date().toISOString()},history:[]},lastActionStatus:'suggested',threadMemory:{activeRoute:'leads',turns:[{question:'who hot',route:'leads',timestamp:new Date().toISOString()}]}},q:'follow-up',must:/Follow-up logged|still alive|unresolved|money, timing, trust, or fit/i,mustNot:/Move now|Next move: Open Hit List|Quick check before we add another move/i}
+    ].forEach(function(test){
+      var chatId='qa_action_accountability_'+test.name;
+      setStore(MISSION_CHAT_SESSIONS_KEY,[{id:chatId,title:'QA Action Accountability',createdAt:new Date(Date.now()-60000).toISOString(),updatedAt:new Date().toISOString(),messages:test.messages||[],memory:{brainSession:{}}}]);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,chatId);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,chatId);
+      sessionStorage.removeItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
+      sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify(test.brain||{resultLoop:{history:[]},threadMemory:{turns:[]}}));
+      var priorAccountabilityIntegrityFlag=window.__missionIntegritySelfCheckActive;
+      var priorAccountabilitySelfCheckFlag=window.__missionCommandSelfCheckActive;
+      window.__missionIntegritySelfCheckActive=false;
+      window.__missionCommandSelfCheckActive=false;
+      var accountabilityVisible=String(getMissionCommandResponse('ask',ctx,test.q,{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+      window.__missionIntegritySelfCheckActive=priorAccountabilityIntegrityFlag;
+      window.__missionCommandSelfCheckActive=priorAccountabilitySelfCheckFlag;
+      if(!test.must.test(accountabilityVisible)||test.mustNot.test(accountabilityVisible))failures.push(test.name+'_action_accountability_guard');
+    });
+    [
       {name:'paid_data_why',setup:['paid','what data are you using'],q:'why',must:/sale already happened|logging the money|protecting delivery/i,mustNot:/sync is the trust check|pipeline is the closest/i},
       {name:'paid_content_why',setup:['paid','content not sales'],q:'why',must:/corrected the lane to content|turning today.?s work into proof/i,mustNot:/sale already happened|booked call/i},
       {name:'booked_calendar_next',setup:['booked','what is on my calendar'],q:'what next',must:/Last result was booked|prep the call|calendar detail/i,mustNot:/Finish the current block step|Open Production tracker/i},
@@ -19080,7 +19102,7 @@ function runMissionBroadRegressionHardeningV1(){
     restoreMissionStorageForQaV1(localStorage,savedLocalAll);
     restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:165,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 115 sales/result/data/mixed-lane/storage/legacy-watchlist/silence checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:168,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 118 sales/result/data/mixed-lane/storage/legacy-watchlist/silence/accountability checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -20105,7 +20127,7 @@ function missionActionLayerShouldSkipV1(turn,question,opts){
   if(getMissionCloseSignal(q))return true;
   if(getMissionCorrectionTargetRouteV2(q))return true;
   var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(q):null;
-  if(resultSignal&&['call_done','booked','paid','reply','no_reply','done','resource_mismatch'].indexOf(resultSignal.type)>=0)return true;
+  if(resultSignal&&['call_done','booked','paid','reply','no_reply','no','follow_up','done','resource_mismatch'].indexOf(resultSignal.type)>=0)return true;
   if(route==='sales'&&/\b(what should i say|what do i say|too expensive|cant afford|can't afford|he said|she said|they said|ghosted|payment plan|roleplay|score my answer)\b/.test(q))return true;
   if(/^(why|why again|more|more again|run it back|tell me more)$/i.test(q))return true;
   return false;
