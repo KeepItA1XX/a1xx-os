@@ -3836,9 +3836,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 19:14 ET · OS v2_2 DPC negative-input guard';
+var APP_BUILD_STAMP='2026-05-24 19:21 ET · OS v2_2 DPC negative visual clamp';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1914';
+var APP_CACHE_TOKEN='mmos-20260524-1921';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -5452,10 +5452,44 @@ function getCoachForDate(dKey){
   };
 }
 
+function getDpcNumberInputIdsV22(){
+  return ['coach-dms','coach-cold-calls','coach-content','coach-calls','coach-closes','coach-money','coach-leads'];
+}
+
+function normalizeDpcNumberInputV22(el){
+  if(!el)return false;
+  var raw=String(el.value||'').trim();
+  if(!raw)return false;
+  var value=parseFloat(raw);
+  if(isFinite(value)&&value<0){
+    el.value='0';
+    if(el.dataset)el.dataset.dpcHadNegative='1';
+    return true;
+  }
+  return false;
+}
+
+function wireDpcNumberInputClampV22(){
+  getDpcNumberInputIdsV22().forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el||el.dataset.dpcClampWired==='1')return;
+    el.dataset.dpcClampWired='1';
+    ['input','change','blur'].forEach(function(evt){
+      el.addEventListener(evt,function(){normalizeDpcNumberInputV22(el);});
+    });
+    el.addEventListener('paste',function(){
+      setTimeout(function(){normalizeDpcNumberInputV22(el);},0);
+    });
+  });
+}
+
 function readDpcInputs(){
   var hadNegative=false;
   function n(id){
-    var value=parseFloat((document.getElementById(id)||{}).value);
+    var el=document.getElementById(id);
+    if(el&&normalizeDpcNumberInputV22(el))hadNegative=true;
+    if(el&&el.dataset&&el.dataset.dpcHadNegative==='1')hadNegative=true;
+    var value=parseFloat((el||{}).value);
     if(!isFinite(value))return 0;
     if(value<0){hadNegative=true;return 0;}
     return value;
@@ -5476,8 +5510,8 @@ function getDpcInputTotalV22(row){
 }
 
 function clearDpcInputs(){
-  ['coach-dms','coach-cold-calls','coach-content','coach-calls','coach-closes','coach-money','coach-leads'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.value='';
+  getDpcNumberInputIdsV22().forEach(function(id){
+    var el=document.getElementById(id);if(el){el.value='';if(el.dataset)delete el.dataset.dpcHadNegative;}
   });
 }
 
@@ -29727,6 +29761,7 @@ function init(){
   safeRender('mission delegates',function(){wireMissionDelegates();});
   safeRender('dpc missed banner close',function(){wireDpcMissedBannerCloseV22();});
   safeRender('dismissible ui stability',function(){wireDismissibleUiStabilityV22();});
+  safeRender('dpc negative input clamp',function(){wireDpcNumberInputClampV22();});
   safeRender('system hub subtabs',function(){wireSystemHubSubtabsV1();});
   safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();renderCloseStreak();updateTopbarBiz();if(typeof renderDpcDateView==='function')renderDpcDateView();if(typeof renderMissedDayBanner==='function')renderMissedDayBanner();if(typeof renderProspectList==='function')renderProspectList();if(typeof renderCalNowBanner==='function')renderCalNowBanner();if(typeof startCalNowTicker==='function')startCalNowTicker();});
   var streak=getStore(STREAK_KEY)||{count:0};
