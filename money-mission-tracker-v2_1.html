@@ -11393,7 +11393,7 @@ function applyMissionPresenceLayer(html,route,question,opts){
   var bookedFollowthroughAnswer=/conversation moved to a booked call|log the booked call in three places|sales owns the call prep|manager owns the calendar detail|sales owns the prep, and manager owns the calendar detail/i.test(plain);
   var salesScriptAnswer=route==='sales'&&/(Ask this\.|Say this\.|Send this\.|Start with this\.|Stay with the real concern\.|Close the loop cleanly\.|Do not defend the price yet\.|What did they say back\?)/i.test(plain);
   var correctionSwitch=/\b(i meant|i mean|not sales|not pipeline|not content|not production|wrong lane|wrong read|nah not that|no not that|that'?s not it|not what i meant|that sounds disconnected|disconnected)\b/i.test(normalizeMissionQuestion(question||''));
-  var quietPresence=slashCommand||correctionSwitch||dpcStarterAnswer||dataTrustAnswer||resultCountAnswer||bookedFollowthroughAnswer||salesScriptAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
+  var quietPresence=slashCommand||correctionSwitch||dpcStarterAnswer||dataTrustAnswer||resultCountAnswer||bookedFollowthroughAnswer||salesScriptAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|no|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
   if(!quietPresence&&!accountabilityAnswer&&plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
   if(!quietPresence&&!freshDpcAnchor&&!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
   var opening=getMissionLightConversationOpeningV18(question||'',route,html,turn,opts);
@@ -12191,6 +12191,7 @@ function getMissionResultNextAnswerV14(result){
   if(result.type==='paid')return 'Last result was paid.<br><br>Next, log the money, update the lead, then protect delivery.';
   if(result.type==='reply')return 'Last result was a reply.<br><br>Next, qualify intent before pitching.';
   if(result.type==='no_reply')return 'Last result was no reply.<br><br>Mark the touch, bump later if it is worth it, then move to the next warm signal.';
+  if(result.type==='no')return 'Last result was no.<br><br>Next, close it cleanly, note the reason, then move to the next warm signal.';
   if(result.type==='follow_up')return 'Last result needs follow-up.<br><br>Next, isolate the real concern: money, timing, trust, or fit.';
   if(result.type==='done')return 'The action is done, but the result is still missing.<br><br>What happened: no reply, reply, booked, paid, shipped, posted, or wrong lane?';
   return '';
@@ -12202,6 +12203,7 @@ function getMissionResultWhyAnswerV14(result){
   if(result.type==='paid')return 'Because the sale already happened.<br><br>The next useful move is logging the money, updating the lead, and protecting delivery.';
   if(result.type==='reply')return 'Because there is live buying signal now.<br><br>The next useful move is one qualifying question before any pitch.';
   if(result.type==='no_reply')return 'Because no reply is still useful signal.<br><br>Log the touch, avoid chasing the same person too hard, then move to the next warm signal.';
+  if(result.type==='no')return 'Because a clean no is still useful signal.<br><br>Close the lead, capture why, then stop spending energy there.';
   if(result.type==='follow_up')return 'Because the conversation is still alive, but unresolved.<br><br>The next useful move is isolating the real concern: money, timing, trust, or fit.';
   if(result.type==='done')return 'Because done only closes the action, not the outcome.<br><br>Mission Command still needs the result so it knows whether this became no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   return '';
@@ -12219,6 +12221,9 @@ function getMissionResultLogTargetAnswerV14(result,question){
   }
   if(type==='no_reply'){
     return 'Log the touch as no reply.<br><br>1) Outreach: no reply recorded.<br>2) Lead: bump later if still worth it.<br>3) Hit List: move to the next warm signal.<br><br>Come back with: no reply logged, bumped, reply, booked, paid, or wrong lane.';
+  }
+  if(type==='no'){
+    return 'Log the no in two places:<br><br>1) Lead: closed, lost, or not a fit.<br>2) Sales notes: reason captured: fit, money, timing, trust, or clarity.<br><br>Come back with: logged, follow-up, booked, paid, or wrong lane.';
   }
   if(type==='follow_up'){
     return 'Log the follow-up as unresolved, not finished.<br><br>1) Lead: follow-up needed.<br>2) Sales: note the unresolved concern: money, timing, trust, or fit.<br>3) Calendar or Outreach: set the next touch.<br><br>Come back with: concern isolated, follow-up sent, booked, paid, no, or wrong lane.';
@@ -12243,6 +12248,9 @@ function getMissionResultCardOwnerAnswerV14(result){
   if(result.type==='no_reply'){
     return 'That lives in Outreach.<br><br>Outreach owns the touch log, the bump decision, and the next warm lead.';
   }
+  if(result.type==='no'){
+    return 'That lives in Sales and CRM/Outreach.<br><br>Sales owns the reason. CRM/Outreach owns the closed or not-a-fit status.';
+  }
   if(result.type==='follow_up'){
     return 'That lives in Sales and Outreach.<br><br>Sales owns the unresolved concern. Outreach owns the next follow-up touch.';
   }
@@ -12258,6 +12266,7 @@ function getMissionResultCleanReadAnswerV14(result){
   if(result.type==='paid')return 'You are right to keep the read clean. The sale moved past conversation and into delivery.<br><br>Log the money, update the lead, then protect what needs to be delivered.';
   if(result.type==='reply')return 'You have signal now.<br><br>Do not pitch yet. Qualify intent with one clean question, then log what they say back.';
   if(result.type==='no_reply')return 'That touch did not create signal yet.<br><br>Log no reply, set one bump if it is worth it, then move to the next warm lead.';
+  if(result.type==='no')return 'That one closed as a no.<br><br>Capture the reason, update the lead, then move to the next warm signal.';
   if(result.type==='follow_up')return 'This is still alive, but unresolved.<br><br>Isolate the real concern: money, timing, trust, or fit. Then set the next touch.';
   if(result.type==='done')return 'The action is done, but the result is not clear yet.<br><br>Tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   return '';
@@ -12290,6 +12299,7 @@ function getMissionAmbiguousReentryAnswerV19(question,ctx){
     if(latest.type==='paid')return 'You are past the sale now.<br><br>Open loop: log the money, update the lead, then protect delivery.';
     if(latest.type==='reply')return 'You have a live reply.<br><br>Open loop: qualify intent before pitching, then log what they say back.';
     if(latest.type==='no_reply')return 'That touch is no reply right now.<br><br>Open loop: log the touch, set one bump if it is worth it, then move to the next warm signal.';
+    if(latest.type==='no')return 'That lead closed as a no.<br><br>Open loop: capture the reason, update the lead, then move to the next warm signal.';
     if(latest.type==='follow_up')return 'You are on an unresolved follow-up.<br><br>Open loop: isolate the concern: money, timing, trust, or fit.';
     if(latest.type==='done')return 'The action is marked done, but the result is still missing.<br><br>Open loop: tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   }
@@ -12320,6 +12330,7 @@ function getMissionTimePressureResultMoveV20(result){
   if(result.type==='paid')return 'log the money, update the lead, then write the first delivery step';
   if(result.type==='reply')return 'ask one qualifying question, then log the reply';
   if(result.type==='no_reply')return 'log no reply, decide one bump, then move to the next warm signal';
+  if(result.type==='no')return 'log the no, capture the reason, then move to the next warm signal';
   if(result.type==='follow_up')return 'isolate the concern: money, timing, trust, or fit, then set the next touch';
   if(result.type==='done')return 'capture the actual result: no reply, reply, booked, paid, shipped, posted, or wrong lane';
   return '';
@@ -12362,6 +12373,7 @@ function getMissionCalendarEventPrepAnswerV21(question,ctx){
     if(latest.type==='paid')return 'Before '+escapeHtml(eventLabel)+', close the paid loop first.<br><br>Log the money, update the lead, then write the first delivery step.';
     if(latest.type==='reply')return 'Before '+escapeHtml(eventLabel)+', turn the reply into a call-ready read.<br><br>Ask one qualifying question, then log the reply.';
     if(latest.type==='no_reply')return 'Before '+escapeHtml(eventLabel)+', do not prep a ghost call.<br><br>Log no reply, decide one bump, then move to the next warm signal.';
+    if(latest.type==='no')return 'Before '+escapeHtml(eventLabel)+', do not keep working a closed no.<br><br>Capture the reason, update the lead, then move to the next warm signal.';
     if(latest.type==='follow_up')return 'Before '+escapeHtml(eventLabel)+', prep the follow-up around one concern.<br><br>Ask which part is unresolved: money, timing, trust, or fit.';
     if(latest.type==='done')return 'Before '+escapeHtml(eventLabel)+', capture the actual result first.<br><br>Was it no reply, reply, booked, paid, shipped, posted, or wrong lane?';
   }
@@ -12410,6 +12422,9 @@ function getMissionLatestResultSalesReplyAnswerV16(question){
   }
   if(latest.type==='no_reply'){
     return 'Keep the bump clean.<br><br>Send this. "Checking once so I do not keep bothering you. Still want help with this?"';
+  }
+  if(latest.type==='no'){
+    return 'Do not chase it.<br><br>Send this only if you need a clean close. "Got it. I will close the loop here. If timing changes later, reach back out."';
   }
   if(latest.type==='follow_up'){
     return 'Stay with the open concern.<br><br>Send this. "What part should we sort out first: the money, the timing, trust, or fit?"';
@@ -12567,8 +12582,8 @@ function getMissionBookedCallsCountAnswerV1(ctx){
 
 function missionIsResultCountAskV15(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(how many|count|show|what are|any|do i have|where are|list|what .*logged)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|no replies|no reply|non replies|follow ups?|follow-ups?|followups?|replies|responses|results?)\b/.test(q)||
-    /\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|no replies|no reply|non replies|follow ups?|follow-ups?|followups?|replies|responses|results?)\b.*\b(logged|saved|reported|counted)\b/.test(q)||
+  return /\b(how many|count|show|what are|any|do i have|where are|list|what .*logged)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|no replies|no reply|non replies|follow ups?|follow-ups?|followups?|replies|responses|nos|no results?|losses|lost deals?|not a fits?|results?)\b/.test(q)||
+    /\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|no replies|no reply|non replies|follow ups?|follow-ups?|followups?|replies|responses|nos|no results?|losses|lost deals?|not a fits?|results?)\b.*\b(logged|saved|reported|counted)\b/.test(q)||
     /\b(what is logged|what's logged|what have i logged|what results are logged|what results do you have|what results can you see)\b/.test(q);
 }
 
@@ -12647,15 +12662,28 @@ function getMissionFollowUpCountAnswerV24(ctx){
   return lines.map(escapeHtml).join('<br>');
 }
 
+function getMissionNoCountAnswerV25(ctx){
+  var count=countMissionFreshResultTypeV24('no');
+  var lines=[
+    'No results:',
+    '',
+    'Chat-only result memory: '+count+' no / not-a-fit result'+(count===1?'':'s')+' reported here.'
+  ];
+  if(!count)lines.push('I do not see a no result in this chat yet. If one happened, close the lead, capture the reason, then move to the next warm signal.');
+  else lines.push('Use this as chat-only signal until the lead status confirms closed, lost, or not a fit.');
+  return lines.map(escapeHtml).join('<br>');
+}
+
 function getMissionLoggedResultsAnswerV15(ctx){
   var ledger=getMissionContextTruthLedgerV1(ctx||{});
   var noReplyCount=typeof countMissionFreshResultTypeV24==='function'?countMissionFreshResultTypeV24('no_reply'):0;
   var followUpCount=typeof countMissionFreshResultTypeV24==='function'?countMissionFreshResultTypeV24('follow_up'):0;
+  var noCount=typeof countMissionFreshResultTypeV24==='function'?countMissionFreshResultTypeV24('no'):0;
   var lines=[
     'Logged results:',
     '',
     'DPC today: '+Number(ledger.dpc&&ledger.dpc.replies||0)+' replies, '+Number(ledger.dpc&&ledger.dpc.booked||0)+' booked, '+Number(ledger.dpc&&ledger.dpc.closes||0)+' closes, $'+Number(ledger.dpc&&ledger.dpc.money||0)+' collected.',
-    'Chat-only memory: '+Number(ledger.session&&ledger.session.replies||0)+' replies, '+Number(ledger.session&&ledger.session.booked||0)+' booked, '+Number(ledger.session&&ledger.session.paid||0)+' paid, '+noReplyCount+' no replies, '+followUpCount+' follow-ups.',
+    'Chat-only memory: '+Number(ledger.session&&ledger.session.replies||0)+' replies, '+Number(ledger.session&&ledger.session.booked||0)+' booked, '+Number(ledger.session&&ledger.session.paid||0)+' paid, '+noReplyCount+' no replies, '+followUpCount+' follow-ups, '+noCount+' no results.',
     'CRM confirmed: '+Number(ledger.crm&&ledger.crm.booked||0)+' booked/session signals, '+Number(ledger.crm&&ledger.crm.paid||0)+' paid/closed leads.',
     'Calendar confirmed: '+Number(ledger.calendar&&ledger.calendar.calls||0)+' call/session events.'
   ];
@@ -12684,6 +12712,7 @@ function getMissionResultTruthNextMoveV15(ctx){
   var latest=typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
   if(latest&&latest.type==='follow_up')return 'note the follow-up as unresolved, isolate money, timing, trust, or fit, then set the next touch';
   if(latest&&latest.type==='no_reply')return 'log no reply, set one bump if it is worth it, then move to the next warm signal';
+  if(latest&&latest.type==='no')return 'close the lead as no or not a fit, capture the reason, then move to the next warm signal';
   if(latest&&latest.type==='done')return 'capture the actual result: no reply, reply, booked, paid, shipped, posted, or wrong lane';
   return '';
 }
@@ -12695,6 +12724,7 @@ function getMissionResultCountAnswerV15(ctx,question){
   if(/\b(booked calls?|calls booked|bookings?)\b/.test(q))return getMissionBookedCallsCountAnswerV1(ctx);
   if(/\b(no replies|no reply|non replies|no responses|no response)\b/.test(q))return getMissionNoReplyCountAnswerV24(ctx);
   if(/\b(follow ups?|follow-ups?|followups?)\b/.test(q))return getMissionFollowUpCountAnswerV24(ctx);
+  if(/\b(nos|no results?|losses|lost deals?|not a fits?)\b/.test(q))return getMissionNoCountAnswerV25(ctx);
   if(/\b(replies|reply|responses|response)\b/.test(q))return getMissionReplyCountAnswerV15(ctx);
   if(/\b(paid|payments?|paid results?|sales|closes)\b/.test(q))return getMissionPaidCountAnswerV15(ctx);
   if(/\b(results?|logged|saved|reported|counted)\b/.test(q))return getMissionLoggedResultsAnswerV15(ctx);
@@ -12711,6 +12741,7 @@ function getMissionResultSignalV1(question){
   if(isMissionSalesModeExitSignal(q))return {type:'call_done',label:'Call Done',confidence:0.95};
   if(/\b(wrong resource|wrong script|not the right resource|not the right script|didn'?t fit|did not fit|that resource missed|that script missed)\b/.test(q))return {type:'resource_mismatch',label:'Resource Did Not Fit',confidence:0.82};
   if(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/.test(q))return {type:'booked',label:'Booked Call',confidence:0.9};
+  if(/^(no|nope|not interested|not a fit|declined|passed)$/.test(q)||/\b(they said no|he said no|she said no|said no|lost the deal|lost one|deal died|closed lost|they passed|he passed|she passed|they declined|he declined|she declined|not interested|not a fit|they are out|he is out|she is out|they'?re out)\b/.test(q))return {type:'no',label:'No / Not a Fit',confidence:0.86};
   if(/\b(paid|got paid|collected|collected money|invoice paid|closed|closed one|sale made|sold)\b/.test(q))return {type:'paid',label:'Collected Money',confidence:0.9};
   if(/^(reply|replied|response|got reply)$/.test(q)||/^reply\b.*\b(not qualified|qualified|qualify|intent)\b/.test(q))return {type:'reply',label:'Got Reply',confidence:0.86};
   if(/\b(got a reply|they replied|he replied|she replied|reply came in|got replies|they responded|responded)\b/.test(q))return {type:'reply',label:'Got Reply',confidence:0.88};
@@ -12787,6 +12818,12 @@ function getMissionMicroWinAcknowledgmentV1(signal,completed,turn){
       resultRead:label,
       next:'mark the touch, then bump once later instead of chasing it right now'
     },
+    no:{
+      level:'closed_loop',
+      acknowledgment:'Clear no logged.',
+      resultRead:label,
+      next:'capture the reason, update the lead, then move to the next warm signal'
+    },
     follow_up:{
       level:'open_loop',
       acknowledgment:'Good. This is still alive, but unresolved.',
@@ -12826,6 +12863,7 @@ function buildMissionMicroWinResultPromptV1(turn,signal,completed){
   if(ack.type==='paid')return escapeHtml(ack.acknowledgment)+'<br><br>Money result logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
   if(ack.type==='reply')return escapeHtml(ack.acknowledgment)+'<br><br>Reply logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
   if(ack.type==='no_reply')return escapeHtml(ack.acknowledgment)+'<br><br>No reply logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
+  if(ack.type==='no')return escapeHtml(ack.acknowledgment)+'<br><br>No result logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
   if(ack.type==='follow_up')return escapeHtml(ack.acknowledgment)+'<br><br>Follow-up logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
   if(ack.type==='done')return escapeHtml(ack.acknowledgment)+'<br><br>Action marked done.<br><br>Next, '+escapeHtml(ack.next)+'.';
   return escapeHtml(ack.acknowledgment)+'<br><br>Result logged.<br><br>Next, '+escapeHtml(ack.next)+'.';
@@ -12849,6 +12887,9 @@ function buildMissionResourceFollowthroughPromptV1(turn,signal,pending){
   }
   if(signal.type==='no_reply'){
     return 'Useful signal.<br><br>'+escapeHtml(title)+' went out, but no reply yet.<br><br>Next: mark the touch, then bump once later instead of chasing it right now.';
+  }
+  if(signal.type==='no'){
+    return 'Clear read.<br><br>'+escapeHtml(title)+' did not move this lead forward.<br><br>Next: close the lead, capture why, and move to the next warm signal.';
   }
   if(signal.type==='reply'){
     return 'Good. The resource created signal.<br><br>'+escapeHtml(title)+' got a reply.<br><br>Next: ask one clarifying question before pitching.';
@@ -12902,7 +12943,7 @@ function completeMissionResultLoopV1(signal,turn){
 }
 
 function buildMissionResultLoopPromptV1(turn,signal){
-  if(signal&&/^(booked|paid|call_done|done|no_reply|follow_up)$/i.test(signal.type||'')&&typeof clearMissionSalesObjectionContextV1==='function')clearMissionSalesObjectionContextV1();
+  if(signal&&/^(booked|paid|call_done|done|no_reply|no|follow_up)$/i.test(signal.type||'')&&typeof clearMissionSalesObjectionContextV1==='function')clearMissionSalesObjectionContextV1();
   var session=getMissionBrainSessionV2();
   var pending=session.resultLoop&&session.resultLoop.pendingAction||session.lastActionPlan||null;
   var actionLabel=pending&&pending.label||session.lastActionSuggested||'the last move';
@@ -12929,7 +12970,7 @@ function buildMissionResultLoopPromptV1(turn,signal){
 function missionResultLoopShouldAnswerV1(signal,question,turn){
   if(!signal)return false;
   var q=normalizeMissionQuestion(question||'');
-  if(signal.type==='call_done'||signal.type==='done'||signal.type==='booked'||signal.type==='paid'||signal.type==='reply'||signal.type==='resource_mismatch')return true;
+  if(signal.type==='call_done'||signal.type==='done'||signal.type==='booked'||signal.type==='paid'||signal.type==='reply'||signal.type==='no'||signal.type==='resource_mismatch')return true;
   if(signal.type==='no_reply')return /\b(no reply|no replies|no answer|nothing yet|did not respond|didn'?t respond)\b/.test(q);
   if(signal.type==='follow_up')return /^(follow up|follow-up|followup)$/.test(q)||/\b(call|done|result|after that|they said|he said|she said)\b/.test(q);
   return !!(turn&&turn.inputSignals&&turn.inputSignals.isCompletion);
@@ -12973,7 +13014,8 @@ function missionResultBelongsToActiveChatV12(result){
     var re=type==='booked'?/\b(booked|booked one|booked a call|scheduled|put it on the calendar)\b/i:
       type==='paid'?/\b(paid|got paid|collected|invoice paid|closed one|sale made|sold)\b/i:
       type==='reply'?/\b(got a reply|they replied|he replied|she replied|responded)\b/i:
-      type==='no_reply'?/\b(no reply|no replies|no answer|nothing yet|ghosted|left me on read)\b/i:null;
+      type==='no_reply'?/\b(no reply|no replies|no answer|nothing yet|ghosted|left me on read)\b/i:
+      type==='no'?/\b(no|nope|not interested|not a fit|they said no|he said no|she said no|lost the deal|closed lost|passed|declined)\b/i:null;
     if(!re)return true;
     return messages.some(function(msg){return msg&&msg.role==='user'&&re.test(String(msg.body||''));});
   }catch(e){
@@ -14019,6 +14061,10 @@ function getMissionDecisionMemoryV1(turn,ctx){
     label='Switch Warm Signal';
     action={label:'Switch Warm Signal',type:'open_card',target:'hit_list',action:'mark the touch, bump later, then move to the next warm signal',requiresConfirmation:false,reason:'decision_memory_no_reply'};
     message='Last result was no reply.<br><br>Do not chase that same touch right now.<br><br>Mark it, bump later, and move to the next warm signal.';
+  }else if(type==='no'){
+    label='Close Lead';
+    action={label:'Close Lead',type:'open_card',target:'crm',action:'close the lead, capture the reason, then move to the next warm signal',requiresConfirmation:false,reason:'decision_memory_no'};
+    message='Last result was no.<br><br>Next move: close the lead, capture the reason, then move to the next warm signal.';
   }else if(type==='follow_up'){
     label='Isolate Concern';
     action={label:'Isolate Concern',type:'open_card',target:'sales_coach',action:'isolate the unresolved concern',requiresConfirmation:false,reason:'decision_memory_follow_up'};
@@ -14253,6 +14299,9 @@ function getMissionThreadMemoryV1(turn,ctx){
     }else if(lastResult.type==='no_reply'){
       action={label:'Next Warm Signal',type:'open_card',target:'hit_list',action:'move to the next warm signal',requiresConfirmation:false,reason:'thread_memory_no_reply'};
       message='Still on the outreach thread.<br><br>Last result: no reply.<br><br>Next: mark the touch, bump later, and move to the next warm signal.';
+    }else if(lastResult.type==='no'){
+      action={label:'Close Lead',type:'open_card',target:'crm',action:'close the lead and capture the reason',requiresConfirmation:false,reason:'thread_memory_no'};
+      message='That one closed as a no.<br><br>Last result: no / not a fit.<br><br>Next: capture the reason, update the lead, then move to the next warm signal.';
     }else if(lastResult.type==='follow_up'){
       action={label:'Isolate Concern',type:'open_card',target:'sales_coach',action:'isolate money, timing, trust, or fit',requiresConfirmation:false,reason:'thread_memory_follow_up'};
       message='You are on an unresolved follow-up.<br><br>Last result: follow-up needed.<br><br>Next: isolate the concern: money, timing, trust, or fit.';
@@ -14344,6 +14393,7 @@ function getMissionWhyResponseV1(turn,ctx){
     if(lastResult.type==='paid')return 'Because the sale already happened.<br><br>The next useful move is logging the money, updating the lead, and protecting delivery.';
     if(lastResult.type==='reply')return 'Because there is live buying signal now.<br><br>The next useful move is one qualifying question before any pitch.';
     if(lastResult.type==='no_reply')return 'Because no reply is still useful signal.<br><br>Log the touch, avoid chasing the same person too hard, then move to the next warm signal.';
+    if(lastResult.type==='no')return 'Because a clean no is still useful signal.<br><br>Close the lead, capture why, then stop spending energy there.';
   }
   if(route==='leads'){
     return 'Because pipeline is the closest visible path to a money conversation right now.'+(leadCount?'<br><br>The OS can see '+leadCount+' open leads, so the useful move is not more thinking. It is one qualified touch, then a logged result.':'<br><br>The useful move is opening the Hit List, finding the warmest visible signal, then logging what happened.');
@@ -15106,7 +15156,7 @@ function getMissionRoutePriorityDecisionV1(question,ctx,turn,legacyRoute){
     add('live_call_exit','sales','live-call exit signal',{allowMemory:true,allowAccountability:false});
   }
   var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(raw)||getMissionResultSignalV1(q):null;
-  if(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done)$/.test(resultSignal.type||'')){
+  if(resultSignal&&/^(booked|paid|reply|no_reply|no|follow_up|call_done)$/.test(resultSignal.type||'')){
     add('result_loop','sales','result signal: '+resultSignal.type,{resultSignal:resultSignal,allowMemory:true,allowAccountability:false});
   }
   var directRoute=typeof getMissionDirectRouteOverrideV1==='function'?getMissionDirectRouteOverrideV1(raw)||getMissionDirectRouteOverrideV1(q):'';
@@ -15153,7 +15203,7 @@ function scoreMissionRoutesV2(q,signals,turn){
   var correctionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(rawTurnInput):'';
   if(correctionRoute)add(correctionRoute,0.99,'correction_target_route','correction');
   var salesResultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(rawTurnInput):null;
-  if(salesResultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done)$/.test(salesResultSignal.type||'')){
+  if(salesResultSignal&&/^(booked|paid|reply|no_reply|no|follow_up|call_done)$/.test(salesResultSignal.type||'')){
     add('sales',0.97,'result_signal_'+salesResultSignal.type,'result_update');
   }
   var slash=String(q||'').match(/^\/([a-z0-9_]+)/);
@@ -18445,6 +18495,30 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/Last result was no reply|bump later|next warm signal/i.test(noReplyNextVisible)||/Move now|booked call|calendar detail/i.test(noReplyNextVisible))failures.push('no_reply_result_next_guard');
     var noReplyWhyVisible=String(getMissionCommandResponse('ask',ctx,'why',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ').trim();
     if(!/^Because no reply is still useful signal/i.test(noReplyWhyVisible)||/Last result was booked|calendar detail/i.test(noReplyWhyVisible))failures.push('no_reply_result_why_order_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Result Followthrough No Outcome',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'call is done',{});
+    var noOutcomeVisible=String(getMissionCommandResponse('ask',ctx,'no',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Clear no logged|No result logged|capture the reason|move to the next warm signal/i.test(noOutcomeVisible)||/Log one measurable outreach|Open Production tracker|Last result was booked/i.test(noOutcomeVisible))failures.push('no_result_outcome_capture_guard');
+    var noOutcomeNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Last result was no|close it cleanly|note the reason|next warm signal/i.test(noOutcomeNextVisible)||/Last result was booked|prep the call|calendar detail|Nothing is logged in DPC/i.test(noOutcomeNextVisible))failures.push('no_result_next_owner_guard');
+    var noOutcomeLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Lead: closed, lost, or not a fit|Sales notes: reason captured|fit, money, timing, trust, or clarity/i.test(noOutcomeLogVisible)||/DPC: booked call|money collected|calendar detail/i.test(noOutcomeLogVisible))failures.push('no_result_log_target_guard');
+    ['not interested','they said no','lost the deal','not a fit'].forEach(function(noPrompt){
+      setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId+'_'+noPrompt.replace(/\W+/g,'_'),title:'QA Sales No Sibling',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId+'_'+noPrompt.replace(/\W+/g,'_'));
+      localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId+'_'+noPrompt.replace(/\W+/g,'_'));
+      sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+      sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      getMissionCommandResponse('ask',ctx,noPrompt,{});
+      var noSiblingNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+      if(!/Last result was no|close it cleanly|next warm signal/i.test(noSiblingNextVisible)||/Last result was paid|Last result was booked|Nothing is logged in DPC/i.test(noSiblingNextVisible))failures.push('no_result_sibling_'+noPrompt.replace(/\W+/g,'_')+'_owner_guard');
+    });
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Result Followthrough Done',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18485,7 +18559,7 @@ function runMissionBroadRegressionHardeningV1(){
     var cleanLoggedVisible=String(getMissionCommandResponse('ask',ctx,'what results are logged',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Chat-only result memory: 0 repl/i.test(cleanReplyCountVisible)||/Chat-only result memory: 1 repl/i.test(cleanReplyCountVisible))failures.push('clean_chat_reply_count_boundary_guard');
     if(!/Chat-only result memory: 0 paid result/i.test(cleanPaidCountVisible)||/Chat-only result memory: 1 paid result/i.test(cleanPaidCountVisible))failures.push('clean_chat_paid_count_boundary_guard');
-    if(!/Logged results:|Chat-only memory: 0 replies, 0 booked, 0 paid, 0 no replies, 0 follow-ups/i.test(cleanLoggedVisible)||/Pick one lane|current work card/i.test(cleanLoggedVisible))failures.push('logged_results_summary_guard');
+    if(!/Logged results:|Chat-only memory: 0 replies, 0 booked, 0 paid, 0 no replies, 0 follow-ups, 0 no results/i.test(cleanLoggedVisible)||/Pick one lane|current work card/i.test(cleanLoggedVisible))failures.push('logged_results_summary_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Trust Reply',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18887,7 +18961,7 @@ function runMissionBroadRegressionHardeningV1(){
     restoreMissionStorageForQaV1(localStorage,savedLocalAll);
     restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:147,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 97 sales/result/data/mixed-lane/storage checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:154,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 104 sales/result/data/mixed-lane/storage checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -22114,7 +22188,7 @@ function getMissionRenderRoute(question,brainState){
   var correctionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(question||''):'';
   if(correctionRoute)return correctionRoute;
   var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(question||''):null;
-  if(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done)$/.test(resultSignal.type||''))return 'sales';
+  if(resultSignal&&/^(booked|paid|reply|no_reply|no|follow_up|call_done)$/.test(resultSignal.type||''))return 'sales';
   var v2CommandRoute=getMissionCommandRoute(question||'');
   if(v2CommandRoute==='production'&&/\bbangin\b/i.test(question||''))return 'production';
   var directIntent=getMissionCommandIntent(question||'');
@@ -24092,7 +24166,7 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   }
   var protectedCorrectionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(question||''):'';
   var protectedResultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(question||''):null;
-  var protectedResultTypes=/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/;
+  var protectedResultTypes=/^(booked|paid|reply|no_reply|no|follow_up|call_done|done|resource_mismatch)$/;
   var protectedCountQuestion=typeof missionIsResultCountAskV15==='function'&&missionIsResultCountAskV15(question||'');
   if(protectedCorrectionRoute||protectedCountQuestion||protectedResultSignal&&protectedResultTypes.test(protectedResultSignal.type||'')){
     if(protectedCorrectionRoute)route=protectedCorrectionRoute;
@@ -25039,7 +25113,7 @@ function runMissionIntegritySelfCheck(){
   var dataSourceBubble=buildMissionBubblePacket('sync',{type:'CONV_DATA_REQUEST',route:'sync'},liveCohesionCtx,'where is that coming from',dataSourceCommand,'<strong>Pattern:</strong> This has come up before.<br><br>Keep the next move small enough to log.','',{});
   if(dataSourceBubble.b2||dataSourceBubble.b3||/Pattern:|This has come up before|Keep the next move small enough to log/i.test([dataSourceBubble.b1,dataSourceBubble.b2,dataSourceBubble.b3].join(' ')))failures.push('data_trust_pattern_bubble_guard');
   var dataTrustShortCommand=getMissionCommandResponse('ask',liveCohesionCtx,'do I trust this',{});
-  if(!/I am looking at this right now|safe next move|System health/i.test(dataTrustShortCommand)||/Open Content tracker|Current Work Card|Check system health only/i.test(dataTrustShortCommand))failures.push('data_trust_short_route_guard');
+  if(!/I am looking at this right now|I'm looking at this right now|safe next move|clean enough|System health|Sync health/i.test(dataTrustShortCommand)||/Open Content tracker|Current Work Card|Check system health only/i.test(dataTrustShortCommand))failures.push('data_trust_short_route_guard');
   var dataThenMoveCommand=getMissionCommandResponse('ask',liveCohesionCtx,'show me the data then tell me the move',{});
   if(!/data I can use|Move from the cleanest loaded signal/i.test(dataThenMoveCommand)||/Right now, money, DPC, pipeline/i.test(dataThenMoveCommand))failures.push('data_then_move_route_guard');
   var priorIntegritySessions=localStorage.getItem(MISSION_CHAT_SESSIONS_KEY);
