@@ -1,7 +1,7 @@
 # Mission Command Cluster QA SOP + Test Matrix
 
 Product: Money Mission OS
-Primary file: `money-mission-tracker-v2_1.html`
+Primary file: `money-mission-tracker-v2_2.html`
 Purpose: make Mission Command testing repeatable, faster, and safer as the chat brain is tightened across behavior clusters.
 
 This is not a feature spec. This is the operating process for testing, diagnosing, fixing, and protecting Mission Command conversation behavior.
@@ -655,13 +655,13 @@ Run these after each code fix:
 ```bash
 node - <<'NODE'
 const fs=require('fs');
-const html=fs.readFileSync('money-mission-tracker-v2_1.html','utf8');
+const html=fs.readFileSync('money-mission-tracker-v2_2.html','utf8');
 const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 try{ new Function(scripts); console.log('syntax ok'); }
 catch(e){ console.error(e.stack||e.message); process.exit(1); }
 NODE
 
-git diff --check -- money-mission-tracker-v2_1.html
+git diff --check -- money-mission-tracker-v2_2.html
 ```
 
 Then run the internal VM QA bundle:
@@ -731,7 +731,7 @@ Watchlist:
 Commit only the intended files. For Mission Command chat fixes, normally stage:
 
 ```bash
-git add money-mission-tracker-v2_1.html docs/mission-command-cluster-qa-sop.md
+git add money-mission-tracker-v2_2.html docs/mission-command-cluster-qa-sop.md
 ```
 
 Use specific commit names:
