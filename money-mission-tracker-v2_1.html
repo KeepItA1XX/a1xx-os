@@ -14485,6 +14485,39 @@ function updateMissionThreadMemoryV1(turn){
 /* =========================================================
    MISSION SILENCE INTELLIGENCE — v1
 ========================================================= */
+function getMissionSilenceFreshResultV27(session){
+  session=session||{};
+  var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(latest&&latest.type&&missionResultBelongsToActiveChatV12(latest))return latest;
+  var loop=session.resultLoop||{};
+  var result=loop.lastResult||null;
+  if(result&&result.type&&missionResultBelongsToActiveChatV12(result))return result;
+  return null;
+}
+
+function missionSilencePendingIsBlockedV27(pending,lastResult){
+  if(!pending)return false;
+  if(missionPendingIsBeforeFreshStarterV12(pending))return true;
+  var pendingText=normalizeMissionQuestion([pending.label,pending.action,pending.target,pending.reason].filter(Boolean).join(' '));
+  var needsBooked=/\b(prep call|prep the booked call|booked call|calendar detail|opening question|decision_memory_booked|thread_memory_booked)\b/.test(pendingText);
+  var hasBooked=lastResult&&lastResult.type==='booked'&&missionResultIsFreshForActiveChatV12(lastResult);
+  if(needsBooked&&!hasBooked&&!missionActiveChatHasBookedAfterFreshStarterV12())return true;
+  if(lastResult&&lastResult.type&&/decision_memory_paid|thread_memory_paid/.test(pending.reason||''))return true;
+  return false;
+}
+
+function getMissionSilenceResultReentryMessageV27(result){
+  if(!result||!result.type)return '';
+  if(result.type==='booked')return 'Back in.<br><br>Last result was booked.<br><br>Open loop: add the calendar detail, update the lead, and prep one opening question.';
+  if(result.type==='paid')return 'Back in.<br><br>Last result was paid.<br><br>Open loop: log the money, update the lead, then protect delivery.';
+  if(result.type==='reply')return 'Back in.<br><br>Last result was a reply.<br><br>Open loop: ask one qualifying question before pitching.';
+  if(result.type==='no_reply')return 'Back in.<br><br>Last result was no reply.<br><br>Open loop: log the touch, set one bump if it is worth it, then move to the next warm signal.';
+  if(result.type==='no')return 'Back in.<br><br>Last result was no.<br><br>Open loop: capture the reason, update the lead, then move to the next warm signal.';
+  if(result.type==='follow_up')return 'Back in.<br><br>Last result needs follow-up.<br><br>Open loop: isolate the concern: money, timing, trust, or fit.';
+  if(result.type==='done')return 'Back in.<br><br>The last action was marked done, but the result is still missing.<br><br>Open loop: no reply, reply, booked, paid, shipped, posted, or wrong lane?';
+  return '';
+}
+
 function getMissionSilenceIntelligenceV1(turn,ctx){
   var q=normalizeMissionQuestion(turn&&turn.rawInput||turn&&turn.normalizedInput||'');
   if(typeof missionQuestionIsFreshStarterV12==='function'&&missionQuestionIsFreshStarterV12(q)){
@@ -14498,10 +14531,11 @@ function getMissionSilenceIntelligenceV1(turn,ctx){
   var activeRoute=thread.activeRoute||session.lastRoute||session.sessionTopic||'now';
   var lastQuestion=thread.lastQuestion||thread.turns&&thread.turns[0]&&thread.turns[0].question||'';
   var loop=session.resultLoop||{};
-  var lastResult=loop.lastResult||null;
+  var lastResult=getMissionSilenceFreshResultV27(session);
   var pending=loop.pendingAction||session.lastActionPlan||null;
-  var explicitCommand=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|report|pipeline|who hot|content|production|calendar|what should i say|too expensive|he said|she said|they said|roleplay|score my answer|remember this)\b/.test(q);
-  var openReentry=/\b(good morning|i am back|i'm back|back|lets go|let's go|lock in|ready|i'm ready|im ready|what next|what now|what should i do|what do i do|where were we|pick it back up|continue)\b/.test(q);
+  if(missionSilencePendingIsBlockedV27(pending,lastResult))pending=null;
+  var explicitCommand=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|report|pipeline|who hot|content|production|calendar|what should i say|too expensive|he said|she said|they said|roleplay|score my answer|remember this|what data|show me data|show me the data|what do you see|what can you see|what is loaded|what's loaded|where is that coming from|what should i trust|do i trust|trust check|source check)\b/.test(q);
+  var openReentry=/\b(good morning|i am back|i'm back|im back|back|lets go|let's go|lock in|ready|i'm ready|im ready|what next|what now|what should i do|what do i do|where were we|where did we leave off|where did we leave it|pick it back up|continue|run it back|catch me up)\b/.test(q);
   var band='none';
   if(gapMinutes!==null&&gapMinutes>=720)band='new_session';
   else if(gapMinutes!==null&&gapMinutes>=120)band='long';
@@ -14512,19 +14546,19 @@ function getMissionSilenceIntelligenceV1(turn,ctx){
   var reason='';
   if(shouldAnswer&&band==='new_session'){
     reason='new_session_reentry';
-    message='New session read.<br><br>Last thread was '+escapeHtml(getMissionRouteLabelV2(activeRoute))+'.<br><br>I can continue that, or read the full OS fresh. If you want me to decide, say: call the move.';
+    message=getMissionSilenceResultReentryMessageV27(lastResult)||('Clean reentry.<br><br>Last thread: '+escapeHtml(getMissionRouteLabelV2(activeRoute))+'.<br><br>I can continue there or read the full OS fresh. If you want me to decide, say: call the move.');
   }else if(shouldAnswer&&band==='long'){
     reason='long_gap_reentry';
     if(lastResult){
-      message='Picking it back up.<br><br>Last thread was '+escapeHtml(getMissionRouteLabelV2(activeRoute))+'. Last result: '+escapeHtml(lastResult.label||lastResult.type||'result logged')+'.<br><br>Do you want to continue that thread or call the next move from the full OS?';
+      message=getMissionSilenceResultReentryMessageV27(lastResult);
     }else if(pending){
-      message='Picking it back up.<br><br>Last move was '+escapeHtml(pending.label||pending.action||'the next move')+'.<br><br>Did that turn into no reply, reply, booked, paid, or finished?';
+      message='Back in.<br><br>Last move was '+escapeHtml(pending.label||pending.action||'the next move')+'.<br><br>Did that turn into no reply, reply, booked, paid, or finished?';
     }else{
-      message='Picking it back up.<br><br>Last thread was '+escapeHtml(getMissionRouteLabelV2(activeRoute))+'.<br><br>Do you want to continue there or call the move from the full OS?';
+      message='Back in.<br><br>Last thread: '+escapeHtml(getMissionRouteLabelV2(activeRoute))+'.<br><br>Continue there, or say call the move for a fresh OS read.';
     }
   }else if(shouldAnswer&&band==='medium'){
     reason='medium_gap_reentry';
-    message='Still on this.<br><br>Last thread: '+escapeHtml(getMissionRouteLabelV2(activeRoute))+'.'+(pending?'<br><br>Last move: '+escapeHtml(pending.label||pending.action||'the next move')+'.':'')+'<br><br>What happened since then?';
+    message='Back on the thread.<br><br>Last lane: '+escapeHtml(getMissionRouteLabelV2(activeRoute))+'.'+(pending?'<br><br>Last move: '+escapeHtml(pending.label||pending.action||'the next move')+'.':'')+'<br><br>What happened since then?';
   }
   return {
     hasPrior:hasPrior,
@@ -17753,7 +17787,7 @@ function getMissionIntelligenceAnswerStackV1(turn,ctx){
   add('execution_mode',buildMissionExecutionModeResponseV1(turn,ctx));
   add('decision_memory',buildMissionDecisionMemoryResponseV1(turn,ctx));
   add('pattern_memory',buildMissionPatternCoachingResponseV1(turn,ctx));
-  add('silence_intelligence',buildMissionSilenceIntelligenceResponseV1(turn,ctx));
+  add('silence_intelligence',buildMissionSilenceIntelligenceResponseV1(turn,ctx),{sessionArc:false,closer:false,presence:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false});
   add('why_response',getMissionWhyResponseV1(turn,ctx));
   add('thread_memory',buildMissionThreadMemoryResponseV1(turn,ctx));
   add('action_accountability',buildMissionActionAccountabilityResponseV1(turn,ctx),{actionLayer:false});
@@ -18427,6 +18461,22 @@ function runMissionBroadRegressionHardeningV1(){
       if(legacyVisibleLeakRe.test(visible))failures.push(test.name+'_legacy_visible_label_leak');
     });
     [
+      {name:'silence_medium_natural_reentry',minutes:45,brain:{resultLoop:{pendingAction:{label:'Open Hit List',action:'Contact QA HOT LEAD',route:'leads',suggestedAt:new Date(Date.now()-45*60000).toISOString()},history:[]},threadMemory:{activeRoute:'leads',lastQuestion:'/pipeline',lastUpdatedAt:new Date(Date.now()-45*60000).toISOString(),turns:[{question:'/pipeline',route:'leads',timestamp:new Date(Date.now()-45*60000).toISOString()}]}},q:'continue',must:/Back on the thread|Last lane: Pipeline|Contact QA HOT LEAD/i,mustNot:/Still on this|Next, Check weekly|voice or workflow memory/i},
+      {name:'silence_long_paid_reentry',minutes:180,brain:{resultLoop:{lastResult:{type:'paid',label:'Collected Money',route:'sales',recordedAt:new Date(Date.now()-180*60000).toISOString()},history:[]},threadMemory:{activeRoute:'sales',lastQuestion:'paid',lastUpdatedAt:new Date(Date.now()-180*60000).toISOString(),turns:[{question:'paid',route:'sales',timestamp:new Date(Date.now()-180*60000).toISOString()}]}},q:'i am back',must:/Last result was paid|log the money|protect delivery/i,mustNot:/calendar detail|Next, Check weekly|Still on this/i},
+      {name:'silence_stale_booked_block',minutes:180,brain:{resultLoop:{lastResult:{type:'booked',label:'Booked Call',route:'sales',recordedAt:new Date(Date.now()-180*60000).toISOString(),chatId:'old_chat'},pendingAction:{label:'Prep Call',action:'prep booked call',route:'sales',suggestedAt:new Date(Date.now()-180*60000).toISOString()},history:[]},threadMemory:{activeRoute:'sales',lastQuestion:'booked',lastUpdatedAt:new Date(Date.now()-180*60000).toISOString(),turns:[{question:'booked',route:'sales',timestamp:new Date(Date.now()-180*60000).toISOString()}]}},q:'i am back',must:/Clean reentry|reduce the decision load|one lane|call the move|DPC|Start with/i,mustNot:/Last result was booked|calendar detail|Prep Call/i}
+    ].forEach(function(test){
+      var chatId='qa_silence_boundary_'+test.name;
+      setStore(MISSION_CHAT_SESSIONS_KEY,[{id:chatId,title:'QA Silence Boundary',createdAt:new Date(Date.now()-(test.minutes||45)*60000).toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,chatId);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,chatId);
+      sessionStorage.removeItem(MISSION_FRESH_STARTER_MARKER_KEY_V12);
+      sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify(test.brain||{resultLoop:{history:[]},threadMemory:{turns:[]}}));
+      var silenceVisible=String(getMissionCommandResponse('ask',ctx,test.q,{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+      if(!test.must.test(silenceVisible)||test.mustNot.test(silenceVisible))failures.push(test.name+'_silence_reentry_guard');
+    });
+    [
       {name:'paid_data_why',setup:['paid','what data are you using'],q:'why',must:/sale already happened|logging the money|protecting delivery/i,mustNot:/sync is the trust check|pipeline is the closest/i},
       {name:'paid_content_why',setup:['paid','content not sales'],q:'why',must:/corrected the lane to content|turning today.?s work into proof/i,mustNot:/sale already happened|booked call/i},
       {name:'booked_calendar_next',setup:['booked','what is on my calendar'],q:'what next',must:/Last result was booked|prep the call|calendar detail/i,mustNot:/Finish the current block step|Open Production tracker/i},
@@ -19030,7 +19080,7 @@ function runMissionBroadRegressionHardeningV1(){
     restoreMissionStorageForQaV1(localStorage,savedLocalAll);
     restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:162,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 112 sales/result/data/mixed-lane/storage/legacy-watchlist checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:165,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 115 sales/result/data/mixed-lane/storage/legacy-watchlist/silence checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -25339,7 +25389,7 @@ function runMissionIntegritySelfCheck(){
   var mediumSilence=getMissionSilenceIntelligenceV1({rawInput:'what next',route:'now',inputSignals:{}},actionCtx);
   if(!mediumSilence.shouldAnswer||mediumSilence.reason!=='medium_gap_reentry')failures.push('silence_medium_reentry');
   var mediumSilencePrompt=buildMissionSilenceIntelligenceResponseV1({silenceIntelligence:mediumSilence},actionCtx);
-  if(mediumSilencePrompt.indexOf('Still on this')<0||mediumSilencePrompt.indexOf('Open Hit List')<0)failures.push('silence_medium_prompt');
+  if(mediumSilencePrompt.indexOf('Back on the thread')<0||mediumSilencePrompt.indexOf('Open Hit List')<0)failures.push('silence_medium_prompt');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'leads',lastQuestion:'/pipeline',lastUpdatedAt:new Date(Date.now()-180*60000).toISOString(),turns:[{question:'/pipeline',route:'leads',timestamp:new Date(Date.now()-180*60000).toISOString()}]},resultLoop:{pendingAction:{label:'Open Hit List',route:'leads',suggestedAt:new Date(Date.now()-180*60000).toISOString()},history:[]}}));
   var longSilence=getMissionSilenceIntelligenceV1({rawInput:'i am back',route:'now',inputSignals:{}},actionCtx);
   if(!longSilence.shouldAnswer||longSilence.reason!=='long_gap_reentry')failures.push('silence_long_reentry');
