@@ -11388,10 +11388,11 @@ function applyMissionPresenceLayer(html,route,question,opts){
   var slashCommand=/^\s*\/\w+/.test(String(question||''));
   var dpcStarterAnswer=/nothing is logged in dpc yet|today is still invisible to the os|dpc has nothing logged yet|one measurable outreach or sales action/i.test(plain);
   var dataTrustAnswer=/i am looking at this right now|system health is loaded like this|i cannot fully see this yet|only run sync if this decision needs current numbers/i.test(plain);
+  var resultCountAnswer=/^(booked calls|paid results|replies|no replies|follow-ups|logged results):/i.test(plain);
   var bookedFollowthroughAnswer=/conversation moved to a booked call|log the booked call in three places|sales owns the call prep|manager owns the calendar detail|sales owns the prep, and manager owns the calendar detail/i.test(plain);
   var salesScriptAnswer=route==='sales'&&/(Ask this\.|Say this\.|Send this\.|Start with this\.|Stay with the real concern\.|Close the loop cleanly\.|Do not defend the price yet\.|What did they say back\?)/i.test(plain);
   var correctionSwitch=/\b(i meant|i mean|not sales|not pipeline|not content|not production|wrong lane|wrong read|nah not that|no not that|that'?s not it|not what i meant|that sounds disconnected|disconnected)\b/i.test(normalizeMissionQuestion(question||''));
-  var quietPresence=slashCommand||correctionSwitch||dpcStarterAnswer||dataTrustAnswer||bookedFollowthroughAnswer||salesScriptAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
+  var quietPresence=slashCommand||correctionSwitch||dpcStarterAnswer||dataTrustAnswer||resultCountAnswer||bookedFollowthroughAnswer||salesScriptAnswer||!!(resultSignal&&/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/.test(resultSignal.type||''));
   if(!quietPresence&&!accountabilityAnswer&&plain&&!/^mission command\s*-/i.test(plain))ack=getMissionAcknowledgment(turn,log);
   if(!quietPresence&&!freshDpcAnchor&&!accountabilityAnswer&&plain&&plain.length>35&&opts.closer!==false&&!/target pressure is covered|weekly target is covered|target is handled|gap:\s*\$?0|gap is \$?0/i.test(plain))closer=getMissionTurnCloser(turn,log);
   var opening=getMissionLightConversationOpeningV18(question||'',route,html,turn,opts);
@@ -12565,9 +12566,22 @@ function getMissionBookedCallsCountAnswerV1(ctx){
 
 function missionIsResultCountAskV15(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(how many|count|show|what are|any|do i have|where are|list|what .*logged)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|replies|responses|results?)\b/.test(q)||
-    /\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|replies|responses|results?)\b.*\b(logged|saved|reported|counted)\b/.test(q)||
+  return /\b(how many|count|show|what are|any|do i have|where are|list|what .*logged)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|no replies|no reply|non replies|follow ups?|follow-ups?|followups?|replies|responses|results?)\b/.test(q)||
+    /\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|no replies|no reply|non replies|follow ups?|follow-ups?|followups?|replies|responses|results?)\b.*\b(logged|saved|reported|counted)\b/.test(q)||
     /\b(what is logged|what's logged|what have i logged|what results are logged|what results do you have|what results can you see)\b/.test(q);
+}
+
+function countMissionFreshResultTypeV24(type){
+  try{
+    var active=countMissionActiveChatResultSignalsV12(type);
+    var session=typeof getMissionBrainSessionV2==='function'?getMissionBrainSessionV2():{};
+    var loop=session&&session.resultLoop||{};
+    var loopCount=countMissionFreshResultLoopSignalsV12(loop.history||[],loop.lastResult,type);
+    var eventCount=countMissionFreshResultEventsV12(type);
+    return active!==null?Math.max(active,loopCount,eventCount):Math.max(loopCount,eventCount);
+  }catch(e){
+    return 0;
+  }
 }
 
 function getMissionReplyCountAnswerV15(ctx){
@@ -12608,13 +12622,39 @@ function getMissionPaidCountAnswerV15(ctx){
   return lines.map(escapeHtml).join('<br>');
 }
 
+function getMissionNoReplyCountAnswerV24(ctx){
+  var count=countMissionFreshResultTypeV24('no_reply');
+  var lines=[
+    'No replies:',
+    '',
+    'Chat-only result memory: '+count+' no repl'+(count===1?'y':'ies')+' reported here.'
+  ];
+  if(!count)lines.push('I do not see a no-reply result in this chat yet. If one happened, log no reply, decide one bump, then move to the next warm signal.');
+  else lines.push('Use this as chat-only signal until Outreach or DPC confirms it.');
+  return lines.map(escapeHtml).join('<br>');
+}
+
+function getMissionFollowUpCountAnswerV24(ctx){
+  var count=countMissionFreshResultTypeV24('follow_up');
+  var lines=[
+    'Follow-ups:',
+    '',
+    'Chat-only result memory: '+count+' follow-up'+(count===1?'':'s')+' reported here.'
+  ];
+  if(!count)lines.push('I do not see a follow-up result in this chat yet. If one happened, log the unresolved concern and set the next touch.');
+  else lines.push('Use this as chat-only signal until the lead, calendar, or Outreach confirms the next touch.');
+  return lines.map(escapeHtml).join('<br>');
+}
+
 function getMissionLoggedResultsAnswerV15(ctx){
   var ledger=getMissionContextTruthLedgerV1(ctx||{});
+  var noReplyCount=typeof countMissionFreshResultTypeV24==='function'?countMissionFreshResultTypeV24('no_reply'):0;
+  var followUpCount=typeof countMissionFreshResultTypeV24==='function'?countMissionFreshResultTypeV24('follow_up'):0;
   var lines=[
     'Logged results:',
     '',
     'DPC today: '+Number(ledger.dpc&&ledger.dpc.replies||0)+' replies, '+Number(ledger.dpc&&ledger.dpc.booked||0)+' booked, '+Number(ledger.dpc&&ledger.dpc.closes||0)+' closes, $'+Number(ledger.dpc&&ledger.dpc.money||0)+' collected.',
-    'Chat-only memory: '+Number(ledger.session&&ledger.session.replies||0)+' replies, '+Number(ledger.session&&ledger.session.booked||0)+' booked, '+Number(ledger.session&&ledger.session.paid||0)+' paid.',
+    'Chat-only memory: '+Number(ledger.session&&ledger.session.replies||0)+' replies, '+Number(ledger.session&&ledger.session.booked||0)+' booked, '+Number(ledger.session&&ledger.session.paid||0)+' paid, '+noReplyCount+' no replies, '+followUpCount+' follow-ups.',
     'CRM confirmed: '+Number(ledger.crm&&ledger.crm.booked||0)+' booked/session signals, '+Number(ledger.crm&&ledger.crm.paid||0)+' paid/closed leads.',
     'Calendar confirmed: '+Number(ledger.calendar&&ledger.calendar.calls||0)+' call/session events.'
   ];
@@ -12652,6 +12692,8 @@ function getMissionResultCountAnswerV15(ctx,question){
   if(!missionIsResultCountAskV15(q))return '';
   if(/\b(results?|what is logged|what's logged|what have i logged)\b/.test(q)&&!/\b(booked calls?|calls booked|bookings?|paid|payments?|paid results?|sales|closes|replies|responses)\b/.test(q))return getMissionLoggedResultsAnswerV15(ctx);
   if(/\b(booked calls?|calls booked|bookings?)\b/.test(q))return getMissionBookedCallsCountAnswerV1(ctx);
+  if(/\b(no replies|no reply|non replies|no responses|no response)\b/.test(q))return getMissionNoReplyCountAnswerV24(ctx);
+  if(/\b(follow ups?|follow-ups?|followups?)\b/.test(q))return getMissionFollowUpCountAnswerV24(ctx);
   if(/\b(replies|reply|responses|response)\b/.test(q))return getMissionReplyCountAnswerV15(ctx);
   if(/\b(paid|payments?|paid results?|sales|closes)\b/.test(q))return getMissionPaidCountAnswerV15(ctx);
   if(/\b(results?|logged|saved|reported|counted)\b/.test(q))return getMissionLoggedResultsAnswerV15(ctx);
@@ -12664,7 +12706,7 @@ function getMissionResultCountAnswerV15(ctx,question){
 function getMissionResultSignalV1(question){
   var q=normalizeMissionQuestion(question||'');
   if(!q)return null;
-  if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|replies|responses)\b/.test(q))return null;
+  if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?|paid|payments?|no replies|no reply|follow ups?|follow-ups?|followups?|replies|responses)\b/.test(q))return null;
   if(isMissionSalesModeExitSignal(q))return {type:'call_done',label:'Call Done',confidence:0.95};
   if(/\b(wrong resource|wrong script|not the right resource|not the right script|didn'?t fit|did not fit|that resource missed|that script missed)\b/.test(q))return {type:'resource_mismatch',label:'Resource Did Not Fit',confidence:0.82};
   if(/\b(booked|booked one|booked a call|got booked|scheduled|put it on the calendar)\b/.test(q))return {type:'booked',label:'Booked Call',confidence:0.9};
@@ -18381,6 +18423,10 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'follow-up',{});
     var followUpLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/follow-up needed|unresolved concern|next touch/i.test(followUpLogVisible)||/booked call|calendar detail|money collected/i.test(followUpLogVisible))failures.push('follow_up_result_log_target_guard');
+    var followUpCountVisible=String(getMissionCommandResponse('ask',ctx,'how many follow ups do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Follow-ups:|Chat-only result memory: 1 follow-up/i.test(followUpCountVisible)||/Pipeline is showing|Pick one call-ready lead|What did they say back/i.test(followUpCountVisible))failures.push('follow_up_count_truth_guard');
+    var followUpLoggedVisible=String(getMissionCommandResponse('ask',ctx,'what results are logged',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Chat-only memory: .*1 follow-up/i.test(followUpLoggedVisible)||/Pipeline is showing|Pick one call-ready lead|What did they say back/i.test(followUpLoggedVisible))failures.push('follow_up_logged_results_summary_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Sales Result Followthrough No Reply',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18390,6 +18436,10 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'no reply',{});
     var noReplyLogVisible=String(getMissionCommandResponse('ask',ctx,'what should i log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/no reply recorded|bump later|next warm signal/i.test(noReplyLogVisible)||/booked call|calendar detail|money collected/i.test(noReplyLogVisible))failures.push('no_reply_result_log_target_guard');
+    var noReplyCountVisible=String(getMissionCommandResponse('ask',ctx,'how many no replies do i have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/No replies:|Chat-only result memory: 1 no repl/i.test(noReplyCountVisible)||/confirmed reply|qualify intent|Pipeline is showing|Pick one call-ready lead/i.test(noReplyCountVisible))failures.push('no_reply_count_truth_guard');
+    var noReplyLoggedVisible=String(getMissionCommandResponse('ask',ctx,'what results are logged',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Chat-only memory: .*1 no repl/i.test(noReplyLoggedVisible)||/Pipeline is showing|Pick one call-ready lead|What did they say back/i.test(noReplyLoggedVisible))failures.push('no_reply_logged_results_summary_guard');
     var noReplyNextVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Last result was no reply|bump later|next warm signal/i.test(noReplyNextVisible)||/Move now|booked call|calendar detail/i.test(noReplyNextVisible))failures.push('no_reply_result_next_guard');
     var noReplyWhyVisible=String(getMissionCommandResponse('ask',ctx,'why',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ').trim();
@@ -18434,7 +18484,7 @@ function runMissionBroadRegressionHardeningV1(){
     var cleanLoggedVisible=String(getMissionCommandResponse('ask',ctx,'what results are logged',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Chat-only result memory: 0 repl/i.test(cleanReplyCountVisible)||/Chat-only result memory: 1 repl/i.test(cleanReplyCountVisible))failures.push('clean_chat_reply_count_boundary_guard');
     if(!/Chat-only result memory: 0 paid result/i.test(cleanPaidCountVisible)||/Chat-only result memory: 1 paid result/i.test(cleanPaidCountVisible))failures.push('clean_chat_paid_count_boundary_guard');
-    if(!/Logged results:|Chat-only memory: 0 replies, 0 booked, 0 paid/i.test(cleanLoggedVisible)||/Pick one lane|current work card/i.test(cleanLoggedVisible))failures.push('logged_results_summary_guard');
+    if(!/Logged results:|Chat-only memory: 0 replies, 0 booked, 0 paid, 0 no replies, 0 follow-ups/i.test(cleanLoggedVisible)||/Pick one lane|current work card/i.test(cleanLoggedVisible))failures.push('logged_results_summary_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Result Trust Reply',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -24034,10 +24084,10 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   var protectedCorrectionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(question||''):'';
   var protectedResultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(question||''):null;
   var protectedResultTypes=/^(booked|paid|reply|no_reply|follow_up|call_done|done|resource_mismatch)$/;
-  var protectedCountQuestion=/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(normalizeMissionQuestion(question||''));
+  var protectedCountQuestion=typeof missionIsResultCountAskV15==='function'&&missionIsResultCountAskV15(question||'');
   if(protectedCorrectionRoute||protectedCountQuestion||protectedResultSignal&&protectedResultTypes.test(protectedResultSignal.type||'')){
     if(protectedCorrectionRoute)route=protectedCorrectionRoute;
-    return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false})),b2:'',b3:''};
+    return {b1:withWorker(protectedCountQuestion?answer:applyMissionPresenceLayer(answer,route,question||'',{closer:false})),b2:'',b3:''};
   }
   if(typeof missionShouldSuppressSecondaryBubblesForResultTruthV23==='function'&&missionShouldSuppressSecondaryBubblesForResultTruthV23(question||'',answer||'')){
     return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false,presence:false})),b2:'',b3:''};
