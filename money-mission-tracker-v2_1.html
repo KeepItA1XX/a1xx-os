@@ -12234,6 +12234,29 @@ function getMissionLatestResultFollowthroughAnswerV14(question){
   return '';
 }
 
+function missionIsAmbiguousReentryAskV19(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /^(where we at|where are we|where do i stand|where did we leave off|where did we leave it|what are we still on|what are we on|what did we leave open|what is the open loop|what is active right now|what is the current context|what did you carry over|run it back|run that back|catch me up|bring me back)$/.test(q);
+}
+
+function getMissionAmbiguousReentryAnswerV19(question,ctx){
+  var q=normalizeMissionQuestion(question||'');
+  if(!missionIsAmbiguousReentryAskV19(q))return '';
+  var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(latest&&latest.type){
+    if(latest.type==='booked')return 'You are on the booked-call loop.<br><br>Open loop: add the calendar detail, update the lead, and prep one opening question.';
+    if(latest.type==='paid')return 'You are past the sale now.<br><br>Open loop: log the money, update the lead, then protect delivery.';
+    if(latest.type==='reply')return 'You have a live reply.<br><br>Open loop: qualify intent before pitching, then log what they say back.';
+    if(latest.type==='no_reply')return 'That touch is no reply right now.<br><br>Open loop: log the touch, set one bump if it is worth it, then move to the next warm signal.';
+    if(latest.type==='follow_up')return 'You are on an unresolved follow-up.<br><br>Open loop: isolate the concern: money, timing, trust, or fit.';
+    if(latest.type==='done')return 'The action is marked done, but the result is still missing.<br><br>Open loop: tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+  }
+  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(q,ctx||{})){
+    return getMissionFreshStarterDpcAnchorAnswerV12(q,ctx||{},/\b(where we at|where are we|where do i stand)\b/.test(q)?'where':'');
+  }
+  return 'You are at a clean OS read.<br><br>No confirmed result owns this thread yet.<br><br>Start with one visible move, then log the result so Mission Command has a real signal.';
+}
+
 function getMissionLatestResultSalesReplyAnswerV16(question){
   var q=normalizeMissionQuestion(question||'');
   if(!/\b(help me reply|write (a |the )?(reply|response|dm|text)|what(?:'|’|\s+)?s the reply|reply for me|respond to that|what do i text back|what should i text|what should i dm|what should i say back|what do i say back|what do i send|what should i send|what do i tell (him|her|them)|text (him|her|them)?\s*back|dm (him|her|them)?\s*back|send (him|her|them)?\s*(a )?(text|dm|reply|response)?|how do i answer(?: that)?)\b/.test(q))return '';
@@ -14051,6 +14074,12 @@ function getMissionThreadMemoryV1(turn,ctx){
     }else if(lastResult.type==='no_reply'){
       action={label:'Next Warm Signal',type:'open_card',target:'hit_list',action:'move to the next warm signal',requiresConfirmation:false,reason:'thread_memory_no_reply'};
       message='Still on the outreach thread.<br><br>Last result: no reply.<br><br>Next: mark the touch, bump later, and move to the next warm signal.';
+    }else if(lastResult.type==='follow_up'){
+      action={label:'Isolate Concern',type:'open_card',target:'sales_coach',action:'isolate money, timing, trust, or fit',requiresConfirmation:false,reason:'thread_memory_follow_up'};
+      message='You are on an unresolved follow-up.<br><br>Last result: follow-up needed.<br><br>Next: isolate the concern: money, timing, trust, or fit.';
+    }else if(lastResult.type==='done'){
+      action={label:'Capture Result',type:'next_best_move',target:'mission_command',action:'capture the actual result',requiresConfirmation:false,reason:'thread_memory_done'};
+      message='The action is marked done, but the result is still missing.<br><br>Next: tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
     }else{
       message='We are still on the same thread.<br><br>Last result: '+escapeHtml(lastResult.label||lastResult.type||'result logged')+'.<br><br>Next: close the loop with one visible status change.';
     }
@@ -18489,6 +18518,23 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'wrong read',{});
     var pipelineCorrectionCardVisible=String(getMissionCommandResponse('ask',ctx,'where should this live',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Pipeline, not sales|Pipeline \/ Outreach|lead touch|next status/i.test(pipelineCorrectionCardVisible)||/That lives on Content|Sales Coach|Production, not content|Delivery owns/i.test(pipelineCorrectionCardVisible))failures.push('correction_pipeline_card_target_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Ambiguous Reentry Result Ownership',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'paid',{});
+    var paidReentryVisible=String(getMissionCommandResponse('ask',ctx,'what did we leave open',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/past the sale|Open loop: log the money|protect delivery/i.test(paidReentryVisible)||/Memory lane|Open Memory|current work card|DPC is still at zero/i.test(paidReentryVisible))failures.push('ambiguous_reentry_paid_owner_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Ambiguous Reentry Clean',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    var cleanReentryVisible=String(getMissionCommandResponse('ask',ctx,'what are we still on',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/clean OS read|No confirmed result owns this thread|one visible move/i.test(cleanReentryVisible)||/Memory lane|Open Memory|That's where the OS keeps this lane/i.test(cleanReentryVisible))failures.push('ambiguous_reentry_clean_memory_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Correction Bubble Packet',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -24413,6 +24459,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  if(latestResultFollowthroughAnswer)return finishMissionAnswer(latestResultFollowthroughAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var latestResultSalesReplyAnswer=typeof getMissionLatestResultSalesReplyAnswerV16==='function'?getMissionLatestResultSalesReplyAnswerV16(cleanQuestion||question||''):'';
 	  if(latestResultSalesReplyAnswer)return finishMissionAnswer(latestResultSalesReplyAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
+	  var ambiguousReentryAnswer=typeof getMissionAmbiguousReentryAnswerV19==='function'?getMissionAmbiguousReentryAnswerV19(cleanQuestion||question||'',ctx):'';
+	  if(ambiguousReentryAnswer)return finishMissionAnswer(ambiguousReentryAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||cleanQuestion||'',ctx)){
 	    var freshAnchorKind=/\b(where we at|where are we|where do i stand)\b/.test(rawQ)?'where':(/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(rawQ)?'time':(/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|nah not that|no not that|clean version|clean read)\b/.test(rawQ)?'clean':(/\b(why|why again)\b/.test(rawQ)?'why':'')));
 	    if(freshAnchorKind)return finishMissionAnswer(getMissionFreshStarterDpcAnchorAnswerV12(cleanQuestion||question||'',ctx,freshAnchorKind),{sessionArc:false,closer:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
