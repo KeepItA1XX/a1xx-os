@@ -3514,9 +3514,9 @@ body:before{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.0 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
-var APP_BUILD_STAMP='2026-05-24 12:00 ET · Sheets write verification';
+var APP_BUILD_STAMP='2026-05-24 12:10 ET · Sheets verification timeout tune';
 var APP_BRAIN_BUILD='Mission Command Sheets sync prep';
-var APP_CACHE_TOKEN='mmos-20260524-1200';
+var APP_CACHE_TOKEN='mmos-20260524-1210';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -3836,12 +3836,13 @@ function renderSystemHealth(){
   }).join('');
 }
 
-async function fetchWithRetry(url,opts,tries){
+async function fetchWithRetry(url,opts,tries,timeoutMs){
   tries=tries||2;
+  timeoutMs=timeoutMs||12000;
   var lastErr;
   for(var i=0;i<tries;i++){
     try{
-      var res=await fetchWithTimeout(url,opts||{},12000);
+      var res=await fetchWithTimeout(url,opts||{},timeoutMs);
       if((res.status===429||res.status>=500)&&i<tries-1){
         lastErr=new Error('HTTP '+res.status);
         await new Promise(function(r){setTimeout(r,500*(i+1));});
@@ -3859,13 +3860,17 @@ function fetchWithTimeout(url,opts,ms){
   if(typeof AbortController==='undefined'){
     return Promise.race([
       fetch(url,opts||{}),
-      new Promise(function(resolve,reject){setTimeout(function(){reject(new Error('Request timed out'));},ms);})
+      new Promise(function(resolve,reject){setTimeout(function(){reject(new Error('Request timed out after '+Math.round(ms/1000)+' seconds.'));},ms);})
     ]);
   }
   var controller=new AbortController();
   var options=Object.assign({},opts||{},{signal:controller.signal});
   var timer=setTimeout(function(){controller.abort();},ms);
-  return fetch(url,options).finally(function(){clearTimeout(timer);});
+  return fetch(url,options).catch(function(e){
+    var msg=String(e&&e.message||e||'');
+    if(e&&e.name==='AbortError'||/aborted|abort/i.test(msg))throw new Error('Request timed out after '+Math.round(ms/1000)+' seconds.');
+    throw e;
+  }).finally(function(){clearTimeout(timer);});
 }
 
 function getWebhookToken(){
@@ -3893,13 +3898,14 @@ function waitMs(ms){
   return new Promise(function(resolve){setTimeout(resolve,ms||800);});
 }
 
-async function getAppsScriptJson(action,params){
+async function getAppsScriptJson(action,params,options){
+  options=options||{};
   var appUrl=localStorage.getItem(SHEETS_KEY);
   if(!appUrl)throw new Error('Missing Apps Script URL.');
   var query=Object.assign({action:action,_:Date.now()},params||{});
   var qs=Object.keys(query).map(function(key){return encodeURIComponent(key)+'='+encodeURIComponent(query[key]);}).join('&');
   var sep=appUrl.indexOf('?')>=0?'&':'?';
-  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
+  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},options.tries||2,options.timeoutMs||22000);
   var text=await res.text();
   try{return JSON.parse(text);}
   catch(e){throw new Error('Apps Script returned unreadable data. Check deployment URL.');}
@@ -4186,7 +4192,7 @@ function testSheets(){
   if(!url){document.getElementById('sheets-status').textContent='Enter URL first.';return;}
   var status=document.getElementById('sheets-status');
   if(status){status.style.color='';status.textContent='Checking bridge...';}
-  getAppsScriptJson('health').then(function(res){
+  getAppsScriptJson('health',{}, {timeoutMs:30000, tries:1}).then(function(res){
     var health=res&&res.health||{};
     if(status){
       status.style.color=(health.sheets==='ok')?'#639922':'#d4a017';
@@ -4195,7 +4201,7 @@ function testSheets(){
   }).catch(function(e){
     if(status){
       status.style.color='#e05555';
-      status.textContent='Bridge check failed: '+(e&&e.message?e.message:'check URL/deployment');
+      status.textContent='Bridge check failed: '+(e&&e.message?e.message:'check URL/deployment')+' If this keeps timing out, Apps Script may need redeploy or the Web App URL may be stale.';
     }
   });
 }
@@ -4279,7 +4285,7 @@ async function sendBackup(silent){
 async function verifyBackupSavedToSheetsV1(keyCount,size,startedAt){
   try{
     await waitMs(1400);
-    var res=await getAppsScriptJson('get_backup');
+    var res=await getAppsScriptJson('get_backup',{}, {timeoutMs:26000, tries:2});
     var backup=res&&res.backup;
     if(!backup)return {ok:false,error:'No backup row came back from Sheets.'};
     var savedAtMs=Date.parse(backup.savedAt||'');
@@ -14307,7 +14313,7 @@ function missionSheetsSendTestEventV11(){
       return false;
     }
     setTimeout(function(){
-      getAppsScriptJson('mission_events',{limit:10}).then(function(res){
+      getAppsScriptJson('mission_events',{limit:10},{timeoutMs:26000,tries:2}).then(function(res){
         var rows=Array.isArray(res&&res.rows)?res.rows:[];
         var found=rows.some(function(row){return row.sessionId===marker||row.action==='sync_test';});
         if(found){
