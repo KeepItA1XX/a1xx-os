@@ -3836,9 +3836,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 19:04 ET · OS v2_2 DPC undo restore guard';
+var APP_BUILD_STAMP='2026-05-24 19:07 ET · OS v2_2 DPC save trust feedback';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1904';
+var APP_CACHE_TOKEN='mmos-20260524-1907';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -5476,7 +5476,7 @@ function setDpcSaveStatusV22(kind,text){
   var status=document.getElementById('dpc-save-status');
   if(!status)return;
   status.className='dpc-save-status '+(kind||'info');
-  status.textContent=text||'Saves to today\'s daily log + Google Sheet.';
+  status.textContent=text||'Saves locally and sends to Google Sheets when connected.';
 }
 
 function setDpcSaveBusyV22(isBusy,label){
@@ -5571,7 +5571,7 @@ function renderDpcDateView(){
 
 function postDailySave(dKey,row,saveMode){
   var url=localStorage.getItem(SHEETS_KEY);
-  if(!url)return;
+  if(!url)return {sent:false,reason:'missing_url'};
   try{
     var rhythm=(typeof getDayRhythm==='function')?getDayRhythm(new Date(dKey+'T00:00:00').getDay()):null;
     var dayType=deriveOpsDayType(rhythm);
@@ -5592,7 +5592,16 @@ function postDailySave(dKey,row,saveMode){
       cycle:cycle,
       ts:new Date().toISOString()
     });
-  }catch(e){}
+    return {sent:true,reason:'sent_unverified'};
+  }catch(e){
+    return {sent:false,reason:'send_error'};
+  }
+}
+
+function getDpcSaveTrustTextV22(result){
+  if(result&&result.sent)return 'Local save done. Sheets sync sent.';
+  if(result&&result.reason==='missing_url')return 'Local save done. Sheets URL missing.';
+  return 'Local save done. Sheets sync not sent.';
 }
 
 function deriveOpsDayType(rhythm){
@@ -5649,7 +5658,7 @@ function submitDailyCoachLog(){
   var undoBtn=document.getElementById('dpc-undo-btn');if(undoBtn)undoBtn.style.display='inline-flex';
   // The UI already folds today's delta into newRow. Send the corrected day total
   // to Sheets/Notion so repeat saves do not double-count prior values.
-  postDailySave(viewKey,newRow,'replace');
+  var sheetResult=postDailySave(viewKey,newRow,'replace');
   syncDPCtoWeekly(false);
   if(typeof calcWeek==='function')calcWeek();
   if(typeof updateReport==='function')updateReport();
@@ -5662,7 +5671,7 @@ function submitDailyCoachLog(){
   var status=document.getElementById('dpc-save-status');
   if(status){
     var verb=mode==='delta'?'Added to':'Updated';
-    setDpcSaveStatusV22('ok',verb+' '+viewKey+': '+newRow.dms+' DMs · '+newRow.coldCalls+' calls made · '+newRow.calls+' booked · '+fmt(newRow.money)+' collected');
+    setDpcSaveStatusV22('ok',verb+' '+viewKey+': '+newRow.dms+' DMs · '+newRow.coldCalls+' calls made · '+newRow.calls+' booked · '+fmt(newRow.money)+' collected. '+getDpcSaveTrustTextV22(sheetResult));
     setTimeout(function(){
       window.__dpcSaveBusyV22=false;
       setDpcSaveBusyV22(false);
@@ -5692,7 +5701,7 @@ function undoLastDailySave(){
     d.calls=snap.prevRow.calls;d.closes=snap.prevRow.closes;d.money=snap.prevRow.money;d.leads=snap.prevRow.leads;
     setStore(DPC_KEY,d);
   }
-  postDailySave(snap.date,snap.prevRow,'replace');
+  var undoSheetResult=postDailySave(snap.date,snap.prevRow,'replace');
   syncDPCtoWeekly(false);
   if(typeof calcWeek==='function')calcWeek();
   if(typeof updateReport==='function')updateReport();
@@ -5701,7 +5710,7 @@ function undoLastDailySave(){
   var undoBtn=document.getElementById('dpc-undo-btn');if(undoBtn)undoBtn.style.display='none';
   var status=document.getElementById('dpc-save-status');
   if(status){
-    setDpcSaveStatusV22('ok',(snap.existed===false?'Removed new save for ':'Reverted last save for ')+snap.date+'.');
+    setDpcSaveStatusV22('ok',(snap.existed===false?'Removed new save for ':'Reverted last save for ')+snap.date+'. '+getDpcSaveTrustTextV22(undoSheetResult));
     setTimeout(function(){
       if(typeof renderDpcDateView==='function')renderDpcDateView();
     },3500);
