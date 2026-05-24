@@ -1138,9 +1138,12 @@ input:focus{border-color:#333}
 .dpc-missed-banner{background:#1a1200;border:0.5px solid #5a3800;border-radius:10px;padding:11px 14px;margin-bottom:10px;color:#f0d08a;font-size:12px;font-weight:600;line-height:1.5;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:all .15s;position:relative}
 .dpc-missed-banner.dismissed{display:none!important}
 .dpc-missed-banner:hover{background:#221700;border-color:#7a4800}
-.dpc-missed-banner .dpc-mb-text{flex:1;padding-right:28px}
+.dpc-missed-banner .dpc-mb-text{flex:1;padding-right:74px}
+.dpc-missed-banner .dpc-mb-actions{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:30;display:inline-flex;align-items:center;gap:4px}
+.dpc-missed-banner .dpc-mb-dismiss{height:24px;padding:0 7px;border-radius:7px;color:#a07010;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.dpc-missed-banner .dpc-mb-dismiss:hover{background:#2a1a00;color:#f0d08a}
 .dpc-missed-banner .dpc-mb-close{width:26px;height:26px;min-width:26px;background:transparent;border:0;border-radius:7px;color:#a07010;font-size:16px;cursor:pointer;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;position:relative;z-index:2;pointer-events:auto}
-.dpc-missed-banner .dpc-mb-close{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:30}
+.dpc-missed-banner [data-dpc-missed-dismiss]{pointer-events:auto;user-select:none}
 .dpc-missed-banner .dpc-mb-close:hover{background:#2a1a00;color:#f0d08a}
 .dpc-log-mode-hint{font-size:10px;color:#7ec845;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;text-align:center}
 .dpc-log-mode-hint.edit{color:#d4a017}
@@ -3004,7 +3007,10 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   <!-- MISSED-DAY BANNER (shows when yesterday has no saved record) -->
   <div class="dpc-missed-banner" id="dpc-missed-banner" style="display:none" role="button" tabindex="0">
     <div class="dpc-mb-text" id="dpc-missed-banner-text">You missed yesterday — tap to fill it in.</div>
-    <button class="dpc-mb-close" type="button" onclick="return dismissMissedBanner(event)" onpointerdown="return dismissMissedBanner(event)" aria-label="Dismiss">×</button>
+    <div class="dpc-mb-actions">
+      <span class="dpc-mb-dismiss" data-dpc-missed-dismiss="1" role="button" tabindex="0" onclick="return dismissMissedBanner(event)" onpointerdown="return dismissMissedBanner(event)" onmousedown="return dismissMissedBanner(event)" onkeydown="return handleDpcMissedBannerClickV22(event)">Dismiss</span>
+      <span class="dpc-mb-close" data-dpc-missed-dismiss="1" role="button" tabindex="0" onclick="return dismissMissedBanner(event)" onpointerdown="return dismissMissedBanner(event)" onmousedown="return dismissMissedBanner(event)" onkeydown="return handleDpcMissedBannerClickV22(event)" aria-label="Dismiss">×</span>
+    </div>
   </div>
 
   <!-- LOG INPUTS -->
@@ -3786,9 +3792,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 17:36 ET · OS v2_2 hard DPC banner dismiss';
+var APP_BUILD_STAMP='2026-05-24 17:52 ET · OS v2_2 resilient DPC banner dismiss';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1736';
+var APP_CACHE_TOKEN='mmos-20260524-1752';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -5534,9 +5540,7 @@ function renderMissedDayBanner(){
   var yKey=dateKey(yest);
   var hardDismissKey='a1xx_missed_banner_dismissed_until_'+dateKey(b.today);
   if(window.__dpcMissedBannerDismissed||localStorage.getItem(hardDismissKey)==='1'||localStorage.getItem('a1xx_missed_banner_dismissed_'+yKey)==='1'){
-    banner.classList.add('dismissed');
-    banner.style.display='none';
-    banner.setAttribute('aria-hidden','true');
+    hideDpcMissedBannersV22();
     return;
   }
   var weekStart=getWeekStart();
@@ -5551,8 +5555,23 @@ function renderMissedDayBanner(){
   banner.style.display='flex';
 }
 
+function hideDpcMissedBannersV22(){
+  var banners=[];
+  try{
+    banners=Array.prototype.slice.call(document.querySelectorAll('.dpc-missed-banner'));
+  }catch(err){
+    var one=document.getElementById('dpc-missed-banner');
+    banners=one?[one]:[];
+  }
+  banners.forEach(function(banner){
+    banner.classList.add('dismissed');
+    banner.style.display='none';
+    banner.setAttribute('aria-hidden','true');
+  });
+}
+
 function openYesterdayDPC(e){
-  if(e&&e.target&&e.target.closest&&e.target.closest('.dpc-mb-close'))return false;
+  if(e&&e.target&&e.target.closest&&e.target.closest('[data-dpc-missed-dismiss],.dpc-mb-close,.dpc-mb-dismiss'))return false;
   var panel=document.getElementById('dpc-log');
   if(panel&&panel.classList.contains('collapsed')){
     panel.classList.remove('collapsed');
@@ -5573,28 +5592,25 @@ function dismissMissedBanner(e){
     if(e.stopImmediatePropagation)e.stopImmediatePropagation();
     if(e.stopPropagation)e.stopPropagation();
   }
+  window.__dpcMissedBannerDismissed=true;
+  hideDpcMissedBannersV22();
   var b=getDpcWeekBoundaries();
   var yest=new Date(b.today);yest.setDate(b.today.getDate()-1);
-  window.__dpcMissedBannerDismissed=true;
-  localStorage.setItem('a1xx_missed_banner_dismissed_'+dateKey(yest),'1');
-  localStorage.setItem('a1xx_missed_banner_dismissed_until_'+dateKey(b.today),'1');
-  var banner=document.getElementById('dpc-missed-banner');
-  if(banner){
-    banner.classList.add('dismissed');
-    banner.style.display='none';
-    banner.setAttribute('aria-hidden','true');
-  }
+  try{
+    localStorage.setItem('a1xx_missed_banner_dismissed_'+dateKey(yest),'1');
+    localStorage.setItem('a1xx_missed_banner_dismissed_until_'+dateKey(b.today),'1');
+  }catch(err){}
   return false;
 }
 
 function handleDpcMissedBannerClickV22(e){
-  var close=e&&e.target&&e.target.closest?e.target.closest('.dpc-mb-close'):null;
+  if(e&&e.type==='keydown'&&e.key!=='Enter'&&e.key!==' ')return true;
+  var close=e&&e.target&&e.target.closest?e.target.closest('[data-dpc-missed-dismiss],.dpc-mb-close,.dpc-mb-dismiss'):null;
   if(close){
     return dismissMissedBanner(e);
   }
   var banner=e&&e.target&&e.target.closest?e.target.closest('#dpc-missed-banner'):null;
   if(!banner)return true;
-  if(e&&e.type==='keydown'&&e.key!=='Enter'&&e.key!==' ')return true;
   if(e){
     if(e.preventDefault)e.preventDefault();
     if(e.stopPropagation)e.stopPropagation();
@@ -5605,7 +5621,7 @@ function handleDpcMissedBannerClickV22(e){
 function wireDpcMissedBannerCloseV22(){
   if(document.__a1xxDpcMissedBannerCloseWired)return;
   document.__a1xxDpcMissedBannerCloseWired=true;
-  ['pointerdown','click','keydown'].forEach(function(type){
+  ['pointerdown','mousedown','touchstart','click','keydown'].forEach(function(type){
     document.addEventListener(type,handleDpcMissedBannerClickV22,true);
   });
 }
