@@ -320,6 +320,8 @@ Manager/calendar wording rule:
 - Protect next-call prep from generic lead labels; if the app only has `Unnamed lead`, `active`, or `lead`, say `No specific lead selected yet` instead of pretending a real call lead is selected.
 - Treat sibling prep phrases like `what do I need before my next call`, `prep me before calendar`, `what should I ask before the meeting`, and `what should I do before my next meeting` as calendar/call prep, not lead browsing, generic sales coaching, or DPC starter prompts.
 - Result + calendar crossover must keep the result in charge. After `booked`, `paid`, `follow-up`, `no reply`, `reply`, or `done`, calendar-prep siblings should run before generic latest-result follow-through so the answer keeps both the result and the calendar constraint.
+- Calendar trust boundary: if calendar health is `loading`, `err`, or otherwise weak and no event is loaded, never pretend there is a confirmed next call, next event, or clear calendar window. Say what is known, give a prep checklist if useful, and only tell A1XX to sync when the timing matters.
+- Empty-calendar honesty: if calendar health is OK but no event is loaded, it can say the window is open, but it should not reference a `next calendar commitment`.
 - Manager direct answers should not receive the generic cross-card `Before you switch lanes` append when the answer already includes its own admin/time handoff.
 - Keep required labels like `Calendar read`, `Prep read`, and `Do this next` when regressions depend on them, but make the body sound like an operator read.
 

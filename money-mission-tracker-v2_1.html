@@ -3497,9 +3497,9 @@ body:before{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.0 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
-var APP_BUILD_STAMP='2026-05-24 10:53 ET · result-owned calendar prep hardening';
-var APP_BRAIN_BUILD='Mission Command result-owned calendar prep order';
-var APP_CACHE_TOKEN='mmos-20260524-1053';
+var APP_BUILD_STAMP='2026-05-24 11:01 ET · calendar trust boundary hardening';
+var APP_BRAIN_BUILD='Mission Command calendar trust boundary';
+var APP_CACHE_TOKEN='mmos-20260524-1101';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var TODOIST_KEY='a1xx_todoist_v1';
@@ -12468,15 +12468,56 @@ function missionIsCalendarEventPrepAskV21(question){
   return /\b(prep me for (a|the|this|my|next) call|prepare me for (a|the|this|my|next) call|prep this call|prep (before|for) (my|the|this|next) call|prep (before|for) (my|the|this) next call|prep me before (calendar|the calendar|my calendar|next event|the next event|meeting|the meeting)|call prep|call in \d+|call in ten|call in five|i have a call in \d+|i have a call in ten|i have a call in five|sales call in \d+|what do i need before (this|my|the|next) (meeting|call|event)|what do i need before (my|the|this) next (meeting|call|event)|before (this|my|the|next) (meeting|call|event) what do i need|what should i prep before (my|the|this|next) next call|what should i prep before (my|the|this|next) call|what should i prep (for|before) (my|the|this) next call|what should i prep before (calendar|the calendar|my calendar|next event|the next event|meeting|the meeting)|what should i ask on (the|this|my|next) (call|meeting)|what should i ask before (the|this|my|next) (call|meeting)|what should i do before (my|the|this|next) next (meeting|call|event)|what should i do before (my|the|this|next) (meeting|call|event)|how do i start (the|this|my|next) (call|meeting))\b/.test(q);
 }
 
-function getMissionCalendarEventPrepLabelV21(ctx){
+function getMissionCalendarTrustStateV24(ctx){
   ctx=ctx||{};
+  var h=typeof getHealth==='function'?getHealth():{};
+  var services=h&&h.services||{};
+  var calendar=services.calendar||{};
+  var status=String(calendar.status||'unknown').toLowerCase();
+  var ok=/^(ok|checked|ready|loaded|synced|healthy|success|connected)$/.test(status);
+  var loading=!ok&&/loading|syncing|pending|unknown|checking|wait/.test(status);
+  var error=!ok&&/err|error|fail|timeout|blocked|not set|missing|denied/.test(status);
+  var events=[];
+  try{events=(window.__calEvents||[]).filter(Boolean);}catch(e){events=[];}
   var event=ctx.nextEvent||null;
   if(!event){
     try{
-      var events=(window.__calEvents||[]).filter(Boolean).sort(function(a,b){return new Date(a.start||0)-new Date(b.start||0);});
-      event=events[0]||null;
+      event=events.slice().sort(function(a,b){return new Date(a.start||0)-new Date(b.start||0);})[0]||null;
     }catch(e){event=null;}
   }
+  return {
+    status:status,
+    ok:ok,
+    loading:loading,
+    error:error,
+    weak:!ok,
+    event:event,
+    hasEvent:!!event,
+    eventCount:events.length,
+    message:calendar.msg||''
+  };
+}
+
+function getMissionCalendarTrustPlainLineV24(ctx){
+  var trust=getMissionCalendarTrustStateV24(ctx||{});
+  if(trust.hasEvent)return '';
+  if(trust.error)return 'Calendar is not confirmed right now.';
+  if(trust.loading)return 'Calendar is still loading.';
+  return 'I do not see a confirmed next event loaded.';
+}
+
+function getMissionCalendarTrustPrepLineV24(ctx){
+  var trust=getMissionCalendarTrustStateV24(ctx||{});
+  if(trust.hasEvent)return '';
+  if(trust.error)return 'Do not trust the next-call time yet. Run sync if the time matters.';
+  if(trust.loading)return 'Do not treat the next-call time as locked yet.';
+  return 'Use this as a prep checklist, not a confirmed calendar event.';
+}
+
+function getMissionCalendarEventPrepLabelV21(ctx){
+  ctx=ctx||{};
+  var trust=typeof getMissionCalendarTrustStateV24==='function'?getMissionCalendarTrustStateV24(ctx):{event:null};
+  var event=trust.event||null;
   if(!event)return 'the next call';
   return (event.startTime||formatCalTime(event.start)||'time TBD')+' · '+(event.title||'next call');
 }
@@ -12494,8 +12535,20 @@ function sanitizeMissionCallPrepLeadLineV23(leadLine){
 function getMissionCalendarEventPrepAnswerV21(question,ctx){
   if(!missionIsCalendarEventPrepAskV21(question||''))return '';
   var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  var trust=typeof getMissionCalendarTrustStateV24==='function'?getMissionCalendarTrustStateV24(ctx||{}):{hasEvent:false};
+  var noEventLine=typeof getMissionCalendarTrustPlainLineV24==='function'?getMissionCalendarTrustPlainLineV24(ctx||{}):'I do not see a confirmed next event loaded.';
+  var prepTrustLine=typeof getMissionCalendarTrustPrepLineV24==='function'?getMissionCalendarTrustPrepLineV24(ctx||{}):'Use this as a prep checklist, not a confirmed calendar event.';
   var eventLabel=getMissionCalendarEventPrepLabelV21(ctx||{});
   if(latest&&latest.type){
+    if(!trust.hasEvent){
+      if(latest.type==='booked')return noEventLine+'<br><br>Keep the booked loop simple: add the calendar detail when sync confirms it, update the lead, and prep one opening question.';
+      if(latest.type==='paid')return noEventLine+'<br><br>Close the paid loop first: log the money, update the lead, then write the first delivery step.';
+      if(latest.type==='reply')return noEventLine+'<br><br>Turn the reply into a call-ready read: ask one qualifying question, then log the reply.';
+      if(latest.type==='no_reply')return noEventLine+'<br><br>Do not prep a ghost call: log no reply, decide one bump, then move to the next warm signal.';
+      if(latest.type==='no')return noEventLine+'<br><br>Do not keep working a closed no: capture the reason, update the lead, then move to the next warm signal.';
+      if(latest.type==='follow_up')return noEventLine+'<br><br>Prep the follow-up around one concern: money, timing, trust, or fit.';
+      if(latest.type==='done')return noEventLine+'<br><br>Capture the actual result first: no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+    }
     if(latest.type==='booked')return 'Prep the booked call around '+escapeHtml(eventLabel)+'.<br><br>1) Add the calendar detail.<br>2) Update the lead.<br>3) Open with: "Before I explain anything, what made you want to talk today?"';
     if(latest.type==='paid')return 'Before '+escapeHtml(eventLabel)+', close the paid loop first.<br><br>Log the money, update the lead, then write the first delivery step.';
     if(latest.type==='reply')return 'Before '+escapeHtml(eventLabel)+', turn the reply into a call-ready read.<br><br>Ask one qualifying question, then log the reply.';
@@ -12506,6 +12559,9 @@ function getMissionCalendarEventPrepAnswerV21(question,ctx){
   }
   var leadLine=typeof getMissionSalesLeadLine==='function'?getMissionSalesLeadLine(ctx||{}):'No specific lead selected.';
   leadLine=sanitizeMissionCallPrepLeadLineV23(leadLine);
+  if(!trust.hasEvent){
+    return noEventLine+'<br><br>'+escapeHtml(prepTrustLine)+'<br><br>Prep the call checklist: outcome, opening question, and follow-up target.<br><br>Lead read: '+escapeHtml(leadLine)+'.';
+  }
   return 'Prep '+escapeHtml(eventLabel)+' around one outcome.<br><br>Lead read: '+escapeHtml(leadLine)+'.<br><br>Opening question: "Before I explain anything, what made you want to talk today?"';
 }
 
@@ -12521,6 +12577,7 @@ function getMissionCalendarBlockResultAnswerV22(question,ctx){
   var q=normalizeMissionQuestion(question||'');
   var move=typeof getMissionTimePressureResultMoveV20==='function'?getMissionTimePressureResultMoveV20(latest):'';
   if(!move)return '';
+  var trust=typeof getMissionCalendarTrustStateV24==='function'?getMissionCalendarTrustStateV24(ctx||{}):{hasEvent:false};
   var eventLabel=typeof getMissionCalendarEventPrepLabelV21==='function'?getMissionCalendarEventPrepLabelV21(ctx||{}):'the next event';
   var block={};
   try{block=typeof getMissionBlockIntel==='function'?getMissionBlockIntel():{};}catch(e){block={};}
@@ -12530,6 +12587,10 @@ function getMissionCalendarBlockResultAnswerV22(question,ctx){
     var blockName=block&&block.name||'this window';
     var minutes=Number(block&&block.minutesLeft||0);
     return (minutes?blockName+' has '+minutes+' minutes left.':'Treat this like the active window.')+'<br><br>'+getMissionTimePressureResultLineV20(latest,move);
+  }
+  if(!trust.hasEvent){
+    var noEventLine=typeof getMissionCalendarTrustPlainLineV24==='function'?getMissionCalendarTrustPlainLineV24(ctx||{}):'I do not see a confirmed next event loaded.';
+    return noEventLine+'<br><br>Use the time check to protect the '+resultLabel+' loop: '+escapeHtml(move)+'.';
   }
   return 'Calendar read: '+escapeHtml(eventLabel)+'.<br><br>Use the calendar to protect the '+resultLabel+' loop: '+escapeHtml(move)+'.';
 }
@@ -19096,6 +19157,21 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/resources: loading|calendar: err|safe next move|not treat final counts as locked/i.test(weakHealthTrustVisible)||/This is clean enough to choose the next move/i.test(weakHealthTrustVisible))failures.push('data_trust_weak_health_downgrade_guard');
     var weakHealthMissingVisible=String(getMissionCommandResponse('ask',ctx,'what data is missing',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/sync health needs attention: resources loading, calendar err/i.test(weakHealthMissingVisible)||!/not treat final counts as locked/i.test(weakHealthMissingVisible)||/nothing obvious from the current app packet\s+This is clean enough/i.test(weakHealthMissingVisible))failures.push('data_missing_weak_health_downgrade_guard');
+    var savedCalendarForTrust=window.__calEvents;
+    window.__calEvents=[];
+    var noCalendarCtx=Object.assign({},ctx,{nextEvent:null});
+    setStore(HEALTH_KEY,{lastSync:Date.now(),services:{calendar:{status:'ok'},crm:{status:'ok'},content:{status:'ok'},todoist:{status:'ok'}}});
+    var okEmptyManagerVisible=String(getMissionCommandResponse('sales',noCalendarCtx,'manager review',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/open calendar window intentionally/i.test(okEmptyManagerVisible)||/next calendar commitment/i.test(okEmptyManagerVisible))failures.push('calendar_ok_empty_manager_review_honesty');
+    setStore(HEALTH_KEY,{lastSync:Date.now(),services:{calendar:{status:'loading'},crm:{status:'ok'},content:{status:'ok'},todoist:{status:'ok'}}});
+    var loadingCalendarVisible=String(getMissionCommandResponse('calendar',noCalendarCtx,'what is on my calendar',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Calendar is still loading|calendar sync|not.*locked|wait for calendar sync/i.test(loadingCalendarVisible)||/clear calendar window|next calendar commitment/i.test(loadingCalendarVisible))failures.push('calendar_loading_no_fake_clear_window');
+    setStore(HEALTH_KEY,{lastSync:Date.now(),services:{calendar:{status:'err'},crm:{status:'ok'},content:{status:'ok'},todoist:{status:'ok'}}});
+    var errCalendarPrepVisible=String(getMissionCommandResponse('calendar',noCalendarCtx,'what should i prep before my next call',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Calendar is not confirmed|Do not trust the next-call time|Run sync if the time matters|prep checklist/i.test(errCalendarPrepVisible)||/Prep the next call around/i.test(errCalendarPrepVisible))failures.push('calendar_error_call_prep_trust_boundary');
+    var errCalendarMissingVisible=String(getMissionCommandResponse('calendar',noCalendarCtx,'what can you not see about my time',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/calendar timing|calendar err|sync health needs attention/i.test(errCalendarMissingVisible)||/nothing obvious from the current app packet\s+I would trust/i.test(errCalendarMissingVisible))failures.push('calendar_error_time_missing_data_trust');
+    window.__calEvents=savedCalendarForTrust;
     if(savedHealthForDataTrust)setStore(HEALTH_KEY,savedHealthForDataTrust);
     else localStorage.removeItem(HEALTH_KEY);
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Mixed Lane Corrections',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
@@ -19315,7 +19391,7 @@ function runMissionBroadRegressionHardeningV1(){
     restoreMissionStorageForQaV1(localStorage,savedLocalAll);
     restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:203,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 24 result-calendar crossover checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 3 output-integrity checks + 126 sales/result/data/mixed-lane/storage/legacy-watchlist/silence/accountability checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:207,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 24 result-calendar crossover checks + 4 calendar trust-boundary checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 3 output-integrity checks + 126 sales/result/data/mixed-lane/storage/legacy-watchlist/silence/accountability checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -19346,6 +19422,9 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   if(!(window.__productionPieces&&window.__productionPieces.length))missing.push('production');
   var h=typeof getHealth==='function'?getHealth():{};
   var services=h.services||{};
+  var calendarTrust=typeof getMissionCalendarTrustStateV24==='function'?getMissionCalendarTrustStateV24(ctx||{}):null;
+  var asksTimeTrust=/\b(calendar|block|time|schedule|next call|next event|before.*call|before.*meeting|about my time)\b/.test(q);
+  if(asksTimeTrust&&calendarTrust&&calendarTrust.weak&&!calendarTrust.hasEvent)missing.push('calendar timing');
   var serviceNames=Object.keys(services);
   var weakServiceNames=serviceNames.filter(function(name){
     var s=services[name]||{};
@@ -21874,6 +21953,7 @@ function getMissionManagerSnapshotV11(ctx){
     block:block,
     events:events,
     nextEvent:nextEvent,
+    calendarTrust:typeof getMissionCalendarTrustStateV24==='function'?getMissionCalendarTrustStateV24(Object.assign({},ctx,{nextEvent:nextEvent})):null,
     openTasks:openTasks,
     dayType:dayType,
     dpcTotal:dpcTotal,
@@ -21895,20 +21975,26 @@ function missionManagerTaskLabelV11(task){
 
 function getMissionManagerNextMoveV11(mode,snap){
   snap=snap||{};
+  var calendarTrust=snap.calendarTrust||{};
+  var calendarWeakNoEvent=calendarTrust.weak&&!snap.nextEvent;
   if(mode==='block'){
     if(snap.block&&snap.block.minutesLeft)return 'define one outcome for '+snap.block.name+' and keep it inside the '+snap.block.minutesLeft+' minute window';
     return 'choose one outcome for the current block before opening another lane';
   }
   if(mode==='calendar'){
+    if(calendarWeakNoEvent)return calendarTrust.error?'do not trust the schedule yet; run sync only if timing matters':'wait for calendar sync before treating the window as locked';
     return snap.nextEvent?'prep the one result you want from '+missionManagerEventLabelV11(snap.nextEvent):'use the clear calendar window for the highest-value open loop';
   }
   if(mode==='prep'){
+    if(calendarWeakNoEvent)return 'prep the outcome, opening question, and follow-up target without pretending the time is confirmed';
     return snap.nextEvent?'write the outcome, opening question, and follow-up needed for '+missionManagerEventLabelV11(snap.nextEvent):'prep the next block by naming the result before the work starts';
   }
   if(mode==='tasks'){
     return snap.openTasks.length?'clear or reschedule "'+missionManagerTaskLabelV11(snap.openTasks[0])+'"':'review calendar, weekly numbers, and one admin loop';
   }
   if(mode==='review'){
+    if(calendarWeakNoEvent)return 'check revenue, DPC, pipeline, content, production, and calendar sync if timing matters';
+    if(!snap.nextEvent)return 'check revenue, DPC, pipeline, content, production, and use the open calendar window intentionally';
     return 'check revenue, DPC, pipeline, content, production, and the next calendar commitment';
   }
   if(mode==='day'){
@@ -21930,9 +22016,14 @@ function getMissionManagerCardIntelligenceResponseV11(route,ctx,question,brainSt
   if(mode==='block'){
     answer='You are in '+blockName+' right now.<br><br>'+(minutes?'There are '+minutes+' minutes left.':'This is the active window.')+' Use the window for one clean outcome.<br><br>Do this next: '+move+'.';
   }else if(mode==='calendar'){
-    answer='Calendar read:<br><br>'+(snap.events.length?snap.events.slice(0,3).map(missionManagerEventLabelV11).join('<br>'):'No upcoming business event is loaded right now.')+'<br><br>Use the calendar to reduce the decision load.<br><br>Do this next: '+move+'.';
+    var calendarStatusLine='';
+    if(snap.calendarTrust&&snap.calendarTrust.weak&&!snap.nextEvent){
+      calendarStatusLine=snap.calendarTrust.error?'Calendar is not confirmed right now.':'Calendar is still loading.';
+    }
+    answer='Calendar read:<br><br>'+(snap.events.length?snap.events.slice(0,3).map(missionManagerEventLabelV11).join('<br>'):(calendarStatusLine||'No upcoming business event is loaded right now.'))+'<br><br>Use the calendar to reduce the decision load.<br><br>Do this next: '+move+'.';
   }else if(mode==='prep'){
-    answer='Prep read:<br><br>Next event: '+missionManagerEventLabelV11(snap.nextEvent)+'.<br><br>Prep one outcome before the clock starts.<br><br>Do this next: '+move+'.';
+    var prepEventLine=snap.calendarTrust&&snap.calendarTrust.weak&&!snap.nextEvent?(snap.calendarTrust.error?'Calendar is not confirmed right now.':'Calendar is still loading.'):('Next event: '+missionManagerEventLabelV11(snap.nextEvent)+'.');
+    answer='Prep read:<br><br>'+prepEventLine+'<br><br>Prep one outcome before the clock starts.<br><br>Do this next: '+move+'.';
   }else if(mode==='tasks'){
     answer='Admin task read:<br><br>'+snap.openTasks.length+' open task'+(snap.openTasks.length===1?'':'s')+' loaded.'+(snap.openTasks.length?'<br>Top task: '+missionManagerTaskLabelV11(snap.openTasks[0])+'.':'')+'<br><br>Clear or reschedule one loop before opening another lane.<br><br>Do this next: '+move+'.';
   }else if(mode==='review'){
