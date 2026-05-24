@@ -18375,6 +18375,27 @@ function runMissionBroadRegressionHardeningV1(){
       if(test.card&&/\b(Same pipeline lane|Which lead do you want to move first|Who is closest to a real decision|Want to go through one lead at a time)\b/i.test(plain))failures.push(test.name+'_route_garnish_bleed');
       if(missionVisibleAnswerHasInternalLeakV1(answer))failures.push(test.name+'_internal_leak');
     });
+    var legacyVisibleLeakRe=/Pattern read:|Current read:|Result read:|Data read:|Next move:|Same lane:|Still on this|Let us dig in|Alright, where did we leave it|voice or workflow memory|This belongs to Mission Command|Need anything else|Should we keep this lane/i;
+    [
+      {name:'legacy_no_label_paid_next',setup:['paid'],q:'what next'},
+      {name:'legacy_no_label_paid_time',setup:['paid'],q:'I got 10 minutes'},
+      {name:'legacy_no_label_booked_log',setup:['booked'],q:'what should i log'},
+      {name:'legacy_no_label_open_energy',setup:[],q:'YO LETS GO'},
+      {name:'legacy_no_label_changed_today',setup:[],q:'what changed today'},
+      {name:'legacy_no_label_data_move',setup:[],q:'show me the data then tell me the move'},
+      {name:'legacy_no_label_memory',setup:[],q:'remember this'},
+      {name:'legacy_no_label_calendar',setup:[],q:'what is on my calendar'}
+    ].forEach(function(test){
+      setStore(MISSION_CHAT_SESSIONS_KEY,[{id:'qa_legacy_watchlist_'+test.name,title:'QA Legacy Watchlist',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_legacy_watchlist_'+test.name);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_legacy_watchlist_'+test.name);
+      sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+      sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      (test.setup||[]).forEach(function(prompt){getMissionCommandResponse('ask',ctx,prompt,{});});
+      var visible=String(getMissionCommandResponse('ask',ctx,test.q,{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+      if(legacyVisibleLeakRe.test(visible))failures.push(test.name+'_legacy_visible_label_leak');
+    });
     ['brief','outreach','content','production','manager'].forEach(function(card){
       var aligned=applyMissionCrossCardAlignmentV1('QA card answer',{cardAlignment:card});
       if(!/Before (?:switching:|you switch lanes,)/.test(aligned))failures.push(card+'_alignment_missing');
@@ -18961,7 +18982,7 @@ function runMissionBroadRegressionHardeningV1(){
     restoreMissionStorageForQaV1(localStorage,savedLocalAll);
     restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:154,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 104 sales/result/data/mixed-lane/storage checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:162,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 112 sales/result/data/mixed-lane/storage/legacy-watchlist checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
