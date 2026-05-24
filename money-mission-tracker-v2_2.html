@@ -1762,6 +1762,22 @@ html,body,*{
   scrollbar-width:none;
   -ms-overflow-style:none;
 }
+html{
+  scroll-padding-top:16px;
+}
+body{
+  overflow-x:hidden;
+  overscroll-behavior-y:none;
+}
+.app{
+  position:relative;
+  isolation:isolate;
+}
+#pane-today,#pane-week,#pane-report,#pane-rolodex{
+  position:relative;
+  isolation:isolate;
+  overflow:visible;
+}
 html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   width:0;
   height:0;
@@ -1967,6 +1983,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   z-index:3;
   isolation:isolate;
   scroll-margin-top:18px;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
   overflow-anchor:none;
 }
 #mission-command-card{
@@ -1978,6 +1997,21 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   scroll-padding-block:14px 18px;
   overflow-anchor:none;
   contain:content;
+  min-height:220px;
+  flex:1 1 auto;
+}
+.mission-history-drawer{
+  max-height:100%;
+  min-height:0;
+  overflow:hidden;
+  overscroll-behavior:contain;
+}
+.mission-history-list{
+  min-height:0;
+  overscroll-behavior:contain;
+}
+.system-panel,.settings-main,.ig-token-modal-overlay{
+  overscroll-behavior:contain;
 }
 @media(max-width:860px){
   .dt-right{
@@ -3792,9 +3826,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 18:24 ET · OS v2_2 panel open-state cleanup';
+var APP_BUILD_STAMP='2026-05-24 18:46 ET · OS v2_2 scroll position stability';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1824';
+var APP_CACHE_TOKEN='mmos-20260524-1846';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -27512,6 +27546,17 @@ function scrollMissionThread(thread){
   }
 }
 
+function scrollToMissionSurfaceV22(target){
+  if(!target||!target.getBoundingClientRect)return;
+  try{
+    var rect=target.getBoundingClientRect();
+    var y=rect.top+(window.pageYOffset||document.documentElement.scrollTop||0)-16;
+    window.scrollTo({top:Math.max(0,y),behavior:'smooth'});
+  }catch(err){
+    try{target.scrollIntoView({behavior:'smooth',block:'start'});}catch(fallbackErr){}
+  }
+}
+
 function removeMissionThinkingBubble(thread){
   if(!thread)return null;
   var thinking=thread.querySelector('[data-mission-thinking="1"]');
@@ -29078,7 +29123,7 @@ function openMissionTool(tool,shouldScroll,options){
   }
   if(shouldScroll){
     var target=document.getElementById(activeId);
-    if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+    if(target)scrollToMissionSurfaceV22(target);
   }
 }
 
