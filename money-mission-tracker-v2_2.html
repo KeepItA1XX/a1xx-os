@@ -1119,6 +1119,9 @@ input:focus{border-color:#333}
 .dpc-save-btn:hover{background:#162016;border-color:#4f7f28;color:#9ee878}
 .dpc-save-status{font-size:10px;color:#8b949e;line-height:1.35;flex:1}
 .dpc-save-status.ok{color:#7ec845}
+.dpc-save-status.info{color:#9aa3aa}
+.dpc-save-status.warn{color:#d4a017}
+.dpc-save-status.locked{color:#5b9cf6}
 /* DPC date-awareness — added 2026-05-12 */
 .dpc-date-nav{display:flex;align-items:center;gap:8px;margin-bottom:8px;background:#050f02;border:0.5px solid #1a2a0a;border-radius:9px;padding:6px 10px}
 .dpc-date-arrow{height:26px;width:26px;border:0.5px solid #2a4015;border-radius:6px;background:#0b1407;color:#7ec845;font-size:14px;font-weight:800;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;line-height:1}
@@ -3832,9 +3835,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 18:54 ET · OS v2_2 input field visibility';
+var APP_BUILD_STAMP='2026-05-24 18:57 ET · OS v2_2 DPC save feedback';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1854';
+var APP_CACHE_TOKEN='mmos-20260524-1857';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -5468,6 +5471,13 @@ function fillDpcInputs(row){
   s('coach-calls',row.calls);s('coach-closes',row.closes);s('coach-money',row.money);s('coach-leads',row.leads);
 }
 
+function setDpcSaveStatusV22(kind,text){
+  var status=document.getElementById('dpc-save-status');
+  if(!status)return;
+  status.className='dpc-save-status '+(kind||'info');
+  status.textContent=text||'Saves to today\'s daily log + Google Sheet.';
+}
+
 function renderDpcDateView(){
   var d=getDpcViewDate();
   var b=getDpcWeekBoundaries();
@@ -5495,6 +5505,7 @@ function renderDpcDateView(){
     if(grid)grid.style.display='';
     if(saveRow)saveRow.style.display='flex';
     if(futureBox)futureBox.style.display='none';
+    setDpcSaveStatusV22('info','Add-mode: enter only new activity. This adds to today\'s Daily Log row.');
     var row=getCoachForDate(dateKey(d));
     if(tsf){
       tsf.style.display='block';
@@ -5524,6 +5535,7 @@ function renderDpcDateView(){
     if(saveRow)saveRow.style.display='flex';
     if(tsf)tsf.style.display='none';
     if(futureBox)futureBox.style.display='none';
+    setDpcSaveStatusV22('warn','Edit-mode: these numbers replace the selected day\'s Daily Log row.');
     fillDpcInputs(getCoachForDate(dateKey(d)));
   }else{
     var rhythm=(typeof getDayRhythm==='function')?getDayRhythm(d.getDay()):null;
@@ -5532,6 +5544,7 @@ function renderDpcDateView(){
     if(grid)grid.style.display='none';
     if(saveRow)saveRow.style.display='none';
     if(tsf)tsf.style.display='none';
+    setDpcSaveStatusV22('locked','Future day: read-only until that date becomes active.');
     if(futureBox&&rhythm){
       futureBox.style.display='block';
       futureBox.innerHTML='<div class="fr-day">'+escapeHtml(d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}))+' · <span class="fr-name">'+escapeHtml(uiTitleCase(rhythm.name))+'</span></div>'+escapeHtml(uiTitleCase(rhythm.focus))+'<br><span style="color:#5b9cf6;font-weight:700">'+escapeHtml(uiTitleCase(rhythm.action))+'</span>';
@@ -5623,12 +5636,10 @@ function submitDailyCoachLog(){
   renderMissionBrief(window.__contentPieces||[],window.__calEvents||[]);
   var status=document.getElementById('dpc-save-status');
   if(status){
-    status.className='dpc-save-status ok';
     var verb=mode==='delta'?'Added to':'Updated';
-    status.textContent=verb+' '+viewKey+': '+newRow.dms+' DMs · '+newRow.coldCalls+' calls made · '+newRow.calls+' booked · '+fmt(newRow.money)+' collected';
+    setDpcSaveStatusV22('ok',verb+' '+viewKey+': '+newRow.dms+' DMs · '+newRow.coldCalls+' calls made · '+newRow.calls+' booked · '+fmt(newRow.money)+' collected');
     setTimeout(function(){
-      var s=document.getElementById('dpc-save-status');
-      if(s){s.className='dpc-save-status';s.textContent='Saves to today’s daily log + Google Sheet.';}
+      if(typeof renderDpcDateView==='function')renderDpcDateView();
     },4500);
   }
   flash('saved-tag');
@@ -5658,11 +5669,9 @@ function undoLastDailySave(){
   var undoBtn=document.getElementById('dpc-undo-btn');if(undoBtn)undoBtn.style.display='none';
   var status=document.getElementById('dpc-save-status');
   if(status){
-    status.className='dpc-save-status ok';
-    status.textContent='Reverted last save for '+snap.date+'.';
+    setDpcSaveStatusV22('ok','Reverted last save for '+snap.date+'.');
     setTimeout(function(){
-      var s=document.getElementById('dpc-save-status');
-      if(s){s.className='dpc-save-status';s.textContent='Saves to today’s daily log + Google Sheet.';}
+      if(typeof renderDpcDateView==='function')renderDpcDateView();
     },3500);
   }
   sendBackup(true);
