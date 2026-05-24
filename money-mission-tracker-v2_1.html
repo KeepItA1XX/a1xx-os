@@ -25666,6 +25666,121 @@ function runMissionLongMemoryPanelCheckV1(){
   return {passed:!failures.length,meta:failures.length?failures.join(' | '):'50-record cap, sanitized lead names, repeated-intent nudge'};
 }
 
+function snapshotMissionQAStorageV1(storage){
+  var snapshot={};
+  try{
+    for(var i=0;i<storage.length;i++){
+      var key=storage.key(i);
+      if(key)snapshot[key]=storage.getItem(key);
+    }
+  }catch(e){}
+  return snapshot;
+}
+
+function restoreMissionQAStorageV1(storage,snapshot){
+  try{
+    var keys=[];
+    for(var i=0;i<storage.length;i++){
+      var key=storage.key(i);
+      if(key)keys.push(key);
+    }
+    keys.forEach(function(key){storage.removeItem(key);});
+    Object.keys(snapshot||{}).forEach(function(key){
+      if(snapshot[key]===null||snapshot[key]===undefined)storage.removeItem(key);
+      else storage.setItem(key,snapshot[key]);
+    });
+  }catch(e){}
+}
+
+function snapshotMissionQAGlobalsV1(){
+  return {
+    activeTopicRoute:window.__missionCommandActiveTopicRoute,
+    activeTopicQuestion:window.__missionCommandActiveTopicQuestion,
+    activeTopicAt:window.__missionCommandActiveTopicAt,
+    lastTurnObject:window.__missionLastTurnObjectV2,
+    lastTurnV2:window.__missionLastTurnV2,
+    currentSalesMode:window.__missionCurrentSalesMode,
+    contextMode:window.__missionContextMode,
+    lastContextArbitration:window.__missionLastContextArbitrationV11,
+    lastSilentFreshBoundary:window.__missionLastSilentFreshBoundaryV17,
+    lastRoutePriorityDecision:window.__missionLastRoutePriorityDecisionV1,
+    lastInputDebug:window.__missionLastInputDebug,
+    lastTruthLedger:window.__missionLastTruthLedgerV1,
+    sessionDataCache:window.__missionSessionDataCacheV1,
+    salesDeepTemplate:window.__missionLastSalesDeepTemplateV1,
+    internalQADebugProbe:window.__missionLastInternalQADebugProbeV1,
+    resultEvents:window.__missionResultEventsV12,
+    commandSelfCheckActive:window.__missionCommandSelfCheckActive,
+    integritySelfCheckActive:window.__missionIntegritySelfCheckActive
+  };
+}
+
+function restoreMissionQAGlobalsV1(snapshot){
+  snapshot=snapshot||{};
+  window.__missionCommandActiveTopicRoute=snapshot.activeTopicRoute;
+  window.__missionCommandActiveTopicQuestion=snapshot.activeTopicQuestion;
+  window.__missionCommandActiveTopicAt=snapshot.activeTopicAt;
+  window.__missionLastTurnObjectV2=snapshot.lastTurnObject;
+  window.__missionLastTurnV2=snapshot.lastTurnV2;
+  window.__missionCurrentSalesMode=snapshot.currentSalesMode;
+  window.__missionContextMode=snapshot.contextMode;
+  window.__missionLastContextArbitrationV11=snapshot.lastContextArbitration;
+  window.__missionLastSilentFreshBoundaryV17=snapshot.lastSilentFreshBoundary;
+  window.__missionLastRoutePriorityDecisionV1=snapshot.lastRoutePriorityDecision;
+  window.__missionLastInputDebug=snapshot.lastInputDebug;
+  window.__missionLastTruthLedgerV1=snapshot.lastTruthLedger;
+  window.__missionSessionDataCacheV1=snapshot.sessionDataCache;
+  window.__missionLastSalesDeepTemplateV1=snapshot.salesDeepTemplate;
+  window.__missionLastInternalQADebugProbeV1=snapshot.internalQADebugProbe;
+  window.__missionResultEventsV12=snapshot.resultEvents;
+  window.__missionCommandSelfCheckActive=snapshot.commandSelfCheckActive;
+  window.__missionIntegritySelfCheckActive=snapshot.integritySelfCheckActive;
+}
+
+function resetMissionQATransientStateV1(){
+  try{restoreMissionQAStorageV1(localStorage,{});}catch(e){}
+  try{restoreMissionQAStorageV1(sessionStorage,{});}catch(e){}
+  window.__missionCommandActiveTopicRoute='';
+  window.__missionCommandActiveTopicQuestion='';
+  window.__missionCommandActiveTopicAt=0;
+  window.__missionLastTurnObjectV2=null;
+  window.__missionLastTurnV2=null;
+  window.__missionCurrentSalesMode='normal';
+  window.__missionContextMode='general';
+  window.__missionLastContextArbitrationV11=null;
+  window.__missionLastSilentFreshBoundaryV17=null;
+  window.__missionLastRoutePriorityDecisionV1=null;
+  window.__missionLastInputDebug=null;
+  window.__missionLastTruthLedgerV1=null;
+  window.__missionSessionDataCacheV1=null;
+  window.__missionLastSalesDeepTemplateV1=null;
+  window.__missionLastInternalQADebugProbeV1=null;
+  window.__missionResultEventsV12=[];
+  window.__missionCommandSelfCheckActive=false;
+  window.__missionIntegritySelfCheckActive=false;
+}
+
+function runMissionQASuiteIsolatedV1(name,fn){
+  var localSnapshot=snapshotMissionQAStorageV1(localStorage);
+  var sessionSnapshot=snapshotMissionQAStorageV1(sessionStorage);
+  var globalsSnapshot=snapshotMissionQAGlobalsV1();
+  try{
+    resetMissionQATransientStateV1();
+    var result=typeof fn==='function'?fn():{passed:false,meta:'Missing QA suite'};
+    if(result&&typeof result==='object'){
+      result.meta=(result.meta?result.meta+' · ':'')+'isolated';
+      result.qaIsolation=name||'suite';
+    }
+    return result;
+  }catch(e){
+    return {passed:false,meta:(e&&e.message?e.message:String(e))+' · isolated',qaIsolation:name||'suite'};
+  }finally{
+    restoreMissionQAStorageV1(localStorage,localSnapshot);
+    restoreMissionQAStorageV1(sessionStorage,sessionSnapshot);
+    restoreMissionQAGlobalsV1(globalsSnapshot);
+  }
+}
+
 function runMissionQAPanelCheck(){
   var status=document.getElementById('mission-command-test-status');
   if(status){status.textContent='Running Mission QA...';status.className='reset-status';}
@@ -25678,35 +25793,38 @@ function runMissionQAPanelCheck(){
     rows.push({name:name,passed:passed,meta:meta||result&&result.meta||''});
   }
   try{
-    var chat=runMissionCommandSelfCheck();
+    var chat=runMissionQASuiteIsolatedV1('chat_routes',function(){return runMissionCommandSelfCheck();});
     add('Chat Routes',chat,(chat.total||0)+' prompts · '+((chat.answerWarnings&&chat.answerWarnings.length)||0)+' wording notes');
   }catch(e){
     add('Chat Routes',{passed:false,meta:e&&e.message?e.message:String(e)});
   }
   try{
-    var integrity=runMissionIntegritySelfCheck();
+    var integrity=runMissionQASuiteIsolatedV1('integrity_layer',function(){return runMissionIntegritySelfCheck();});
     add('Integrity Layer',integrity,(integrity.total||0)+' checks'+(integrity.failures&&integrity.failures.length?' · '+integrity.failures.join(', '):''));
   }catch(e){
     add('Integrity Layer',{passed:false,meta:e&&e.message?e.message:String(e)});
   }
   try{
-    var master=runMissionMasterIntelligenceQASweepV1();
+    var master=runMissionQASuiteIsolatedV1('master_intelligence',function(){return runMissionMasterIntelligenceQASweepV1();});
     add('Master Intelligence QA',master,(master.total||0)+' checks'+(master.failures&&master.failures.length?' · '+master.failures.join(', '):''));
   }catch(e){
     add('Master Intelligence QA',{passed:false,meta:e&&e.message?e.message:String(e)});
   }
   try{
-    add('Broad Regression Hardening',runMissionBroadRegressionHardeningV1());
+    add('Broad Regression Hardening',runMissionQASuiteIsolatedV1('broad_regression',function(){return runMissionBroadRegressionHardeningV1();}));
   }catch(e){
     add('Broad Regression Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});
   }
-  add('Thread Memory Guard',runMissionThreadRouteGuardPanelCheckV1());
-  add('Multi-Chat Memory',runMissionMultiChatMemoryPanelCheckV11());
-  add('Long Memory Rollup',runMissionLongMemoryPanelCheckV1());
-  add('Mentor Domains',runMissionMentorPanelCheckV1());
+  add('Thread Memory Guard',runMissionQASuiteIsolatedV1('thread_memory_guard',function(){return runMissionThreadRouteGuardPanelCheckV1();}));
+  add('Multi-Chat Memory',runMissionQASuiteIsolatedV1('multi_chat_memory',function(){return runMissionMultiChatMemoryPanelCheckV11();}));
+  add('Long Memory Rollup',runMissionQASuiteIsolatedV1('long_memory_rollup',function(){return runMissionLongMemoryPanelCheckV1();}));
+  add('Mentor Domains',runMissionQASuiteIsolatedV1('mentor_domains',function(){return runMissionMentorPanelCheckV1();}));
   try{
-    var spacing=applyMissionReadabilityGuardV1('3) Pipeline: 32 open leads.<strong>Next:</strong><br>Create one visible move');
-    add('Readability Guard',{passed:spacing.indexOf('<br><br><strong>Next:</strong>')>=0,meta:'Spacing before section labels'});
+    var spacingResult=runMissionQASuiteIsolatedV1('readability_guard',function(){
+      var spacing=applyMissionReadabilityGuardV1('3) Pipeline: 32 open leads.<strong>Next:</strong><br>Create one visible move');
+      return {passed:spacing.indexOf('<br><br><strong>Next:</strong>')>=0,meta:'Spacing before section labels'};
+    });
+    add('Readability Guard',spacingResult);
   }catch(e){
     add('Readability Guard',{passed:false,meta:e&&e.message?e.message:String(e)});
   }

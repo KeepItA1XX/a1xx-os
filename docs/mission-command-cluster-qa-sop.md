@@ -101,6 +101,7 @@ Regression target if failure appears: fresh_chat_correction_anchor_<prompt>
    - master intelligence QA
    - broad regression hardening
    - presence self-check
+   - QA panel isolation check when a suite passes alone but fails after another suite
 
 9. Live retest.
    Run the original chain plus 2 to 3 wording variations.
@@ -175,6 +176,13 @@ Update tests when:
 - The product behavior is correct but the harness setup is stale.
 - A regression assertion expects old wording that is no longer the standard.
 - The test passes in isolation but fails after another fixture mutates state.
+
+QA harness isolation rule:
+
+- Each major QA suite should start from a clean transient browser state.
+- If a suite fails only after another suite ran first, rerun it alone before patching product behavior.
+- If the isolated rerun passes, treat the issue as `qa_harness_fail` and fix the fixture reset or suite wrapper.
+- Do not patch Mission Command behavior to satisfy a polluted test state.
 
 Add to watchlist when:
 
