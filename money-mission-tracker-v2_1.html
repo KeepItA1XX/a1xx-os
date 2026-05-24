@@ -12116,7 +12116,7 @@ function missionHasFreshBookedContextV12(){
 
 function missionIsBookedLogTargetAskV13(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(what do i log|what should i log|where do i log this|where should i update it|what should i log after this|what do i log after this|what should i come back with|what do i come back with|what should i come back and tell you|what should i tell you after|what counts as done|what counts as a result|what changes in the app|what status changes|what button do i press|what result are we looking for|what result are we trying to create)\b/.test(q);
+  return /\b(what do i log|what should i log|what to log|tell me what to log|tell me what i should log|where do i log this|where should i update it|what should i update|what should i log after this|what do i log after this|what should i come back with|what do i come back with|what should i come back and tell you|what should i tell you after|what counts as done|what counts as a result|what changes in the app|what should change in the app|what status changes|what button do i press|what result are we looking for|what result are we trying to create)\b/.test(q);
 }
 
 function getMissionBookedLogTargetAnswerV13(){
@@ -12225,6 +12225,7 @@ function getMissionLatestResultFollowthroughAnswerV14(question){
   var q=normalizeMissionQuestion(question||'');
   var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
   if(!latest||!latest.type)return '';
+  if(typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(q)&&/\b(data|loaded|source|trust|sync|what data|what do you see|show me)\b/.test(q))return '';
   if(missionIsResultDirectNextAskV14(q))return getMissionResultNextAnswerV14(latest);
   if(missionIsResultWhyAskV14(q))return getMissionResultWhyAnswerV14(latest);
   if(typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(q))return getMissionResultLogTargetAnswerV14(latest,q);
@@ -12260,7 +12261,9 @@ function getMissionLatestResultSalesReplyAnswerV16(question){
 }
 
 function missionShouldProtectBookedLogTargetV13(question){
-  return missionIsBookedLogTargetAskV13(question||'')&&typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12();
+  var q=normalizeMissionQuestion(question||'');
+  if(/\b(data|loaded|source|trust|sync|what data|what do you see|show me)\b/.test(q))return false;
+  return missionIsBookedLogTargetAskV13(q)&&typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12();
 }
 
 function getMissionFreshBookedResultV12(fallback){
@@ -18171,6 +18174,8 @@ function runMissionBroadRegressionHardeningV1(){
     sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     getMissionCommandResponse('ask',ctx,'booked',{});
+    var bookedDataLogVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me what to log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Log target:|booked call in three places|Calendar: call detail added|Lead: status updated/i.test(bookedDataLogVisible)||/paid result|money collected|one outreach or sales action/i.test(bookedDataLogVisible))failures.push('booked_data_trust_log_target_guard');
     getMissionCommandResponse('ask',ctx,'paid',{});
     var afterPaidVisible=String(getMissionCommandResponse('ask',ctx,'what next',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/paid|sale|protect delivery|log the money/i.test(afterPaidVisible)||/Last result was booked|prep the call|calendar detail|opening question/i.test(afterPaidVisible))failures.push('paid_live_path_overrides_booked_guard');
@@ -18287,6 +18292,8 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/Result trust: paid result is chat-only until DPC or CRM confirms it/i.test(paidTrustVisible)||/booked call is chat-only|reply is chat-only/i.test(paidTrustVisible))failures.push('paid_data_trust_truth_guard');
     var paidDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/log the money in DPC|update the lead in CRM|protect delivery/i.test(paidDataMoveVisible)||/one outreach or sales action/i.test(paidDataMoveVisible))failures.push('paid_data_trust_move_guard');
+    var paidDataLogVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me what to log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Log target:|paid result|money collected|Delivery|delivery protected/i.test(paidDataLogVisible)||/one outreach or sales action|booked call in three places/i.test(paidDataLogVisible))failures.push('paid_data_trust_log_target_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Soft Result Data Trust',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18296,6 +18303,8 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'follow-up',{});
     var followUpDataMoveVisible=String(getMissionCommandResponse('ask',ctx,'show me the data then tell me the move',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/follow-up as unresolved|isolate money, timing, trust, or fit|next touch/i.test(followUpDataMoveVisible)||/one outreach or sales action/i.test(followUpDataMoveVisible))failures.push('follow_up_data_trust_move_guard');
+    var followUpDataLogVisible=String(getMissionCommandResponse('ask',ctx,'what should I trust and what do I log',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/follow-up as unresolved|Lead: follow-up needed|unresolved concern|next touch/i.test(followUpDataLogVisible)||/paid result|booked call|one outreach or sales action/i.test(followUpDataLogVisible))failures.push('follow_up_data_trust_log_target_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Soft Result No Reply Data Trust',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18653,6 +18662,12 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var resultTrustBlock=resultTrustLine?'<br><br>'+escapeHtml(resultTrustLine):'';
   var resultTrustMove=typeof getMissionResultTruthNextMoveV15==='function'?getMissionResultTruthNextMoveV15(ctx):'';
   var safeMove=resultTrustMove||'one outreach or sales action, then log the result';
+  var latestResult=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  var resultLogTarget=(latestResult&&latestResult.type&&typeof getMissionResultLogTargetAnswerV14==='function')?getMissionResultLogTargetAnswerV14(latestResult,q):'';
+  var wantsDataPlusLog=/\b(data|loaded|source|trust|sync|what data|what do you see|show me)\b/.test(q)&&/\b(what do i log|what should i log|what to log|tell me what to log|tell me what i should log|what should change|what changes in the app|what should i update|where do i log|what counts as done|what should i come back with)\b/.test(q);
+  if(wantsDataPlusLog&&resultLogTarget){
+    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Log target:<br><br>'+resultLogTarget;
+  }
   if(/\b(show me the data.*tell me the move|show me data.*tell me the move|data.*then.*move)\b/.test(q)){
     return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Move from the cleanest loaded signal: '+escapeHtml(safeMove)+'.';
   }
@@ -24263,6 +24278,7 @@ function getMissionMoneyReadResponseV1(ctx,question){
 function getMissionFreshBookedFollowupAnswerV12(question){
   var q=normalizeMissionQuestion(question||'');
   if(!q||!(typeof missionHasFreshBookedContextV12==='function'&&missionHasFreshBookedContextV12()))return '';
+  if(typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(q)&&/\b(data|loaded|source|trust|sync|what data|what do you see|show me)\b/.test(q))return '';
   if(typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(q)){
     return getMissionBookedLogTargetAnswerV13();
   }
