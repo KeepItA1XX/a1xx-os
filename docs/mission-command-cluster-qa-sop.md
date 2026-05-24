@@ -294,6 +294,14 @@ Time pressure:
 Use it to close the [active loop]: [smallest move].
 ```
 
+Time-pressure wording rule:
+
+- Time is a constraint, not a competing brain.
+- State the window first, then compress the active result or current lane into one move.
+- Prefer "Use the window to..." over generic planning language.
+- Do not give a multi-step plan unless the user asks for one.
+- If data trust is also present, data trust wins and time pressure should not inject a separate result loop.
+
 Log/card ownership rule:
 
 - Log answers should name the outcome first, then the exact app updates.

@@ -12400,6 +12400,19 @@ function getMissionTimePressureWindowLineV20(ctx){
   return 'Treat this like a short action window.';
 }
 
+function getMissionTimePressureResultLineV20(result,move){
+  if(!result||!result.type||!move)return '';
+  var label=String(result.type||'result').replace(/_/g,' ');
+  if(result.type==='booked')return 'Use the window to close the booked loop: '+move+'.';
+  if(result.type==='paid')return 'Use the window to close the paid loop: '+move+'.';
+  if(result.type==='reply')return 'Use the window to turn the reply into a clean next signal: '+move+'.';
+  if(result.type==='no_reply')return 'Use the window to close the no reply touch: '+move+'.';
+  if(result.type==='no')return 'Use the window to close the no cleanly: '+move+'.';
+  if(result.type==='follow_up')return 'Use the window to make the follow-up concrete. '+move.charAt(0).toUpperCase()+move.slice(1)+'.';
+  if(result.type==='done')return 'Use the window to capture the missing result. '+move.charAt(0).toUpperCase()+move.slice(1)+'.';
+  return 'Use the window to close the '+label+' loop: '+move+'.';
+}
+
 function getMissionTimePressureResultMoveV20(result){
   if(!result||!result.type)return '';
   if(result.type==='booked')return 'add the calendar detail, update the lead, and prep one opening question';
@@ -12408,7 +12421,7 @@ function getMissionTimePressureResultMoveV20(result){
   if(result.type==='no_reply')return 'log no reply, decide one bump, then move to the next warm signal';
   if(result.type==='no')return 'log the no, capture the reason, then move to the next warm signal';
   if(result.type==='follow_up')return 'isolate the concern: money, timing, trust, or fit, then set the next touch';
-  if(result.type==='done')return 'capture the actual result: no reply, reply, booked, paid, shipped, posted, or wrong lane';
+  if(result.type==='done')return 'tell Mission Command what happened: no reply, reply, booked, paid, shipped, posted, or wrong lane';
   return '';
 }
 
@@ -12420,7 +12433,7 @@ function getMissionTimePressureResultAnswerV20(question,ctx){
   if(!latest||!latest.type)return '';
   var move=getMissionTimePressureResultMoveV20(latest);
   if(!move)return '';
-  return getMissionTimePressureWindowLineV20(ctx||{})+'<br><br>Use it to close the '+String(latest.type||'result').replace(/_/g,' ')+' loop: '+move+'.';
+  return getMissionTimePressureWindowLineV20(ctx||{})+'<br><br>'+getMissionTimePressureResultLineV20(latest,move);
 }
 
 function missionIsCalendarEventPrepAskV21(question){
@@ -12478,9 +12491,9 @@ function getMissionCalendarBlockResultAnswerV22(question,ctx){
   if(isBlockAsk){
     var blockName=block&&block.name||'this window';
     var minutes=Number(block&&block.minutesLeft||0);
-    return (minutes?blockName+' has '+minutes+' minutes left.':'Treat this like the active window.')+'<br><br>Use it to close the '+resultLabel+' loop: '+move+'.';
+    return (minutes?blockName+' has '+minutes+' minutes left.':'Treat this like the active window.')+'<br><br>'+getMissionTimePressureResultLineV20(latest,move);
   }
-  return 'Calendar read: '+escapeHtml(eventLabel)+'.<br><br>Use the calendar to close the '+resultLabel+' loop: '+escapeHtml(move)+'.';
+  return 'Calendar read: '+escapeHtml(eventLabel)+'.<br><br>Use the calendar to protect the '+resultLabel+' loop: '+escapeHtml(move)+'.';
 }
 
 function getMissionLatestResultSalesReplyAnswerV16(question){
