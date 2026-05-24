@@ -13280,6 +13280,7 @@ function rememberMissionFreshStarterMarkerV12(question){
 function getMissionDirectEntryModeV17(input,ctx,session,activeChat){
   var q=normalizeMissionQuestion(input||'');
   if(!q)return 'continuation_entry';
+  if(typeof missionIsCalendarEventPrepAskV21==='function'&&missionIsCalendarEventPrepAskV21(q))return 'direct_call_entry';
   if(/^\/pipeline\b|^pipeline$|\b(who hot|hit list|call-ready|call ready|lead list|open leads)\b/.test(q))return 'direct_pipeline_entry';
   if(typeof isMissionDataTrustPromptV12==='function'&&isMissionDataTrustPromptV12(q))return 'direct_data_trust_entry';
   if(/\b(what data|what do you see|what can you see|what'?s loaded|what is loaded|sources? loaded|what are you reading|what is this based on|where did that come from|where is that coming from|what data should i trust|what data can i trust|what should i trust|what can i trust|do i trust this|can i trust this|safe to act on|not safe to assume|what can you not see|what is missing|data is missing|show me the data|data then move|source check|trust check|sync check)\b/.test(q))return 'direct_data_trust_entry';
@@ -15235,6 +15236,7 @@ function getMissionSalesReplyOverrideV1(question){
 function getMissionDirectRouteOverrideV1(question){
   var q=normalizeMissionUserPromptForRoutingV1(question||'');
   if(!q)return '';
+  if(typeof missionIsCalendarEventPrepAskV21==='function'&&missionIsCalendarEventPrepAskV21(q))return 'calendar';
   var salesRoute=getMissionSalesReplyOverrideV1(q);
   if(salesRoute)return salesRoute;
   var slash=String(q||'').match(/^\/([a-z0-9_]+)/);
@@ -18418,6 +18420,7 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'priority_sales_reply',q:'what should i say',route:'sales',layer:'sales_reply'},
       {name:'priority_sync_data',q:'what data is missing',route:'sync',layer:'sync_data_trust'},
       {name:'priority_content_card',q:'what should i do on the content card',route:'content',layer:'explicit_card'},
+      {name:'priority_calendar_call_prep',q:'what should i prep before my next call',route:'calendar',layer:'direct_route'},
       {name:'priority_what_changed',q:'what changed today',route:'report',layer:'what_changed_engine'},
       {name:'priority_booked_count',q:'how many booked calls do i have',route:'dpc',layer:'booked_call_count'}
     ];

@@ -315,6 +315,7 @@ Manager/calendar wording rule:
 - State the block, event, task, or review signal first.
 - Translate the signal into one protected outcome or handoff.
 - Prep phrases like "what should I prep before my next call" belong to calendar/call prep, not pipeline browsing, unless A1XX explicitly asks for leads or pipeline.
+- Protect next-call prep at the direct-route boundary too; do not rely only on late answer helpers, because pipeline/lead routing can otherwise steal the turn.
 - Manager direct answers should not receive the generic cross-card `Before you switch lanes` append when the answer already includes its own admin/time handoff.
 - Keep required labels like `Calendar read`, `Prep read`, and `Do this next` when regressions depend on them, but make the body sound like an operator read.
 
