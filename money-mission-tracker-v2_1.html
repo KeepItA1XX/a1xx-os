@@ -3497,9 +3497,9 @@ body:before{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.0 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
-var APP_BUILD_STAMP='2026-05-24 10:47 ET · calendar prep sibling hardening';
-var APP_BRAIN_BUILD='Mission Command calendar prep sibling guards';
-var APP_CACHE_TOKEN='mmos-20260524-1047';
+var APP_BUILD_STAMP='2026-05-24 10:53 ET · result-owned calendar prep hardening';
+var APP_BRAIN_BUILD='Mission Command result-owned calendar prep order';
+var APP_CACHE_TOKEN='mmos-20260524-1053';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var TODOIST_KEY='a1xx_todoist_v1';
@@ -18470,6 +18470,41 @@ function runMissionBroadRegressionHardeningV1(){
         failures.push(test.name+'_accountability_guard');
       }
     });
+    var resultCalendarPrompts=['what do I need before my next call','prep me before calendar','what should I ask before the meeting','what should I do before my next meeting'];
+    var resultCalendarCases=[
+      {type:'booked',label:'Booked Call',must:/Prep the booked call|calendar detail|Update the lead/i},
+      {type:'paid',label:'Collected Money',must:/close the paid loop|Log the money|delivery/i},
+      {type:'follow_up',label:'Follow-Up Needed',must:/prep the follow-up|money, timing, trust, or fit/i},
+      {type:'no_reply',label:'No Reply Yet',must:/do not prep a ghost call|Log no reply|one bump/i},
+      {type:'reply',label:'Got Reply',must:/turn the reply into a call-ready read|Ask one qualifying question/i},
+      {type:'done',label:'Action Done',must:/capture the actual result first|Was it no reply/i}
+    ];
+    resultCalendarCases.forEach(function(test,idx){
+      var resultAt=new Date(Date.now()+idx*1000).toISOString();
+      var chatId='qa_result_calendar_'+test.type;
+      setStore(MISSION_CHAT_SESSIONS_KEY,[{
+        id:chatId,
+        title:'QA Result Calendar '+test.type,
+        createdAt:new Date(Date.now()-60000).toISOString(),
+        updatedAt:resultAt,
+        messages:[{role:'user',body:test.type==='no_reply'?'no reply':(test.type==='follow_up'?'follow-up':test.type),ts:resultAt}],
+        memory:{brainSession:{}}
+      }]);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,chatId);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,chatId);
+      var result={type:test.type,label:test.label,route:'sales',recordedAt:resultAt,chatId:chatId,truthStatus:'session_only',confirmed:false};
+      sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{lastResult:result,history:[result]},threadMemory:{turns:[]}}));
+      setMissionResultEventLedgerV12([result]);
+      resultCalendarPrompts.forEach(function(q){
+        var route=getMissionRenderRoute(q,{});
+        var answer=String(getMissionCommandResponse(route,ctx,q,{}));
+        var packet=buildMissionBubblePacket(route,{type:'CONV_DATA_REQUEST',route:route},ctx,q,answer,'','',{});
+        var visible=[packet.b1,packet.b2,packet.b3].join(' ').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,' ');
+        if(route!=='calendar'||!test.must.test(visible)||/Pipeline is showing|open leads|Lead read|Nothing is logged in DPC/i.test(visible)){
+          failures.push('result_calendar_crossover_'+test.type+'_'+q.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''));
+        }
+      });
+    });
     var qaCalendarEvents=window.__calEvents;
     window.__calEvents=[];
     var qaTruthChatId='qa_truth_ledger_chat';
@@ -19280,7 +19315,7 @@ function runMissionBroadRegressionHardeningV1(){
     restoreMissionStorageForQaV1(localStorage,savedLocalAll);
     restoreMissionStorageForQaV1(sessionStorage,savedSessionAll);
   }
-  return {passed:!failures.length,failures:failures,total:179,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 3 output-integrity checks + 126 sales/result/data/mixed-lane/storage/legacy-watchlist/silence/accountability checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
+  return {passed:!failures.length,failures:failures,total:203,meta:failures.length?failures.join(', '):'34 regression prompts + 10 route-priority matrix checks + 24 result-calendar crossover checks + 3 truth-ledger checks + 2 skill-validator checks + 1 response-frame check + 3 output-integrity checks + 126 sales/result/data/mixed-lane/storage/legacy-watchlist/silence/accountability checks · explicit cards · polite wrappers · sales/resource guards · money/data phrasing · communication cohesion · leak guard'};
 }
 
 function getMissionHandoffResponse(question){
@@ -25146,6 +25181,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  if(bookedFollowupAnswer)return finishMissionAnswer(bookedFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
 	  var recentCorrectionFollowupAnswer=typeof getMissionRecentCorrectionFollowupAnswerV18==='function'?getMissionRecentCorrectionFollowupAnswerV18(cleanQuestion||question||'',ctx):'';
 	  if(recentCorrectionFollowupAnswer)return finishMissionAnswer(recentCorrectionFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
+	  var earlyCalendarEventPrepAnswer=typeof getMissionCalendarEventPrepAnswerV21==='function'?getMissionCalendarEventPrepAnswerV21(cleanQuestion||question||'',ctx):'';
+	  if(earlyCalendarEventPrepAnswer)return finishMissionAnswer(earlyCalendarEventPrepAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var latestResultFollowthroughAnswer=typeof getMissionLatestResultFollowthroughAnswerV14==='function'?getMissionLatestResultFollowthroughAnswerV14(cleanQuestion||question||''):'';
 	  if(latestResultFollowthroughAnswer)return finishMissionAnswer(latestResultFollowthroughAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var latestResultSalesReplyAnswer=typeof getMissionLatestResultSalesReplyAnswerV16==='function'?getMissionLatestResultSalesReplyAnswerV16(cleanQuestion||question||''):'';
@@ -25156,8 +25193,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  if(ambiguousReentryAnswer)return finishMissionAnswer(ambiguousReentryAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var calendarBlockResultAnswer=typeof getMissionCalendarBlockResultAnswerV22==='function'?getMissionCalendarBlockResultAnswerV22(cleanQuestion||question||'',ctx):'';
 	  if(calendarBlockResultAnswer)return finishMissionAnswer(calendarBlockResultAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
-	  var calendarEventPrepAnswer=typeof getMissionCalendarEventPrepAnswerV21==='function'?getMissionCalendarEventPrepAnswerV21(cleanQuestion||question||'',ctx):'';
-	  if(calendarEventPrepAnswer)return finishMissionAnswer(calendarEventPrepAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var timePressureResultAnswer=typeof getMissionTimePressureResultAnswerV20==='function'?getMissionTimePressureResultAnswerV20(cleanQuestion||question||'',ctx):'';
 	  if(timePressureResultAnswer)return finishMissionAnswer(timePressureResultAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||cleanQuestion||'',ctx)){
