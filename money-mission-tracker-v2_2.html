@@ -1138,7 +1138,8 @@ input:focus{border-color:#333}
 .dpc-missed-banner{background:#1a1200;border:0.5px solid #5a3800;border-radius:10px;padding:11px 14px;margin-bottom:10px;color:#f0d08a;font-size:12px;font-weight:600;line-height:1.5;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:all .15s}
 .dpc-missed-banner:hover{background:#221700;border-color:#7a4800}
 .dpc-missed-banner .dpc-mb-text{flex:1}
-.dpc-missed-banner .dpc-mb-close{background:transparent;border:0;color:#a07010;font-size:14px;cursor:pointer;padding:0 4px;line-height:1}
+.dpc-missed-banner .dpc-mb-close{width:26px;height:26px;min-width:26px;background:transparent;border:0;border-radius:7px;color:#a07010;font-size:16px;cursor:pointer;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;position:relative;z-index:2;pointer-events:auto}
+.dpc-missed-banner .dpc-mb-close:hover{background:#2a1a00;color:#f0d08a}
 .dpc-log-mode-hint{font-size:10px;color:#7ec845;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;text-align:center}
 .dpc-log-mode-hint.edit{color:#d4a017}
 .dpc-log-mode-hint.future{color:#5b9cf6}
@@ -3001,7 +3002,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   <!-- MISSED-DAY BANNER (shows when yesterday has no saved record) -->
   <div class="dpc-missed-banner" id="dpc-missed-banner" style="display:none" onclick="openYesterdayDPC(event)">
     <div class="dpc-mb-text" id="dpc-missed-banner-text">You missed yesterday — tap to fill it in.</div>
-    <button class="dpc-mb-close" onclick="dismissMissedBanner(event)" aria-label="Dismiss">×</button>
+    <button class="dpc-mb-close" type="button" onclick="return dismissMissedBanner(event)" onpointerdown="return dismissMissedBanner(event)" aria-label="Dismiss">×</button>
   </div>
 
   <!-- LOG INPUTS -->
@@ -3783,9 +3784,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 17:00 ET · OS v2_2 day bar non-sticky containment';
+var APP_BUILD_STAMP='2026-05-24 17:04 ET · OS v2_2 DPC missed banner close';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1700';
+var APP_CACHE_TOKEN='mmos-20260524-1704';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -5541,7 +5542,7 @@ function renderMissedDayBanner(){
 }
 
 function openYesterdayDPC(e){
-  if(e&&e.target&&e.target.classList&&e.target.classList.contains('dpc-mb-close'))return;
+  if(e&&e.target&&e.target.closest&&e.target.closest('.dpc-mb-close'))return false;
   var panel=document.getElementById('dpc-log');
   if(panel&&panel.classList.contains('collapsed')){
     panel.classList.remove('collapsed');
@@ -5556,12 +5557,20 @@ function openYesterdayDPC(e){
 }
 
 function dismissMissedBanner(e){
-  if(e)e.stopPropagation();
+  if(e){
+    if(e.preventDefault)e.preventDefault();
+    if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    if(e.stopPropagation)e.stopPropagation();
+  }
   var b=getDpcWeekBoundaries();
   var yest=new Date(b.today);yest.setDate(b.today.getDate()-1);
   localStorage.setItem('a1xx_missed_banner_dismissed_'+dateKey(yest),'1');
   var banner=document.getElementById('dpc-missed-banner');
-  if(banner)banner.style.display='none';
+  if(banner){
+    banner.style.display='none';
+    banner.setAttribute('aria-hidden','true');
+  }
+  return false;
 }
 
 function toggleCoachAction(id){
