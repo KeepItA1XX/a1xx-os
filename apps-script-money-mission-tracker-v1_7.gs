@@ -1019,7 +1019,10 @@ function archiveCycle(d) {
     'Cycle ' + d.cycleNum + ' archived on ' + new Date().toLocaleDateString()
   ];
   sheet.appendRow(row);
-  sheet.getRange(sheet.getLastRow(), 1, 1, ARCHIVE_HEADERS.length).setFontWeight('bold').setBackground('#0d1808');
+  sheet.getRange(sheet.getLastRow(), 1, 1, ARCHIVE_HEADERS.length)
+    .setFontWeight('bold')
+    .setBackground('#0d1808')
+    .setFontColor('#d9f8c6');
   return {
     archivedAt: archivedAt,
     cycleNum: d.cycleNum || '',
