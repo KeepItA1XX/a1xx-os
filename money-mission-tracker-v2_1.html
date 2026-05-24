@@ -12438,7 +12438,7 @@ function getMissionTimePressureResultAnswerV20(question,ctx){
 
 function missionIsCalendarEventPrepAskV21(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(prep me for (a|the|this) call|prepare me for (a|the|this) call|prep this call|call prep|call in \d+|call in ten|call in five|i have a call in \d+|i have a call in ten|i have a call in five|sales call in \d+|what do i need before (this|my|the) (meeting|call)|before (this|my|the) (meeting|call) what do i need|what should i prep before (my|the|this) next call|what should i prep before (my|the|this) call|what should i ask on the call|how do i start the call)\b/.test(q);
+  return /\b(prep me for (a|the|this|my|next) call|prepare me for (a|the|this|my|next) call|prep this call|prep (before|for) (my|the|this|next) call|prep (before|for) (my|the|this) next call|call prep|call in \d+|call in ten|call in five|i have a call in \d+|i have a call in ten|i have a call in five|sales call in \d+|what do i need before (this|my|the|next) (meeting|call)|before (this|my|the|next) (meeting|call) what do i need|what should i prep before (my|the|this|next) next call|what should i prep before (my|the|this|next) call|what should i prep (for|before) (my|the|this) next call|what should i ask on the call|how do i start the call)\b/.test(q);
 }
 
 function getMissionCalendarEventPrepLabelV21(ctx){
@@ -12468,6 +12468,7 @@ function getMissionCalendarEventPrepAnswerV21(question,ctx){
     if(latest.type==='done')return 'Before '+escapeHtml(eventLabel)+', capture the actual result first.<br><br>Was it no reply, reply, booked, paid, shipped, posted, or wrong lane?';
   }
   var leadLine=typeof getMissionSalesLeadLine==='function'?getMissionSalesLeadLine(ctx||{}):'No specific lead selected.';
+  leadLine=String(leadLine||'No specific lead selected.').replace(/\s*[.]+$/,'');
   return 'Prep '+escapeHtml(eventLabel)+' around one outcome.<br><br>Lead read: '+escapeHtml(leadLine)+'.<br><br>Opening question: "Before I explain anything, what made you want to talk today?"';
 }
 
@@ -18998,6 +18999,14 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/Calendar read|booked loop|calendar detail|update the lead/i.test(bookedCalendarVisible)||/prep the one result you want|name the outcome|return to the active mission/i.test(bookedCalendarVisible))failures.push('calendar_block_booked_result_guard');
     var bookedFreeVisible=String(getMissionCommandResponse('ask',ctx,'am I free',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/booked loop|calendar detail|opening question|update the lead/i.test(bookedFreeVisible)||/Define the one result|production unless|Deep window|schedule is here to protect/i.test(bookedFreeVisible))failures.push('calendar_sibling_booked_free_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:'qa_plain_calendar_prep',title:'QA Plain Calendar Prep',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,'qa_plain_calendar_prep');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,'qa_plain_calendar_prep');
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    var plainCalendarPrepVisible=String(getMissionCommandResponse('ask',ctx,'what should i prep before my next call',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Prep .*call|Opening question|one outcome/i.test(plainCalendarPrepVisible)||/Pipeline is showing|Pick one call-ready lead|open leads/i.test(plainCalendarPrepVisible))failures.push('calendar_event_prep_plain_guard');
     ['what can you see','what are you reading','what can I trust','what is not safe to assume','trust check'].forEach(function(dataPrompt){
       var dataSiblingVisible=String(getMissionCommandResponse('ask',ctx,dataPrompt,{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
       if(!/I am looking at this right now|System health|CRM leads|current app packet/i.test(dataSiblingVisible)||/Finish the current block step|Open your saved IG|voice or workflow memory/i.test(dataSiblingVisible))failures.push('data_trust_sibling_'+dataPrompt.replace(/\W+/g,'_'));
