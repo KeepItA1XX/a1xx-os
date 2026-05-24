@@ -3836,9 +3836,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 19:02 ET · OS v2_2 DPC double-submit guard';
+var APP_BUILD_STAMP='2026-05-24 19:04 ET · OS v2_2 DPC undo restore guard';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1902';
+var APP_CACHE_TOKEN='mmos-20260524-1904';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -5621,6 +5621,7 @@ function submitDailyCoachLog(){
   var inputs=readDpcInputs();
   var store=getStore(DPC_WEEKLY_LOG_KEY)||{};
   store[weekStart]=store[weekStart]||{};
+  var rowExisted=!!store[weekStart][viewKey];
   var prevRow=Object.assign({dms:0,coldCalls:0,content:0,calls:0,closes:0,leads:0,money:0},store[weekStart][viewKey]||{});
   var newRow;
   if(mode==='delta'){
@@ -5644,7 +5645,7 @@ function submitDailyCoachLog(){
     d.calls=newRow.calls;d.closes=newRow.closes;d.money=newRow.money;d.leads=newRow.leads;
     setStore(DPC_KEY,d);
   }
-  window.__dpcLastSnapshot={date:viewKey,prevRow:prevRow,mode:mode,existed:!!(store[weekStart][viewKey]&&Object.keys(prevRow).length),ts:Date.now()};
+  window.__dpcLastSnapshot={date:viewKey,prevRow:prevRow,mode:mode,existed:rowExisted,ts:Date.now()};
   var undoBtn=document.getElementById('dpc-undo-btn');if(undoBtn)undoBtn.style.display='inline-flex';
   // The UI already folds today's delta into newRow. Send the corrected day total
   // to Sheets/Notion so repeat saves do not double-count prior values.
@@ -5682,7 +5683,8 @@ function undoLastDailySave(){
   var weekStart=getWeekStart();
   var store=getStore(DPC_WEEKLY_LOG_KEY)||{};
   store[weekStart]=store[weekStart]||{};
-  store[weekStart][snap.date]=snap.prevRow;
+  if(snap.existed===false)delete store[weekStart][snap.date];
+  else store[weekStart][snap.date]=snap.prevRow;
   setStore(DPC_WEEKLY_LOG_KEY,store);
   if(snap.date===dateKey(new Date())){
     var d=getDailyCoach();
@@ -5699,7 +5701,7 @@ function undoLastDailySave(){
   var undoBtn=document.getElementById('dpc-undo-btn');if(undoBtn)undoBtn.style.display='none';
   var status=document.getElementById('dpc-save-status');
   if(status){
-    setDpcSaveStatusV22('ok','Reverted last save for '+snap.date+'.');
+    setDpcSaveStatusV22('ok',(snap.existed===false?'Removed new save for ':'Reverted last save for ')+snap.date+'.');
     setTimeout(function(){
       if(typeof renderDpcDateView==='function')renderDpcDateView();
     },3500);
@@ -5725,6 +5727,7 @@ function applyWeeklyEdit(elId,dpcField,rawValue){
   var delta=newVal-currentSum;
   if(delta===0){if(el)el.value=newVal;return;}
   var todayKey=dateKey(new Date());
+  var todayRowExisted=!!store[weekStart][todayKey];
   var todayRow=Object.assign({dms:0,coldCalls:0,content:0,calls:0,closes:0,leads:0,money:0},store[weekStart][todayKey]||{});
   var prevTodayRow=Object.assign({},todayRow);
   todayRow[dpcField]=(parseFloat(todayRow[dpcField])||0)+delta;
@@ -5736,7 +5739,7 @@ function applyWeeklyEdit(elId,dpcField,rawValue){
   dpc[dpcField]=todayRow[dpcField];
   setStore(DPC_KEY,dpc);
   // snapshot for Undo
-  window.__dpcLastSnapshot={date:todayKey,prevRow:prevTodayRow,mode:'weekly-edit',ts:Date.now()};
+  window.__dpcLastSnapshot={date:todayKey,prevRow:prevTodayRow,mode:'weekly-edit',existed:todayRowExisted,ts:Date.now()};
   var undoBtn=document.getElementById('dpc-undo-btn');if(undoBtn)undoBtn.style.display='inline-flex';
   // POST to Sheets daily_save (replace today's row with the new totals)
   postDailySave(todayKey,todayRow,'replace');
