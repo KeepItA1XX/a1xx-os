@@ -102,6 +102,7 @@ Regression target if failure appears: fresh_chat_correction_anchor_<prompt>
    - broad regression hardening
    - presence self-check
    - QA panel isolation check when a suite passes alone but fails after another suite
+   - persistence stress check after changes to chat save, history, reload, note, step, or sync paths
 
 9. Live retest.
    Run the original chain plus 2 to 3 wording variations.
@@ -183,6 +184,12 @@ QA harness isolation rule:
 - If a suite fails only after another suite ran first, rerun it alone before patching product behavior.
 - If the isolated rerun passes, treat the issue as `qa_harness_fail` and fix the fixture reset or suite wrapper.
 - Do not patch Mission Command behavior to satisfy a polluted test state.
+
+Persistence stress rule:
+
+- New chat, chat switch, reload, note save, step done, and sync-style saves must not reattach stale result memory to the wrong chat.
+- A result saved in one chat should restore when returning to that chat.
+- A clean chat should stay clean even if another chat has booked, paid, follow-up, reply, no-reply, or done memory.
 
 Add to watchlist when:
 

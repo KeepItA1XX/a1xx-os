@@ -25781,6 +25781,76 @@ function runMissionQASuiteIsolatedV1(name,fn){
   }
 }
 
+function runMissionPersistenceStressRegressionV23(){
+  var failures=[];
+  function plain(html){
+    return String(html||'').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  }
+  function answer(q,ctx){
+    return plain(getMissionCommandResponse('ask',ctx||{},q,{}));
+  }
+  function rendered(q){
+    try{
+      renderMissionCommand('ask',q,true);
+      var thread=document.getElementById('mission-command-thread');
+      return plain(thread&&thread.innerHTML||'');
+    }catch(e){
+      failures.push('render_error_'+q.replace(/\W+/g,'_'));
+      return '';
+    }
+  }
+  function activeId(){
+    try{return localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';}catch(e){return '';}
+  }
+  function resetTransient(reason){
+    try{sessionStorage.clear();}catch(e){}
+    try{resetMissionTransientChatBrainV11(reason||'qa_persistence_reset');}catch(e){}
+    window.__missionResultEventsV12=[];
+  }
+  var ctx={rev:999,wk:500,gap:0,nextEvent:{title:'Strategy Call',start:new Date(Date.now()+20*60000).toISOString(),startTime:'9:30 PM'},openTasks:[{content:'Add booked call detail'}],dayType:'General Mode'};
+  try{
+    window.__calEvents=[ctx.nextEvent];
+    window.__missionCommandContext=ctx;
+    startMissionNewChat();
+    var bookedChat=activeId();
+    rendered('good morning');
+    rendered('booked');
+    var bookedNext=answer('what next',ctx);
+    if(!/Last result was booked|booked loop|calendar detail/i.test(bookedNext))failures.push('persistence_booked_after_render_save');
+    addMissionLocalNote('QA persistence note', 'sales');
+    completeMissionStep(getMissionDayType&&getMissionDayType()||'general');
+    var bookedAfterLocalActions=answer('what next',ctx);
+    if(!/Last result was booked|booked loop|calendar detail/i.test(bookedAfterLocalActions))failures.push('persistence_local_actions_displaced_booked');
+    startMissionNewChat();
+    var cleanChat=activeId();
+    var cleanStarter=answer('what should i do today',ctx);
+    if(/Last result was booked|booked call|calendar detail/i.test(cleanStarter))failures.push('persistence_new_chat_leaked_booked');
+    setActiveMissionSession(bookedChat);
+    var restoredBooked=answer('what next',ctx);
+    if(!/Last result was booked|booked loop|calendar detail/i.test(restoredBooked))failures.push('persistence_switch_back_lost_booked');
+    setActiveMissionSession(cleanChat);
+    var restoredClean=answer('what next',ctx);
+    if(/Last result was booked|booked call|calendar detail/i.test(restoredClean))failures.push('persistence_switch_clean_leaked_booked');
+    resetTransient('qa_reload_booked');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,bookedChat);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,bookedChat);
+    var reloadBooked=answer('what next',ctx);
+    if(!/Last result was booked|booked loop|calendar detail/i.test(reloadBooked))failures.push('persistence_reload_lost_booked');
+    resetTransient('qa_reload_clean');
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,cleanChat);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,cleanChat);
+    var reloadClean=answer('what next',ctx);
+    if(/Last result was booked|booked call|calendar detail/i.test(reloadClean))failures.push('persistence_reload_clean_leaked_booked');
+    setActiveMissionSession(bookedChat);
+    rendered('paid');
+    var paidAfterSave=answer('what next',ctx);
+    if(!/Last result was paid|paid loop|log the money|protect delivery/i.test(paidAfterSave)||/booked loop|calendar detail/i.test(paidAfterSave))failures.push('persistence_paid_overrides_booked_after_save');
+  }catch(e){
+    failures.push(e&&e.message?e.message:String(e));
+  }
+  return {passed:!failures.length,failures:failures,total:8,meta:failures.length?failures.join(' | '):'new chat, switch chat, reload, save note, step done, latest result'};
+}
+
 function runMissionQAPanelCheck(){
   var status=document.getElementById('mission-command-test-status');
   if(status){status.textContent='Running Mission QA...';status.className='reset-status';}
@@ -25817,6 +25887,7 @@ function runMissionQAPanelCheck(){
   }
   add('Thread Memory Guard',runMissionQASuiteIsolatedV1('thread_memory_guard',function(){return runMissionThreadRouteGuardPanelCheckV1();}));
   add('Multi-Chat Memory',runMissionQASuiteIsolatedV1('multi_chat_memory',function(){return runMissionMultiChatMemoryPanelCheckV11();}));
+  add('Persistence Stress',runMissionQASuiteIsolatedV1('persistence_stress',function(){return runMissionPersistenceStressRegressionV23();}));
   add('Long Memory Rollup',runMissionQASuiteIsolatedV1('long_memory_rollup',function(){return runMissionLongMemoryPanelCheckV1();}));
   add('Mentor Domains',runMissionQASuiteIsolatedV1('mentor_domains',function(){return runMissionMentorPanelCheckV1();}));
   try{
