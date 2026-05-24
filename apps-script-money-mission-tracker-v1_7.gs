@@ -1,6 +1,13 @@
 // ============================================================
 // A1XX Money Mission Tracker — Google Apps Script Backend
-// Version 1.7
+// Version 1.8
+// Changes in 1.8 (2026-05-24):
+//   - Added Mission Command v1.1 Sheets event receiver.
+//   - Added SHEET_MISSION_EVENTS = 'Mission Command Events' tab.
+//   - Added type='mission_dpc_log', 'mission_pipeline_move', 'mission_booked_call',
+//     'mission_revenue_log', and 'mission_content_log' POST handling.
+//   - Granular Mission Command writes append to an event log only; existing
+//     Daily Log, CRM, Calendar, and revenue totals remain confirmation-owned.
 // Changes in 1.7 (2026-05-12):
 //   - Added SHEET_RESET_AUDIT = 'Reset Audit' tab — captures every truncated row
 //   - Added type='reset_test_data' POST → archives-then-truncates Daily Log
@@ -30,6 +37,7 @@ var SHEET_RESET_AUDIT  = 'Reset Audit';      // ← NEW in 1.7
 var SHEET_MISSION_CHAT = 'Mission Command Chat Log';
 var SHEET_MISSION_SESSIONS = 'Mission Command Sessions';
 var SHEET_MISSION_SYNC_AUDIT = 'Mission Command Sync Audit';
+var SHEET_MISSION_EVENTS = 'Mission Command Events';
 
 var NOTION_CONTENT_DB    = '1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18: was incorrectly set to the data source ID (...8188...). Notion /v1/databases/{id}/query expects the DATABASE ID (URL slug). Parent database "Master Beat Catalog" lives at notion.so/1a76115281da8199a5dffc423d447f31. */
@@ -87,6 +95,12 @@ var PROSPECT_HEADERS = [
 
 var RESET_AUDIT_HEADERS = [
   'Reset At','Reason','Source Tab','Original Row (JSON)'
+];
+
+var MISSION_EVENT_HEADERS = [
+  'Received At','Event Type','Event Timestamp','Source','Action','Route',
+  'Result','Status','Lead','Amount','Title','Summary','Session ID',
+  'Active Chat ID','Prompt','Payload JSON'
 ];
 
 // ── MAIN HANDLERS ────────────────────────────────────────────
@@ -152,6 +166,12 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: sessionRow }))
         .setMimeType(ContentService.MimeType.JSON);
     }
+    if (isMissionCommandEventTypeV18(data.type)) {
+      var eventRow = saveMissionCommandEventV18(data);
+      logActivity('Mission Command event — ' + data.type + ' — ' + String(eventRow.action || eventRow.summary || '').slice(0, 80));
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: eventRow }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
     if (data.type === 'prospect_save') {
       var rec = saveProspectSnapshot(data);
       logActivity('Prospect save — ' + (data.stageName || data.realName || '(unnamed)') + ' (' + (data.source || 'no source') + ')');
@@ -192,6 +212,7 @@ function doGet(e) {
     if (e.parameter.action === 'get_backup')          return getBackup(e);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
+    if (e.parameter.action === 'mission_events')      return getMissionCommandEventsV18(e);
     if (e.parameter.action === 'health')              return getHealthCheck(e);
     if (e.parameter.action === 'instagram')           return getInstagramData(e);
     if (e.parameter.action === 'search_resources')    return searchResources(e);
@@ -862,6 +883,108 @@ function getMissionChatSyncAuditSheet(ss, headers) {
     matchPrefix: true,
     renameMatched: true
   });
+}
+
+function isMissionCommandEventTypeV18(type) {
+  return [
+    'mission_dpc_log',
+    'mission_pipeline_move',
+    'mission_booked_call',
+    'mission_revenue_log',
+    'mission_content_log'
+  ].indexOf(String(type || '')) >= 0;
+}
+
+function getMissionCommandEventPayloadV18(d) {
+  var payload = d && typeof d.payload === 'object' && d.payload !== null ? d.payload : {};
+  var flat = {};
+  Object.keys(d || {}).forEach(function(key) {
+    if (key !== 'payload' && key !== 'token') flat[key] = d[key];
+  });
+  Object.keys(payload).forEach(function(key) { flat[key] = payload[key]; });
+  return flat;
+}
+
+function stringifyMissionEventPayloadV18(payload) {
+  var json = JSON.stringify(payload || {});
+  if (json.length > 40000) json = json.slice(0, 39980) + '...';
+  return json;
+}
+
+function saveMissionCommandEventV18(d) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getOrCreateSheet(ss, SHEET_MISSION_EVENTS, MISSION_EVENT_HEADERS, {
+    matchPrefix: true,
+    renameMatched: true
+  });
+  var payload = getMissionCommandEventPayloadV18(d || {});
+  var eventType = String((d && d.type) || payload.type || '').trim();
+  var summary = payload.summary || payload.note || payload.text || payload.description || '';
+  var lead = payload.lead || payload.leadName || payload.name || payload.stageName || payload.contact || '';
+  var row = [
+    new Date().toISOString(),
+    eventType,
+    payload.ts || (d && d.ts) || '',
+    payload.source || '',
+    payload.action || '',
+    payload.route || '',
+    payload.result || payload.resultType || '',
+    payload.status || '',
+    lead,
+    payload.amount || payload.money || payload.revenue || '',
+    payload.title || '',
+    String(summary).slice(0, 1000),
+    payload.sessionId || payload.chatSessionId || '',
+    payload.activeChatId || payload.chatId || '',
+    String(payload.prompt || payload.question || payload.input || '').slice(0, 1000),
+    stringifyMissionEventPayloadV18(payload)
+  ];
+  sheet.appendRow(row);
+  formatSheet(sheet);
+  return {
+    receivedAt: row[0],
+    type: row[1],
+    action: row[4],
+    route: row[5],
+    result: row[6],
+    lead: row[8],
+    amount: row[9],
+    summary: row[11]
+  };
+}
+
+function getMissionCommandEventsV18(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_MISSION_EVENTS);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', rows: [] }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  var limit = Math.min(Number(e.parameter.limit || 25), 100);
+  var last = sheet.getLastRow();
+  var start = Math.max(2, last - limit + 1);
+  var values = sheet.getRange(start, 1, last - start + 1, MISSION_EVENT_HEADERS.length).getValues();
+  var rows = values.map(function(row) {
+    return {
+      receivedAt: row[0],
+      type: row[1],
+      eventTs: row[2],
+      source: row[3],
+      action: row[4],
+      route: row[5],
+      result: row[6],
+      status: row[7],
+      lead: row[8],
+      amount: row[9],
+      title: row[10],
+      summary: row[11],
+      sessionId: row[12],
+      activeChatId: row[13],
+      prompt: row[14]
+    };
+  });
+  return ContentService.createTextOutput(JSON.stringify({ status: 'ok', rows: rows }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function ensureSheetHeaders(sheet, headers) {
