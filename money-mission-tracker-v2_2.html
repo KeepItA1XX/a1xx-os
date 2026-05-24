@@ -3588,7 +3588,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
       <div class="wi-group"><div class="wi-label">Lead name</div><input class="wi-input" type="text" id="cl-name" placeholder="e.g. Mike T."></div>
       <div class="wi-group"><div class="wi-label">Amount ($)</div><input class="wi-input" type="number" id="cl-amount" placeholder="0" min="0"></div>
       <div class="wi-group"><div class="wi-label">Product</div>
-        <select id="cl-product" class="close-form select">
+        <select id="cl-product" class="close-form-select">
           <option value="">Select product</option>
           <option>Studio Session</option>
           <option>Beat Pack ($7)</option>
@@ -3599,7 +3599,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
         </select>
       </div>
       <div class="wi-group"><div class="wi-label">Source</div>
-        <select id="cl-source" class="close-form select">
+        <select id="cl-source" class="close-form-select">
           <option value="">Select source</option>
           <option>Instagram DM</option>
           <option>ClickFunnels</option>
@@ -3840,9 +3840,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 19:44 ET · OS v2_2 close log double-submit guard';
+var APP_BUILD_STAMP='2026-05-24 19:55 ET · OS v2_2 close log readback guard';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1944';
+var APP_CACHE_TOKEN='mmos-20260524-1955';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4841,6 +4841,28 @@ function setCloseSaveBusyV22(isBusy){
   btn.textContent=isBusy?'Saving close...':'Save close ✓';
 }
 
+function resetCloseSaveBusyV22(){
+  window.__closeSaveBusyV22=false;
+  setCloseSaveBusyV22(false);
+}
+
+function clearCloseFormFieldsV22(){
+  ['cl-name','cl-amount','cl-product','cl-source'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+}
+
+function closeCloseFormV22(){
+  var f=document.getElementById('close-form');
+  if(f)f.classList.remove('open');
+}
+
+function saveCloseLogWithReadbackV22(log,expectedTs){
+  setStore(CLOSE_LOG_KEY,log);
+  var saved=getCloseLog();
+  return Array.isArray(saved)&&saved.some(function(item){return String(item&&item.ts||'')===String(expectedTs);});
+}
+
 function saveClose(){
   if(window.__closeSaveBusyV22){
     setCloseFormStatusV22('warn','Already saving that close. Give it one second.');
@@ -4855,19 +4877,26 @@ function saveClose(){
   window.__closeSaveBusyV22=true;
   setCloseSaveBusyV22(true);
   var log=getCloseLog();
-  log.unshift({date:dateKey(new Date()),name:name,product:product,amount:amount,source:source,ts:Date.now()});
-  setStore(CLOSE_LOG_KEY,log);
-  document.getElementById('cl-name').value='';
-  document.getElementById('cl-amount').value='';
-  document.getElementById('cl-product').value='';
-  document.getElementById('cl-source').value='';
-  toggleCloseForm();
-  renderCloseLog();
-  renderCloseStreak();
+  var close={date:dateKey(new Date()),name:name,product:product,amount:amount,source:source,ts:Date.now()};
+  log.unshift(close);
+  if(!saveCloseLogWithReadbackV22(log,close.ts)){
+    resetCloseSaveBusyV22();
+    setCloseFormStatusV22('warn','Close did not verify locally. Keep the form open and try again.');
+    return;
+  }
+  try{
+    renderCloseLog();
+    renderCloseStreak();
+  }catch(e){
+    resetCloseSaveBusyV22();
+    setCloseFormStatusV22('warn','Close saved locally, but the log view did not refresh. Refresh before adding another close.');
+    return;
+  }
+  clearCloseFormFieldsV22();
+  closeCloseFormV22();
   sendBackup(true);
   setTimeout(function(){
-    window.__closeSaveBusyV22=false;
-    setCloseSaveBusyV22(false);
+    resetCloseSaveBusyV22();
   },650);
 }
 
