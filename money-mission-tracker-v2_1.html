@@ -18431,6 +18431,14 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/I am looking at this right now|CRM leads|System health/i.test(shortLoadedVisible)||/voice or workflow memory/i.test(shortLoadedVisible))failures.push('short_loaded_data_trust_guard');
     var shortTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/I am looking at this right now|System health|Sync health|Result trust/i.test(shortTrustVisible)||/Finish the current block step|Open your saved IG/i.test(shortTrustVisible))failures.push('short_trust_data_trust_guard');
+    var savedHealthForDataTrust=getStore(HEALTH_KEY);
+    setStore(HEALTH_KEY,{lastSync:Date.now(),services:{content:{status:'ok'},resources:{status:'loading'},calendar:{status:'err'},crm:{status:'ok'},todoist:{status:'ok'}}});
+    var weakHealthTrustVisible=String(getMissionCommandResponse('ask',ctx,'do I trust this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/resources: loading|calendar: err|safe next move|not treat final counts as locked/i.test(weakHealthTrustVisible)||/This is clean enough to choose the next move/i.test(weakHealthTrustVisible))failures.push('data_trust_weak_health_downgrade_guard');
+    var weakHealthMissingVisible=String(getMissionCommandResponse('ask',ctx,'what data is missing',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/sync health needs attention: resources loading, calendar err/i.test(weakHealthMissingVisible)||!/not treat final counts as locked/i.test(weakHealthMissingVisible)||/nothing obvious from the current app packet\s+This is clean enough/i.test(weakHealthMissingVisible))failures.push('data_missing_weak_health_downgrade_guard');
+    if(savedHealthForDataTrust)setStore(HEALTH_KEY,savedHealthForDataTrust);
+    else localStorage.removeItem(HEALTH_KEY);
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Mixed Lane Corrections',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18615,6 +18623,12 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var h=typeof getHealth==='function'?getHealth():{};
   var services=h.services||{};
   var serviceNames=Object.keys(services);
+  var weakServiceNames=serviceNames.filter(function(name){
+    var s=services[name]||{};
+    var status=String(s.status||'').toLowerCase();
+    if(!status)return false;
+    return !/^(ok|checked|ready|loaded|synced|healthy|success|connected)$/.test(status);
+  });
   var loaded=[];
   if(window.__crmLeads&&window.__crmLeads.length)loaded.push('CRM leads: '+window.__crmLeads.length);
   if(window.__contentPieces&&window.__contentPieces.length)loaded.push('content: '+window.__contentPieces.length);
@@ -18630,8 +18644,11 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var healthItems=serviceNames.slice(0,5).map(function(name){var s=services[name]||{};return name+': '+(s.status||'checked');});
   var healthLine=serviceNames.length?blockLines(healthItems):'Sync health has not been checked in detail yet.';
   var healthRead=serviceNames.length?'System health is loaded like this:<br>'+healthLine:healthLine;
-  var missingLine=missing.length?escapeHtml(missing.join(', ')):'nothing obvious from the current app packet';
-  var trustLine=missing.length?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
+  var weakServiceLine=weakServiceNames.map(function(name){var s=services[name]||{};return name+' '+(s.status||'needs review');}).join(', ');
+  var missingText=missing.length?missing.join(', '):'nothing obvious from the current app packet';
+  if(weakServiceLine)missingText+=(missing.length?'. ':'; ')+'sync health needs attention: '+weakServiceLine;
+  var missingLine=escapeHtml(missingText);
+  var trustLine=(missing.length||weakServiceNames.length)?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
   var resultTrustLine=typeof getMissionResultTruthTrustLineV15==='function'?getMissionResultTruthTrustLineV15(ctx):'';
   var resultTrustBlock=resultTrustLine?'<br><br>'+escapeHtml(resultTrustLine):'';
   var resultTrustMove=typeof getMissionResultTruthNextMoveV15==='function'?getMissionResultTruthNextMoveV15(ctx):'';
