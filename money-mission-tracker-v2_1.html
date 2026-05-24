@@ -12329,7 +12329,7 @@ function getMissionCalendarEventPrepAnswerV21(question,ctx){
 
 function missionIsCalendarBlockResultAskV22(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(what is on my calendar|what'?s on my calendar|whats on my calendar|what do i have today|what is my schedule|what'?s my schedule|whats my schedule|what is next on calendar|what do i have before the next thing|how much time do i have|how much runway do i have|what block are we in|what block we in|what time block|what window am i in)\b/.test(q);
+  return /\b(what is on my calendar|what'?s on my calendar|whats on my calendar|what do i have today|what is my schedule|what'?s my schedule|whats my schedule|what is next on calendar|what is next event|what is my next event|what i got next|what do i have before the next thing|how much time do i have|how much runway do i have|what block are we in|what block we in|what time block|what window am i in|am i free|do i have time|what can i do in this window|what can fit right now|what can i do in \d+ minutes|what should i do before the next thing|what needs prep|what should i check on manager|what should i check on the manager card)\b/.test(q);
 }
 
 function getMissionCalendarBlockResultAnswerV22(question,ctx){
@@ -12342,7 +12342,7 @@ function getMissionCalendarBlockResultAnswerV22(question,ctx){
   var eventLabel=typeof getMissionCalendarEventPrepLabelV21==='function'?getMissionCalendarEventPrepLabelV21(ctx||{}):'the next event';
   var block={};
   try{block=typeof getMissionBlockIntel==='function'?getMissionBlockIntel():{};}catch(e){block={};}
-  var isBlockAsk=/\b(how much time|how much runway|what block|time block|what window)\b/.test(q);
+  var isBlockAsk=/\b(how much time|how much runway|what block|time block|what window|am i free|do i have time|this window|fit right now|in \d+ minutes)\b/.test(q);
   var resultLabel=String(latest.type||'result').replace(/_/g,' ');
   if(isBlockAsk){
     var blockName=block&&block.name||'this window';
@@ -18560,6 +18560,8 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/Prep the booked call|calendar detail|Update the lead|Before I explain anything/i.test(bookedEventPrepVisible)||/current work card|Pick one lane|Call path: clarify/i.test(bookedEventPrepVisible))failures.push('calendar_event_prep_booked_result_guard');
     var bookedCalendarVisible=String(getMissionCommandResponse('ask',ctx,'what is on my calendar',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Calendar read|booked loop|calendar detail|update the lead/i.test(bookedCalendarVisible)||/prep the one result you want|name the outcome|return to the active mission/i.test(bookedCalendarVisible))failures.push('calendar_block_booked_result_guard');
+    var bookedFreeVisible=String(getMissionCommandResponse('ask',ctx,'am I free',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/booked loop|calendar detail|opening question|update the lead/i.test(bookedFreeVisible)||/Define the one result|production unless|Deep window|schedule is here to protect/i.test(bookedFreeVisible))failures.push('calendar_sibling_booked_free_guard');
     ['what can you see','what are you reading','what can I trust','what is not safe to assume','trust check'].forEach(function(dataPrompt){
       var dataSiblingVisible=String(getMissionCommandResponse('ask',ctx,dataPrompt,{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
       if(!/I am looking at this right now|System health|CRM leads|current app packet/i.test(dataSiblingVisible)||/Finish the current block step|Open your saved IG|voice or workflow memory/i.test(dataSiblingVisible))failures.push('data_trust_sibling_'+dataPrompt.replace(/\W+/g,'_'));
@@ -18614,6 +18616,11 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/close the paid loop|Log the money|delivery step/i.test(paidEventPrepVisible)||/current mission position|Call path: clarify|one call-ready lead/i.test(paidEventPrepVisible))failures.push('calendar_event_prep_paid_result_guard');
     var paidBlockVisible=String(getMissionCommandResponse('ask',ctx,'how much runway do I have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/paid loop|log the money|delivery step/i.test(paidBlockVisible)||/choose one outcome|open another lane|return to the active mission/i.test(paidBlockVisible))failures.push('calendar_block_paid_result_guard');
+    var paidTimeSiblingVisible=String(getMissionCommandResponse('ask',ctx,'do I have time',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/paid loop|log the money|delivery step|protect delivery/i.test(paidTimeSiblingVisible)||/Deep window|Define the one result|production unless/i.test(paidTimeSiblingVisible))failures.push('calendar_sibling_paid_time_guard');
+    getMissionCommandResponse('ask',ctx,'follow-up',{});
+    var followUpPrepSiblingVisible=String(getMissionCommandResponse('ask',ctx,'what needs prep',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/follow.?up loop|money, timing, trust, or fit|next touch/i.test(followUpPrepSiblingVisible)||/write the outcome|prep the one result|calendar detail/i.test(followUpPrepSiblingVisible))failures.push('calendar_sibling_follow_up_prep_guard');
     getMissionCommandResponse('ask',ctx,'content not sales',{});
     var correctionWhyVisible=String(getMissionCommandResponse('ask',ctx,'why',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Content, not sales|corrected the lane to content|turning today.?s work into proof/i.test(correctionWhyVisible)||/sale already happened|protecting delivery|booked call|calendar detail/i.test(correctionWhyVisible))failures.push('correction_why_result_memory_guard');
@@ -21294,6 +21301,7 @@ function getMissionManagerQuestionSignalV11(question,route){
   var cardSignal=typeof getMissionCardSignalV1==='function'?getMissionCardSignalV1(question||'',route||''):null;
   if(typeof isMissionExplicitCardPromptV1==='function'&&isMissionExplicitCardPromptV1(question||'')&&(!cardSignal||cardSignal.card!=='manager'))return null;
   var explicit=/\b(manager card|manager tab|admin card|admin lane|calendar card|calendar tab|schedule card|tasks card|task card|what should i check on the manager|what should i check on manager|what is on my calendar|what's on my calendar|whats on my calendar|what do i have today|what is my schedule|what's my schedule|what block|what block we in|what time block|how much time|how much runway|what day is it|what should i prep|what needs prep|what needs reviewing|what admin|admin loop|open task|open tasks|calendar prep|meeting prep|event prep)\b/.test(q);
+  if(/\bwhat should i check on manager\b/.test(q))explicit=true;
   var contextAsk=(route==='calendar'||getMissionActiveCardV1()==='manager')&&/\b(what should i do|what next|what matters|where do i start|help me get started|read this|show me|what should i check|what does this mean)\b/.test(q);
   if(!explicit&&!contextAsk)return null;
   var mode='overview';
