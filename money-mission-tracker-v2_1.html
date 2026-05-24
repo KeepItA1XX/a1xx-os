@@ -1881,8 +1881,8 @@ body:before{
 
     <div class="settings-pane active" id="settings-pane-account">
       <div class="settings-subtabs">
-        <button class="settings-subtab active" data-account-subtab="profile" onclick="setAccountSubTab('profile')">Profile</button>
-        <button class="settings-subtab" data-account-subtab="signin" onclick="setAccountSubTab('signin')">Sign-In</button>
+        <button type="button" class="settings-subtab active" data-account-subtab="profile" onclick="setAccountSubTab('profile')">Profile</button>
+        <button type="button" class="settings-subtab" data-account-subtab="signin" onclick="setAccountSubTab('signin')">Sign-In</button>
       </div>
       <div class="account-subpane active" id="account-subpane-profile">
         <div class="settings-section">
@@ -1911,10 +1911,10 @@ body:before{
 
     <div class="settings-pane" id="settings-pane-connections">
       <div class="settings-subtabs">
-        <button class="settings-subtab active" data-connections-subtab="bridge" onclick="setConnectionsSubTab('bridge')">Bridge</button>
-        <button class="settings-subtab" data-connections-subtab="notion" onclick="setConnectionsSubTab('notion')">Notion</button>
-        <button class="settings-subtab" data-connections-subtab="google" onclick="setConnectionsSubTab('google')">Google</button>
-        <button class="settings-subtab" data-connections-subtab="setup" onclick="setConnectionsSubTab('setup')">Setup</button>
+        <button type="button" class="settings-subtab active" data-connections-subtab="bridge" onclick="setConnectionsSubTab('bridge')">Bridge</button>
+        <button type="button" class="settings-subtab" data-connections-subtab="notion" onclick="setConnectionsSubTab('notion')">Notion</button>
+        <button type="button" class="settings-subtab" data-connections-subtab="google" onclick="setConnectionsSubTab('google')">Google</button>
+        <button type="button" class="settings-subtab" data-connections-subtab="setup" onclick="setConnectionsSubTab('setup')">Setup</button>
       </div>
       <div class="connections-subpane active" id="connections-subpane-bridge">
         <div class="settings-section">
@@ -2019,10 +2019,10 @@ body:before{
 
     <div class="settings-pane" id="settings-pane-ai">
       <div class="settings-subtabs">
-        <button class="settings-subtab active" data-ai-subtab="overview" onclick="setAISubTab('overview')">Overview</button>
-        <button class="settings-subtab" data-ai-subtab="workers" onclick="setAISubTab('workers')">Workers</button>
-        <button class="settings-subtab" data-ai-subtab="memory" onclick="setAISubTab('memory')">Memory</button>
-        <button class="settings-subtab" data-ai-subtab="permissions" onclick="setAISubTab('permissions')">Rules</button>
+        <button type="button" class="settings-subtab active" data-ai-subtab="overview" onclick="setAISubTab('overview')">Overview</button>
+        <button type="button" class="settings-subtab" data-ai-subtab="workers" onclick="setAISubTab('workers')">Workers</button>
+        <button type="button" class="settings-subtab" data-ai-subtab="memory" onclick="setAISubTab('memory')">Memory</button>
+        <button type="button" class="settings-subtab" data-ai-subtab="permissions" onclick="setAISubTab('permissions')">Rules</button>
       </div>
       <div class="ai-subpane active" id="ai-subpane-overview">
         <div class="settings-section">
@@ -2080,10 +2080,10 @@ body:before{
 
     <div class="settings-pane" id="settings-pane-health">
       <div class="settings-subtabs">
-        <button class="settings-subtab active" data-health-subtab="status" onclick="setHealthSubTab('status')">Status</button>
-        <button class="settings-subtab" data-health-subtab="backups" onclick="setHealthSubTab('backups')">Backups</button>
-        <button class="settings-subtab" data-health-subtab="diagnostics" onclick="setHealthSubTab('diagnostics')">Diagnostics</button>
-        <button class="settings-subtab" data-health-subtab="version" onclick="setHealthSubTab('version')">Version</button>
+        <button type="button" class="settings-subtab active" data-health-subtab="status" onclick="setHealthSubTab('status')">Status</button>
+        <button type="button" class="settings-subtab" data-health-subtab="backups" onclick="setHealthSubTab('backups')">Backups</button>
+        <button type="button" class="settings-subtab" data-health-subtab="diagnostics" onclick="setHealthSubTab('diagnostics')">Diagnostics</button>
+        <button type="button" class="settings-subtab" data-health-subtab="version" onclick="setHealthSubTab('version')">Version</button>
       </div>
       <div class="health-subpane active" id="health-subpane-status">
         <div class="settings-section">
@@ -3513,9 +3513,9 @@ body:before{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.0 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
-var APP_BUILD_STAMP='2026-05-24 11:15 ET · Sheets integration v1.1 prep';
+var APP_BUILD_STAMP='2026-05-24 11:43 ET · System Hub subtab click fix';
 var APP_BRAIN_BUILD='Mission Command Sheets sync prep';
-var APP_CACHE_TOKEN='mmos-20260524-1115';
+var APP_CACHE_TOKEN='mmos-20260524-1143';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4086,6 +4086,22 @@ function setAISubTab(tab){
     pane.classList.toggle('active',pane.id==='ai-subpane-'+window.__aiSubTab);
   });
   if(window.__aiSubTab==='workers')renderMissionWorkerStatus();
+}
+
+function wireSystemHubSubtabsV1(){
+  var panel=document.getElementById('system-panel');
+  if(!panel||panel.dataset.subtabsWired==='1')return;
+  panel.dataset.subtabsWired='1';
+  panel.addEventListener('click',function(event){
+    var btn=event.target&&event.target.closest?event.target.closest('.settings-subtab'):null;
+    if(!btn||!panel.contains(btn))return;
+    event.preventDefault();
+    event.stopPropagation();
+    if(btn.hasAttribute('data-account-subtab'))setAccountSubTab(btn.getAttribute('data-account-subtab'));
+    else if(btn.hasAttribute('data-connections-subtab'))setConnectionsSubTab(btn.getAttribute('data-connections-subtab'));
+    else if(btn.hasAttribute('data-ai-subtab'))setAISubTab(btn.getAttribute('data-ai-subtab'));
+    else if(btn.hasAttribute('data-health-subtab'))setHealthSubTab(btn.getAttribute('data-health-subtab'));
+  },true);
 }
 
 function updateSettingsConnections(){
@@ -29000,6 +29016,7 @@ function init(){
   window.__a1xxBooting=true;
   safeRender('mission command launch default',function(){resetMissionCommandDefaultForLaunch();});
   safeRender('mission delegates',function(){wireMissionDelegates();});
+  safeRender('system hub subtabs',function(){wireSystemHubSubtabsV1();});
   safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();renderCloseStreak();updateTopbarBiz();if(typeof renderDpcDateView==='function')renderDpcDateView();if(typeof renderMissedDayBanner==='function')renderMissedDayBanner();if(typeof renderProspectList==='function')renderProspectList();if(typeof renderCalNowBanner==='function')renderCalNowBanner();if(typeof startCalNowTicker==='function')startCalNowTicker();});
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
