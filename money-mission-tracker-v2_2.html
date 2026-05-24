@@ -1135,10 +1135,11 @@ input:focus{border-color:#333}
 .dpc-future-rhythm .fr-name{color:#5b9cf6;font-weight:700}
 .dpc-undo-btn{height:30px;padding:0 12px;background:#100c02;border:0.5px solid #3a2800;border-radius:7px;color:#d4a017;font-size:10px;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;display:inline-flex;align-items:center;justify-content:center;line-height:1}
 .dpc-undo-btn:hover{background:#1a1200;border-color:#5a3800;color:#e4a020}
-.dpc-missed-banner{background:#1a1200;border:0.5px solid #5a3800;border-radius:10px;padding:11px 14px;margin-bottom:10px;color:#f0d08a;font-size:12px;font-weight:600;line-height:1.5;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:all .15s}
+.dpc-missed-banner{background:#1a1200;border:0.5px solid #5a3800;border-radius:10px;padding:11px 14px;margin-bottom:10px;color:#f0d08a;font-size:12px;font-weight:600;line-height:1.5;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:all .15s;position:relative}
 .dpc-missed-banner:hover{background:#221700;border-color:#7a4800}
-.dpc-missed-banner .dpc-mb-text{flex:1}
+.dpc-missed-banner .dpc-mb-text{flex:1;padding-right:28px}
 .dpc-missed-banner .dpc-mb-close{width:26px;height:26px;min-width:26px;background:transparent;border:0;border-radius:7px;color:#a07010;font-size:16px;cursor:pointer;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;position:relative;z-index:2;pointer-events:auto}
+.dpc-missed-banner .dpc-mb-close{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:30}
 .dpc-missed-banner .dpc-mb-close:hover{background:#2a1a00;color:#f0d08a}
 .dpc-log-mode-hint{font-size:10px;color:#7ec845;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;text-align:center}
 .dpc-log-mode-hint.edit{color:#d4a017}
@@ -3000,7 +3001,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   </div>
 
   <!-- MISSED-DAY BANNER (shows when yesterday has no saved record) -->
-  <div class="dpc-missed-banner" id="dpc-missed-banner" style="display:none" onclick="openYesterdayDPC(event)">
+  <div class="dpc-missed-banner" id="dpc-missed-banner" style="display:none" role="button" tabindex="0">
     <div class="dpc-mb-text" id="dpc-missed-banner-text">You missed yesterday — tap to fill it in.</div>
     <button class="dpc-mb-close" type="button" onclick="return dismissMissedBanner(event)" onpointerdown="return dismissMissedBanner(event)" aria-label="Dismiss">×</button>
   </div>
@@ -3784,9 +3785,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 17:04 ET · OS v2_2 DPC missed banner close';
+var APP_BUILD_STAMP='2026-05-24 17:13 ET · OS v2_2 delegated DPC banner close';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1704';
+var APP_CACHE_TOKEN='mmos-20260524-1713';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -5538,6 +5539,7 @@ function renderMissedDayBanner(){
   var dayName=yest.toLocaleDateString('en-US',{weekday:'long'});
   var t=document.getElementById('dpc-missed-banner-text');
   if(t)t.textContent='You missed '+dayName+' — tap to fill it in.';
+  banner.removeAttribute('aria-hidden');
   banner.style.display='flex';
 }
 
@@ -5554,6 +5556,7 @@ function openYesterdayDPC(e){
   setDpcViewDate(-1);
   var card=document.getElementById('dpc-card');
   if(card&&card.scrollIntoView)card.scrollIntoView({behavior:'smooth',block:'start'});
+  return false;
 }
 
 function dismissMissedBanner(e){
@@ -5571,6 +5574,29 @@ function dismissMissedBanner(e){
     banner.setAttribute('aria-hidden','true');
   }
   return false;
+}
+
+function handleDpcMissedBannerClickV22(e){
+  var close=e&&e.target&&e.target.closest?e.target.closest('.dpc-mb-close'):null;
+  if(close){
+    return dismissMissedBanner(e);
+  }
+  var banner=e&&e.target&&e.target.closest?e.target.closest('#dpc-missed-banner'):null;
+  if(!banner)return true;
+  if(e&&e.type==='keydown'&&e.key!=='Enter'&&e.key!==' ')return true;
+  if(e){
+    if(e.preventDefault)e.preventDefault();
+    if(e.stopPropagation)e.stopPropagation();
+  }
+  return openYesterdayDPC(e);
+}
+
+function wireDpcMissedBannerCloseV22(){
+  if(document.__a1xxDpcMissedBannerCloseWired)return;
+  document.__a1xxDpcMissedBannerCloseWired=true;
+  ['pointerdown','click','keydown'].forEach(function(type){
+    document.addEventListener(type,handleDpcMissedBannerClickV22,true);
+  });
 }
 
 function toggleCoachAction(id){
@@ -29390,6 +29416,7 @@ function init(){
   window.__a1xxBooting=true;
   safeRender('mission command launch default',function(){resetMissionCommandDefaultForLaunch();});
   safeRender('mission delegates',function(){wireMissionDelegates();});
+  safeRender('dpc missed banner close',function(){wireDpcMissedBannerCloseV22();});
   safeRender('system hub subtabs',function(){wireSystemHubSubtabsV1();});
   safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();renderCloseStreak();updateTopbarBiz();if(typeof renderDpcDateView==='function')renderDpcDateView();if(typeof renderMissedDayBanner==='function')renderMissedDayBanner();if(typeof renderProspectList==='function')renderProspectList();if(typeof renderCalNowBanner==='function')renderCalNowBanner();if(typeof startCalNowTicker==='function')startCalNowTicker();});
   var streak=getStore(STREAK_KEY)||{count:0};
