@@ -276,6 +276,12 @@ Here is what I can safely use.
 Use this for one safe next move, not locked final numbers.
 ```
 
+Data trust wording rule:
+
+- Prefer "safe for one next move" over vague confidence phrases.
+- If sync is healthy, the answer may act on loaded data, but it should still avoid claiming final locked numbers unless the user specifically ran or requested sync.
+- If sync is weak, partial, loading, or missing, the answer must say what is weak and avoid "clean enough" language.
+
 ```text
 Sales reply:
 Send this. "[exact line]"

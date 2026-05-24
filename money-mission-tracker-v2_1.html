@@ -18500,9 +18500,9 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'sync_trust_data',q:'do i trust this data',must:/safe next move|Data read|Clean enough|Partial|loaded/i},
       {name:'sync_trust_short',q:'do I trust this',must:/I am looking at this right now|I'm looking at this right now|safe next move|clean enough|loaded|System health/i},
       {name:'sync_source_origin',q:'where is that coming from',must:/current app packet|System health|CRM leads|loaded/i},
-      {name:'sync_data_then_move',q:'show me the data then tell me the move',must:/data I can use|System health|Move from the cleanest loaded signal/i},
+      {name:'sync_data_then_move',q:'show me the data then tell me the move',must:/data I can use|System health|Use the cleanest loaded signal|Move from the cleanest loaded signal/i},
       {name:'production_studio_session',q:'production studio session',must:/Production|studio|asset|song|beat/i},
-      {name:'data_loaded_status',q:'what is loaded',must:/I am looking at this right now|I am reading|Data read|Clean enough|Partial|loaded|Trust level/i},
+      {name:'data_loaded_status',q:'what is loaded',must:/I am looking at this right now|I am reading|Data read|safe next move|Clean enough|Partial|loaded|Trust level/i},
       {name:'cohesion_meaning',q:'what does that mean',must:/clean read|reading|useful read|move/i},
       {name:'cohesion_money_bridge',q:'how does that connect to money',must:/connection|money|move|matters/i},
       {name:'cohesion_card_owner',q:'what card owns this',must:/Card|belongs to|Open|Come back/i},
@@ -19273,7 +19273,7 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var missingText=missing.length?missing.join(', '):'nothing obvious from the current app packet';
   if(weakServiceLine)missingText+=(missing.length?'. ':'; ')+'sync health needs attention: '+weakServiceLine;
   var missingLine=escapeHtml(missingText);
-  var trustLine=(missing.length||weakServiceNames.length)?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'This is clean enough to choose the next move.';
+  var trustLine=(missing.length||weakServiceNames.length)?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'I would trust this for one safe next move. Run sync first only if exact counts matter.';
   var resultTrustLine=typeof getMissionResultTruthTrustLineV15==='function'?getMissionResultTruthTrustLineV15(ctx):'';
   var resultTrustBlock=resultTrustLine?'<br><br>'+escapeHtml(resultTrustLine):'';
   var resultTrustMove=typeof getMissionResultTruthNextMoveV15==='function'?getMissionResultTruthNextMoveV15(ctx):'';
@@ -19285,7 +19285,7 @@ function getMissionDataConfidenceResponse(route,ctx,question){
     return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Log target:<br><br>'+resultLogTarget;
   }
   if(/\b(show me the data.*tell me the move|show me data.*tell me the move|data.*then.*move)\b/.test(q)){
-    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Move from the cleanest loaded signal: '+escapeHtml(safeMove)+'.';
+    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Use the cleanest loaded signal: '+escapeHtml(safeMove)+'.';
   }
   if(/\b(where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth)\b/.test(q)){
     return 'That read is coming from the current app packet and sync health.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
@@ -19294,7 +19294,8 @@ function getMissionDataConfidenceResponse(route,ctx,question){
     return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see|what can you not see about my time)\b/.test(q)){
-    return 'I cannot fully see this yet:<br><br>'+missingLine+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Only run sync if this decision needs current numbers.';
+    var syncTail=/\b(run sync|sync is checked)\b/i.test(trustLine)?'':'<br><br>Only run sync if this decision needs current numbers.';
+    return 'I cannot fully see this yet:<br><br>'+missingLine+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+syncTail;
   }
   if(/\b(is this current|is this data current|is calendar current|calendar current|is this block current|block current|time current|current data|data current|is this live|calendar stale|data stale|stale data)\b/.test(q)){
     return 'It is current enough for a safe next move, not final enough for locked numbers.<br><br>I am seeing:<br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>Run sync first only if the decision depends on exact counts.';
