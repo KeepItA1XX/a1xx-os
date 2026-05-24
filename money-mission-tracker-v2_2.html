@@ -2129,7 +2129,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 </div>
 
 <!-- SETTINGS / SYSTEM HUB -->
-<div class="settings-backdrop" id="settings-backdrop" onclick="closeSystemPanel()"></div>
+<div class="settings-backdrop" id="settings-backdrop" data-ui-dismiss-surface="system-panel" onclick="closeSystemPanel()"></div>
 <div class="system-panel" id="system-panel">
   <div class="settings-nav">
     <div class="settings-brand">Settings</div>
@@ -2144,7 +2144,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
         <div class="system-title">System Hub</div>
         <div class="system-last" id="system-last">Last sync: never</div>
       </div>
-      <button class="settings-close" onclick="closeSystemPanel()" title="Close settings">×</button>
+      <button class="settings-close" data-ui-dismiss="system-panel" onclick="closeSystemPanel()" title="Close settings">×</button>
     </div>
 
     <div class="settings-pane active" id="settings-pane-account">
@@ -2454,7 +2454,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 <div class="company-panel" id="company-panel">
   <div class="cp-header">
     Business Health — Cycle 1
-    <span class="cp-close" onclick="toggleCompanyPanel()">×</span>
+    <span class="cp-close" data-ui-dismiss="company-panel" role="button" tabindex="0" onclick="toggleCompanyPanel()">×</span>
   </div>
   <div class="cp-grid">
     <div class="cp-item">
@@ -2521,7 +2521,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   <div class="mission-history-drawer" id="mission-history-drawer" aria-hidden="true">
     <div class="mission-history-top">
       <div class="mission-history-title">Chats</div>
-      <button class="mission-icon-btn" onclick="toggleMissionHistory(false)" title="Close history">×</button>
+      <button class="mission-icon-btn" data-ui-dismiss="mission-history" onclick="toggleMissionHistory(false)" title="Close history">×</button>
     </div>
     <div class="mission-history-projects" id="mission-history-projects"></div>
     <div class="mission-project-form" id="mission-project-form">
@@ -3670,7 +3670,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
     <div class="kpip" id="kpi-panel-rpt">
       <div class="kpihd">
         <div><div class="kpitt" id="kpi-ttl-rpt"></div><div class="kpibdg" id="kpi-bdg-rpt"></div></div>
-        <div class="kpicl" onclick="closeKPI()">×</div>
+        <div class="kpicl" data-ui-dismiss="kpi-panel" role="button" tabindex="0" onclick="closeKPI()">×</div>
       </div>
       <div class="kpidc" id="kpi-dsc-rpt"></div>
       <div class="kpils" id="kpi-lst-rpt"></div>
@@ -3792,9 +3792,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 17:52 ET · OS v2_2 resilient DPC banner dismiss';
+var APP_BUILD_STAMP='2026-05-24 18:16 ET · OS v2_2 dismissible UI stability';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1752';
+var APP_CACHE_TOKEN='mmos-20260524-1816';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4297,6 +4297,63 @@ function closeSystemPanel(){
   var b=document.getElementById('settings-backdrop');
   if(p)p.classList.remove('open');
   if(b)b.classList.remove('open');
+}
+
+function stopUiDismissEventV22(e){
+  if(!e)return;
+  if(e.preventDefault)e.preventDefault();
+  if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+  if(e.stopPropagation)e.stopPropagation();
+}
+
+function closeInstagramTokenModalV22(e){
+  stopUiDismissEventV22(e);
+  var modal=document.getElementById('ig-token-modal-overlay');
+  if(modal)modal.classList.remove('active');
+  return false;
+}
+
+function closeUiTargetV22(target,e){
+  if(!target)return true;
+  var action=target.getAttribute('data-ui-dismiss')||'';
+  stopUiDismissEventV22(e);
+  if(action==='system-panel')closeSystemPanel();
+  else if(action==='company-panel'){
+    var company=document.getElementById('company-panel');
+    if(company)company.classList.remove('open');
+  }else if(action==='mission-history'){
+    if(typeof toggleMissionHistory==='function')toggleMissionHistory(false);
+  }else if(action==='kpi-panel'){
+    if(typeof closeKPI==='function')closeKPI();
+  }else if(action==='ig-token'){
+    closeInstagramTokenModalV22();
+  }
+  return false;
+}
+
+function handleUiDismissStabilityV22(e){
+  if(!e)return true;
+  var isKey=e.type==='keydown';
+  if(isKey&&e.key!=='Enter'&&e.key!==' '&&e.key!=='Escape')return true;
+  var target=e.target&&e.target.closest?e.target.closest('[data-ui-dismiss]'):null;
+  if(target)return closeUiTargetV22(target,e);
+  if(isKey&&e.key==='Escape'){
+    if(document.getElementById('ig-token-modal-overlay')&&document.getElementById('ig-token-modal-overlay').classList.contains('active'))return closeInstagramTokenModalV22(e);
+    if(document.getElementById('system-panel')&&document.getElementById('system-panel').classList.contains('open')){stopUiDismissEventV22(e);closeSystemPanel();return false;}
+    if(document.getElementById('mission-history-drawer')&&document.getElementById('mission-history-drawer').classList.contains('open')){stopUiDismissEventV22(e);toggleMissionHistory(false);return false;}
+  }
+  var surface=e.target&&e.target.getAttribute?e.target.getAttribute('data-ui-dismiss-surface'):null;
+  if(surface==='system-panel'){stopUiDismissEventV22(e);closeSystemPanel();return false;}
+  if(surface==='ig-token')return closeInstagramTokenModalV22(e);
+  return true;
+}
+
+function wireDismissibleUiStabilityV22(){
+  if(document.__a1xxDismissibleUiStabilityWired)return;
+  document.__a1xxDismissibleUiStabilityWired=true;
+  ['pointerdown','mousedown','touchstart','click','keydown'].forEach(function(type){
+    document.addEventListener(type,handleUiDismissStabilityV22,true);
+  });
 }
 
 function setSettingsTab(tab){
@@ -29444,6 +29501,7 @@ function init(){
   safeRender('mission command launch default',function(){resetMissionCommandDefaultForLaunch();});
   safeRender('mission delegates',function(){wireMissionDelegates();});
   safeRender('dpc missed banner close',function(){wireDpcMissedBannerCloseV22();});
+  safeRender('dismissible ui stability',function(){wireDismissibleUiStabilityV22();});
   safeRender('system hub subtabs',function(){wireSystemHubSubtabsV1();});
   safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();renderCloseStreak();updateTopbarBiz();if(typeof renderDpcDateView==='function')renderDpcDateView();if(typeof renderMissedDayBanner==='function')renderMissedDayBanner();if(typeof renderProspectList==='function')renderProspectList();if(typeof renderCalNowBanner==='function')renderCalNowBanner();if(typeof startCalNowTicker==='function')startCalNowTicker();});
   var streak=getStore(STREAK_KEY)||{count:0};
@@ -31096,7 +31154,7 @@ setTimeout(startA1XX,50);
 </script>
 
 <!-- Instagram token refresh modal — v1.5 -->
-<div class="ig-token-modal-overlay" id="ig-token-modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
+<div class="ig-token-modal-overlay" id="ig-token-modal-overlay" data-ui-dismiss-surface="ig-token" onclick="if(event.target===this)closeInstagramTokenModalV22(event)">
   <div class="ig-token-modal">
     <h3>🔑 Refresh Instagram Token</h3>
     <p>
@@ -31108,7 +31166,7 @@ setTimeout(startA1XX,50);
     </p>
     <textarea id="ig-token-input" placeholder="Paste IGAA... token here"></textarea>
     <div class="ig-token-modal-btns">
-      <button class="ig-cancel-btn" onclick="document.getElementById('ig-token-modal-overlay').classList.remove('active')">Cancel</button>
+      <button class="ig-cancel-btn" data-ui-dismiss="ig-token" onclick="return closeInstagramTokenModalV22(event)">Cancel</button>
       <button class="ig-save-btn" onclick="saveInstagramToken()">Save & Refresh</button>
     </div>
   </div>
