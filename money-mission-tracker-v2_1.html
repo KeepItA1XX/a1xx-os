@@ -12116,7 +12116,7 @@ function missionHasFreshBookedContextV12(){
 
 function missionIsBookedLogTargetAskV13(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(what do i log|what should i log|what to log|tell me what to log|tell me what i should log|where do i log this|where should i update it|what should i update|what should i log after this|what do i log after this|what should i come back with|what do i come back with|what should i come back and tell you|what should i tell you after|what counts as done|what counts as a result|what changes in the app|what should change in the app|what status changes|what button do i press|what result are we looking for|what result are we trying to create)\b/.test(q);
+  return /\b(what do i log|what should i log|what to log|tell me what to log|tell me what i should log|where do i log this|where should i update it|what should i update|what do i update before time|what should i log after this|what do i log after this|what should i come back with|what do i come back with|what should i come back and tell you|what should i tell you after|what counts as done|what counts as a result|what changes in the app|what should change in the app|what status changes|what button do i press|what result are we looking for|what result are we trying to create)\b/.test(q);
 }
 
 function getMissionBookedLogTargetAnswerV13(){
@@ -12255,6 +12255,42 @@ function getMissionAmbiguousReentryAnswerV19(question,ctx){
     return getMissionFreshStarterDpcAnchorAnswerV12(q,ctx||{},/\b(where we at|where are we|where do i stand)\b/.test(q)?'where':'');
   }
   return 'You are at a clean OS read.<br><br>No confirmed result owns this thread yet.<br><br>Start with one visible move, then log the result so Mission Command has a real signal.';
+}
+
+function missionIsTimePressureAskV20(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(i got \d+ minutes|i have \d+ minutes|got \d+ min|only have (a few|\d+) minutes|few minutes|quick move|quick win|short window|before i leave|about to leave|before the next block|before next block|before my next call|before the next call|before time runs out|time runs out|what do i update before time|what can i finish before|what should i finish before|tired but need money|i'?m tired but need money|im tired but need money)\b/.test(q);
+}
+
+function getMissionTimePressureWindowLineV20(ctx){
+  ctx=ctx||{};
+  var block={};
+  try{block=typeof getMissionBlockIntel==='function'?getMissionBlockIntel():{};}catch(e){block={};}
+  var minutes=Number(block&&block.minutesLeft||ctx.blockMinutes||ctx.minutesLeft||ctx.minutesRemaining||0);
+  var name=block&&block.name||ctx.blockName||'this window';
+  if(minutes>0)return name+' has '+minutes+' minutes left.';
+  return 'Treat this like a short action window.';
+}
+
+function getMissionTimePressureResultMoveV20(result){
+  if(!result||!result.type)return '';
+  if(result.type==='booked')return 'add the calendar detail, update the lead, and prep one opening question';
+  if(result.type==='paid')return 'log the money, update the lead, then write the first delivery step';
+  if(result.type==='reply')return 'ask one qualifying question, then log the reply';
+  if(result.type==='no_reply')return 'log no reply, decide one bump, then move to the next warm signal';
+  if(result.type==='follow_up')return 'isolate the concern: money, timing, trust, or fit, then set the next touch';
+  if(result.type==='done')return 'capture the actual result: no reply, reply, booked, paid, shipped, posted, or wrong lane';
+  return '';
+}
+
+function getMissionTimePressureResultAnswerV20(question,ctx){
+  var q=normalizeMissionQuestion(question||'');
+  if(!missionIsTimePressureAskV20(q))return '';
+  var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(!latest||!latest.type)return '';
+  var move=getMissionTimePressureResultMoveV20(latest);
+  if(!move)return '';
+  return getMissionTimePressureWindowLineV20(ctx||{})+'<br><br>Use it to close the '+String(latest.type||'result').replace(/_/g,' ')+' loop: '+move+'.';
 }
 
 function getMissionLatestResultSalesReplyAnswerV16(question){
@@ -18527,6 +18563,8 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'paid',{});
     var paidReentryVisible=String(getMissionCommandResponse('ask',ctx,'what did we leave open',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/past the sale|Open loop: log the money|protect delivery/i.test(paidReentryVisible)||/Memory lane|Open Memory|current work card|DPC is still at zero/i.test(paidReentryVisible))failures.push('ambiguous_reentry_paid_owner_guard');
+    var paidTimeWindowVisible=String(getMissionCommandResponse('ask',ctx,'I got 10 minutes',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/paid loop|log the money|delivery/i.test(paidTimeWindowVisible)||/one DM|cold call|Pick one lane|Production tracker/i.test(paidTimeWindowVisible))failures.push('time_pressure_paid_result_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Ambiguous Reentry Clean',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18535,6 +18573,24 @@ function runMissionBroadRegressionHardeningV1(){
     localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
     var cleanReentryVisible=String(getMissionCommandResponse('ask',ctx,'what are we still on',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/clean OS read|No confirmed result owns this thread|one visible move/i.test(cleanReentryVisible)||/Memory lane|Open Memory|That's where the OS keeps this lane/i.test(cleanReentryVisible))failures.push('ambiguous_reentry_clean_memory_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Time Pressure Result Ownership',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'booked',{});
+    var bookedTimeWindowVisible=String(getMissionCommandResponse('ask',ctx,'what should I finish before my next call',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/booked loop|calendar detail|update the lead|opening question/i.test(bookedTimeWindowVisible)||/one call-ready lead|Define the one result|Production tracker/i.test(bookedTimeWindowVisible))failures.push('time_pressure_booked_result_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Time Pressure Follow Up',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    getMissionCommandResponse('ask',ctx,'follow-up',{});
+    var followUpTimeWindowVisible=String(getMissionCommandResponse('ask',ctx,'I got 10 minutes',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/follow.up loop|money, timing, trust, or fit|next touch/i.test(followUpTimeWindowVisible)||/one DM|cold call|Pick one lane|Production tracker/i.test(followUpTimeWindowVisible))failures.push('time_pressure_follow_up_result_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Correction Bubble Packet',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -18723,10 +18779,10 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   if(/\b(what data are you using|what data do you have|what do you see|what can you see|what are you reading|what(?:'|’|\s+)?s loaded|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what should i trust(?: from this)?|what can i trust|do i trust this|can i trust this|trust this|what is trusted|what is safe to act on|what is not safe to assume|source check|trust check)\b/.test(q)){
     return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
   }
-  if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see)\b/.test(q)){
+  if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see|what can you not see about my time)\b/.test(q)){
     return 'I cannot fully see this yet:<br><br>'+missingLine+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Only run sync if this decision needs current numbers.';
   }
-  if(/\b(is this current|is this data current|current data|data current|is this live|calendar stale|data stale|stale data)\b/.test(q)){
+  if(/\b(is this current|is this data current|is calendar current|calendar current|is this block current|block current|time current|current data|data current|is this live|calendar stale|data stale|stale data)\b/.test(q)){
     return 'It is current enough for a safe next move, not final enough for locked numbers.<br><br>I am seeing:<br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>Run sync first only if the decision depends on exact counts.';
   }
   return (missing.length?'The data is partial. I cannot fully see '+escapeHtml(missing.join(', '))+'.':'The current app packet is clean enough for the next move.')+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Run sync only if the decision needs current numbers.';
@@ -18746,7 +18802,7 @@ function getMissionFriendlyActionTextV1(action,fallback){
 
 function isMissionDataTrustPromptV12(question){
   var q=normalizeMissionQuestion(question||'');
-  return /\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|trust this data|do i trust this data|do i trust this|can i trust this|trust this|what should i trust(?: from this)?|what can i trust|what is trusted|what is safe to act on|what is not safe to assume|source check|trust check|what is missing|what data is missing|what do you see|what can you see|what are you reading|what can you not see|what data are you using|what data do you have|what(?:'|’|\s+)?s loaded|what is loaded|what data is loaded|what sources are loaded|what sources are you using|where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth|show me the data|show me data|data then move|calendar stale)\b/.test(q);
+  return /\b(stale|missing data|data missing|no data|not loaded|why no|current data|data current|is this current|is this data current|is this live|is calendar current|calendar current|is this block current|block current|time current|trust this data|do i trust this data|do i trust this|can i trust this|trust this|what should i trust(?: from this)?|what can i trust|what is trusted|what is safe to act on|what is not safe to assume|source check|trust check|what is missing|what data is missing|what do you see|what can you see|what are you reading|what can you not see|what can you not see about my time|what data are you using|what data do you have|what(?:'|’|\s+)?s loaded|what is loaded|what data is loaded|what sources are loaded|what sources are you using|where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth|show me the data|show me data|data then move|calendar stale)\b/.test(q);
 }
 
 var MISSION_SALES_CLOSER_STAGES={
@@ -24461,6 +24517,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  if(latestResultSalesReplyAnswer)return finishMissionAnswer(latestResultSalesReplyAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var ambiguousReentryAnswer=typeof getMissionAmbiguousReentryAnswerV19==='function'?getMissionAmbiguousReentryAnswerV19(cleanQuestion||question||'',ctx):'';
 	  if(ambiguousReentryAnswer)return finishMissionAnswer(ambiguousReentryAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
+	  var timePressureResultAnswer=typeof getMissionTimePressureResultAnswerV20==='function'?getMissionTimePressureResultAnswerV20(cleanQuestion||question||'',ctx):'';
+	  if(timePressureResultAnswer)return finishMissionAnswer(timePressureResultAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  if(typeof missionFreshStarterNeedsDpcAnchorV12==='function'&&missionFreshStarterNeedsDpcAnchorV12(question||cleanQuestion||'',ctx)){
 	    var freshAnchorKind=/\b(where we at|where are we|where do i stand)\b/.test(rawQ)?'where':(/\b(i got \d+ minutes|i got twenty minutes|i got 20 minutes)\b/.test(rawQ)?'time':(/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|nah not that|no not that|clean version|clean read)\b/.test(rawQ)?'clean':(/\b(why|why again)\b/.test(rawQ)?'why':'')));
 	    if(freshAnchorKind)return finishMissionAnswer(getMissionFreshStarterDpcAnchorAnswerV12(cleanQuestion||question||'',ctx,freshAnchorKind),{sessionArc:false,closer:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
