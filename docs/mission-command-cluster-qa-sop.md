@@ -317,6 +317,7 @@ Manager/calendar wording rule:
 - Prep phrases like "what should I prep before my next call" belong to calendar/call prep, not pipeline browsing, unless A1XX explicitly asks for leads or pipeline.
 - Protect next-call prep at the direct-route boundary too; do not rely only on late answer helpers, because pipeline/lead routing can otherwise steal the turn.
 - Protect next-call prep in the render/bubble path as well; `buildMissionBubblePacket` must not replace a correct call-prep answer with a pipeline human/data bubble.
+- Protect next-call prep from generic lead labels; if the app only has `Unnamed lead`, `active`, or `lead`, say `No specific lead selected yet` instead of pretending a real call lead is selected.
 - Manager direct answers should not receive the generic cross-card `Before you switch lanes` append when the answer already includes its own admin/time handoff.
 - Keep required labels like `Calendar read`, `Prep read`, and `Do this next` when regressions depend on them, but make the body sound like an operator read.
 
