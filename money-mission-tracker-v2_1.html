@@ -12327,6 +12327,31 @@ function getMissionCalendarEventPrepAnswerV21(question,ctx){
   return 'Prep '+escapeHtml(eventLabel)+' around one outcome.<br><br>Lead read: '+escapeHtml(leadLine)+'.<br><br>Opening question: "Before I explain anything, what made you want to talk today?"';
 }
 
+function missionIsCalendarBlockResultAskV22(question){
+  var q=normalizeMissionQuestion(question||'');
+  return /\b(what is on my calendar|what'?s on my calendar|whats on my calendar|what do i have today|what is my schedule|what'?s my schedule|whats my schedule|what is next on calendar|what do i have before the next thing|how much time do i have|how much runway do i have|what block are we in|what block we in|what time block|what window am i in)\b/.test(q);
+}
+
+function getMissionCalendarBlockResultAnswerV22(question,ctx){
+  if(!missionIsCalendarBlockResultAskV22(question||''))return '';
+  var latest=!missionInternalSelfCheckIsActiveV1()&&typeof getMissionLatestFreshResultV12==='function'?getMissionLatestFreshResultV12():null;
+  if(!latest||!latest.type)return '';
+  var q=normalizeMissionQuestion(question||'');
+  var move=typeof getMissionTimePressureResultMoveV20==='function'?getMissionTimePressureResultMoveV20(latest):'';
+  if(!move)return '';
+  var eventLabel=typeof getMissionCalendarEventPrepLabelV21==='function'?getMissionCalendarEventPrepLabelV21(ctx||{}):'the next event';
+  var block={};
+  try{block=typeof getMissionBlockIntel==='function'?getMissionBlockIntel():{};}catch(e){block={};}
+  var isBlockAsk=/\b(how much time|how much runway|what block|time block|what window)\b/.test(q);
+  var resultLabel=String(latest.type||'result').replace(/_/g,' ');
+  if(isBlockAsk){
+    var blockName=block&&block.name||'this window';
+    var minutes=Number(block&&block.minutesLeft||0);
+    return (minutes?blockName+' has '+minutes+' minutes left.':'Treat this like the active window.')+'<br><br>Use it to close the '+resultLabel+' loop: '+move+'.';
+  }
+  return 'Calendar read: '+escapeHtml(eventLabel)+'.<br><br>Use the calendar to close the '+resultLabel+' loop: '+escapeHtml(move)+'.';
+}
+
 function getMissionLatestResultSalesReplyAnswerV16(question){
   var q=normalizeMissionQuestion(question||'');
   if(!/\b(help me reply|write (a |the )?(reply|response|dm|text)|what(?:'|’|\s+)?s the reply|reply for me|respond to that|what do i text back|what should i text|what should i dm|what should i say back|what do i say back|what do i send|what should i send|what do i tell (him|her|them)|text (him|her|them)?\s*back|dm (him|her|them)?\s*back|send (him|her|them)?\s*(a )?(text|dm|reply|response)?|how do i answer(?: that)?)\b/.test(q))return '';
@@ -18533,6 +18558,8 @@ function runMissionBroadRegressionHardeningV1(){
     });
     var bookedEventPrepVisible=String(getMissionCommandResponse('ask',ctx,'before this call what do I need',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Prep the booked call|calendar detail|Update the lead|Before I explain anything/i.test(bookedEventPrepVisible)||/current work card|Pick one lane|Call path: clarify/i.test(bookedEventPrepVisible))failures.push('calendar_event_prep_booked_result_guard');
+    var bookedCalendarVisible=String(getMissionCommandResponse('ask',ctx,'what is on my calendar',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/Calendar read|booked loop|calendar detail|update the lead/i.test(bookedCalendarVisible)||/prep the one result you want|name the outcome|return to the active mission/i.test(bookedCalendarVisible))failures.push('calendar_block_booked_result_guard');
     ['what can you see','what are you reading','what can I trust','what is not safe to assume','trust check'].forEach(function(dataPrompt){
       var dataSiblingVisible=String(getMissionCommandResponse('ask',ctx,dataPrompt,{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
       if(!/I am looking at this right now|System health|CRM leads|current app packet/i.test(dataSiblingVisible)||/Finish the current block step|Open your saved IG|voice or workflow memory/i.test(dataSiblingVisible))failures.push('data_trust_sibling_'+dataPrompt.replace(/\W+/g,'_'));
@@ -18585,6 +18612,8 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/Last result was paid|log the money|protect delivery/i.test(paidAfterCorrectionNextVisible)||/Production, not content|Content, not sales|Sales lane, not pipeline/i.test(paidAfterCorrectionNextVisible))failures.push('correction_result_reownership_guard');
     var paidEventPrepVisible=String(getMissionCommandResponse('ask',ctx,'what do I need before this meeting',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/close the paid loop|Log the money|delivery step/i.test(paidEventPrepVisible)||/current mission position|Call path: clarify|one call-ready lead/i.test(paidEventPrepVisible))failures.push('calendar_event_prep_paid_result_guard');
+    var paidBlockVisible=String(getMissionCommandResponse('ask',ctx,'how much runway do I have',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/paid loop|log the money|delivery step/i.test(paidBlockVisible)||/choose one outcome|open another lane|return to the active mission/i.test(paidBlockVisible))failures.push('calendar_block_paid_result_guard');
     getMissionCommandResponse('ask',ctx,'content not sales',{});
     var correctionWhyVisible=String(getMissionCommandResponse('ask',ctx,'why',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Content, not sales|corrected the lane to content|turning today.?s work into proof/i.test(correctionWhyVisible)||/sale already happened|protecting delivery|booked call|calendar detail/i.test(correctionWhyVisible))failures.push('correction_why_result_memory_guard');
@@ -24555,6 +24584,8 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	  if(latestResultSalesReplyAnswer)return finishMissionAnswer(latestResultSalesReplyAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var ambiguousReentryAnswer=typeof getMissionAmbiguousReentryAnswerV19==='function'?getMissionAmbiguousReentryAnswerV19(cleanQuestion||question||'',ctx):'';
 	  if(ambiguousReentryAnswer)return finishMissionAnswer(ambiguousReentryAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
+	  var calendarBlockResultAnswer=typeof getMissionCalendarBlockResultAnswerV22==='function'?getMissionCalendarBlockResultAnswerV22(cleanQuestion||question||'',ctx):'';
+	  if(calendarBlockResultAnswer)return finishMissionAnswer(calendarBlockResultAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var calendarEventPrepAnswer=typeof getMissionCalendarEventPrepAnswerV21==='function'?getMissionCalendarEventPrepAnswerV21(cleanQuestion||question||'',ctx):'';
 	  if(calendarEventPrepAnswer)return finishMissionAnswer(calendarEventPrepAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var timePressureResultAnswer=typeof getMissionTimePressureResultAnswerV20==='function'?getMissionTimePressureResultAnswerV20(cleanQuestion||question||'',ctx):'';
