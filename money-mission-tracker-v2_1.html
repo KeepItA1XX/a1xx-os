@@ -2148,6 +2148,8 @@ body:before{
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">App version</div><div class="settings-row-meta">Money Mission OS v2.0 Alpha · Matte Signal operating build</div></div><span class="settings-badge">v2.0 Alpha</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Operating file</div><div class="settings-row-meta">money-mission-tracker-v2_1.html · v1.9 preserved in archive</div></div><span class="settings-badge warn">Active</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Mission Command build</div><div class="settings-row-meta" id="settings-build-stamp">Loading build stamp...</div></div><span class="settings-badge" id="settings-build-badge">Check</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Cache check token</div><div class="settings-row-meta" id="settings-cache-token">Loading cache token...</div></div><span class="settings-badge off">Local</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Apps Script</div><div class="settings-row-meta">Redeploy after backend changes. HTML-only changes need a hard refresh.</div></div><span class="settings-badge off">Manual</span></div>
           </div>
         </div>
@@ -3495,6 +3497,9 @@ body:before{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.0 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
+var APP_BUILD_STAMP='2026-05-24 01:09 ET · visible cache-check build';
+var APP_BRAIN_BUILD='Mission Command route-boundary hardening + build stamp';
+var APP_CACHE_TOKEN='mmos-20260524-0109';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var TODOIST_KEY='a1xx_todoist_v1';
@@ -4016,6 +4021,28 @@ function setHealthSubTab(tab){
     pane.classList.toggle('active',pane.id==='health-subpane-'+window.__healthSubTab);
   });
   if(window.__healthSubTab==='status')renderSystemHealth();
+  if(window.__healthSubTab==='version')renderMissionBuildStampV1();
+}
+
+function getMissionBuildStampV1(){
+  return {
+    appVersion:typeof APP_VERSION!=='undefined'?APP_VERSION:'v2.0 Alpha',
+    file:typeof APP_BUILD_FILE!=='undefined'?APP_BUILD_FILE:'money-mission-tracker-v2_1.html',
+    buildStamp:typeof APP_BUILD_STAMP!=='undefined'?APP_BUILD_STAMP:'unknown build',
+    brainBuild:typeof APP_BRAIN_BUILD!=='undefined'?APP_BRAIN_BUILD:'unknown brain build',
+    cacheToken:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown-cache-token'
+  };
+}
+
+function renderMissionBuildStampV1(){
+  var stamp=getMissionBuildStampV1();
+  window.MISSION_COMMAND_BUILD=stamp;
+  var stampEl=document.getElementById('settings-build-stamp');
+  var badgeEl=document.getElementById('settings-build-badge');
+  var tokenEl=document.getElementById('settings-cache-token');
+  if(stampEl)stampEl.textContent=stamp.buildStamp+' · '+stamp.brainBuild;
+  if(badgeEl){badgeEl.textContent='Loaded';badgeEl.className='settings-badge';}
+  if(tokenEl)tokenEl.textContent=stamp.cacheToken+' · '+stamp.file;
 }
 
 function setConnectionsSubTab(tab){
@@ -26496,6 +26523,8 @@ function getMissionDataPacket(question){
        until A1XX explicitly enables writes in Settings > AI Controls (planned v2.0). */
     llmBridge:{
       version:typeof APP_VERSION!=='undefined'?APP_VERSION:'v2.0 Alpha',
+      buildStamp:typeof APP_BUILD_STAMP!=='undefined'?APP_BUILD_STAMP:'',
+      cacheToken:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
       mode:'local',
       readyForLLM:false,
       suggestedPrompt:'Answer as Mission Command for A1XX (Executive Producer). Be concise, money-first, action-first, grounded in app data. No generic motivation.',
