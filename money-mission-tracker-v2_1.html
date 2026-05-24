@@ -12246,12 +12246,12 @@ function missionIsResultWhyAskV14(question){
 
 function getMissionResultNextAnswerV14(result){
   if(!result||!result.type)return '';
-  if(result.type==='booked')return 'Last result was booked.<br><br>Next, prep the call, add the calendar detail, and update the lead.<br><br>Open with one discovery question.';
-  if(result.type==='paid')return 'Last result was paid.<br><br>Next, log the money, update the lead, then protect delivery.';
-  if(result.type==='reply')return 'Last result was a reply.<br><br>Next, qualify intent before pitching.';
-  if(result.type==='no_reply')return 'Last result was no reply.<br><br>Mark the touch, bump later if it is worth it, then move to the next warm signal.';
-  if(result.type==='no')return 'Last result was no.<br><br>Next, close it cleanly, note the reason, then move to the next warm signal.';
-  if(result.type==='follow_up')return 'Last result needs follow-up.<br><br>Next, isolate the real concern: money, timing, trust, or fit.';
+  if(result.type==='booked')return 'Booked owns this thread now.<br><br>Last result was booked. Prep the call, add the calendar detail, and update the lead.<br><br>Open with one discovery question.';
+  if(result.type==='paid')return 'Paid owns this now.<br><br>Last result was paid. Log the money, update the lead, then protect delivery.';
+  if(result.type==='reply')return 'You have a live reply now.<br><br>Last result was a reply. Qualify intent before pitching.';
+  if(result.type==='no_reply')return 'No reply is the current result.<br><br>Last result was no reply. Do not chase that same touch right now. Mark it, bump later if it is worth it, then move to the next warm signal.';
+  if(result.type==='no')return 'That one closed as a no.<br><br>Last result was no. Close it cleanly, note the reason, then move to the next warm signal.';
+  if(result.type==='follow_up')return 'This is still alive, but unresolved.<br><br>Last result needs follow-up. Isolate the real concern: money, timing, trust, or fit.';
   if(result.type==='done')return 'The action is done, but the result is still missing.<br><br>What happened: no reply, reply, booked, paid, shipped, posted, or wrong lane?';
   return '';
 }
@@ -12273,13 +12273,13 @@ function getMissionResultLogTargetAnswerV14(result,question){
   var type=result.type;
   if(type==='booked')return getMissionBookedLogTargetAnswerV13();
   if(type==='paid'){
-    return 'Log the paid result in three places:<br><br>1) DPC: money collected.<br>2) Lead: status updated to paid or closed.<br>3) Delivery: what is owed and the first delivery step.<br><br>Come back with: money logged, lead updated, delivery protected, follow-up, problem, or wrong lane.';
+    return 'Paid needs three updates:<br><br>1) DPC: money collected.<br>2) Lead: status updated to paid or closed.<br>3) Delivery: what is owed and the first delivery step.<br><br>Come back with: money logged, lead updated, delivery protected, follow-up, problem, or wrong lane.';
   }
   if(type==='reply'){
-    return 'Log the reply, then qualify intent.<br><br>1) DPC or Outreach: reply received.<br>2) Lead: status updated.<br>3) Sales: one qualifying question asked.<br><br>Come back with: qualified, booked, follow-up, no, paid, or wrong lane.';
+    return 'Reply needs a clean next signal.<br><br>1) DPC or Outreach: reply received.<br>2) Lead: status updated.<br>3) Sales: one qualifying question asked.<br><br>Come back with: qualified, booked, follow-up, no, paid, or wrong lane.';
   }
   if(type==='no_reply'){
-    return 'Log the touch as no reply.<br><br>1) Outreach: no reply recorded.<br>2) Lead: bump later if still worth it.<br>3) Hit List: move to the next warm signal.<br><br>Come back with: no reply logged, bumped, reply, booked, paid, or wrong lane.';
+    return 'No reply still counts as signal.<br><br>1) Outreach: no reply recorded.<br>2) Lead: bump later if still worth it.<br>3) Hit List: move to the next warm signal.<br><br>Come back with: no reply logged, bumped, reply, booked, paid, or wrong lane.';
   }
   if(type==='no'){
     return 'Log the no in two places:<br><br>1) Lead: closed, lost, or not a fit.<br>2) Sales notes: reason captured: fit, money, timing, trust, or clarity.<br><br>Come back with: logged, follow-up, booked, paid, or wrong lane.';
@@ -14130,27 +14130,27 @@ function getMissionDecisionMemoryV1(turn,ctx){
   if(type==='paid'){
     label='Protect Delivery';
     action={label:'Protect Delivery',type:'next_best_move',target:'delivery',action:'log the money, update the lead, then protect delivery',requiresConfirmation:false,reason:'decision_memory_paid'};
-    message='Last result was paid.<br><br>Next move: log the money, update the lead, then protect delivery.';
+    message='Paid owns this now.<br><br>Last result was paid. Log the money, update the lead, then protect delivery.';
   }else if(type==='booked'){
     label='Prep Call';
     action={label:'Prep Call',type:'open_card',target:'sales_coach',action:'prep the booked call and add the calendar detail',requiresConfirmation:false,reason:'decision_memory_booked'};
-    message='Last result was booked.<br><br>Next move: prep the call, add the calendar detail, and open with one discovery question.';
+    message='Booked owns this thread now.<br><br>Last result was booked. Prep the call, add the calendar detail, and open with one discovery question.';
   }else if(type==='reply'){
     label='Qualify Intent';
     action={label:'Qualify Intent',type:'open_card',target:'sales_coach',action:'qualify intent before pitching',requiresConfirmation:false,reason:'decision_memory_reply'};
-    message='Last result was a reply.<br><br>Next move: qualify intent before pitching.';
+    message='You have a live reply now.<br><br>Last result was a reply. Qualify intent before pitching.';
   }else if(type==='no_reply'){
     label='Switch Warm Signal';
     action={label:'Switch Warm Signal',type:'open_card',target:'hit_list',action:'mark the touch, bump later, then move to the next warm signal',requiresConfirmation:false,reason:'decision_memory_no_reply'};
-    message='Last result was no reply.<br><br>Do not chase that same touch right now.<br><br>Mark it, bump later, and move to the next warm signal.';
+    message='No reply is the current result.<br><br>Last result was no reply. Do not chase that same touch right now. Mark it, bump later, and move to the next warm signal.';
   }else if(type==='no'){
     label='Close Lead';
     action={label:'Close Lead',type:'open_card',target:'crm',action:'close the lead, capture the reason, then move to the next warm signal',requiresConfirmation:false,reason:'decision_memory_no'};
-    message='Last result was no.<br><br>Next move: close the lead, capture the reason, then move to the next warm signal.';
+    message='That one closed as a no.<br><br>Last result was no. Close the lead, capture the reason, then move to the next warm signal.';
   }else if(type==='follow_up'){
     label='Isolate Concern';
     action={label:'Isolate Concern',type:'open_card',target:'sales_coach',action:'isolate the unresolved concern',requiresConfirmation:false,reason:'decision_memory_follow_up'};
-    message='Last result needs follow-up.<br><br>Next move: isolate the real concern: money, timing, trust, or fit.';
+    message='This is still alive, but unresolved.<br><br>Last result needs follow-up. Isolate the real concern: money, timing, trust, or fit.';
   }else if(type==='done'){
     label='Capture Result';
     action={label:'Capture Result',type:'result_prompt',target:'mission_command',action:'capture what happened after the action',requiresConfirmation:true,reason:'decision_memory_done'};
@@ -14590,12 +14590,12 @@ function missionSilencePendingIsBlockedV27(pending,lastResult){
 
 function getMissionSilenceResultReentryMessageV27(result){
   if(!result||!result.type)return '';
-  if(result.type==='booked')return 'Back in.<br><br>Last result was booked.<br><br>Open loop: add the calendar detail, update the lead, and prep one opening question.';
-  if(result.type==='paid')return 'Back in.<br><br>Last result was paid.<br><br>Open loop: log the money, update the lead, then protect delivery.';
-  if(result.type==='reply')return 'Back in.<br><br>Last result was a reply.<br><br>Open loop: ask one qualifying question before pitching.';
-  if(result.type==='no_reply')return 'Back in.<br><br>Last result was no reply.<br><br>Open loop: log the touch, set one bump if it is worth it, then move to the next warm signal.';
-  if(result.type==='no')return 'Back in.<br><br>Last result was no.<br><br>Open loop: capture the reason, update the lead, then move to the next warm signal.';
-  if(result.type==='follow_up')return 'Back in.<br><br>Last result needs follow-up.<br><br>Open loop: isolate the concern: money, timing, trust, or fit.';
+  if(result.type==='booked')return 'Back in.<br><br>Booked is still the open loop.<br><br>Last result was booked. Add the calendar detail, update the lead, and prep one opening question.';
+  if(result.type==='paid')return 'Back in.<br><br>Paid is still the open loop.<br><br>Last result was paid. Log the money, update the lead, then protect delivery.';
+  if(result.type==='reply')return 'Back in.<br><br>The live reply is still open.<br><br>Last result was a reply. Ask one qualifying question before pitching.';
+  if(result.type==='no_reply')return 'Back in.<br><br>No reply is still the current signal.<br><br>Last result was no reply. Do not chase that same touch right now. Log the touch, set one bump if it is worth it, then move to the next warm signal.';
+  if(result.type==='no')return 'Back in.<br><br>That lead closed as a no.<br><br>Last result was no. Capture the reason, update the lead, then move to the next warm signal.';
+  if(result.type==='follow_up')return 'Back in.<br><br>The follow-up is still unresolved.<br><br>Last result needs follow-up. Isolate the concern: money, timing, trust, or fit.';
   if(result.type==='done')return 'Back in.<br><br>The last action was marked done, but the result is still missing.<br><br>Open loop: no reply, reply, booked, paid, shipped, posted, or wrong lane?';
   return '';
 }
@@ -24875,36 +24875,36 @@ function getMissionCommunicationCohesionAnswerV1(ctx,question,route,brainState,t
   var naturalCardLabel=getMissionCohesionCardLabelFromMoveV1(c.cardLabel,c.nextMove);
   if(/\b(what card owns this|what lane owns this|which card handles|what card should change|what card do i open|where should this live)\b/.test(c.q)){
     if(c.bookedContext){
-      return 'That split lives in Sales and Manager.<br><br>Sales owns the call prep. Manager owns the calendar detail.<br><br>Open Sales Coach for the question, then Manager/Calendar to save the call.<br><br>Come back with: call added, lead updated, booked, paid, or wrong lane.';
+      return 'That split lives in Sales and Manager.<br><br>Sales owns the call prep. Manager owns the calendar detail.<br><br>Open Sales Coach for the question, then Manager/Calendar to save the call.';
     }
-    return 'That lives on '+escapeHtml(naturalCardLabel)+'.<br><br>Use that card because it owns the next visible status change.<br><br>Open '+escapeHtml(naturalCardLabel)+', do the smallest step, then come back with done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+    return 'That lives on '+escapeHtml(naturalCardLabel)+'.<br><br>Open '+escapeHtml(naturalCardLabel)+' and make the next visible status change.<br><br>Come back with the result: done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   }
   if(typeof missionIsBookedLogTargetAskV13==='function'&&missionIsBookedLogTargetAskV13(c.q)&&c.bookedContext){
     return getMissionBookedLogTargetAnswerV13();
   }
   if(category==='context_awareness'){
-    return 'I am looking at:<br><br>- Lane: '+escapeHtml(c.routeLabel)+'<br>- Card: '+escapeHtml(c.cardLabel)+'<br>- Mode: '+escapeHtml(c.mode)+'<br>- Money: '+escapeHtml(c.moneyLine)+'<br>- DPC: '+escapeHtml(c.dpcLine)+(c.lastResult?'<br>- Last result: '+escapeHtml(c.lastResult):'')+(c.missing.length?'<br>- Missing: '+escapeHtml(c.missing.join(', ')):'')+'<br><br>The useful read is: '+escapeHtml(c.nextMove)+'.';
+    return 'Here is the app read:<br><br>Lane: '+escapeHtml(c.routeLabel)+'<br>Card: '+escapeHtml(c.cardLabel)+'<br>Mode: '+escapeHtml(c.mode)+'<br>Money: '+escapeHtml(c.moneyLine)+'<br>DPC: '+escapeHtml(c.dpcLine)+(c.lastResult?'<br>Last result: '+escapeHtml(c.lastResult):'')+(c.missing.length?'<br>Missing: '+escapeHtml(c.missing.join(', ')):'')+'<br><br>Use that read for one move: '+escapeHtml(c.nextMove)+'.';
   }
   if(category==='lane_bridge'){
-    return 'Here is the connection:<br><br>'+escapeHtml(c.routeLabel)+' is pointing at '+escapeHtml(c.cardLabel)+'.<br><br>That matters because this app needs the work to land as a card action, not just advice.<br><br>So the move is: '+escapeHtml(c.nextMove)+'.';
+    return 'Here is the connection.<br><br>'+escapeHtml(c.routeLabel)+' is pointing at '+escapeHtml(c.cardLabel)+'.<br><br>Make it real in the app: '+escapeHtml(c.nextMove)+'.';
   }
   if(category==='next_step_translation'){
-    return 'Turn it into a card move.<br><br>Open '+escapeHtml(c.cardLabel)+', make the next visible status change, then come back with done, no reply, reply, booked, paid, shipped, posted, or wrong lane.';
+    return 'Turn it into a card move.<br><br>Open '+escapeHtml(c.cardLabel)+' and make the next visible status change.<br><br>Come back with the result.';
   }
   if(category==='correction_repair'||category==='clearer_explanation'){
     if(c.bookedContext){
       return 'Clean read. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';
     }
     if(/\b(that sounds disconnected)\b/.test(c.q)){
-      return 'Fair. Here is the connection.<br><br>'+escapeHtml(c.nextMove)+'.<br><br>That belongs in '+escapeHtml(naturalCardLabel)+' because the app needs a visible status change.';
+      return 'Fair. Here is the connection.<br><br>'+escapeHtml(c.nextMove)+'.<br><br>Log it through '+escapeHtml(naturalCardLabel)+' so the app has a visible status change.';
     }
     if(/\b(answer like.*know what)\b/.test(c.q)){
       return 'I am with you.<br><br>'+escapeHtml(c.nextMove)+'.<br><br>Do the smallest visible step in '+escapeHtml(naturalCardLabel)+', then tell me what changed.';
     }
     if(/\b(wrong read|nah not that|no not that|not what i meant)\b/.test(c.q)){
-      return 'Got it. Different read.<br><br>'+escapeHtml(c.nextMove)+'.<br><br>That should happen in '+escapeHtml(naturalCardLabel)+' so the app can see the status change.';
+      return 'Got it. Different read.<br><br>'+escapeHtml(c.nextMove)+'.<br><br>Use '+escapeHtml(naturalCardLabel)+' for the visible update.';
     }
-    return 'Clean read. '+escapeHtml(c.nextMove)+'.<br><br>That should happen in '+escapeHtml(naturalCardLabel)+' so the app can see the status change.<br><br>Do the smallest visible step there, then tell me what changed.';
+    return 'Clean read. '+escapeHtml(c.nextMove)+'.<br><br>Use '+escapeHtml(naturalCardLabel)+' for the visible update, then tell me what changed.';
   }
   return 'I am reading '+escapeHtml(c.cardLabel)+' plus the current '+escapeHtml(c.routeLabel)+' lane.<br><br>The clean read is: '+escapeHtml(c.nextMove)+'.<br><br>'+(c.missing.length?'The part I do not know yet: '+escapeHtml(c.missing.join(', '))+'.<br><br>':'')+'I would trust this enough to take one safe next action, but not enough to invent missing numbers.';
 }
@@ -24944,7 +24944,7 @@ function getMissionFreshBookedFollowupAnswerV12(question){
   }
   if(/\b(how many|count|show|what are|what is|any|do i have|where are|list)\b.*\b(booked calls?|calls booked|bookings?)\b/.test(q))return '';
   if(/\b(what next|what now|next move|what should i do|what do i do)\b/.test(q)){
-    return 'Last result was booked.<br><br>Next, prep the call, add the calendar detail, and update the lead.<br><br>Open with one discovery question.';
+    return 'Booked owns this thread now.<br><br>Last result was booked. Prep the call, add the calendar detail, and update the lead.<br><br>Open with one discovery question.';
   }
   if(/^(why|why again|y tho|why tho|why that|why this)$/.test(q)){
     return 'Because the conversation already moved to a booked call.<br><br>The next useful move is prep, calendar detail, and one clean opening question.';

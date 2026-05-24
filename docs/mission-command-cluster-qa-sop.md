@@ -233,6 +233,76 @@ Use this order unless A1XX points to a live failure:
 | P2 | Wrap / review | Keeps closeout honest about what moved | what changed/tomorrow/wrap prompts |
 | P3 | Voice / naturalness | Improves feel after logic is stable | high-frequency first-bubble wording |
 
+## Mission Command Communication Standard v1
+
+Purpose: make correct answers easier for A1XX to receive, trust, and act on without weakening route truth, context boundaries, data trust, latest-result ownership, or regression protection.
+
+Core rules:
+
+- Truth wins first. Never make an answer sound smoother by weakening result truth, data trust, fresh starter boundaries, direct-entry ownership, or confirmed-vs-chat-only separation.
+- Action before explanation. For result follow-through, short-window prompts, live calls, and repeated "what next" prompts, give the move first and the reason only when it helps.
+- Trust before action. For data prompts, show what is loaded, what is missing or weak, and what is safe to act on.
+- Acknowledge lightly. Use a short acknowledgement for greetings, corrections, lane switches, emotional pressure, and result confirmations. Do not add acknowledgement to sales scripts or data trust answers unless it reduces friction.
+- One answer, one job. Most answers should fit into `read -> move -> log` or `answer -> reason -> next`, not a long explanation.
+- Keep the first bubble clean. The first bubble should not contain internal labels, debug language, duplicate closers, or old template frames.
+- Compress under pressure. If A1XX has a short window, answer with the smallest useful move and what to log after it.
+
+Preferred response shapes:
+
+```text
+Result follow-through:
+Paid owns this now.
+
+Last result was paid. Log the money, update the lead, then protect delivery.
+```
+
+```text
+Correction:
+Fair.
+
+The useful read is [current truth].
+
+Do [next visible move].
+```
+
+```text
+Data trust:
+Here is what I can safely use.
+
+[Loaded packet]
+
+[Health / missing / weak signal]
+
+Use this for one safe next move, not locked final numbers.
+```
+
+```text
+Sales reply:
+Send this. "[exact line]"
+```
+
+```text
+Time pressure:
+[Window read.]
+
+Use it to close the [active loop]: [smallest move].
+```
+
+Phrases to avoid or rotate carefully:
+
+- "Still on this."
+- "Let us dig in."
+- "Alright, where did we leave it?"
+- "Need anything else right now?"
+- "Should we keep this lane or switch?"
+- Repeated "Clean read." on every correction.
+- Internal-feeling labels like "Pattern read:", "Current read:", "Result read:", or "Trust level:" in normal chat.
+
+Communication regression rule:
+
+- Add a voice regression when a phrase is high-frequency, creates user confusion, sounds like an internal debug frame, or makes a correct answer harder to act on.
+- Do not add brittle regressions for harmless word choice unless the wording protects a major route, memory, result, or data-trust behavior.
+
 ## Live Transcript Capture Format
 
 When A1XX sends live test output, convert it into this structure before patching:
