@@ -3497,9 +3497,9 @@ body:before{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.0 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_1.html';
-var APP_BUILD_STAMP='2026-05-24 01:09 ET · visible cache-check build';
-var APP_BRAIN_BUILD='Mission Command route-boundary hardening + build stamp';
-var APP_CACHE_TOKEN='mmos-20260524-0109';
+var APP_BUILD_STAMP='2026-05-24 01:16 ET · call-prep render-path hardening';
+var APP_BRAIN_BUILD='Mission Command route + render bubble protection';
+var APP_CACHE_TOKEN='mmos-20260524-0116';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var TODOIST_KEY='a1xx_todoist_v1';
@@ -22497,6 +22497,7 @@ function getMissionRenderRoute(question,brainState){
   if(mention&&mention.route)return mention.route;
   var correctionRoute=typeof getMissionCorrectionTargetRouteV2==='function'?getMissionCorrectionTargetRouteV2(question||''):'';
   if(correctionRoute)return correctionRoute;
+  if(typeof missionIsCalendarEventPrepAskV21==='function'&&missionIsCalendarEventPrepAskV21(question||''))return 'calendar';
   var resultSignal=typeof getMissionResultSignalV1==='function'?getMissionResultSignalV1(question||''):null;
   if(resultSignal&&/^(booked|paid|reply|no_reply|no|follow_up|call_done)$/.test(resultSignal.type||''))return 'sales';
   var v2CommandRoute=getMissionCommandRoute(question||'');
@@ -24471,6 +24472,10 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   if(typeof isMissionDataTrustPromptV12==='function'&&isMissionDataTrustPromptV12(question||'')){
     return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false,presence:false})),b2:'',b3:''};
   }
+  if(typeof missionIsCalendarEventPrepAskV21==='function'&&missionIsCalendarEventPrepAskV21(question||'')){
+    route='calendar';
+    return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false,presence:false})),b2:'',b3:''};
+  }
   if(typeof missionShouldProtectBookedLogTargetV13==='function'&&missionShouldProtectBookedLogTargetV13(question||'')){
     return {b1:withWorker(getMissionBookedLogTargetAnswerV13()),b2:'',b3:''};
   }
@@ -25438,6 +25443,9 @@ function runMissionIntegritySelfCheck(){
   if(bookedBubble.b1.indexOf('Conversation moved to calendar')<0||bookedBubble.b1.indexOf('DPC lane')>=0)failures.push('bubble_protect_result_answer');
   if(getMissionRenderRoute('i meant sales not pipeline',{})!=='sales')failures.push('render_route_correction_sales');
   if(getMissionRenderRoute('booked',{})!=='sales')failures.push('render_route_booked_sales');
+  if(getMissionRenderRoute('what should i prep before my next call',{})!=='calendar')failures.push('render_route_calendar_call_prep');
+  var callPrepBubble=buildMissionBubblePacket('leads',{type:'CONV_DATA_REQUEST',route:'leads'},actionCtx,'what should i prep before my next call','Prep 12:00 PM · PLAN WEEK around one outcome.<br><br>Opening question: "Before I explain anything, what made you want to talk today?"','','',{});
+  if(callPrepBubble.b2||/Pipeline is showing|call-ready lead|open leads/i.test([callPrepBubble.b1,callPrepBubble.b2,callPrepBubble.b3].join(' ')))failures.push('bubble_protect_calendar_call_prep');
   if(getMissionThreadExplicitRouteFromQuestionV1('/pipeline')!=='leads'||getMissionThreadExplicitRouteFromQuestionV1('pipeline')!=='leads')failures.push('thread_explicit_pipeline_normalized');
   sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({threadMemory:{activeRoute:'sales',turns:[{question:'/pipeline',route:'sales',timestamp:new Date().toISOString()}]},resultLoop:{history:[]}}));
   var normalizedPipelineThread=getMissionThreadMemoryV1({rawInput:'why',route:'now',inputSignals:{}},actionCtx);
