@@ -11298,6 +11298,7 @@ function applyMissionTransitionAckDedupeV18(html,question){
   if(/\b(i meant pipeline not sales|pipeline not sales|sales but i mean pipeline|sales but i meant pipeline|sales but i mean leads|sales but i meant leads)\b/.test(q)){
     out=out.replace(/^(Got it\.|On it\.|Clean switch\.|I am with you\.)?\s*(Pipeline lane\.|Leads lane\.|Leads\s*\([^)]*\):)\s*(<br\s*\/?>\s*){2}/i,'Pipeline, not sales.<br><br>');
     out=out.replace(/^(Leads|Pipeline):\s*\.\s*(<br\s*\/?>\s*){1,2}/i,'Pipeline, not sales.<br><br>');
+    out=out.replace(/^(Got it\.|On it\.|Clean switch\.|I am with you\.)?\s*Leads\s*\([^)]*\):\s*/i,'Pipeline, not sales.<br><br>');
   }
   return out;
 }
@@ -18730,6 +18731,14 @@ function runMissionBroadRegressionHardeningV1(){
     getMissionCommandResponse('ask',ctx,'wrong read',{});
     var pipelineCorrectionCardVisible=String(getMissionCommandResponse('ask',ctx,'where should this live',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/Pipeline, not sales|Pipeline \/ Outreach|lead touch|next status/i.test(pipelineCorrectionCardVisible)||/That lives on Content|Sales Coach|Production, not content|Delivery owns/i.test(pipelineCorrectionCardVisible))failures.push('correction_pipeline_card_target_guard');
+    setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Pipeline Correction Voice',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
+    localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
+    sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+    sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+    var pipelineCorrectionVoiceVisible=String(getMissionCommandResponse('ask',ctx,'i meant pipeline not sales',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+    if(!/^Pipeline, not sales/i.test(pipelineCorrectionVoiceVisible)||/^Leads\s*\(/i.test(pipelineCorrectionVoiceVisible))failures.push('pipeline_correction_voice_label_guard');
     setStore(MISSION_CHAT_SESSIONS_KEY,[{id:salesReplyChatId,title:'QA Ambiguous Reentry Result Ownership',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
     localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,salesReplyChatId);
     localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,salesReplyChatId);
@@ -24745,7 +24754,12 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var earlyProtectedRouteAnswer=getMissionProtectedRouteAnswerV1(directRouteOverride||'',ctx,cleanQuestion||question||'',brainState,turnV2);
   if(earlyProtectedRouteAnswer){
     var earlyProtectedCard={leads:'outreach',content:'content',production:'production',calendar:'manager',weekly:'weekly',report:'brief'}[directRouteOverride]||'';
-    if(preflightCorrectionTarget)setMissionCommandActiveTopic(preflightCorrectionTarget,question||cleanQuestion||'');
+    if(preflightCorrectionTarget){
+      setMissionCommandActiveTopic(preflightCorrectionTarget,question||cleanQuestion||'');
+      if(preflightCorrectionTarget==='leads'&&!/^Pipeline, not sales\./i.test(String(earlyProtectedRouteAnswer||''))){
+        earlyProtectedRouteAnswer='Pipeline, not sales.<br><br>'+earlyProtectedRouteAnswer;
+      }
+    }
     return finishMissionAnswer(earlyProtectedRouteAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,stylePreference:directRouteOverride==='sync'?false:undefined,cardAlignment:earlyProtectedCard});
   }
   var cohesionAnswer=getMissionCommunicationCohesionAnswerV1(ctx,question||cleanQuestion||'',route,brainState,turnV2);
