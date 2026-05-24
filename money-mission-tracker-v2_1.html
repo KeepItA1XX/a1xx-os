@@ -14216,6 +14216,35 @@ function getMissionThreadExplicitRouteFromQuestionV1(q){
   return '';
 }
 
+function missionThreadQuestionHasExplicitRouteOwnershipV26(q){
+  q=normalizeMissionQuestion(q||'');
+  if(!q)return false;
+  if(/^\/\w+/.test(q))return true;
+  if(getMissionThreadExplicitRouteFromQuestionV1(q))return true;
+  return /\b(i meant sales|i meant content|i meant pipeline|i meant leads|i meant production|i meant calendar|i meant sync|sales not pipeline|sales not content|content not sales|pipeline but i mean sales|content but i mean sales|not pipeline|not content|not sales|wrong lane)\b/.test(q);
+}
+
+function missionThreadLastTurnCanOwnFollowupOverResultV26(lastTurn,lastResult,question){
+  var q=normalizeMissionQuestion(question||'');
+  if(!lastTurn||!lastResult||!lastResult.route)return false;
+  if(!/^(why|why again|more|more again|tell me more|run it back)$/i.test(q))return false;
+  var lastText=lastTurn.question||lastTurn.rawInput||lastTurn.normalizedInput||'';
+  if(!missionThreadQuestionHasExplicitRouteOwnershipV26(lastText))return false;
+  var lastRoute=getMissionThreadExplicitRouteFromQuestionV1(lastText)||lastTurn.route||'';
+  return !!(lastRoute&&lastRoute!==lastResult.route);
+}
+
+function getMissionThreadRouteFollowupMessageV26(activeRoute,lastTurn,pending){
+  var lastMove=pending?getMissionFriendlyActionTextV1(pending,'the last move'):(lastTurn&&lastTurn.question||'the current mission');
+  if(activeRoute==='leads')return 'Pipeline thread.<br><br>Last move: '+escapeHtml(lastMove)+'.<br><br>Next: move the warmest lead one step and log the result.';
+  if(activeRoute==='sales')return 'Sales thread.<br><br>Last move: '+escapeHtml(lastMove)+'.<br><br>Next: keep the prospect naming the real problem before you pitch.';
+  if(activeRoute==='content')return 'Content thread.<br><br>Last move: '+escapeHtml(lastMove)+'.<br><br>Next: move one content item forward or capture the post job.';
+  if(activeRoute==='production')return 'Production thread.<br><br>Last move: '+escapeHtml(lastMove)+'.<br><br>Next: move one asset closer to shipping, selling, or proof.';
+  if(activeRoute==='calendar')return 'Calendar thread.<br><br>Last move: '+escapeHtml(lastMove)+'.<br><br>Next: use the schedule to protect the current open loop.';
+  if(activeRoute==='sync')return 'Data trust thread.<br><br>Last move: '+escapeHtml(lastMove)+'.<br><br>Next: clear the trust check once, then act on the cleanest loaded signal.';
+  return 'Clean thread read.<br><br>Last move: '+escapeHtml(lastMove)+'.<br><br>Next: make one visible move, then log what changed.';
+}
+
 function getMissionThreadMemorySessionV1(){
   try{
     var session=getMissionBrainSessionV2();
@@ -14273,7 +14302,7 @@ function getMissionThreadMemoryV1(turn,ctx){
   var correction=!!(turn&&turn.inputSignals&&turn.inputSignals.isCorrection)||/\b(nah not that|not that|wrong lane|i meant)\b/.test(q);
   var lastWasCorrection=!!(lastTurn&&/\b(nah not that|not that|wrong lane|i meant)\b/.test(normalizeMissionQuestion(lastTurn.question||lastTurn.normalizedInput||'')));
   var resultRoute=lastResult&&lastResult.route||'';
-  var routeSupersedesResult=!!(lastTurn&&lastTurn.route&&resultRoute&&lastTurn.route!==resultRoute&&/^(why|why again|more|more again|tell me more|run it back)$/i.test(q));
+  var routeSupersedesResult=missionThreadLastTurnCanOwnFollowupOverResultV26(lastTurn,lastResult,q);
   var resultFollowup=!!(lastResult&&missionResultBelongsToActiveChatV12(lastResult)&&/\b(what next|what now|next move|what should i do|what do i do|why|more|run it back)\b/.test(q)&&!lastWasCorrection&&!routeSupersedesResult);
   var explicitCommand=/^\/\w+/.test(q)||/\b(sync check|where do i check sync|what changed|what did i log|how much money|report|pipeline|who hot|content|production|calendar|what should i say|too expensive|he said|she said|they said|roleplay|score my answer)\b/.test(q);
   var routeChanged=!!(lastRoute&&activeRoute&&lastRoute!==activeRoute);
@@ -14318,7 +14347,7 @@ function getMissionThreadMemoryV1(turn,ctx){
     message='We are still on '+escapeHtml(getMissionRouteLabelV2(pending.route||activeRoute))+'.<br><br>Last move: '+escapeHtml(pendingFriendly)+'.<br><br>Do that, then tell me what happened.';
   }else if(shouldAnswer){
     reason=routeChanged?'route_changed_followup':'active_thread_followup';
-    message='We are still on '+escapeHtml(getMissionRouteLabelV2(activeRoute))+'.<br><br>Last useful thread: '+escapeHtml(lastTurn&&lastTurn.question||'the current mission')+'.<br><br>Next: make one visible move, then log what changed.';
+    message=getMissionThreadRouteFollowupMessageV26(activeRoute,lastTurn,pending);
   }
   return {
     hasThread:hasThread,
@@ -14387,7 +14416,8 @@ function getMissionWhyResponseV1(turn,ctx){
     pending=null;
     nextMove=turn&&turn.brainState&&turn.brainState.nextBestMove||lastTurn&&lastTurn.actionLabel||'the next visible move';
   }
-  var lastResultMatchesRoute=!lastResult||!lastResult.route||!route||route==='now'||lastResult.route===route;
+  var routeShouldSupersedeResult=missionThreadLastTurnCanOwnFollowupOverResultV26(lastTurn,lastResult,turn&&turn.rawInput||turn&&turn.normalizedInput||'');
+  var lastResultMatchesRoute=!lastResult||!lastResult.route||!route||route==='now'||lastResult.route===route||!routeShouldSupersedeResult;
   if(lastResult&&lastResultMatchesRoute){
     if(lastResult.type==='booked')return 'Because the conversation already moved to a booked call.<br><br>The next useful move is prep, calendar detail, and one clean opening question.';
     if(lastResult.type==='paid')return 'Because the sale already happened.<br><br>The next useful move is logging the money, updating the lead, and protecting delivery.';
@@ -18395,6 +18425,24 @@ function runMissionBroadRegressionHardeningV1(){
       (test.setup||[]).forEach(function(prompt){getMissionCommandResponse('ask',ctx,prompt,{});});
       var visible=String(getMissionCommandResponse('ask',ctx,test.q,{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
       if(legacyVisibleLeakRe.test(visible))failures.push(test.name+'_legacy_visible_label_leak');
+    });
+    [
+      {name:'paid_data_why',setup:['paid','what data are you using'],q:'why',must:/sale already happened|logging the money|protecting delivery/i,mustNot:/sync is the trust check|pipeline is the closest/i},
+      {name:'paid_content_why',setup:['paid','content not sales'],q:'why',must:/corrected the lane to content|turning today.?s work into proof/i,mustNot:/sale already happened|booked call/i},
+      {name:'booked_calendar_next',setup:['booked','what is on my calendar'],q:'what next',must:/Last result was booked|prep the call|calendar detail/i,mustNot:/Finish the current block step|Open Production tracker/i},
+      {name:'paid_content_runback',setup:['paid','what should i post'],q:'run it back',must:/Content thread|move one content item forward|capture the post job/i,mustNot:/past the sale|protect delivery|booked call/i},
+      {name:'follow_up_pipeline_next',setup:['follow-up','/pipeline'],q:'what next',must:/Last result needs follow-up|money, timing, trust, or fit/i,mustNot:/Last result was booked|prep the call/i}
+    ].forEach(function(test){
+      var chatId='qa_thread_boundary_'+test.name;
+      setStore(MISSION_CHAT_SESSIONS_KEY,[{id:chatId,title:'QA Thread Boundary',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),messages:[],memory:{brainSession:{}}}]);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_SESSION_KEY,chatId);
+      localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,chatId);
+      sessionStorage.setItem(MISSION_BRAIN_SESSION_V2_KEY,JSON.stringify({resultLoop:{history:[]},threadMemory:{turns:[]}}));
+      sessionStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      localStorage.removeItem(MISSION_RESULT_EVENT_LEDGER_KEY_V12);
+      (test.setup||[]).forEach(function(prompt){getMissionCommandResponse('ask',ctx,prompt,{});});
+      var threadVisible=String(getMissionCommandResponse('ask',ctx,test.q,{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+      if(!test.must.test(threadVisible)||test.mustNot.test(threadVisible))failures.push(test.name+'_thread_memory_result_boundary_guard');
     });
     ['brief','outreach','content','production','manager'].forEach(function(card){
       var aligned=applyMissionCrossCardAlignmentV1('QA card answer',{cardAlignment:card});
