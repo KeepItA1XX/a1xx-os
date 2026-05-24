@@ -3792,9 +3792,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 18:16 ET · OS v2_2 dismissible UI stability';
+var APP_BUILD_STAMP='2026-05-24 18:24 ET · OS v2_2 panel open-state cleanup';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1816';
+var APP_CACHE_TOKEN='mmos-20260524-1824';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4219,6 +4219,7 @@ function totalDays(ci){return Math.ceil((pd(CYCLES[ci].end)-pd(CYCLES[ci].start)
    TABS
 ══════════════════════════════════════════════════════════ */
 function showTab(name,el){
+  if(typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('main-tab-switch');
   window.__missionActiveMainTab=name||'today';
   ['today','week','report','rolodex'].forEach(function(t){
     document.getElementById('pane-'+t).style.display='none';
@@ -4287,6 +4288,7 @@ function toggleSystemPanel(){
   var b=document.getElementById('settings-backdrop');
   if(!p)return;
   var open=!p.classList.contains('open');
+  if(open&&typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('system-panel-open',{system:true});
   p.classList.toggle('open',open);
   if(b)b.classList.toggle('open',open);
   if(open){setSettingsTab(window.__settingsTab||'account');renderSystemHealth();}
@@ -4297,6 +4299,30 @@ function closeSystemPanel(){
   var b=document.getElementById('settings-backdrop');
   if(p)p.classList.remove('open');
   if(b)b.classList.remove('open');
+}
+
+function closeTransientUiSurfacesV22(reason,keep){
+  keep=keep||{};
+  if(!keep.system)closeSystemPanel();
+  if(!keep.company){
+    var company=document.getElementById('company-panel');
+    if(company)company.classList.remove('open');
+  }
+  if(!keep.missionHistory&&typeof toggleMissionHistory==='function')toggleMissionHistory(false);
+  if(!keep.missionProjectForm){
+    var projectForm=document.getElementById('mission-project-form');
+    if(projectForm)projectForm.classList.remove('show');
+  }
+  if(!keep.kpi){
+    var kpiPanel=document.getElementById('kpi-panel-rpt');
+    if(kpiPanel&&kpiPanel.classList.contains('open')&&typeof closeKPI==='function')closeKPI();
+    else if(kpiPanel)kpiPanel.classList.remove('open');
+  }
+  if(!keep.instagram){
+    var igModal=document.getElementById('ig-token-modal-overlay');
+    if(igModal)igModal.classList.remove('active');
+  }
+  window.__lastTransientUiCleanup={reason:reason||'unspecified',ts:new Date().toISOString()};
 }
 
 function stopUiDismissEventV22(e){
@@ -28046,6 +28072,7 @@ function toggleMissionHistory(force){
   var drawer=document.getElementById('mission-history-drawer');
   if(!drawer)return;
   var open=typeof force==='boolean'?force:!drawer.classList.contains('open');
+  if(open&&typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('mission-history-open',{missionHistory:true});
   drawer.classList.toggle('open',open);
   drawer.setAttribute('aria-hidden',open?'false':'true');
   if(open)renderMissionHistoryPanel();
@@ -29003,6 +29030,7 @@ function updateMissionToolState(tool,locked){
 
 function openMissionTool(tool,shouldScroll,options){
   options=options||{};
+  if(typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('mission-tool-switch');
   window.__missionActiveCard=tool||'command';
   window.__missionLastUserAction='opened_'+(tool||'command');
   window.__missionLastUserActionTimestamp=Date.now();
@@ -29686,6 +29714,7 @@ function buildCycles(){
 }
 function toggleKPI(idx){
   if(selCycle===idx){closeKPI();return;}
+  if(typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('kpi-panel-open',{kpi:true});
   selCycle=idx;buildCycles();
   var cy=CKP[idx];
   var panel=document.getElementById('kpi-panel-rpt');
@@ -30726,6 +30755,7 @@ function renderInstagramNoToken() {
 
 function openIGTokenModal() {
   safeRender('ig token modal open', function() {
+    if(typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('instagram-modal-open',{instagram:true});
     document.getElementById('ig-token-modal-overlay').classList.add('active');
     document.getElementById('ig-token-input').value = '';
     setTimeout(function(){ document.getElementById('ig-token-input').focus(); }, 120);
@@ -31043,8 +31073,10 @@ function getCurrentBanginWeek(){
 function toggleCompanyPanel(){
   var p=document.getElementById('company-panel');
   var sp=document.getElementById('system-panel');
-  closeSystemPanel();
-  if(p)p.classList.toggle('open');
+  var open=!!(p&&!p.classList.contains('open'));
+  if(open&&typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('company-panel-open',{company:true});
+  else closeSystemPanel();
+  if(p)p.classList.toggle('open',open);
   if(p&&p.classList.contains('open'))updateCompanyHealth();
 }
 
