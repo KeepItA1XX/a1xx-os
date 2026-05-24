@@ -1824,17 +1824,23 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   box-shadow:none!important;
 }
 .mission-command-input input,.mission-chat-rename input,.mission-project-form input,.mission-project-form button,.dpc-log-item input,.checklist-add input,input[type=number],input[type=text],input[type=password],input[type=time],textarea,select{
-  background:#080b0d!important;
-  border-color:transparent!important;
-  box-shadow:none!important;
+  background:#0c1114!important;
+  border-color:#25313a!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.018)!important;
 }
 .mission-command-input input{
   border-color:#263039!important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.018)!important;
 }
+.dpc-log-item input,input[type=number].derived-synced,.wi-input.derived-synced{
+  background:#0d130f!important;
+  border-color:#2d4030!important;
+  color:#f1f7ef!important;
+}
 .mission-command-input input:focus,input:focus,textarea:focus,select:focus{
-  border-color:transparent!important;
-  box-shadow:0 0 0 2px rgba(126,200,69,.16)!important;
+  background:#10171a!important;
+  border-color:#5d913b!important;
+  box-shadow:0 0 0 2px rgba(126,200,69,.13),inset 0 1px 0 rgba(255,255,255,.025)!important;
 }
 .mission-command-input input:focus{
   border-color:#5d913b!important;
@@ -3826,9 +3832,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 18:46 ET · OS v2_2 scroll position stability';
+var APP_BUILD_STAMP='2026-05-24 18:54 ET · OS v2_2 input field visibility';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-1846';
+var APP_CACHE_TOKEN='mmos-20260524-1854';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4359,6 +4365,70 @@ function closeTransientUiSurfacesV22(reason,keep){
   window.__lastTransientUiCleanup={reason:reason||'unspecified',ts:new Date().toISOString()};
 }
 
+function closeMissionInlineTransientStateV22(e){
+  var target=e&&e.target&&e.target.closest?e.target:null;
+  var isKey=e&&e.type==='keydown';
+  var editing=target&&target.closest?target.closest('.mission-chat-item.editing'):null;
+  if(editing){
+    stopUiDismissEventV22(e);
+    editing.classList.remove('editing');
+    return true;
+  }
+  var menuOpen=document.querySelector('.mission-chat-item.menu-open');
+  if(menuOpen){
+    var insideMenu=target&&target.closest?target.closest('.mission-chat-item.menu-open'):null;
+    if(!isKey&&insideMenu)return false;
+    if(isKey)stopUiDismissEventV22(e);
+    menuOpen.classList.remove('menu-open');
+    return !!isKey;
+  }
+  var projectForm=document.getElementById('mission-project-form');
+  if(projectForm&&projectForm.classList.contains('show')){
+    var insideProjectForm=target&&target.closest?target.closest('#mission-project-form'):null;
+    if(!isKey&&insideProjectForm)return false;
+    if(isKey)stopUiDismissEventV22(e);
+    projectForm.classList.remove('show');
+    return !!isKey;
+  }
+  return false;
+}
+
+function closeOpenSurfaceByEscapeV22(e){
+  if(closeMissionInlineTransientStateV22(e))return true;
+  var ig=document.getElementById('ig-token-modal-overlay');
+  if(ig&&ig.classList.contains('active')){
+    closeInstagramTokenModalV22(e);
+    return true;
+  }
+  var system=document.getElementById('system-panel');
+  if(system&&system.classList.contains('open')){
+    stopUiDismissEventV22(e);
+    closeSystemPanel();
+    return true;
+  }
+  var company=document.getElementById('company-panel');
+  if(company&&company.classList.contains('open')){
+    stopUiDismissEventV22(e);
+    company.classList.remove('open');
+    return true;
+  }
+  var missionHistory=document.getElementById('mission-history-drawer');
+  if(missionHistory&&missionHistory.classList.contains('open')){
+    stopUiDismissEventV22(e);
+    if(typeof toggleMissionHistory==='function')toggleMissionHistory(false);
+    else missionHistory.classList.remove('open');
+    return true;
+  }
+  var kpiPanel=document.getElementById('kpi-panel-rpt');
+  if(kpiPanel&&kpiPanel.classList.contains('open')){
+    stopUiDismissEventV22(e);
+    if(typeof closeKPI==='function')closeKPI();
+    else kpiPanel.classList.remove('open');
+    return true;
+  }
+  return false;
+}
+
 function stopUiDismissEventV22(e){
   if(!e)return;
   if(e.preventDefault)e.preventDefault();
@@ -4398,9 +4468,9 @@ function handleUiDismissStabilityV22(e){
   var target=e.target&&e.target.closest?e.target.closest('[data-ui-dismiss]'):null;
   if(target)return closeUiTargetV22(target,e);
   if(isKey&&e.key==='Escape'){
-    if(document.getElementById('ig-token-modal-overlay')&&document.getElementById('ig-token-modal-overlay').classList.contains('active'))return closeInstagramTokenModalV22(e);
-    if(document.getElementById('system-panel')&&document.getElementById('system-panel').classList.contains('open')){stopUiDismissEventV22(e);closeSystemPanel();return false;}
-    if(document.getElementById('mission-history-drawer')&&document.getElementById('mission-history-drawer').classList.contains('open')){stopUiDismissEventV22(e);toggleMissionHistory(false);return false;}
+    if(closeOpenSurfaceByEscapeV22(e))return false;
+  }else if(!isKey){
+    closeMissionInlineTransientStateV22(e);
   }
   var surface=e.target&&e.target.getAttribute?e.target.getAttribute('data-ui-dismiss-surface'):null;
   if(surface==='system-panel'){stopUiDismissEventV22(e);closeSystemPanel();return false;}
