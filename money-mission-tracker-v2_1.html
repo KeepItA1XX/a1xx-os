@@ -12258,12 +12258,12 @@ function getMissionResultNextAnswerV14(result){
 
 function getMissionResultWhyAnswerV14(result){
   if(!result||!result.type)return '';
-  if(result.type==='booked')return 'Because the conversation already moved to a booked call.<br><br>The next useful move is prep, calendar detail, and one clean opening question.';
-  if(result.type==='paid')return 'Because the sale already happened.<br><br>The next useful move is logging the money, updating the lead, and protecting delivery.';
-  if(result.type==='reply')return 'Because there is live buying signal now.<br><br>The next useful move is one qualifying question before any pitch.';
+  if(result.type==='booked')return 'Because the conversation already moved to a booked call.<br><br>That means the useful move is prep, calendar detail, and one clean opening question.';
+  if(result.type==='paid')return 'Because the sale already happened.<br><br>That means the useful move is logging the money, updating the lead, and protecting delivery.';
+  if(result.type==='reply')return 'Because there is live buying signal now.<br><br>That means one qualifying question comes before any pitch.';
   if(result.type==='no_reply')return 'Because no reply is still useful signal.<br><br>Log the touch, avoid chasing the same person too hard, then move to the next warm signal.';
   if(result.type==='no')return 'Because a clean no is still useful signal.<br><br>Close the lead, capture why, then stop spending energy there.';
-  if(result.type==='follow_up')return 'Because the conversation is still alive, but unresolved.<br><br>The next useful move is isolating the real concern: money, timing, trust, or fit.';
+  if(result.type==='follow_up')return 'Because the conversation is still alive, but unresolved.<br><br>That means the useful move is isolating the real concern: money, timing, trust, or fit.';
   if(result.type==='done')return 'Because done only closes the action, not the outcome.<br><br>Mission Command still needs the result so it knows whether this became no reply, reply, booked, paid, shipped, posted, or wrong lane.';
   return '';
 }
@@ -13235,10 +13235,10 @@ function getMissionFreshStarterDpcAnchorAnswerV12(question,ctx,kind){
   }
   if(kind==='clean'||/\b(make it make sense|that sounds disconnected|answer like.*know what|wrong read|clean version|clean read)\b/.test(q)){
     if(/\b(wrong read|nah not that|no not that)\b/.test(q)){
-      return 'Got it. Staying on the clean starter read.<br><br>Nothing is logged in DPC yet, so the next move is one outreach or sales action.<br><br>Log the result so Mission Command has something real to steer from.';
+      return 'Got it. Staying on the clean starter read.<br><br>DPC is still empty, so the move is one outreach or sales action.<br><br>Log the result so Mission Command has something real to steer from.';
     }
     if(/\b(that sounds disconnected)\b/.test(q)){
-      return 'Fair. The connection is simple.<br><br>DPC is empty, so Mission Command is trying to create the first measurable money signal.<br><br>Do one outreach or sales action, then log what happened.';
+      return 'Fair. Here is the connection.<br><br>DPC is empty, so Mission Command is trying to create the first measurable money signal.<br><br>Do one outreach or sales action, then log what happened.';
     }
     if(/\b(answer like.*know what)\b/.test(q)){
       return 'You are trying to get moving without opening every lane.<br><br>Start with one outreach or sales action and log the result.<br><br>That gives the OS a real signal instead of another guess.';
@@ -14514,9 +14514,9 @@ function getMissionWhyResponseV1(turn,ctx){
   var routeShouldSupersedeResult=missionThreadLastTurnCanOwnFollowupOverResultV26(lastTurn,lastResult,turn&&turn.rawInput||turn&&turn.normalizedInput||'');
   var lastResultMatchesRoute=!lastResult||!lastResult.route||!route||route==='now'||lastResult.route===route||!routeShouldSupersedeResult;
   if(lastResult&&lastResultMatchesRoute){
-    if(lastResult.type==='booked')return 'Because the conversation already moved to a booked call.<br><br>The next useful move is prep, calendar detail, and one clean opening question.';
-    if(lastResult.type==='paid')return 'Because the sale already happened.<br><br>The next useful move is logging the money, updating the lead, and protecting delivery.';
-    if(lastResult.type==='reply')return 'Because there is live buying signal now.<br><br>The next useful move is one qualifying question before any pitch.';
+    if(lastResult.type==='booked')return 'Because the conversation already moved to a booked call.<br><br>That means the useful move is prep, calendar detail, and one clean opening question.';
+    if(lastResult.type==='paid')return 'Because the sale already happened.<br><br>That means the useful move is logging the money, updating the lead, and protecting delivery.';
+    if(lastResult.type==='reply')return 'Because there is live buying signal now.<br><br>That means one qualifying question comes before any pitch.';
     if(lastResult.type==='no_reply')return 'Because no reply is still useful signal.<br><br>Log the touch, avoid chasing the same person too hard, then move to the next warm signal.';
     if(lastResult.type==='no')return 'Because a clean no is still useful signal.<br><br>Close the lead, capture why, then stop spending energy there.';
   }
@@ -24696,11 +24696,18 @@ function getMissionContextualSalesReplyV1(question){
 
 function getMissionSalesObjectionCorrectionRepairV29(question){
   var q=normalizeMissionQuestion(question||'');
-  if(!/\b(wrong read|nah not that|no not that|that sounds disconnected|disconnected|not what i meant|give me the clean version|clean version|make it make sense|answer like you know)\b/.test(q))return '';
+  var isWhy=/^(why|why again|why tho|why that|why this|y tho)$/.test(q);
+  if(!isWhy&&!/\b(wrong read|nah not that|no not that|that sounds disconnected|disconnected|not what i meant|give me the clean version|clean version|make it make sense|answer like you know)\b/.test(q))return '';
   if(typeof getMissionLatestFreshResultV12==='function'&&getMissionLatestFreshResultV12())return '';
   var last=typeof getMissionRecentSalesObjectionContextV1==='function'?getMissionRecentSalesObjectionContextV1():'';
   if(!last)return '';
   var lead=/\b(that sounds disconnected|disconnected)\b/.test(q)?'Fair.':'Got it.';
+  if(isWhy){
+    if(last==='need_to_think')return 'Because "I need to think" usually means one concern is still unresolved.<br><br>Find out whether it is money, timing, trust, or fit before you explain more.';
+    if(last==='too_expensive'||last==='cant_afford')return 'Because price is not always the real problem.<br><br>First find out whether the number is impossible, or whether they are not clear on the result yet.';
+    if(last==='payment_plan')return 'Because payment structure only matters if they are already clear this is the right fix.<br><br>Confirm the decision before you solve the payment plan.';
+    if(last==='ghosted'||last==='no_reply')return 'Because no answer is still signal.<br><br>Send one clean bump, then stop chasing that same touch.';
+  }
   if(last==='need_to_think'){
     return lead+'<br><br>The live sales context is still the stall.<br><br>Stay with the real concern.<br><br>Say this. "Totally fair. What part are you still thinking through: the money, the timing, or whether this solves the problem?"';
   }
@@ -24961,7 +24968,7 @@ function getMissionFreshBookedFollowupAnswerV12(question){
     return 'Booked owns this thread now.<br><br>Last result was booked. Prep the call, add the calendar detail, and update the lead.<br><br>Open with one discovery question.';
   }
   if(/^(why|why again|y tho|why tho|why that|why this)$/.test(q)){
-    return 'Because the conversation already moved to a booked call.<br><br>The next useful move is prep, calendar detail, and one clean opening question.';
+    return 'Because the conversation already moved to a booked call.<br><br>That means the useful move is prep, calendar detail, and one clean opening question.';
   }
   if(/\b(make it make sense|give me the clean version|give me the clean read|that sounds disconnected|answer like you know|wrong read)\b/.test(q)){
     if(/\b(that sounds disconnected)\b/.test(q))return 'Fair. The conversation moved to a booked call.<br><br>Sales owns the prep, and Manager owns the calendar detail.<br><br>Prep one opening question, add the call detail, then update the lead.';

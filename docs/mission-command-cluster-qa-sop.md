@@ -302,6 +302,13 @@ Time-pressure wording rule:
 - Do not give a multi-step plan unless the user asks for one.
 - If data trust is also present, data trust wins and time pressure should not inject a separate result loop.
 
+Correction / why wording rule:
+
+- Corrections should acknowledge lightly, restate the active truth, then give the repaired move.
+- "Why" answers should explain the active result or lane in one sentence, then translate it into the move.
+- Keep protected truth anchors when tests depend on them, but avoid repeating "The next useful move is..." everywhere.
+- If A1XX says the answer is disconnected, show the connection between the app signal and the next action.
+
 Log/card ownership rule:
 
 - Log answers should name the outcome first, then the exact app updates.
