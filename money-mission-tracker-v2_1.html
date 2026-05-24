@@ -18496,6 +18496,7 @@ function runMissionBroadRegressionHardeningV1(){
       {name:'content_card',q:'what should i do on the content card',must:/I checked Content|Content card read/i,card:'content'},
       {name:'production_card',q:'what should i do on the beat card',must:/I checked Production|Production card read/i,card:'production'},
       {name:'manager_card',q:'what should i check on the manager card',must:/I checked Manager|Manager card read/i,card:'manager'},
+      {name:'manager_review',q:'manager review',must:/Manager review read|Money:|Do this next/i,card:'manager'},
       {name:'hit_list',q:'how is the hit list looking',must:/I checked the Hit List|Hit List read/i,card:'outreach'},
       {name:'hit_list_navigation',q:'where do i click to find the hit list',must:/Hit List read|Open Hit List|Outreach/i,card:'outreach'},
       {name:'weekly_scorecard',q:'what should i track every week',must:/weekly scorecard|five numbers|Track five numbers/i,card:'weekly'},
@@ -18537,7 +18538,8 @@ function runMissionBroadRegressionHardeningV1(){
       if(test.name==='sales_break_even_qualifier'&&/BANGIN\+ Upload Checklist|Production card read/i.test(plain))failures.push(test.name+'_resource_bleed');
       if(test.name==='production_studio_session'&&/Send:|Ask:|Sales lane/i.test(plain))failures.push(test.name+'_sales_bleed');
       if((plain.match(/Before (?:switching:|you switch lanes,)/g)||[]).length>1)failures.push(test.name+'_duplicate_handoff');
-      if(test.card&&!/Before (?:switching:|you switch lanes,)/.test(plain))failures.push(test.name+'_handoff_missing');
+      if(test.card&&test.card!=='manager'&&!/Before (?:switching:|you switch lanes,)/.test(plain))failures.push(test.name+'_handoff_missing');
+      if(test.card==='manager'&&/Before (?:switching:|you switch lanes,)/.test(plain))failures.push(test.name+'_manager_duplicate_handoff');
       if(test.card&&/\b(Same pipeline lane|Which lead do you want to move first|Who is closest to a real decision|Want to go through one lead at a time)\b/i.test(plain))failures.push(test.name+'_route_garnish_bleed');
       if(missionVisibleAnswerHasInternalLeakV1(answer))failures.push(test.name+'_internal_leak');
     });
@@ -21754,7 +21756,7 @@ function getMissionManagerQuestionSignalV11(question,route){
   if(!q)return null;
   var cardSignal=typeof getMissionCardSignalV1==='function'?getMissionCardSignalV1(question||'',route||''):null;
   if(typeof isMissionExplicitCardPromptV1==='function'&&isMissionExplicitCardPromptV1(question||'')&&(!cardSignal||cardSignal.card!=='manager'))return null;
-  var explicit=/\b(manager card|manager tab|admin card|admin lane|calendar card|calendar tab|schedule card|tasks card|task card|what should i check on the manager|what should i check on manager|what is on my calendar|what's on my calendar|whats on my calendar|what do i have today|what is my schedule|what's my schedule|what block|what block we in|what time block|how much time|how much runway|what day is it|what should i prep|what needs prep|what needs reviewing|what admin|admin loop|open task|open tasks|calendar prep|meeting prep|event prep)\b/.test(q);
+  var explicit=/\b(manager card|manager tab|manager review|manager read|admin card|admin lane|calendar card|calendar tab|schedule card|tasks card|task card|what should i check on the manager|what should i check on manager|what is on my calendar|what's on my calendar|whats on my calendar|what do i have today|what is my schedule|what's my schedule|what block|what block we in|what time block|how much time|how much runway|what day is it|what should i prep|what needs prep|what needs reviewing|what admin|admin loop|open task|open tasks|calendar prep|meeting prep|event prep)\b/.test(q);
   if(/\bwhat should i check on manager\b/.test(q))explicit=true;
   var contextAsk=(route==='calendar'||getMissionActiveCardV1()==='manager')&&/\b(what should i do|what next|what matters|where do i start|help me get started|read this|show me|what should i check|what does this mean)\b/.test(q);
   if(!explicit&&!contextAsk)return null;
@@ -21842,19 +21844,19 @@ function getMissionManagerCardIntelligenceResponseV11(route,ctx,question,brainSt
   var minutes=Number(snap.block&&snap.block.minutesLeft||0);
   var answer='';
   if(mode==='block'){
-    answer='You are in '+blockName+' right now.<br><br>'+(minutes?'There are '+minutes+' minutes left.':'This is the active window.')+' Keep it to one clean outcome.<br><br>Do this next: '+move+'.';
+    answer='You are in '+blockName+' right now.<br><br>'+(minutes?'There are '+minutes+' minutes left.':'This is the active window.')+' Use the window for one clean outcome.<br><br>Do this next: '+move+'.';
   }else if(mode==='calendar'){
-    answer='Calendar read:<br><br>'+(snap.events.length?snap.events.slice(0,3).map(missionManagerEventLabelV11).join('<br>'):'No upcoming business event is loaded right now.')+'<br><br>Do this next: '+move+'.';
+    answer='Calendar read:<br><br>'+(snap.events.length?snap.events.slice(0,3).map(missionManagerEventLabelV11).join('<br>'):'No upcoming business event is loaded right now.')+'<br><br>Use the calendar to reduce the decision load.<br><br>Do this next: '+move+'.';
   }else if(mode==='prep'){
-    answer='Prep read:<br><br>Next event: '+missionManagerEventLabelV11(snap.nextEvent)+'.<br><br>Do this next: '+move+'.';
+    answer='Prep read:<br><br>Next event: '+missionManagerEventLabelV11(snap.nextEvent)+'.<br><br>Prep one outcome before the clock starts.<br><br>Do this next: '+move+'.';
   }else if(mode==='tasks'){
-    answer='Admin task read:<br><br>'+snap.openTasks.length+' open task'+(snap.openTasks.length===1?'':'s')+' visible in the current packet.'+(snap.openTasks.length?'<br>Top task: '+missionManagerTaskLabelV11(snap.openTasks[0])+'.':'')+'<br><br>Do this next: '+move+'.';
+    answer='Admin task read:<br><br>'+snap.openTasks.length+' open task'+(snap.openTasks.length===1?'':'s')+' loaded.'+(snap.openTasks.length?'<br>Top task: '+missionManagerTaskLabelV11(snap.openTasks[0])+'.':'')+'<br><br>Clear or reschedule one loop before opening another lane.<br><br>Do this next: '+move+'.';
   }else if(mode==='review'){
-    answer='Manager review read:<br><br>Money: '+fmt(snap.revenue)+' of '+fmt(snap.target)+' · gap '+fmt(snap.gap)+'. DPC activity today: '+snap.dpcTotal+'. Calendar events loaded: '+snap.events.length+'.<br><br>Do this next: '+move+'.';
+    answer='Manager review read:<br><br>Money: '+fmt(snap.revenue)+' of '+fmt(snap.target)+' · gap '+fmt(snap.gap)+'. DPC activity today: '+snap.dpcTotal+'. Calendar events loaded: '+snap.events.length+'.<br><br>Use this as a business read, not a dashboard tour.<br><br>Do this next: '+move+'.';
   }else if(mode==='day'){
-    answer='Day mode read:<br><br>Current mode: '+String(snap.dayType||'General Mode')+'. Block: '+blockName+(minutes?' · '+minutes+' minutes left':'')+'.<br><br>Do this next: '+move+'.';
+    answer='Day mode read:<br><br>Current mode: '+String(snap.dayType||'General Mode')+'. Block: '+blockName+(minutes?' · '+minutes+' minutes left':'')+'.<br><br>Use the mode as the filter, then pick one card.<br><br>Do this next: '+move+'.';
   }else{
-    answer='I checked Manager.<br><br>'+snap.events.length+' calendar event'+(snap.events.length===1?'':'s')+' loaded, '+snap.openTasks.length+' open task'+(snap.openTasks.length===1?'':'s')+', and next event is '+missionManagerEventLabelV11(snap.nextEvent)+'.<br><br>Do this next: '+move+'.';
+    answer='I checked Manager.<br><br>'+snap.events.length+' calendar event'+(snap.events.length===1?'':'s')+' loaded, '+snap.openTasks.length+' open task'+(snap.openTasks.length===1?'':'s')+', and next event is '+missionManagerEventLabelV11(snap.nextEvent)+'.<br><br>Use Manager to protect time, prep, and admin handoffs.<br><br>Do this next: '+move+'.';
   }
   if(turn){
     turn.managerCardIntelligence={mode:mode,reason:signal.reason,nextMove:move,eventCount:snap.events.length,taskCount:snap.openTasks.length};
@@ -25190,7 +25192,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var productionIntel=getMissionProductionCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(productionIntel)return finishMissionAnswer(productionIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,cardAlignment:'production'});
   var managerIntel=getMissionManagerCardIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
-  if(managerIntel)return finishMissionAnswer(managerIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,cardAlignment:'manager'});
+  if(managerIntel)return finishMissionAnswer(managerIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,cardAlignment:false});
   var weeklyIntel=getMissionWeeklyReviewIntelligenceResponseV11(route,ctx,cleanQuestion||question||'',brainState,turnV2);
   if(weeklyIntel)return finishMissionAnswer(weeklyIntel,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,cardAlignment:'weekly'});
   var rolodexIntel=getMissionRolodexIntelligenceResponseV1(route,ctx,cleanQuestion||question||'',brainState,turnV2);

@@ -309,6 +309,14 @@ Correction / why wording rule:
 - Keep protected truth anchors when tests depend on them, but avoid repeating "The next useful move is..." everywhere.
 - If A1XX says the answer is disconnected, show the connection between the app signal and the next action.
 
+Manager/calendar wording rule:
+
+- Calendar and Manager answers should reduce decision load, not read like a raw report.
+- State the block, event, task, or review signal first.
+- Translate the signal into one protected outcome or handoff.
+- Manager direct answers should not receive the generic cross-card `Before you switch lanes` append when the answer already includes its own admin/time handoff.
+- Keep required labels like `Calendar read`, `Prep read`, and `Do this next` when regressions depend on them, but make the body sound like an operator read.
+
 Log/card ownership rule:
 
 - Log answers should name the outcome first, then the exact app updates.
