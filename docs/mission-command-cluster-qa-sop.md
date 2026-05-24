@@ -294,6 +294,13 @@ Time pressure:
 Use it to close the [active loop]: [smallest move].
 ```
 
+Log/card ownership rule:
+
+- Log answers should name the outcome first, then the exact app updates.
+- Use three targets only when all three matter; otherwise keep it to the smallest set that makes the result trackable.
+- "Come back with" should point to the real outcome or the first completed update, not a long menu unless the state is genuinely open.
+- Card ownership answers should say which card owns the visible update and stop before becoming a workflow lecture.
+
 Phrases to avoid or rotate carefully:
 
 - "Still on this."
