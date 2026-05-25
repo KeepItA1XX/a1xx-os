@@ -3870,9 +3870,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 22:01 ET · OS v2_2 diagnostics collapse';
+var APP_BUILD_STAMP='2026-05-25 08:37 ET · OS v2_2 connection backup guard';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-2201';
+var APP_CACHE_TOKEN='mmos-20260525-0837';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4038,9 +4038,10 @@ function getBackupExcludedKeysV22(){
   return keys;
 }
 function shouldIncludeInBackupPayloadV22(key){
-  if(!key||key.indexOf('a1xx_')!==0)return false;
+  if(!key)return false;
   var protectedKeys=typeof getProtectedStorageKeysV22==='function'?getProtectedStorageKeysV22():{};
   if(protectedKeys[key])return true;
+  if(key.indexOf('a1xx_')!==0)return false;
   var excluded=getBackupExcludedKeysV22();
   return !excluded[key];
 }
@@ -4388,6 +4389,7 @@ function runStorageHealthSelfCheckV22(){
   if(!excluded[MISSION_CHAT_HISTORY_ALIAS_KEY]||!excluded[MISSION_CHAT_ACTIVE_ALIAS_KEY]||!excluded[MISSION_SHEETS_RETRY_KEY])failures.push('backup_exclude_map_failed');
   if(shouldIncludeInBackupPayloadV22(MISSION_CHAT_HISTORY_ALIAS_KEY))failures.push('backup_alias_not_excluded');
   if(!shouldIncludeInBackupPayloadV22(SHEETS_KEY))failures.push('backup_protected_key_not_included');
+  if(!shouldIncludeInBackupPayloadV22(WEBHOOK_TOKEN_KEY))failures.push('backup_webhook_token_not_included');
   var archived=compactMissionSessionForStorageV22({id:'test_archive',title:'Archive',archivedAt:'2026-05-24',messages:[{role:'user',body:'x'.repeat(3000),ts:'1'}],memory:{heavy:'x'.repeat(1000)}},'archive');
   if(archived.memory||archived.messages[0].body.length>700)failures.push('archive_compaction_failed');
   var protectedKeys=getProtectedStorageKeysV22();
