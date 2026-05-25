@@ -216,6 +216,7 @@ function doGet(e) {
     if (e.parameter.action === 'rolodex_search')      return searchRolodex(e);
     if (e.parameter.action === 'skool_community')     return getSkoolCommunity(e);
     if (e.parameter.action === 'get_backup')          return getBackup(e);
+    if (e.parameter.action === 'backup_get_probe')    return getBackupWriteProbeV18(e);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
     if (e.parameter.action === 'mission_events')      return getMissionCommandEventsV18(e);
@@ -1219,6 +1220,33 @@ function getBackup(e) {
   if (markerId) latest.markerSearch = 'not_found_recent';
   return ContentService.createTextOutput(JSON.stringify(latest))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getBackupWriteProbeV18(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
+  var markerId = String((e && e.parameter && e.parameter.marker) || ('get_probe_' + Date.now())).slice(0, 120);
+  var marker = {
+    id: markerId,
+    ts: Date.now(),
+    build: String((e && e.parameter && e.parameter.build) || ''),
+    transport: 'GET'
+  };
+  var payload = JSON.stringify({
+    __mmos_backup_verification_v22: marker,
+    __mmos_backup_probe_v22: true,
+    build: marker.build
+  });
+  var savedAt = new Date().toISOString();
+  sheet.appendRow([savedAt, 1, payload.length, payload]);
+  logActivity('Backup GET probe saved — ' + markerId + ' — row ' + sheet.getLastRow());
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'ok',
+    probe: true,
+    marker: marker,
+    matchedRow: sheet.getLastRow(),
+    backup: { savedAt: savedAt, keyCount: 1, size: payload.length, payload: payload }
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function getHealthCheck(e) {
