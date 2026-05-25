@@ -2513,10 +2513,11 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Last captured issue</div><div class="settings-row-meta" id="settings-self-hardening-last-error">No issue captured yet.</div></div><span class="settings-badge off">Error</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Turn monitor</div><div class="settings-row-meta" id="settings-self-hardening-turns">No Mission Command turns recorded yet.</div></div><span class="settings-badge off">Turns</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Last self-check</div><div class="settings-row-meta" id="settings-self-hardening-check">Not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-check-badge">Check</span></div>
             </div>
           </details>
         </div>
-        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
+        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button><button class="btn" onclick="runSelfHardeningDiagnosticsCheckV10()">Check self-hardening</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
       </div>
       <div class="health-subpane" id="health-subpane-version">
         <div class="settings-section">
@@ -3878,9 +3879,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 09:21 ET · OS v2_2 System Health async stability';
+var APP_BUILD_STAMP='2026-05-25 09:24 ET · OS v2_2 self-hardening diagnostics control';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-0921';
+var APP_CACHE_TOKEN='mmos-20260525-0924';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4228,6 +4229,23 @@ function renderSelfHardeningDiagnosticsV10(){
     if(last)last.textContent=summary.lastError?(summary.lastError.ts+' · '+summary.lastError.source+' · '+summary.lastError.message):'No issue captured yet.';
     if(turns)turns.textContent=summary.lastTurnAt?('Last turn '+summary.lastTurnAt+' · route '+(summary.lastRoute||'unknown')):'No Mission Command turns recorded yet.';
   }catch(e){}
+}
+function runSelfHardeningDiagnosticsCheckV10(){
+  var row=document.getElementById('settings-self-hardening-check');
+  var badge=document.getElementById('settings-self-hardening-check-badge');
+  var result=runSelfHardeningPhase1SelfCheckV10();
+  var checkedLabel=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+  if(row){
+    row.textContent=result.passed
+      ? 'Checked '+checkedLabel+' · passive monitor writes, restores, and stays out of backup payloads.'
+      : 'Checked '+checkedLabel+' · review: '+result.failures.join(' | ');
+  }
+  if(badge){
+    badge.textContent=result.passed?'Passed':'Review';
+    badge.className='settings-badge '+(result.passed?'':'warn');
+  }
+  renderSelfHardeningDiagnosticsV10();
+  return result;
 }
 function runSelfHardeningPhase1SelfCheckV10(){
   var failures=[];
