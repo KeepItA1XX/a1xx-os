@@ -8,6 +8,9 @@
 //     'mission_revenue_log', and 'mission_content_log' POST handling.
 //   - Granular Mission Command writes append to an event log only; existing
 //     Daily Log, CRM, Calendar, and revenue totals remain confirmation-owned.
+//   - 2026-05-25 recovery patch: added A1XX_SPREADSHEET_ID routing helper so
+//     the backend can write to the clean rescue workbook instead of the bloated
+//     originally bound workbook.
 // Changes in 1.7 (2026-05-12):
 //   - Added SHEET_RESET_AUDIT = 'Reset Audit' tab — captures every truncated row
 //   - Added type='reset_test_data' POST → archives-then-truncates Daily Log
@@ -46,6 +49,7 @@ var NOTION_CRM_DB        = 'b82e7140-b3b0-48d1-915d-34e4cdf9f65a';
 var NOTION_OPS_DAILY_DB  = '36461152-81da-809d-baa7-d6638dd2077b';
 var NOTION_OPS_WEEKLY_DB = '515171aa-890f-405f-a035-a37c09348f35';
 var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
+var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -102,6 +106,12 @@ var MISSION_EVENT_HEADERS = [
   'Result','Status','Lead','Amount','Title','Summary','Session ID',
   'Active Chat ID','Prompt','Payload JSON'
 ];
+
+function getMoneyMissionSpreadsheet() {
+  var targetId = String(PropertiesService.getScriptProperties().getProperty(TARGET_SPREADSHEET_PROPERTY) || '').trim();
+  if (targetId) return SpreadsheetApp.openById(targetId);
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
 
 // ── MAIN HANDLERS ────────────────────────────────────────────
 function doPost(e) {
@@ -231,7 +241,7 @@ function doGet(e) {
 }
 
 function handleLogChange(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = ss.getSheetByName('Dev Log');
   if (!sheet) {
     sheet = ss.insertSheet('Dev Log');
@@ -252,7 +262,7 @@ function handleLogChange(data) {
 // then truncates the targeted tab(s) below the header row.
 // Never deletes audit history. Headers always preserved.
 function resetTestData(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var audit = getOrCreateSheet(ss, SHEET_RESET_AUDIT, RESET_AUDIT_HEADERS);
   var nowIso = new Date().toISOString();
   var reason = String(d.reason || 'no reason provided').slice(0, 500);
@@ -294,7 +304,7 @@ function saveDailySnapshot(d) {
   try {
     lock.waitLock(10000);
     locked = true;
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getMoneyMissionSpreadsheet();
     var sheet = getOrCreateSheet(ss, SHEET_DAILY, DAILY_HEADERS);
     var date = String(d.date || '').slice(0, 10);
     if (!date) throw new Error('daily_save: missing date');
@@ -360,7 +370,7 @@ function saveDailySnapshot(d) {
 }
 
 function getDailyLog(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_DAILY);
   if (!sheet || sheet.getLastRow() < 2) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', rows: [] }))
@@ -399,7 +409,7 @@ function saveProspectSnapshot(d) {
   try {
     lock.waitLock(10000);
     locked = true;
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getMoneyMissionSpreadsheet();
     var sheet = getOrCreateSheet(ss, SHEET_PROSPECTS, PROSPECT_HEADERS);
     var nowIso = new Date().toISOString();
     var id = String(d.id || '').trim();
@@ -438,7 +448,7 @@ function saveProspectSnapshot(d) {
 
 function deleteProspectRow(id) {
   if (!id) return false;
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_PROSPECTS);
   if (!sheet || sheet.getLastRow() < 2) return false;
   var idCol = PROSPECT_HEADERS.indexOf('ID') + 1;
@@ -455,7 +465,7 @@ function deleteProspectRow(id) {
 }
 
 function getProspectLog(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_PROSPECTS);
   if (!sheet || sheet.getLastRow() < 2) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', rows: [] }))
@@ -709,7 +719,7 @@ function getCalendarEvents(e) {
 }
 
 function saveWeekly(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_WEEKLY, WEEKLY_HEADERS);
   var wkRev = d.weeklyRevenue || []; var wkSv = d.weeklyServices || []; var wkOt = d.weeklyOther || [];
   var timestamp = d.timestamp || new Date().toISOString();
@@ -756,7 +766,7 @@ function saveWeekly(d) {
 }
 
 function saveMissionChatLog(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var headers = [
     'Timestamp','Date','Cycle','Active Tool','Kind','Question','Answer',
     'Sources','Packet Summary','Mode','Turn ID'
@@ -794,7 +804,7 @@ function saveMissionChatSession(d) {
   try {
     lock.waitLock(10000);
     locked = true;
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getMoneyMissionSpreadsheet();
     var headers = [
       'Session ID','Title','Project','Created At','Updated At','Archived At',
       'Message Count','Last Question','Last Answer','Tags','Context Window',
@@ -919,7 +929,7 @@ function stringifyMissionEventPayloadV18(payload) {
 }
 
 function saveMissionCommandEventV18(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_MISSION_EVENTS, MISSION_EVENT_HEADERS, {
     matchPrefix: true,
     renameMatched: true
@@ -961,7 +971,7 @@ function saveMissionCommandEventV18(d) {
 }
 
 function getMissionCommandEventsV18(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_MISSION_EVENTS);
   if (!sheet || sheet.getLastRow() < 2) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', rows: [] }))
@@ -1012,7 +1022,7 @@ function ensureSheetHeaders(sheet, headers) {
 }
 
 function archiveCycle(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_ARCHIVE, ARCHIVE_HEADERS);
   var archivedAt = new Date().toISOString();
   var row = [
@@ -1049,7 +1059,7 @@ function archiveCycle(d) {
 }
 
 function saveBackup(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
   var json = d.payload || '{}';
   var marker = d.backupMarker || null;
@@ -1105,7 +1115,7 @@ function isBackupProbePayloadV18(payload) {
 }
 
 function saveBackupChunkV18(d) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
   var marker = d.backupMarker || null;
   var markerId = d.backupMarkerId || (marker && marker.id) || ('backup_' + Date.now());
@@ -1189,7 +1199,7 @@ function makeLatestBackupResponseV18(sheet) {
 }
 
 function getBackup(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_BACKUP);
   if (!sheet || sheet.getLastRow() < 2) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', backup: null }))
@@ -1223,7 +1233,7 @@ function getBackup(e) {
 }
 
 function getBackupWriteProbeV18(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getMoneyMissionSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
   var markerId = String((e && e.parameter && e.parameter.marker) || ('get_probe_' + Date.now())).slice(0, 120);
   var marker = {
@@ -1260,7 +1270,14 @@ function getHealthCheck(e) {
     health.notion = nr.getResponseCode() < 400 ? 'ok' : 'error';
     health.notionCode = nr.getResponseCode();
   } catch (err) { health.notion = 'error'; health.notionMsg = err.toString(); }
-  try { var ss = SpreadsheetApp.getActiveSpreadsheet(); health.sheets = ss ? 'ok' : 'error'; health.sheetsName = ss ? ss.getName() : ''; }
+  try {
+    var targetId = String(PropertiesService.getScriptProperties().getProperty(TARGET_SPREADSHEET_PROPERTY) || '').trim();
+    var ss = getMoneyMissionSpreadsheet();
+    health.sheets = ss ? 'ok' : 'error';
+    health.sheetsName = ss ? ss.getName() : '';
+    health.sheetsId = ss ? ss.getId() : '';
+    health.sheetsSource = targetId ? 'script_property' : 'active_bound';
+  }
   catch (err) { health.sheets = 'error'; health.sheetsMsg = err.toString(); }
   try { var cals = CalendarApp.getAllCalendars(); health.calendar = 'ok'; health.calendarCount = cals.length; }
   catch (err) { health.calendar = 'error'; health.calendarMsg = err.toString(); }
@@ -1272,7 +1289,7 @@ function getHealthCheck(e) {
 
 function logActivity(msg) {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getMoneyMissionSpreadsheet();
     var sheet = getOrCreateSheet(ss, SHEET_LOG, ['Timestamp', 'Event']);
     sheet.appendRow([new Date().toISOString(), msg]);
   } catch(e) {}
@@ -1570,6 +1587,17 @@ function error(msg) { return ContentService.createTextOutput(JSON.stringify({ st
 
 function authorizeNotionFetch() {
   UrlFetchApp.fetch('https://api.notion.com/v1/users/me', { method: 'get', headers: { Authorization: 'Bearer test' }, muteHttpExceptions: true });
+}
+
+function testTargetSpreadsheetRouting() {
+  var targetId = String(PropertiesService.getScriptProperties().getProperty(TARGET_SPREADSHEET_PROPERTY) || '').trim();
+  var ss = getMoneyMissionSpreadsheet();
+  Logger.log(JSON.stringify({
+    ok: true,
+    spreadsheetName: ss.getName(),
+    spreadsheetId: ss.getId(),
+    source: targetId ? 'script_property' : 'active_bound'
+  }));
 }
 
 function getInstagramData(e) {
