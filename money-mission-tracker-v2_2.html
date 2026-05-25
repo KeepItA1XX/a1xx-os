@@ -3879,9 +3879,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 09:27 ET · OS v2_2 self-hardening safe wrapper capture';
+var APP_BUILD_STAMP='2026-05-25 09:34 ET · OS v2_2 self-hardening operator summary';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-0927';
+var APP_CACHE_TOKEN='mmos-20260525-0934';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4221,13 +4221,17 @@ function renderSelfHardeningDiagnosticsV10(){
     var badge=document.getElementById('settings-self-hardening-badge');
     var last=document.getElementById('settings-self-hardening-last-error');
     var turns=document.getElementById('settings-self-hardening-turns');
-    if(row)row.textContent='Phase 1 passive · '+summary.turns+' MC turns · '+summary.fallbacks+' fallbacks · '+summary.errors+' captured issues.';
+    if(row){
+      if(summary.errors)row.textContent='Review needed. '+summary.errors+' issue'+(summary.errors===1?'':'s')+' captured; open details before changing data.';
+      else if(summary.turns)row.textContent='Clean. Watching Mission Command turns with no captured issues.';
+      else row.textContent='Ready. Passive monitor is armed; run Mission Command or check self-hardening.';
+    }
     if(badge){
-      badge.textContent=summary.errors?'Review':'Passive';
+      badge.textContent=summary.errors?'Review':summary.turns?'Clean':'Ready';
       badge.className='settings-badge '+(summary.errors?'warn':'off');
     }
-    if(last)last.textContent=summary.lastError?(summary.lastError.ts+' · '+summary.lastError.source+' · '+summary.lastError.message):'No issue captured yet.';
-    if(turns)turns.textContent=summary.lastTurnAt?('Last turn '+summary.lastTurnAt+' · route '+(summary.lastRoute||'unknown')):'No Mission Command turns recorded yet.';
+    if(last)last.textContent=summary.lastError?('Review '+summary.lastError.source+' · '+summary.lastError.message+' · '+summary.lastError.ts):'Clean. No captured issue since this browser state loaded.';
+    if(turns)turns.textContent=summary.lastTurnAt?('Watching '+summary.turns+' turn'+(summary.turns===1?'':'s')+' · last route '+(summary.lastRoute||'unknown')+' · '+summary.fallbacks+' fallback'+(summary.fallbacks===1?'':'s')):'No Mission Command turns recorded yet.';
   }catch(e){}
 }
 function runSelfHardeningDiagnosticsCheckV10(){
