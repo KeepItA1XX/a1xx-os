@@ -2518,6 +2518,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <summary><span>Self-hardening details</span><span class="settings-badge off">Details</span></summary>
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Last captured issue</div><div class="settings-row-meta" id="settings-self-hardening-last-error">No issue captured yet.</div></div><span class="settings-badge off">Error</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Suggested check</div><div class="settings-row-meta" id="settings-self-hardening-action">No action needed yet.</div></div><span class="settings-badge off" id="settings-self-hardening-action-badge">Next</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Recent issues</div><div class="settings-row-meta" id="settings-self-hardening-recent-issues">No recent issues captured.</div></div><span class="settings-badge off" id="settings-self-hardening-recent-badge">0</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Turn monitor</div><div class="settings-row-meta" id="settings-self-hardening-turns">No Mission Command turns recorded yet.</div></div><span class="settings-badge off">Turns</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Last self-check</div><div class="settings-row-meta" id="settings-self-hardening-check">Not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-check-badge">Check</span></div>
@@ -3895,9 +3896,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 10:31 ET · OS v2_2 source trust duplicate cleanup';
+var APP_BUILD_STAMP='2026-05-25 10:35 ET · OS v2_2 self-hardening action hint';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1031';
+var APP_CACHE_TOKEN='mmos-20260525-1035';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -4274,12 +4275,37 @@ function mcFormatRecentIssuesV10(items){
     return when+' · '+issueClass+' · '+(item.source||'runtime')+' · '+(item.message||'unknown issue')+build;
   }).join(' | ');
 }
+function mcGetSelfHardeningActionHintV10(summary){
+  summary=summary||mcGetSelfHardeningSummaryV10();
+  var issue=summary.lastError||summary.recentErrors&&summary.recentErrors[0]||null;
+  if(summary.runtimeErrors){
+    var source=String(issue&&issue.source||'runtime');
+    if(/safeRender/i.test(source))return {status:'review',label:'Render',text:'Open the affected screen again. If it repeats, patch that render path before changing data.'};
+    if(/runMissionTurn|Mission Command/i.test(source))return {status:'review',label:'Turn',text:'Retry the same Mission Command prompt. If it repeats, patch the route that answered.'};
+    return {status:'review',label:'Runtime',text:'Review the last captured issue first. Patch runtime errors before trusting new behavior.'};
+  }
+  if(summary.activeDataWarnings){
+    return {status:'watch',label:'Data',text:'Run sync check, then Probe endpoints. Trust the lane only after Bridge Pulse or Endpoint Probe is clean.'};
+  }
+  if(summary.dataWarnings){
+    return {status:'watch',label:'History',text:'Older data delays are recorded. If the lane is green now, keep moving.'};
+  }
+  if(summary.fallbacks){
+    return {status:'watch',label:'Fallback',text:'Watch the last Mission Command route. If fallback count grows, add a focused prompt regression.'};
+  }
+  if(summary.turns){
+    return {status:'clean',label:'Clear',text:'No action needed. Keep testing real prompts.'};
+  }
+  return {status:'ready',label:'Ready',text:'No action needed yet. Run one Mission Command turn or self-check.'};
+}
 function renderSelfHardeningDiagnosticsV10(){
   try{
     var summary=mcGetSelfHardeningSummaryV10();
     var row=document.getElementById('settings-self-hardening-summary');
     var badge=document.getElementById('settings-self-hardening-badge');
     var last=document.getElementById('settings-self-hardening-last-error');
+    var action=document.getElementById('settings-self-hardening-action');
+    var actionBadge=document.getElementById('settings-self-hardening-action-badge');
     var recent=document.getElementById('settings-self-hardening-recent-issues');
     var recentBadge=document.getElementById('settings-self-hardening-recent-badge');
     var turns=document.getElementById('settings-self-hardening-turns');
@@ -4295,6 +4321,12 @@ function renderSelfHardeningDiagnosticsV10(){
       badge.className='settings-badge '+(summary.runtimeErrors||summary.activeDataWarnings?'warn':'off');
     }
     if(last)last.textContent=summary.lastError?((summary.lastError.label||mcClassifyRuntimeIssueV10(summary.lastError.source,summary.lastError.message).label)+' · '+summary.lastError.source+' · '+summary.lastError.message+' · '+summary.lastError.ts):'Clean. No captured issue since this browser state loaded.';
+    var hint=mcGetSelfHardeningActionHintV10(summary);
+    if(action)action.textContent=hint.text;
+    if(actionBadge){
+      actionBadge.textContent=hint.label;
+      actionBadge.className='settings-badge '+(hint.status==='review'||hint.status==='watch'?'warn':'off');
+    }
     if(recent)recent.textContent=mcFormatRecentIssuesV10(summary.recentErrors);
     if(recentBadge){
       recentBadge.textContent=summary.recentErrors&&summary.recentErrors.length?String(summary.recentErrors.length):'0';
@@ -4336,6 +4368,10 @@ function runSelfHardeningPhase1SelfCheckV10(){
     mcRecordTurnHealthV10({route:'sync',rawInput:'health',_mcStartedAtV10:Date.now()},'ok',null);
     var health=mcGetTurnHealthV10();
     if(health.turns!==1||health.lastRoute!=='sync')failures.push('turn_health_failed');
+    var runtimeHint=mcGetSelfHardeningActionHintV10({runtimeErrors:1,activeDataWarnings:0,dataWarnings:0,fallbacks:0,turns:1,lastError:{source:'safeRender:test',message:'x'},recentErrors:[]});
+    if(runtimeHint.label!=='Render'||runtimeHint.status!=='review')failures.push('action_hint_runtime_failed');
+    var dataHint=mcGetSelfHardeningActionHintV10({runtimeErrors:0,activeDataWarnings:1,dataWarnings:1,fallbacks:0,turns:1,lastError:{source:'safeLoad:Calendar',message:'timeout'},recentErrors:[]});
+    if(dataHint.label!=='Data'||dataHint.status!=='watch'||!/Probe endpoints/i.test(dataHint.text))failures.push('action_hint_data_failed');
     if(shouldIncludeInBackupPayloadV22(MC_RUNTIME_ERROR_LOG_KEY_V10)||shouldIncludeInBackupPayloadV22(MC_TURN_HEALTH_KEY_V10))failures.push('self_hardening_logs_should_not_backup');
   }catch(e){failures.push(e&&e.message?e.message:String(e));}
   finally{
