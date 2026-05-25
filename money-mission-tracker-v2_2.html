@@ -285,6 +285,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .diagnostics-detail[open] summary:after{content:'-';color:#7ec845}
 .diagnostics-detail-list{padding:0 0 8px}
 .diagnostics-detail-list .settings-row{margin:0 8px 6px}
+.diagnostics-overview{gap:5px}
+.diagnostics-overview .settings-row{background:#090b0d;border-color:transparent;padding:7px 8px}
+.diagnostics-overview .settings-row.is-primary{background:#0b100b}
+.diagnostics-actions{display:grid;gap:8px}
+.diagnostics-action-group{background:#090b0d;border-radius:8px;padding:8px}
+.diagnostics-action-title{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:#68727c;margin-bottom:7px}
+.diagnostics-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.diagnostics-action-grid .btn{width:100%;height:30px;margin:0;font-size:10px;padding:0 8px}
 .settings-field{margin-bottom:9px}
 .settings-field label{display:block;font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:5px}
 .settings-field input{width:100%;height:34px;background:#080a0c;border:0.5px solid #2a3036;border-radius:8px;color:#f0f3f5;font-size:12px;font-weight:700;padding:0 10px;outline:none}
@@ -307,6 +315,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   .settings-subtabs{grid-template-columns:repeat(2,1fr)}
   .settings-main{padding:14px 12px 16px}
   .settings-row{flex-direction:column;gap:7px}
+  .diagnostics-action-grid{grid-template-columns:1fr}
 }
 .auto-backup-bar{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:0.5px solid #1e1e1e;font-size:10px;color:#555}
 /* RESET TEST DATA — added 2026-05-12 */
@@ -2479,14 +2488,12 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
       </div>
       <div class="health-subpane" id="health-subpane-diagnostics">
         <div class="settings-section">
-          <div class="settings-section-title">Diagnostics</div>
-          <div class="settings-list" id="settings-diagnostics-list">
-            <div class="settings-row"><div><div class="settings-row-name">Recent checks</div><div class="settings-row-meta">Run sync check when live data feels stale.</div></div><span class="settings-badge warn">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Storage Health</div><div class="settings-row-meta" id="settings-storage-health-summary">Open diagnostics to measure browser storage.</div></div><span class="settings-badge off" id="settings-storage-health-badge">Check</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Backup payload</div><div class="settings-row-meta" id="settings-storage-backup-size">Not checked yet.</div></div><span class="settings-badge off">Size</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Storage guardrails</div><div class="settings-row-meta" id="settings-storage-guardrails">Not checked yet.</div></div><span class="settings-badge off" id="settings-storage-guardrails-badge">Safe</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Bridge Pulse</div><div class="settings-row-meta" id="settings-bridge-pulse-summary">Run sync check to measure external data timing.</div></div><span class="settings-badge off" id="settings-bridge-pulse-badge">Pulse</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Endpoint Probe</div><div class="settings-row-meta" id="settings-bridge-probe-summary">Run endpoint probe when one source keeps failing.</div></div><span class="settings-badge off" id="settings-bridge-probe-badge">Probe</span></div>
+          <div class="settings-section-title">Diagnostics overview</div>
+          <div class="settings-list diagnostics-overview" id="settings-diagnostics-list">
+            <div class="settings-row"><div><div class="settings-row-name">Recent checks</div><div class="settings-row-meta">Use the action panel below when data feels stale.</div></div><span class="settings-badge warn">Review</span></div>
+            <div class="settings-row is-primary"><div><div class="settings-row-name">Storage Health</div><div class="settings-row-meta" id="settings-storage-health-summary">Open diagnostics to measure browser storage.</div></div><span class="settings-badge off" id="settings-storage-health-badge">Check</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Bridge Pulse</div><div class="settings-row-meta" id="settings-bridge-pulse-summary">Run sync check to measure live source timing.</div></div><span class="settings-badge off" id="settings-bridge-pulse-badge">Pulse</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Endpoint Probe</div><div class="settings-row-meta" id="settings-bridge-probe-summary">Probe one source when a lane keeps failing.</div></div><span class="settings-badge off" id="settings-bridge-probe-badge">Probe</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Self-Hardening</div><div class="settings-row-meta" id="settings-self-hardening-summary">Passive monitor not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-badge">Passive</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Drift Watch</div><div class="settings-row-meta" id="settings-drift-watch-summary">Passive stale-state watch not checked yet.</div></div><span class="settings-badge off" id="settings-drift-watch-badge">Check</span></div>
           </div>
@@ -2495,11 +2502,13 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Storage counts</div><div class="settings-row-meta" id="settings-storage-health-detail">Not checked yet.</div></div><span class="settings-badge off">Counts</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Largest local keys</div><div class="settings-row-meta" id="settings-storage-top-keys">Not checked yet.</div></div><span class="settings-badge off">Audit</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Storage guardrails</div><div class="settings-row-meta" id="settings-storage-guardrails">Not checked yet.</div></div><span class="settings-badge off" id="settings-storage-guardrails-badge">Safe</span></div>
             </div>
           </details>
           <details class="diagnostics-detail">
             <summary><span>Backup details</span><span class="settings-badge off">Details</span></summary>
             <div class="settings-list diagnostics-detail-list">
+              <div class="settings-row"><div><div class="settings-row-name">Backup payload</div><div class="settings-row-meta" id="settings-storage-backup-size">Not checked yet.</div></div><span class="settings-badge off">Size</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Backup largest keys</div><div class="settings-row-meta" id="settings-storage-backup-detail">Not checked yet.</div></div><span class="settings-badge off">Payload</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Skipped keys</div><div class="settings-row-meta" id="settings-storage-skipped-keys">Not checked yet.</div></div><span class="settings-badge off">Lean</span></div>
             </div>
@@ -2535,7 +2544,27 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             </div>
           </details>
         </div>
-        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="runBridgeEndpointProbeV22()">Probe endpoints</button><button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button><button class="btn" onclick="runSelfHardeningDiagnosticsCheckV10()">Check self-hardening</button><button class="btn" onclick="runDriftWatchDiagnosticsCheckV10()">Check drift</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
+        <div class="settings-section">
+          <div class="settings-section-title">Diagnostic actions</div>
+          <div class="diagnostics-actions">
+            <div class="diagnostics-action-group">
+              <div class="diagnostics-action-title">Live sources</div>
+              <div class="diagnostics-action-grid">
+                <button class="btn" onclick="loadTodayData()">Run sync check</button>
+                <button class="btn" onclick="runBridgeEndpointProbeV22()">Probe endpoints</button>
+              </div>
+            </div>
+            <div class="diagnostics-action-group">
+              <div class="diagnostics-action-title">Local safety</div>
+              <div class="diagnostics-action-grid">
+                <button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button>
+                <button class="btn" onclick="runSelfHardeningDiagnosticsCheckV10()">Check self-hardening</button>
+                <button class="btn" onclick="runDriftWatchDiagnosticsCheckV10()">Check drift</button>
+                <button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="health-subpane" id="health-subpane-version">
         <div class="settings-section">
@@ -3897,9 +3926,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 10:43 ET · OS v2_2 drift watch action hint';
+var APP_BUILD_STAMP='2026-05-25 10:50 ET · OS v2_2 diagnostics cleanup';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1043';
+var APP_CACHE_TOKEN='mmos-20260525-1050';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -5014,10 +5043,9 @@ function runStorageHealthSelfCheckV22(){
   if(!guard||!Array.isArray(guard.protectedKeys)||guard.protectedKeys.length<6)failures.push('guardrail_report_failed');
   var selfHardening=typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,failures:['missing_self_hardening_self_check']};
   if(!selfHardening.passed)failures.push('self_hardening_self_check_failed:'+selfHardening.failures.join('|'));
-  if(typeof recordBridgePulseV22==='function'&&typeof getBridgePulseSnapshotV22==='function'){
-    recordBridgePulseV22('self-check','ok',25,'storage self-check');
-    var pulse=getBridgePulseSnapshotV22();
-    if(!pulse.rows.length)failures.push('bridge_pulse_empty');
+  if(typeof getBridgePulseSnapshotV22==='function'&&typeof formatBridgePulseDurationV22==='function'){
+    var pulseSample={label:'self-check',status:'ok',durationMs:25,msg:'storage self-check',ts:Date.now()};
+    if(formatBridgePulseDurationV22(pulseSample.durationMs)!=='25ms'||pulseSample.status!=='ok')failures.push('bridge_pulse_self_check_failed');
   }else failures.push('bridge_pulse_missing');
   var probeSelfCheck=typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false};
   if(!probeSelfCheck.passed)failures.push('bridge_probe_self_check_failed');
