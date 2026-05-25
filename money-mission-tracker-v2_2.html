@@ -2485,6 +2485,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Storage Health</div><div class="settings-row-meta" id="settings-storage-health-summary">Open diagnostics to measure browser storage.</div></div><span class="settings-badge off" id="settings-storage-health-badge">Check</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Backup payload</div><div class="settings-row-meta" id="settings-storage-backup-size">Not checked yet.</div></div><span class="settings-badge off">Size</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Storage guardrails</div><div class="settings-row-meta" id="settings-storage-guardrails">Not checked yet.</div></div><span class="settings-badge off" id="settings-storage-guardrails-badge">Safe</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Bridge Pulse</div><div class="settings-row-meta" id="settings-bridge-pulse-summary">Run sync check to measure external data timing.</div></div><span class="settings-badge off" id="settings-bridge-pulse-badge">Pulse</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Self-Hardening</div><div class="settings-row-meta" id="settings-self-hardening-summary">Passive monitor not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-badge">Passive</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Drift Watch</div><div class="settings-row-meta" id="settings-drift-watch-summary">Passive stale-state watch not checked yet.</div></div><span class="settings-badge off" id="settings-drift-watch-badge">Check</span></div>
           </div>
@@ -2505,6 +2506,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <details class="diagnostics-detail">
             <summary><span>Service notes</span><span class="settings-badge off">Details</span></summary>
             <div class="settings-list diagnostics-detail-list">
+              <div class="settings-row"><div><div class="settings-row-name">Bridge timings</div><div class="settings-row-meta" id="settings-bridge-pulse-details">No sync pulse recorded yet.</div></div><span class="settings-badge off" id="settings-bridge-pulse-detail-badge">Timing</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Slow lanes</div><div class="settings-row-meta" id="settings-bridge-pulse-slow">No slow lanes recorded yet.</div></div><span class="settings-badge off" id="settings-bridge-pulse-slow-badge">Clear</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Cycle Archive</div><div class="settings-row-meta">Use the two-click Archive Cycle flow, then confirm Activity Log shows ping, archive, and Notion upsert.</div></div><span class="settings-badge">Ready</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Source of truth</div><div class="settings-row-meta">Activity Log remains the source of truth for backend events.</div></div><span class="settings-badge off">Log</span></div>
             </div>
@@ -3890,9 +3893,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 10:06 ET · OS v2_2 bridge timeout tuning';
+var APP_BUILD_STAMP='2026-05-25 10:11 ET · OS v2_2 bridge pulse diagnostics';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1006';
+var APP_CACHE_TOKEN='mmos-20260525-1011';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -3900,6 +3903,9 @@ var BRIDGE_TIMEOUT_STANDARD_V22=22000;
 var BRIDGE_TIMEOUT_NOTION_V22=26000;
 var BRIDGE_TIMEOUT_HEAVY_V22=30000;
 var BRIDGE_TIMEOUT_SAFELOAD_HEAVY_V22=33000;
+var BRIDGE_PULSE_KEY_V22='a1xx_bridge_pulse_v22';
+var BRIDGE_PULSE_SLOW_MS_V22=10000;
+var BRIDGE_PULSE_REVIEW_MS_V22=25000;
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
 var MISSION_SHEETS_RETRY_KEY='a1xx_mc_sheets_retry_v11';
 var TODOIST_KEY='a1xx_todoist_v1';
@@ -4599,6 +4605,95 @@ function markSyncComplete(){
   renderSystemHealth();
 }
 
+function getBridgePulseLogV22(){
+  try{
+    var raw=sessionStorage.getItem(BRIDGE_PULSE_KEY_V22);
+    var parsed=raw?JSON.parse(raw):[];
+    return Array.isArray(parsed)?parsed:[];
+  }catch(e){return [];}
+}
+
+function saveBridgePulseLogV22(log){
+  var rows=Array.isArray(log)?log.slice(-18):[];
+  try{
+    sessionStorage.setItem(BRIDGE_PULSE_KEY_V22,JSON.stringify(rows));
+  }catch(e){
+    window.__bridgePulseFallbackV22=rows;
+  }
+}
+
+function recordBridgePulseV22(label,status,durationMs,msg){
+  var row={
+    label:String(label||'unknown'),
+    status:status||'ok',
+    durationMs:Math.max(0,Math.round(durationMs||0)),
+    msg:String(msg||'').slice(0,160),
+    ts:Date.now()
+  };
+  var log=getBridgePulseLogV22();
+  log.push(row);
+  saveBridgePulseLogV22(log);
+  if(window.__healthSubTab==='diagnostics')renderBridgePulseDiagnosticsV22();
+  return row;
+}
+
+function formatBridgePulseDurationV22(ms){
+  ms=Math.max(0,Math.round(ms||0));
+  if(ms>=1000)return (ms/1000).toFixed(ms>=10000?0:1)+'s';
+  return ms+'ms';
+}
+
+function getBridgePulseSnapshotV22(){
+  var log=getBridgePulseLogV22();
+  if(!log.length&&Array.isArray(window.__bridgePulseFallbackV22))log=window.__bridgePulseFallbackV22;
+  var latest={};
+  log.forEach(function(row){latest[row.label]=row;});
+  var rows=Object.keys(latest).map(function(label){return latest[label];}).sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+  var slow=rows.filter(function(row){return row.durationMs>=BRIDGE_PULSE_SLOW_MS_V22||row.status==='err';});
+  var review=rows.filter(function(row){return row.durationMs>=BRIDGE_PULSE_REVIEW_MS_V22||row.status==='err';});
+  return {rows:rows,slow:slow,review:review,last:log[log.length-1]||null};
+}
+
+function renderBridgePulseDiagnosticsV22(){
+  var snap=getBridgePulseSnapshotV22();
+  var summary=document.getElementById('settings-bridge-pulse-summary');
+  var badge=document.getElementById('settings-bridge-pulse-badge');
+  var details=document.getElementById('settings-bridge-pulse-details');
+  var detailBadge=document.getElementById('settings-bridge-pulse-detail-badge');
+  var slow=document.getElementById('settings-bridge-pulse-slow');
+  var slowBadge=document.getElementById('settings-bridge-pulse-slow-badge');
+  var rows=snap.rows.slice(0,8);
+  if(summary){
+    if(!rows.length)summary.textContent='Run sync check to measure external data timing.';
+    else if(snap.review.length)summary.textContent='Review. '+snap.review.length+' bridge lane'+(snap.review.length===1?' needs':'s need')+' attention.';
+    else if(snap.slow.length)summary.textContent='Watch. '+snap.slow.length+' bridge lane'+(snap.slow.length===1?' is':'s are')+' slow but responding.';
+    else summary.textContent='Clean. External data lanes are responding inside the safe window.';
+  }
+  if(badge){
+    badge.textContent=!rows.length?'Pulse':snap.review.length?'Review':snap.slow.length?'Watch':'Clean';
+    badge.className='settings-badge '+(!rows.length?'off':(snap.review.length||snap.slow.length?'warn':''));
+  }
+  if(details){
+    details.textContent=rows.length?rows.map(function(row){
+      return row.label+' · '+formatBridgePulseDurationV22(row.durationMs)+' · '+row.status;
+    }).join(' | '):'No sync pulse recorded yet.';
+  }
+  if(detailBadge){
+    detailBadge.textContent=rows.length?String(rows.length):'Timing';
+    detailBadge.className='settings-badge '+(rows.length?'':'off');
+  }
+  if(slow){
+    slow.textContent=snap.slow.length?snap.slow.map(function(row){
+      return row.label+' · '+formatBridgePulseDurationV22(row.durationMs)+(row.msg?' · '+row.msg:'');
+    }).join(' | '):'No slow lanes recorded yet.';
+  }
+  if(slowBadge){
+    slowBadge.textContent=snap.slow.length?String(snap.slow.length):'Clear';
+    slowBadge.className='settings-badge '+(snap.slow.length?'warn':'off');
+  }
+  return snap;
+}
+
 function renderSystemHealth(){
   var h=getHealth();
   // Update topbar dot
@@ -4690,6 +4785,7 @@ function renderStorageHealthDiagnosticsV22(){
       guardBadge.className='settings-badge '+(report.ok?'':'warn');
     }
   }
+  if(typeof renderBridgePulseDiagnosticsV22==='function')renderBridgePulseDiagnosticsV22();
   if(typeof renderSelfHardeningDiagnosticsV10==='function')renderSelfHardeningDiagnosticsV10();
   if(typeof renderDriftWatchDiagnosticsV10==='function')renderDriftWatchDiagnosticsV10();
   return audit;
@@ -4727,6 +4823,11 @@ function runStorageHealthSelfCheckV22(){
   if(!guard||!Array.isArray(guard.protectedKeys)||guard.protectedKeys.length<6)failures.push('guardrail_report_failed');
   var selfHardening=typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,failures:['missing_self_hardening_self_check']};
   if(!selfHardening.passed)failures.push('self_hardening_self_check_failed:'+selfHardening.failures.join('|'));
+  if(typeof recordBridgePulseV22==='function'&&typeof getBridgePulseSnapshotV22==='function'){
+    recordBridgePulseV22('self-check','ok',25,'storage self-check');
+    var pulse=getBridgePulseSnapshotV22();
+    if(!pulse.rows.length)failures.push('bridge_pulse_empty');
+  }else failures.push('bridge_pulse_missing');
   return {pass:failures.length===0,failures:failures,audit:audit};
 }
 
@@ -4806,12 +4907,16 @@ async function getAppsScriptJson(action,params,options){
 }
 
 async function safeLoad(label,loader,fallback,ms){
+  var started=Date.now();
   try{
-    return await Promise.race([
+    var result=await Promise.race([
       Promise.resolve().then(loader),
       new Promise(function(resolve,reject){setTimeout(function(){reject(new Error(label+' timed out'));},ms||14000);})
     ]);
+    if(typeof recordBridgePulseV22==='function')recordBridgePulseV22(label,'ok',Date.now()-started,'loaded');
+    return result;
   }catch(e){
+    if(typeof recordBridgePulseV22==='function')recordBridgePulseV22(label,'err',Date.now()-started,e&&e.message?e.message:String(e));
     console.warn('A1XX load skipped:',label,e);
     try{
       if(typeof mcRecordRuntimeErrorV10==='function')mcRecordRuntimeErrorV10(e,'safeLoad:'+label,{detail:'fallback returned'});
