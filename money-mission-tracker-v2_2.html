@@ -3879,9 +3879,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 09:24 ET · OS v2_2 self-hardening diagnostics control';
+var APP_BUILD_STAMP='2026-05-25 09:27 ET · OS v2_2 self-hardening safe wrapper capture';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-0924';
+var APP_CACHE_TOKEN='mmos-20260525-0927';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4257,6 +4257,9 @@ function runSelfHardeningPhase1SelfCheckV10(){
     mcRecordRuntimeErrorV10(new Error('self check'), 'self_check', {});
     var errors=mcReadJsonV10(MC_RUNTIME_ERROR_LOG_KEY_V10,[]);
     if(!errors.length||errors[0].message!=='self check')failures.push('runtime_log_failed');
+    safeRender('self_hardening_self_check',function(){throw new Error('safe render self check');});
+    errors=mcReadJsonV10(MC_RUNTIME_ERROR_LOG_KEY_V10,[]);
+    if(!errors.some(function(item){return item.source==='safeRender:self_hardening_self_check'&&item.message==='safe render self check';}))failures.push('safe_render_capture_failed');
     mcRecordTurnHealthV10({route:'sync',rawInput:'health',_mcStartedAtV10:Date.now()},'ok',null);
     var health=mcGetTurnHealthV10();
     if(health.turns!==1||health.lastRoute!=='sync')failures.push('turn_health_failed');
@@ -4637,13 +4640,21 @@ async function safeLoad(label,loader,fallback,ms){
     ]);
   }catch(e){
     console.warn('A1XX load skipped:',label,e);
+    try{
+      if(typeof mcRecordRuntimeErrorV10==='function')mcRecordRuntimeErrorV10(e,'safeLoad:'+label,{detail:'fallback returned'});
+    }catch(recordErr){}
     return fallback;
   }
 }
 
 function safeRender(label,fn){
   try{return fn();}
-  catch(e){console.warn('A1XX render skipped:',label,e);}
+  catch(e){
+    console.warn('A1XX render skipped:',label,e);
+    try{
+      if(typeof mcRecordRuntimeErrorV10==='function')mcRecordRuntimeErrorV10(e,'safeRender:'+label,{detail:'render skipped'});
+    }catch(recordErr){}
+  }
 }
 
 function getCycleIdx(){
