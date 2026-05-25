@@ -2512,6 +2512,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <summary><span>Self-hardening details</span><span class="settings-badge off">Details</span></summary>
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Last captured issue</div><div class="settings-row-meta" id="settings-self-hardening-last-error">No issue captured yet.</div></div><span class="settings-badge off">Error</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Recent issues</div><div class="settings-row-meta" id="settings-self-hardening-recent-issues">No recent issues captured.</div></div><span class="settings-badge off" id="settings-self-hardening-recent-badge">0</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Turn monitor</div><div class="settings-row-meta" id="settings-self-hardening-turns">No Mission Command turns recorded yet.</div></div><span class="settings-badge off">Turns</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Last self-check</div><div class="settings-row-meta" id="settings-self-hardening-check">Not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-check-badge">Check</span></div>
             </div>
@@ -3879,9 +3880,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 09:34 ET · OS v2_2 self-hardening operator summary';
+var APP_BUILD_STAMP='2026-05-25 09:39 ET · OS v2_2 self-hardening recent issues';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-0934';
+var APP_CACHE_TOKEN='mmos-20260525-0939';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4212,7 +4213,15 @@ function mcGetSelfHardeningSummaryV10(){
   var health=mcGetTurnHealthV10();
   var errors=mcReadJsonV10(MC_RUNTIME_ERROR_LOG_KEY_V10,[]);
   var last=errors&&errors.length?errors[errors.length-1]:health.lastError;
-  return {phase:MC_SELF_HARDENING_PHASE_V10,turns:health.turns||0,errors:Math.max(health.errors||0,errors?errors.length:0),fallbacks:health.fallbacks||0,lastRoute:health.lastRoute||'',lastTurnAt:health.lastTurnAt||'',lastError:last||null};
+  return {phase:MC_SELF_HARDENING_PHASE_V10,turns:health.turns||0,errors:Math.max(health.errors||0,errors?errors.length:0),fallbacks:health.fallbacks||0,lastRoute:health.lastRoute||'',lastTurnAt:health.lastTurnAt||'',lastError:last||null,recentErrors:(errors||[]).slice(-5).reverse()};
+}
+function mcFormatRecentIssuesV10(items){
+  if(!items||!items.length)return 'No recent issues captured.';
+  return items.map(function(item){
+    var when=item.ts?new Date(item.ts).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'time unknown';
+    var build=item.build?(' · '+item.build):'';
+    return when+' · '+(item.source||'runtime')+' · '+(item.message||'unknown issue')+build;
+  }).join(' | ');
 }
 function renderSelfHardeningDiagnosticsV10(){
   try{
@@ -4220,6 +4229,8 @@ function renderSelfHardeningDiagnosticsV10(){
     var row=document.getElementById('settings-self-hardening-summary');
     var badge=document.getElementById('settings-self-hardening-badge');
     var last=document.getElementById('settings-self-hardening-last-error');
+    var recent=document.getElementById('settings-self-hardening-recent-issues');
+    var recentBadge=document.getElementById('settings-self-hardening-recent-badge');
     var turns=document.getElementById('settings-self-hardening-turns');
     if(row){
       if(summary.errors)row.textContent='Review needed. '+summary.errors+' issue'+(summary.errors===1?'':'s')+' captured; open details before changing data.';
@@ -4231,6 +4242,11 @@ function renderSelfHardeningDiagnosticsV10(){
       badge.className='settings-badge '+(summary.errors?'warn':'off');
     }
     if(last)last.textContent=summary.lastError?('Review '+summary.lastError.source+' · '+summary.lastError.message+' · '+summary.lastError.ts):'Clean. No captured issue since this browser state loaded.';
+    if(recent)recent.textContent=mcFormatRecentIssuesV10(summary.recentErrors);
+    if(recentBadge){
+      recentBadge.textContent=summary.recentErrors&&summary.recentErrors.length?String(summary.recentErrors.length):'0';
+      recentBadge.className='settings-badge '+(summary.recentErrors&&summary.recentErrors.length?'warn':'off');
+    }
     if(turns)turns.textContent=summary.lastTurnAt?('Watching '+summary.turns+' turn'+(summary.turns===1?'':'s')+' · last route '+(summary.lastRoute||'unknown')+' · '+summary.fallbacks+' fallback'+(summary.fallbacks===1?'':'s')):'No Mission Command turns recorded yet.';
   }catch(e){}
 }
