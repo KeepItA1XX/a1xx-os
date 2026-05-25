@@ -2486,6 +2486,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Backup payload</div><div class="settings-row-meta" id="settings-storage-backup-size">Not checked yet.</div></div><span class="settings-badge off">Size</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Storage guardrails</div><div class="settings-row-meta" id="settings-storage-guardrails">Not checked yet.</div></div><span class="settings-badge off" id="settings-storage-guardrails-badge">Safe</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Bridge Pulse</div><div class="settings-row-meta" id="settings-bridge-pulse-summary">Run sync check to measure external data timing.</div></div><span class="settings-badge off" id="settings-bridge-pulse-badge">Pulse</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Endpoint Probe</div><div class="settings-row-meta" id="settings-bridge-probe-summary">Run endpoint probe when one source keeps failing.</div></div><span class="settings-badge off" id="settings-bridge-probe-badge">Probe</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Self-Hardening</div><div class="settings-row-meta" id="settings-self-hardening-summary">Passive monitor not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-badge">Passive</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Drift Watch</div><div class="settings-row-meta" id="settings-drift-watch-summary">Passive stale-state watch not checked yet.</div></div><span class="settings-badge off" id="settings-drift-watch-badge">Check</span></div>
           </div>
@@ -2508,6 +2509,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Bridge timings</div><div class="settings-row-meta" id="settings-bridge-pulse-details">No sync pulse recorded yet.</div></div><span class="settings-badge off" id="settings-bridge-pulse-detail-badge">Timing</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Slow lanes</div><div class="settings-row-meta" id="settings-bridge-pulse-slow">No slow lanes recorded yet.</div></div><span class="settings-badge off" id="settings-bridge-pulse-slow-badge">Clear</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Endpoint results</div><div class="settings-row-meta" id="settings-bridge-probe-details">No endpoint probe run yet.</div></div><span class="settings-badge off" id="settings-bridge-probe-detail-badge">Actions</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Cycle Archive</div><div class="settings-row-meta">Use the two-click Archive Cycle flow, then confirm Activity Log shows ping, archive, and Notion upsert.</div></div><span class="settings-badge">Ready</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Source of truth</div><div class="settings-row-meta">Activity Log remains the source of truth for backend events.</div></div><span class="settings-badge off">Log</span></div>
             </div>
@@ -2531,7 +2533,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             </div>
           </details>
         </div>
-        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button><button class="btn" onclick="runSelfHardeningDiagnosticsCheckV10()">Check self-hardening</button><button class="btn" onclick="runDriftWatchDiagnosticsCheckV10()">Check drift</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
+        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="runBridgeEndpointProbeV22()">Probe endpoints</button><button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button><button class="btn" onclick="runSelfHardeningDiagnosticsCheckV10()">Check self-hardening</button><button class="btn" onclick="runDriftWatchDiagnosticsCheckV10()">Check drift</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
       </div>
       <div class="health-subpane" id="health-subpane-version">
         <div class="settings-section">
@@ -3893,9 +3895,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 10:11 ET · OS v2_2 bridge pulse diagnostics';
+var APP_BUILD_STAMP='2026-05-25 10:15 ET · OS v2_2 bridge endpoint probe';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1011';
+var APP_CACHE_TOKEN='mmos-20260525-1015';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -3906,6 +3908,7 @@ var BRIDGE_TIMEOUT_SAFELOAD_HEAVY_V22=33000;
 var BRIDGE_PULSE_KEY_V22='a1xx_bridge_pulse_v22';
 var BRIDGE_PULSE_SLOW_MS_V22=10000;
 var BRIDGE_PULSE_REVIEW_MS_V22=25000;
+var BRIDGE_ENDPOINT_PROBE_KEY_V22='a1xx_bridge_endpoint_probe_v22';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
 var MISSION_SHEETS_RETRY_KEY='a1xx_mc_sheets_retry_v11';
 var TODOIST_KEY='a1xx_todoist_v1';
@@ -4694,6 +4697,128 @@ function renderBridgePulseDiagnosticsV22(){
   return snap;
 }
 
+function getBridgeEndpointProbeLogV22(){
+  try{
+    var raw=sessionStorage.getItem(BRIDGE_ENDPOINT_PROBE_KEY_V22);
+    var parsed=raw?JSON.parse(raw):null;
+    return parsed&&Array.isArray(parsed.rows)?parsed:{rows:[],checkedAt:null};
+  }catch(e){return {rows:[],checkedAt:null};}
+}
+
+function saveBridgeEndpointProbeLogV22(result){
+  var safe={
+    checkedAt:result&&result.checkedAt?result.checkedAt:Date.now(),
+    rows:Array.isArray(result&&result.rows)?result.rows.slice(0,12):[]
+  };
+  try{
+    sessionStorage.setItem(BRIDGE_ENDPOINT_PROBE_KEY_V22,JSON.stringify(safe));
+  }catch(e){
+    window.__bridgeEndpointProbeFallbackV22=safe;
+  }
+  return safe;
+}
+
+function getBridgeEndpointProbeTargetsV22(){
+  return [
+    {label:'Health',action:'health',timeoutMs:BRIDGE_TIMEOUT_STANDARD_V22},
+    {label:'Content pipeline',action:'content_pipeline',params:{databaseId:NOTION_CONTENT_DB},timeoutMs:BRIDGE_TIMEOUT_NOTION_V22},
+    {label:'Production pipeline',action:'production_pipeline',params:{databaseId:NOTION_PRODUCTION_DB},timeoutMs:BRIDGE_TIMEOUT_HEAVY_V22},
+    {label:'Resources',action:'resources',timeoutMs:BRIDGE_TIMEOUT_HEAVY_V22},
+    {label:'CRM leads',action:'crm_leads',timeoutMs:BRIDGE_TIMEOUT_NOTION_V22},
+    {label:'Calendar',action:'calendar',timeoutMs:BRIDGE_TIMEOUT_HEAVY_V22}
+  ];
+}
+
+function summarizeBridgeEndpointPayloadV22(data){
+  if(!data)return 'no data';
+  if(data.status==='error')return data.message||'Apps Script returned error';
+  if(data.message&&String(data.message).indexOf('Backend is live')>=0)return 'handler missing';
+  if(Array.isArray(data))return data.length+' row(s)';
+  if(Array.isArray(data.items))return data.items.length+' item(s)';
+  if(Array.isArray(data.events))return data.events.length+' event(s)';
+  if(Array.isArray(data.rows))return data.rows.length+' row(s)';
+  if(data.health)return 'health ok';
+  if(data.status==='ok')return 'ok';
+  return 'responded';
+}
+
+function classifyBridgeEndpointProbeRowV22(row){
+  if(!row||row.status==='err')return 'review';
+  if(/handler missing|returned error/i.test(row.summary||''))return 'review';
+  if((row.durationMs||0)>=BRIDGE_PULSE_REVIEW_MS_V22)return 'review';
+  if((row.durationMs||0)>=BRIDGE_PULSE_SLOW_MS_V22)return 'watch';
+  return 'ok';
+}
+
+function renderBridgeEndpointProbeDiagnosticsV22(){
+  var saved=getBridgeEndpointProbeLogV22();
+  if(!saved.rows.length&&window.__bridgeEndpointProbeFallbackV22)saved=window.__bridgeEndpointProbeFallbackV22;
+  var rows=saved.rows||[];
+  var summary=document.getElementById('settings-bridge-probe-summary');
+  var badge=document.getElementById('settings-bridge-probe-badge');
+  var details=document.getElementById('settings-bridge-probe-details');
+  var detailBadge=document.getElementById('settings-bridge-probe-detail-badge');
+  var reviews=rows.filter(function(row){return classifyBridgeEndpointProbeRowV22(row)==='review';});
+  var watches=rows.filter(function(row){return classifyBridgeEndpointProbeRowV22(row)==='watch';});
+  if(summary){
+    if(!rows.length)summary.textContent='Run endpoint probe when one source keeps failing.';
+    else if(reviews.length)summary.textContent='Review. '+reviews.length+' endpoint'+(reviews.length===1?' needs':'s need')+' attention.';
+    else if(watches.length)summary.textContent='Watch. '+watches.length+' endpoint'+(watches.length===1?' is':'s are')+' slow but responding.';
+    else summary.textContent='Clean. All probed bridge actions responded.';
+  }
+  if(badge){
+    badge.textContent=!rows.length?'Probe':reviews.length?'Review':watches.length?'Watch':'Clean';
+    badge.className='settings-badge '+(!rows.length?'off':(reviews.length||watches.length?'warn':''));
+  }
+  if(details){
+    details.textContent=rows.length?rows.map(function(row){
+      return row.label+' · '+formatBridgePulseDurationV22(row.durationMs)+' · '+row.summary;
+    }).join(' | '):'No endpoint probe run yet.';
+  }
+  if(detailBadge){
+    detailBadge.textContent=rows.length?String(rows.length):'Actions';
+    detailBadge.className='settings-badge '+(rows.length?'':'off');
+  }
+  return {rows:rows,reviews:reviews,watches:watches,checkedAt:saved.checkedAt};
+}
+
+async function runBridgeEndpointProbeV22(){
+  var summary=document.getElementById('settings-bridge-probe-summary');
+  var badge=document.getElementById('settings-bridge-probe-badge');
+  if(summary)summary.textContent='Probing bridge actions one at a time...';
+  if(badge){badge.textContent='Running';badge.className='settings-badge warn';}
+  var rows=[];
+  var targets=getBridgeEndpointProbeTargetsV22();
+  for(var i=0;i<targets.length;i++){
+    var target=targets[i];
+    var started=Date.now();
+    try{
+      var data=await getAppsScriptJson(target.action,target.params||{},{timeoutMs:target.timeoutMs||BRIDGE_TIMEOUT_STANDARD_V22,tries:1});
+      var summaryText=summarizeBridgeEndpointPayloadV22(data);
+      var status=/handler missing|returned error/i.test(summaryText)?'err':'ok';
+      var duration=Date.now()-started;
+      rows.push({label:target.label,action:target.action,status:status,durationMs:duration,summary:summaryText});
+      if(typeof recordBridgePulseV22==='function')recordBridgePulseV22('probe:'+target.label,status,duration,summaryText);
+    }catch(e){
+      var msg=e&&e.message?e.message:String(e);
+      var durationErr=Date.now()-started;
+      rows.push({label:target.label,action:target.action,status:'err',durationMs:durationErr,summary:msg.slice(0,160)});
+      if(typeof recordBridgePulseV22==='function')recordBridgePulseV22('probe:'+target.label,'err',durationErr,msg);
+    }
+  }
+  saveBridgeEndpointProbeLogV22({checkedAt:Date.now(),rows:rows});
+  return renderBridgeEndpointProbeDiagnosticsV22();
+}
+
+function runBridgeEndpointProbeSelfCheckV22(){
+  var sample={checkedAt:Date.now(),rows:[
+    {label:'Health',action:'health',status:'ok',durationMs:120,summary:'health ok'},
+    {label:'Calendar',action:'calendar',status:'err',durationMs:30000,summary:'Request timed out after 30 seconds.'}
+  ]};
+  var reviews=sample.rows.filter(function(row){return classifyBridgeEndpointProbeRowV22(row)==='review';});
+  return {passed:!!(sample.rows.length===2&&reviews.length===1),rows:sample.rows};
+}
+
 function renderSystemHealth(){
   var h=getHealth();
   // Update topbar dot
@@ -4786,6 +4911,7 @@ function renderStorageHealthDiagnosticsV22(){
     }
   }
   if(typeof renderBridgePulseDiagnosticsV22==='function')renderBridgePulseDiagnosticsV22();
+  if(typeof renderBridgeEndpointProbeDiagnosticsV22==='function')renderBridgeEndpointProbeDiagnosticsV22();
   if(typeof renderSelfHardeningDiagnosticsV10==='function')renderSelfHardeningDiagnosticsV10();
   if(typeof renderDriftWatchDiagnosticsV10==='function')renderDriftWatchDiagnosticsV10();
   return audit;
@@ -4828,6 +4954,8 @@ function runStorageHealthSelfCheckV22(){
     var pulse=getBridgePulseSnapshotV22();
     if(!pulse.rows.length)failures.push('bridge_pulse_empty');
   }else failures.push('bridge_pulse_missing');
+  var probeSelfCheck=typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false};
+  if(!probeSelfCheck.passed)failures.push('bridge_probe_self_check_failed');
   return {pass:failures.length===0,failures:failures,audit:audit};
 }
 
