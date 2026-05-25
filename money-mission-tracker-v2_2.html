@@ -278,6 +278,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .settings-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:#090b0d;border:0.5px solid #181e24;border-radius:8px;padding:8px 9px}
 .settings-row-name{font-size:11px;font-weight:700;color:#d7dde3}
 .settings-row-meta{font-size:10px;color:#68727c;line-height:1.4;margin-top:2px;word-break:break-word}
+.diagnostics-detail{background:#090b0d;border:0;border-radius:8px;margin-top:7px}
+.diagnostics-detail summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9px;font-size:11px;font-weight:800;color:#d7dde3}
+.diagnostics-detail summary::-webkit-details-marker{display:none}
+.diagnostics-detail summary:after{content:'+';font-size:13px;color:#68727c;margin-left:auto}
+.diagnostics-detail[open] summary:after{content:'-';color:#7ec845}
+.diagnostics-detail-list{padding:0 0 8px}
+.diagnostics-detail-list .settings-row{margin:0 8px 6px}
 .settings-field{margin-bottom:9px}
 .settings-field label{display:block;font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:5px}
 .settings-field input{width:100%;height:34px;background:#080a0c;border:0.5px solid #2a3036;border-radius:8px;color:#f0f3f5;font-size:12px;font-weight:700;padding:0 10px;outline:none}
@@ -2474,13 +2481,32 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
         <div class="settings-section">
           <div class="settings-section-title">Diagnostics</div>
           <div class="settings-list" id="settings-diagnostics-list">
-            <div class="settings-row"><div><div class="settings-row-name">Recent checks</div><div class="settings-row-meta">Run sync check to refresh live services. Activity Log remains the source of truth for backend events.</div></div><span class="settings-badge warn">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Cycle Archive</div><div class="settings-row-meta">Use the two-click Archive Cycle flow, then confirm Activity Log shows ping, archive, and Notion upsert.</div></div><span class="settings-badge">Ready</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Recent checks</div><div class="settings-row-meta">Run sync check when live data feels stale.</div></div><span class="settings-badge warn">Review</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Storage Health</div><div class="settings-row-meta" id="settings-storage-health-summary">Open diagnostics to measure browser storage.</div></div><span class="settings-badge off" id="settings-storage-health-badge">Check</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Largest local keys</div><div class="settings-row-meta" id="settings-storage-top-keys">Not checked yet.</div></div><span class="settings-badge off">Audit</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Backup payload</div><div class="settings-row-meta" id="settings-storage-backup-size">Not checked yet.</div></div><span class="settings-badge off">Size</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Storage guardrails</div><div class="settings-row-meta" id="settings-storage-guardrails">Not checked yet.</div></div><span class="settings-badge off" id="settings-storage-guardrails-badge">Safe</span></div>
           </div>
+          <details class="diagnostics-detail">
+            <summary><span>Storage details</span><span class="settings-badge off">Details</span></summary>
+            <div class="settings-list diagnostics-detail-list">
+              <div class="settings-row"><div><div class="settings-row-name">Storage counts</div><div class="settings-row-meta" id="settings-storage-health-detail">Not checked yet.</div></div><span class="settings-badge off">Counts</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Largest local keys</div><div class="settings-row-meta" id="settings-storage-top-keys">Not checked yet.</div></div><span class="settings-badge off">Audit</span></div>
+            </div>
+          </details>
+          <details class="diagnostics-detail">
+            <summary><span>Backup details</span><span class="settings-badge off">Details</span></summary>
+            <div class="settings-list diagnostics-detail-list">
+              <div class="settings-row"><div><div class="settings-row-name">Backup largest keys</div><div class="settings-row-meta" id="settings-storage-backup-detail">Not checked yet.</div></div><span class="settings-badge off">Payload</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Skipped keys</div><div class="settings-row-meta" id="settings-storage-skipped-keys">Not checked yet.</div></div><span class="settings-badge off">Lean</span></div>
+            </div>
+          </details>
+          <details class="diagnostics-detail">
+            <summary><span>Service notes</span><span class="settings-badge off">Details</span></summary>
+            <div class="settings-list diagnostics-detail-list">
+              <div class="settings-row"><div><div class="settings-row-name">Cycle Archive</div><div class="settings-row-meta">Use the two-click Archive Cycle flow, then confirm Activity Log shows ping, archive, and Notion upsert.</div></div><span class="settings-badge">Ready</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Source of truth</div><div class="settings-row-meta">Activity Log remains the source of truth for backend events.</div></div><span class="settings-badge off">Log</span></div>
+            </div>
+          </details>
         </div>
         <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
       </div>
@@ -3844,9 +3870,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 21:50 ET · OS v2_2 lean backup payload';
+var APP_BUILD_STAMP='2026-05-24 22:01 ET · OS v2_2 diagnostics collapse';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-2150';
+var APP_CACHE_TOKEN='mmos-20260524-2201';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4301,9 +4327,12 @@ function renderSystemHealth(){
 
 function renderStorageHealthDiagnosticsV22(){
   var summary=document.getElementById('settings-storage-health-summary');
+  var summaryDetail=document.getElementById('settings-storage-health-detail');
   var badge=document.getElementById('settings-storage-health-badge');
   var top=document.getElementById('settings-storage-top-keys');
   var backup=document.getElementById('settings-storage-backup-size');
+  var backupDetail=document.getElementById('settings-storage-backup-detail');
+  var skippedKeys=document.getElementById('settings-storage-skipped-keys');
   var guard=document.getElementById('settings-storage-guardrails');
   var guardBadge=document.getElementById('settings-storage-guardrails-badge');
   var audit=getStorageHealthSnapshotV22();
@@ -4313,7 +4342,8 @@ function renderStorageHealthDiagnosticsV22(){
     audit=getStorageHealthSnapshotV22();
   }
   var checkedLabel=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
-  if(summary)summary.textContent='Checked '+checkedLabel+' · Local '+audit.local.totalKB+'KB across '+audit.local.count+' keys · Session '+audit.session.totalKB+'KB across '+audit.session.count+' keys · '+audit.percent+'% of 5MB budget.';
+  if(summary)summary.textContent='Checked '+checkedLabel+' · '+audit.percent+'% of 5MB budget.';
+  if(summaryDetail)summaryDetail.textContent='Local '+audit.local.totalKB+'KB across '+audit.local.count+' keys · Session '+audit.session.totalKB+'KB across '+audit.session.count+' keys.';
   if(top)top.textContent=(compacted&&compacted.ok?'Compacted chat storage. ':'')+formatStorageTopKeysV22(audit.local.top);
   if(badge){
     badge.textContent=audit.label;
@@ -4322,11 +4352,13 @@ function renderStorageHealthDiagnosticsV22(){
   if(backup){
     var backupBuild=buildBackupPayloadV22();
     var payloadAudit=getBackupPayloadAuditV22(backupBuild.payload);
-    backup.textContent='Lean backup estimate: '+payloadAudit.totalKB+'KB across '+payloadAudit.count+' keys. Skips '+backupBuild.skipped.length+' transient/rebuildable keys. Largest: '+formatStorageTopKeysV22(payloadAudit.top);
+    backup.textContent='Lean backup: '+payloadAudit.totalKB+'KB across '+payloadAudit.count+' keys · skips '+backupBuild.skipped.length+' transient keys.';
+    if(backupDetail)backupDetail.textContent='Largest: '+formatStorageTopKeysV22(payloadAudit.top);
+    if(skippedKeys)skippedKeys.textContent=backupBuild.skipped.length?backupBuild.skipped.join(' | '):'No transient keys skipped in this browser.';
   }
   if(guard||guardBadge){
     var report=getStorageGuardrailReportV22();
-    if(guard)guard.textContent='Protected setup keys: '+report.protectedKeys.length+' watched · '+report.present.length+' currently set · reset/compaction preserve map active.';
+    if(guard)guard.textContent='Protected keys: '+report.present.length+' of '+report.protectedKeys.length+' set · preserve map active.';
     if(guardBadge){
       guardBadge.textContent=report.ok?'Protected':'Review';
       guardBadge.className='settings-badge '+(report.ok?'':'warn');
