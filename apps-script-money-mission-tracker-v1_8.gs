@@ -147,6 +147,11 @@ function doPost(e) {
       logActivity('Backup saved — ' + (data.keyCount || '?') + ' keys — ' + (data.size || '?') + ' chars');
       return ok('Backup saved.');
     }
+    if (data.type === 'backup_chunk_save') {
+      saveBackupChunkV18(data);
+      logActivity('Backup chunk saved — ' + ((Number(data.part) || 0) + 1) + '/' + (data.total || '?') + ' — ' + (data.backupMarkerId || 'no marker'));
+      return ok('Backup chunk saved.');
+    }
     if (data.type === 'daily_save') {
       var row = saveDailySnapshot(data);
       var notionDaily = syncDailyDpcToNotion(row, data);
@@ -1053,7 +1058,7 @@ function saveBackup(d) {
       json = JSON.stringify(parsed);
     } catch (err) {}
   }
-  var savedAt = new Date().toISOString();
+  var savedAt = d.savedAt || new Date().toISOString();
   var markerId = marker && marker.id ? String(marker.id) : ('backup_' + Date.now());
   if (json.length > 45000) {
     var chunkSize = 39000;
@@ -1086,6 +1091,29 @@ function parseBackupChunkV18(payload) {
   } catch (err) {
     return null;
   }
+}
+
+function saveBackupChunkV18(d) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
+  var marker = d.backupMarker || null;
+  var markerId = d.backupMarkerId || (marker && marker.id) || ('backup_' + Date.now());
+  var part = Math.max(0, Number(d.part) || 0);
+  var total = Math.max(1, Number(d.total) || 1);
+  var savedAt = d.savedAt || new Date().toISOString();
+  var envelope = {
+    __mmos_backup_chunk_v22: {
+      backupId: markerId,
+      part: part,
+      total: total,
+      marker: marker || null,
+      savedAt: savedAt,
+      build: d.build || ''
+    },
+    data: String(d.chunk || '')
+  };
+  sheet.appendRow([savedAt, d.keyCount || 0, d.size || String(d.chunk || '').length, JSON.stringify(envelope)]);
+  if (part + 1 === total) logActivity('Backup marker saved — ' + markerId + ' — chunked rows ending ' + sheet.getLastRow());
 }
 
 function extractBackupMarkerV18(payload) {
