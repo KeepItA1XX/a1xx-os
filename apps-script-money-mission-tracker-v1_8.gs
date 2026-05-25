@@ -154,9 +154,10 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'backup_save') {
-      saveBackup(data);
+      var backupResult = saveBackup(data);
       logActivity('Backup saved — ' + (data.keyCount || '?') + ' keys — ' + (data.size || '?') + ' chars');
-      return ok('Backup saved.');
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', message: 'Backup saved.', backup: backupResult }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'backup_chunk_save') {
       saveBackupChunkV18(data);
@@ -226,6 +227,7 @@ function doGet(e) {
     if (e.parameter.action === 'rolodex_search')      return searchRolodex(e);
     if (e.parameter.action === 'skool_community')     return getSkoolCommunity(e);
     if (e.parameter.action === 'get_backup')          return getBackup(e);
+    if (e.parameter.action === 'backup_status')       return getBackupStatusV18(e);
     if (e.parameter.action === 'backup_get_probe')    return getBackupWriteProbeV18(e);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -1060,7 +1062,6 @@ function archiveCycle(d) {
 
 function saveBackup(d) {
   var ss = getMoneyMissionSpreadsheet();
-  var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
   var json = d.payload || '{}';
   var marker = d.backupMarker || null;
   if (marker && !extractBackupMarkerV18(json)) {
@@ -1072,28 +1073,93 @@ function saveBackup(d) {
   }
   var savedAt = d.savedAt || new Date().toISOString();
   var markerId = marker && marker.id ? String(marker.id) : ('backup_' + Date.now());
-  if (json.length > 45000) {
-    var chunkSize = 39000;
-    var total = Math.ceil(json.length / chunkSize);
-    for (var i = 0; i < total; i++) {
-      var envelope = {
-        __mmos_backup_chunk_v22: {
-          backupId: markerId,
-          part: i,
-          total: total,
-          marker: marker || null,
-          savedAt: savedAt,
-          build: d.build || ''
-        },
-        data: json.slice(i * chunkSize, (i + 1) * chunkSize)
-      };
-      sheet.appendRow([savedAt, d.keyCount || 0, json.length, JSON.stringify(envelope)]);
-    }
-  } else {
-    sheet.appendRow([savedAt, d.keyCount || 0, json.length, json]);
+  var savedMarker = extractBackupMarkerV18(json) || marker || { id: markerId };
+  var driveFile = writeBackupPayloadToDriveV18(json, markerId, savedAt, {
+    build: d.build || '',
+    keyCount: d.keyCount || 0,
+    size: json.length,
+    marker: savedMarker
+  });
+  var status = isBackupProbePayloadV18(json) ? 'probe' : 'drive_archived';
+  var indexRow = '';
+  var indexStatus = 'indexed';
+  var indexError = '';
+  try {
+    var sheet = getBackupIndexSheetV18(ss);
+    sheet.appendRow([
+      savedAt,
+      d.keyCount || 0,
+      json.length,
+      'DRIVE_BACKUP_INDEX',
+      markerId,
+      driveFile.id,
+      driveFile.url,
+      d.build || '',
+      status,
+      'Payload stored in Drive. Sheet row is index only.'
+    ]);
+    indexRow = sheet.getLastRow();
+  } catch (err) {
+    indexStatus = 'drive_only';
+    indexError = err.toString();
   }
-  var savedMarker = extractBackupMarkerV18(json);
-  if (savedMarker && savedMarker.id) logActivity('Backup marker saved — ' + savedMarker.id + ' — row ' + sheet.getLastRow());
+  if (savedMarker && savedMarker.id) logActivity('Drive backup marker saved — ' + savedMarker.id + ' — file ' + driveFile.id + ' — index row ' + (indexRow || 'not written'));
+  return { marker: savedMarker, driveFileId: driveFile.id, driveUrl: driveFile.url, row: indexRow, indexStatus: indexStatus, indexError: indexError };
+}
+
+function getBackupIndexHeadersV18() {
+  return ['Saved At', 'Key Count', 'Size (chars)', 'Data', 'Backup ID', 'Drive File ID', 'Drive URL', 'Build', 'Status', 'Notes'];
+}
+
+function getBackupIndexSheetV18(ss) {
+  var headers = getBackupIndexHeadersV18();
+  var sheet = getOrCreateSheet(ss, SHEET_BACKUP, headers);
+  if (sheet.getMaxColumns() < headers.length) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), headers.length - sheet.getMaxColumns());
+  }
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#1a2910').setFontColor('#7ec845');
+  sheet.setFrozenRows(1);
+  return sheet;
+}
+
+function getBackupFolderV18() {
+  var props = PropertiesService.getScriptProperties();
+  var folderId = String(props.getProperty('A1XX_BACKUP_FOLDER_ID') || '').trim();
+  if (folderId) {
+    try {
+      return DriveApp.getFolderById(folderId);
+    } catch (err) {
+      props.deleteProperty('A1XX_BACKUP_FOLDER_ID');
+    }
+  }
+  var name = 'Money Mission OS Backups';
+  var folders = DriveApp.getFoldersByName(name);
+  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
+  props.setProperty('A1XX_BACKUP_FOLDER_ID', folder.getId());
+  return folder;
+}
+
+function makeBackupFileNameV18(markerId, savedAt) {
+  var stamp = String(savedAt || new Date().toISOString()).replace(/[^0-9A-Za-z_-]/g, '').slice(0, 32);
+  var cleanMarker = String(markerId || ('backup_' + Date.now())).replace(/[^0-9A-Za-z_-]/g, '').slice(0, 120);
+  return 'mmos-backup-' + cleanMarker + '-' + stamp + '.json';
+}
+
+function writeBackupPayloadToDriveV18(json, markerId, savedAt, meta) {
+  var folder = getBackupFolderV18();
+  var fileName = makeBackupFileNameV18(markerId, savedAt);
+  var file = folder.createFile(fileName, String(json || '{}'), MimeType.PLAIN_TEXT);
+  try {
+    file.setDescription(JSON.stringify({
+      markerId: markerId,
+      savedAt: savedAt,
+      build: meta && meta.build || '',
+      keyCount: meta && meta.keyCount || 0,
+      size: meta && meta.size || String(json || '').length
+    }));
+  } catch (err) {}
+  return { id: file.getId(), url: file.getUrl(), name: fileName };
 }
 
 function parseBackupChunkV18(payload) {
@@ -1116,7 +1182,6 @@ function isBackupProbePayloadV18(payload) {
 
 function saveBackupChunkV18(d) {
   var ss = getMoneyMissionSpreadsheet();
-  var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
   var marker = d.backupMarker || null;
   var markerId = d.backupMarkerId || (marker && marker.id) || ('backup_' + Date.now());
   var part = Math.max(0, Number(d.part) || 0);
@@ -1133,8 +1198,30 @@ function saveBackupChunkV18(d) {
     },
     data: String(d.chunk || '')
   };
-  sheet.appendRow([savedAt, d.keyCount || 0, d.size || String(d.chunk || '').length, JSON.stringify(envelope)]);
-  if (part + 1 === total) logActivity('Backup marker saved — ' + markerId + ' — chunked rows ending ' + sheet.getLastRow());
+  var driveFile = writeBackupPayloadToDriveV18(JSON.stringify(envelope), markerId + '_part_' + part, savedAt, {
+    build: d.build || '',
+    keyCount: d.keyCount || 0,
+    size: d.size || String(d.chunk || '').length,
+    marker: marker || null
+  });
+  var rowNumber = '';
+  try {
+    var sheet = getBackupIndexSheetV18(ss);
+    sheet.appendRow([
+      savedAt,
+      d.keyCount || 0,
+      d.size || String(d.chunk || '').length,
+      'DRIVE_BACKUP_LEGACY_CHUNK',
+      markerId,
+      driveFile.id,
+      driveFile.url,
+      d.build || '',
+      'legacy_chunk_archived',
+      'Legacy chunk stored in Drive to prevent Sheet bloat. Update frontend to backup_save for full restore.'
+    ]);
+    rowNumber = sheet.getLastRow();
+  } catch (err) {}
+  if (part + 1 === total) logActivity('Backup marker saved — ' + markerId + ' — legacy chunks stored in Drive ending row ' + (rowNumber || 'not written'));
 }
 
 function extractBackupMarkerV18(payload) {
@@ -1162,6 +1249,37 @@ function makeBackupResponseV18(row, rowNumber, marker, markerSearch, payloadOver
   };
 }
 
+function isDriveBackupIndexRowV18(row) {
+  return String(row[3] || '').indexOf('DRIVE_BACKUP_') === 0 && String(row[5] || '');
+}
+
+function loadDriveBackupPayloadV18(fileId) {
+  return DriveApp.getFileById(String(fileId || '')).getBlob().getDataAsString();
+}
+
+function makeDriveBackupResponseV18(row, rowNumber, markerSearch) {
+  var payload = loadDriveBackupPayloadV18(row[5]);
+  var marker = extractBackupMarkerV18(payload);
+  return {
+    status: 'ok',
+    storage: 'drive',
+    markerSearch: markerSearch || '',
+    matchedRow: rowNumber || '',
+    marker: marker || null,
+    backup: {
+      savedAt: row[0],
+      keyCount: row[1],
+      size: row[2],
+      payload: payload,
+      backupId: row[4] || '',
+      driveFileId: row[5] || '',
+      driveUrl: row[6] || '',
+      build: row[7] || '',
+      indexStatus: row[8] || ''
+    }
+  };
+}
+
 function reconstructBackupFromRowsV18(values, start, backupId) {
   var chunks = [];
   var lastRow = 0;
@@ -1183,9 +1301,17 @@ function reconstructBackupFromRowsV18(values, start, backupId) {
 function makeLatestBackupResponseV18(sheet) {
   var lastRow = sheet.getLastRow();
   var scanStart = Math.max(2, lastRow - 249);
-  var values = sheet.getRange(scanStart, 1, lastRow - scanStart + 1, 4).getValues();
+  var values = sheet.getRange(scanStart, 1, lastRow - scanStart + 1, Math.min(sheet.getLastColumn(), 10)).getValues();
   for (var i = values.length - 1; i >= 0; i--) {
     var latest = values[i];
+    if (isDriveBackupIndexRowV18(latest)) {
+      if (String(latest[8] || '') === 'probe') continue;
+      try {
+        return makeDriveBackupResponseV18(latest, scanStart + i, 'latest_drive');
+      } catch (err) {
+        continue;
+      }
+    }
     if (isBackupProbePayloadV18(latest[3])) continue;
     var chunk = parseBackupChunkV18(latest[3]);
     if (chunk && chunk.__mmos_backup_chunk_v22) {
@@ -1209,8 +1335,12 @@ function getBackup(e) {
   var lastRow = sheet.getLastRow();
   if (markerId) {
     var start = Math.max(2, lastRow - 249);
-    var values = sheet.getRange(start, 1, lastRow - start + 1, 4).getValues();
+    var values = sheet.getRange(start, 1, lastRow - start + 1, Math.min(sheet.getLastColumn(), 10)).getValues();
     for (var i = values.length - 1; i >= 0; i--) {
+      if (isDriveBackupIndexRowV18(values[i]) && String(values[i][4] || '') === markerId) {
+        return ContentService.createTextOutput(JSON.stringify(makeDriveBackupResponseV18(values[i], start + i, 'matched_drive')))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       var payload = String(values[i][3] || '');
       if (payload.indexOf(markerId) === -1) continue;
       var chunk = parseBackupChunkV18(payload);
@@ -1232,9 +1362,44 @@ function getBackup(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function getBackupWriteProbeV18(e) {
+function getBackupStatusV18(e) {
+  var folder = getBackupFolderV18();
   var ss = getMoneyMissionSpreadsheet();
-  var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
+  var sheet = ss.getSheetByName(SHEET_BACKUP);
+  var latest = null;
+  if (sheet && sheet.getLastRow() >= 2) {
+    var lastRow = sheet.getLastRow();
+    var start = Math.max(2, lastRow - 249);
+    var values = sheet.getRange(start, 1, lastRow - start + 1, Math.min(sheet.getLastColumn(), 10)).getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      var row = values[i];
+      if (!isDriveBackupIndexRowV18(row)) continue;
+      if (String(row[8] || '') === 'probe') continue;
+      latest = {
+        savedAt: row[0],
+        keyCount: row[1],
+        size: row[2],
+        backupId: row[4],
+        driveFileId: row[5],
+        driveUrl: row[6],
+        build: row[7],
+        indexStatus: row[8],
+        matchedRow: start + i
+      };
+      break;
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'ok',
+    storage: 'drive',
+    driveBackupActive: true,
+    folderId: folder.getId(),
+    folderName: folder.getName(),
+    latest: latest
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getBackupWriteProbeV18(e) {
   var markerId = String((e && e.parameter && e.parameter.marker) || ('get_probe_' + Date.now())).slice(0, 120);
   var marker = {
     id: markerId,
@@ -1248,14 +1413,23 @@ function getBackupWriteProbeV18(e) {
     build: marker.build
   });
   var savedAt = new Date().toISOString();
-  sheet.appendRow([savedAt, 1, payload.length, payload]);
-  logActivity('Backup GET probe saved — ' + markerId + ' — row ' + sheet.getLastRow());
+  var result = saveBackup({
+    payload: payload,
+    keyCount: 1,
+    size: payload.length,
+    backupMarker: marker,
+    backupMarkerId: marker.id,
+    build: marker.build,
+    savedAt: savedAt
+  });
+  logActivity('Backup GET probe saved to Drive — ' + markerId + ' — index row ' + result.row);
   return ContentService.createTextOutput(JSON.stringify({
     status: 'ok',
+    storage: 'drive',
     probe: true,
     marker: marker,
-    matchedRow: sheet.getLastRow(),
-    backup: { savedAt: savedAt, keyCount: 1, size: payload.length, payload: payload }
+    matchedRow: result.row,
+    backup: { savedAt: savedAt, keyCount: 1, size: payload.length, payload: payload, driveFileId: result.driveFileId, driveUrl: result.driveUrl }
   })).setMimeType(ContentService.MimeType.JSON);
 }
 

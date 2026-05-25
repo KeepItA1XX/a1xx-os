@@ -2314,7 +2314,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="setup-panel" id="setup-sheets">
             <div class="setup-panel-title">Connect Google Sheets + Calendar</div>
-            <div class="setup-note">Paste your Apps Script Web App URL below. This powers automatic Sheets backup, Google Calendar reading, and Notion content loading.</div>
+            <div class="setup-note">Paste your Apps Script Web App URL below. This powers Drive-indexed backups, Google Calendar reading, and Notion content loading.</div>
             <div class="setup-field">
               <label>Apps Script Web App URL</label>
               <div class="setup-field-row">
@@ -2353,7 +2353,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-list" style="margin-top:12px;">
               <div class="settings-row"><div><div class="settings-row-name">Always-live audit tabs</div><div class="settings-row-meta">Activity Log, State Backups, Mission Command Events, Sync Audit, Sessions, and Chat Log should update when their matching sync action runs.</div></div><span class="settings-badge">Active</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Action-owned tabs</div><div class="settings-row-meta">Daily Log updates after a DPC save. Dev Log updates after a change-log post. Cycle Archives updates after archive flow. Revenue Log updates from lead/revenue imports.</div></div><span class="settings-badge warn">On Use</span></div>
-              <div class="settings-row"><div><div class="settings-row-name">Fast health check</div><div class="settings-row-meta">Use Test Event for Mission Command Events, Manual Backup for State Backups, and one DPC save for Daily Log.</div></div><span class="settings-badge off">Check</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Fast health check</div><div class="settings-row-meta">Use Test Event for Mission Command Events, Manual Backup for Drive archive + State Backups index, and one DPC save for Daily Log.</div></div><span class="settings-badge off">Check</span></div>
             </div>
           </div>
           <div class="setup-panel" id="setup-todoist">
@@ -2477,7 +2477,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <div class="backup-status-title" id="backup-status-title">Backup ready</div>
               <div class="settings-badge off" id="backup-status-badge">Idle</div>
             </div>
-            <div class="backup-status-detail" id="backup-status-detail">Use Save backup to push the current app data into Google Sheets.</div>
+            <div class="backup-status-detail" id="backup-status-detail">Use Save backup to store app data in Drive with a small Google Sheets index row.</div>
             <div class="backup-status-track"><div class="backup-status-fill"></div></div>
           </div>
         </div>
@@ -2543,7 +2543,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <details class="diagnostics-detail">
             <summary><span>Backup details</span><span class="settings-badge off">Details</span></summary>
             <div class="settings-list diagnostics-detail-list">
-              <div class="settings-row"><div><div class="settings-row-name">Backup payload</div><div class="settings-row-meta" id="settings-storage-backup-size">Not checked yet.</div></div><span class="settings-badge off">Size</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Backup archive</div><div class="settings-row-meta" id="settings-storage-backup-size">Not checked yet.</div></div><span class="settings-badge off">Drive</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Backup largest keys</div><div class="settings-row-meta" id="settings-storage-backup-detail">Not checked yet.</div></div><span class="settings-badge off">Payload</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Skipped keys</div><div class="settings-row-meta" id="settings-storage-skipped-keys">Not checked yet.</div></div><span class="settings-badge off">Lean</span></div>
             </div>
@@ -3976,9 +3976,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 18:36 ET · OS v2_2 GET backup write probe';
+var APP_BUILD_STAMP='2026-05-25 19:15 ET · OS v2_2 Drive backup archive';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1836';
+var APP_CACHE_TOKEN='mmos-20260525-1915';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -5323,9 +5323,10 @@ function renderStorageHealthDiagnosticsV22(){
   if(backup){
     var backupBuild=buildBackupPayloadV22();
     var payloadAudit=getBackupPayloadAuditV22(backupBuild.payload);
-    backup.textContent='Lean backup: '+payloadAudit.totalKB+'KB across '+payloadAudit.count+' keys · skips '+backupBuild.skipped.length+' transient keys.';
+    backup.textContent='Drive archive ready · lean payload estimate: '+payloadAudit.totalKB+'KB across '+payloadAudit.count+' keys · skips '+backupBuild.skipped.length+' transient keys.';
     if(backupDetail)backupDetail.textContent='Largest: '+formatStorageTopKeysV22(payloadAudit.top);
     if(skippedKeys)skippedKeys.textContent=backupBuild.skipped.length?backupBuild.skipped.join(' | '):'No transient keys skipped in this browser.';
+    refreshBackupArchiveStatusV22();
   }
   if(guard||guardBadge){
     var report=getStorageGuardrailReportV22();
@@ -5341,6 +5342,26 @@ function renderStorageHealthDiagnosticsV22(){
   if(typeof renderDriftWatchDiagnosticsV10==='function')renderDriftWatchDiagnosticsV10();
   if(typeof renderHealthCommandReadV22==='function')renderHealthCommandReadV22('diagnostics');
   return audit;
+}
+
+async function refreshBackupArchiveStatusV22(){
+  var backup=document.getElementById('settings-storage-backup-size');
+  var backupDetail=document.getElementById('settings-storage-backup-detail');
+  var appUrl=localStorage.getItem(SHEETS_KEY);
+  if(!appUrl||typeof getAppsScriptJson!=='function')return;
+  try{
+    var status=await getAppsScriptJson('backup_status',{}, {timeoutMs:12000, tries:1});
+    if(!status||status.status!=='ok'||status.storage!=='drive')return;
+    if(backup){
+      var latest=status.latest;
+      backup.textContent=latest
+        ? 'Drive backup active · latest '+(latest.backupId||'backup')+' · Sheet index row '+(latest.matchedRow||'?')+'.'
+        : 'Drive backup active · no completed backup indexed yet.';
+    }
+    if(backupDetail&&status.latest){
+      backupDetail.textContent='Latest size '+Math.round((Number(status.latest.size)||0)/1000)+'KB · file '+(status.latest.driveFileId||'available')+' · status '+(status.latest.indexStatus||'indexed')+'.';
+    }
+  }catch(e){}
 }
 
 function runStorageHealthSelfCheckV22(){
@@ -5991,7 +6012,7 @@ function setBackupStatus(state,title,detail,badge){
     box.className='backup-status-box active '+(state||'');
   }
   if(titleEl)titleEl.textContent=title||'Backup ready';
-  if(detailEl)detailEl.textContent=detail||'Use Save backup to push the current app data into Google Sheets.';
+  if(detailEl)detailEl.textContent=detail||'Use Save backup to store app data in Drive with a small Google Sheets index row.';
   if(badgeEl){
     badgeEl.textContent=badge||'Idle';
     badgeEl.className='settings-badge '+(state==='ok'?'':state==='err'||state==='warn'?'warn':'off');
@@ -6041,28 +6062,8 @@ function getBackupVerificationMarkerV22(payload){
 
 async function sendBackupPayloadToSheetsV22(appUrl,json,keyCount,backupMarker){
   var savedAt=new Date().toISOString();
-  if(json.length<=45000){
-    await postToAppsScript(appUrl,{type:'backup_save',payload:json,keyCount:keyCount,size:json.length,backupMarker:backupMarker,backupMarkerId:backupMarker.id,build:APP_CACHE_TOKEN,savedAt:savedAt});
-    return {mode:'single',parts:1};
-  }
-  var chunkSize=30000;
-  var total=Math.ceil(json.length/chunkSize);
-  for(var i=0;i<total;i++){
-    await postToAppsScript(appUrl,{
-      type:'backup_chunk_save',
-      chunk:json.slice(i*chunkSize,(i+1)*chunkSize),
-      part:i,
-      total:total,
-      keyCount:keyCount,
-      size:json.length,
-      backupMarker:backupMarker,
-      backupMarkerId:backupMarker.id,
-      build:APP_CACHE_TOKEN,
-      savedAt:savedAt
-    });
-    await waitMs(120);
-  }
-  return {mode:'chunked',parts:total};
+  await postToAppsScript(appUrl,{type:'backup_save',payload:json,keyCount:keyCount,size:json.length,backupMarker:backupMarker,backupMarkerId:backupMarker.id,build:APP_CACHE_TOKEN,savedAt:savedAt});
+  return {mode:'drive_archive',parts:1};
 }
 
 async function runBackupPostProbeV22(appUrl,targetMarker){
@@ -6118,21 +6119,22 @@ async function sendBackup(silent){
     var size=Math.max(1,Math.round(json.length/1000));
     var largest=payloadAudit.top&&payloadAudit.top.length?(' Largest: '+payloadAudit.top[0].key+' · '+payloadAudit.top[0].kb+'KB.'):'';
     var skipped=backupBuild.skipped&&backupBuild.skipped.length?(' Skipped '+backupBuild.skipped.length+' transient keys.'):'';
-    setBackupStatus(json.length>45000?'warn':'','Saving backup...','Sending '+keyCount+' lean keys ('+size+'KB) to your Sheet.'+(json.length>45000?' Large backups are chunked safely.':'')+largest+skipped+' Keep this window open for a moment.','Saving');
+    setBackupStatus('','Saving backup...','Sending '+keyCount+' lean keys ('+size+'KB) to Drive. Google Sheets will only keep a small index row.'+largest+skipped+' Keep this window open for a moment.','Saving');
     setBackupBusy(true);
   }
   try{
     var startedAt=Date.now();
     var probe=await runBackupPostProbeV22(appUrl,backupMarker);
-    if(!probe.ok)throw new Error('Tiny backup POST probe did not write to State Backups. Check the Web App URL, webhook token, Apps Script deployment, and Activity Log POST errors.');
+    if(!probe.ok)throw new Error('Tiny backup POST probe did not verify through the Drive backup index. Check the Web App URL, webhook token, Apps Script deployment, and Activity Log POST errors.');
     var beforeBackup=null;
     try{beforeBackup=await getAppsScriptJson('get_backup',{}, {timeoutMs:18000, tries:1});}catch(beforeErr){}
     var beforeRow=beforeBackup&&beforeBackup.matchedRow?Number(beforeBackup.matchedRow)||0:0;
     await sendBackupPayloadToSheetsV22(appUrl,json,keyCount,backupMarker);
     var verified=await verifyBackupSavedToSheetsV1(keyCount,json.length,startedAt,backupMarker,beforeRow);
-    if(!verified.ok)throw new Error(verified.error||'Backup was sent, but the newest Sheet row could not be verified.');
-    if(!silent)setBackupStatus('ok','Backup verified','Saved '+keyCount+' keys to Google Sheets and verified backup marker '+backupMarker.id+'.','Done');
-    if(!silent)logDevChange('Claude (A1XX OS)','data → Sheets','Manual backup: '+keyCount+' keys, '+Math.round(json.length/1000)+'KB');
+    if(!verified.ok)throw new Error(verified.error||'Backup was sent, but the newest Drive backup index could not be verified.');
+    var storageLabel=verified.backup&&verified.backup.driveFileId?'Drive file + Sheet index':'backup index';
+    if(!silent)setBackupStatus('ok','Backup verified','Saved '+keyCount+' keys to '+storageLabel+' and verified backup marker '+backupMarker.id+'.','Done');
+    if(!silent)logDevChange('Claude (A1XX OS)','data → Drive backup','Manual backup: '+keyCount+' keys, '+Math.round(json.length/1000)+'KB');
     return {ok:true,keyCount:keyCount,size:json.length,verified:true};
   }catch(e){
     if(!silent)setBackupStatus('err','Backup not verified',e.message||'The backup request did not verify. Check Apps Script deployment, webhook token, and target Sheet.','Review');
@@ -6159,19 +6161,19 @@ async function verifyBackupSavedToSheetsV1(keyCount,size,startedAt,expectedMarke
         if(marker&&marker.id===expectedMarker.id)return {ok:true,backup:backup,marker:marker,matchedRow:res&&res.matchedRow};
       }else break;
     }
-    if(!backup)return {ok:false,error:'No backup row came back from Sheets.'};
+    if(!backup)return {ok:false,error:'No backup index came back from the backend.'};
     if(expectedMarker){
       var returnedMarker=getBackupVerificationMarkerV22(backup.payload);
       if(!returnedMarker){
-        if(beforeRow&&lastSeenRow&&lastSeenRow<=beforeRow)return {ok:false,error:'No new backup row appeared in Sheets after Save backup. Check webhook token, Apps Script deployment, and Web App URL, then run backup again.'};
-        return {ok:false,error:'Sheets added or returned a backup row, but the new backup marker was not in the recent rows. Close older app tabs, redeploy Apps Script v1.8 from the latest file, then run backup again.'};
+        if(beforeRow&&lastSeenRow&&lastSeenRow<=beforeRow)return {ok:false,error:'No new backup index row appeared after Save backup. Check webhook token, Apps Script deployment, and Web App URL, then run backup again.'};
+        return {ok:false,error:'The backup index updated, but the new backup marker was not in the recent rows. Close older app tabs, redeploy Apps Script v1.8 from the latest file, then run backup again.'};
       }
-      return {ok:false,error:'Sheets returned backup marker '+returnedMarker.id+', not the new marker '+expectedMarker.id+'.'};
+      return {ok:false,error:'Backup readback returned marker '+returnedMarker.id+', not the new marker '+expectedMarker.id+'.'};
     }
     var savedAtMs=Date.parse(backup.savedAt||'');
-    if(savedAtMs&&savedAtMs+30000<startedAt)return {ok:false,error:'Sheets still shows an old backup row from '+backup.savedAt+'.'};
-    if(Number(backup.keyCount||0)!==Number(keyCount||0))return {ok:false,error:'Backup row came back, but key count did not match.'};
-    if(Math.abs(Number(backup.size||0)-Number(size||0))>25)return {ok:false,error:'Backup row came back, but payload size did not match.'};
+    if(savedAtMs&&savedAtMs+30000<startedAt)return {ok:false,error:'Backup readback still shows an old backup from '+backup.savedAt+'.'};
+    if(Number(backup.keyCount||0)!==Number(keyCount||0))return {ok:false,error:'Backup readback came back, but key count did not match.'};
+    if(Math.abs(Number(backup.size||0)-Number(size||0))>25)return {ok:false,error:'Backup readback came back, but payload size did not match.'};
     return {ok:true,backup:backup};
   }catch(e){
     return {ok:false,error:e&&e.message?e.message:'Backup readback failed.'};
@@ -6426,7 +6428,7 @@ async function restoreBackup(){
       btn.classList.add('restore-armed');
       btn.textContent='Confirm restore';
     }
-    setBackupStatus('restore','Confirm restore','This will replace the current browser data with the latest saved Sheet backup. Tap Confirm restore within 8 seconds to continue.','Confirm');
+    setBackupStatus('restore','Confirm restore','This will replace the current browser data with the latest verified Drive backup. Tap Confirm restore within 8 seconds to continue.','Confirm');
     setTimeout(function(){
       if((window.__restoreBackupArmedUntil||0)<Date.now())resetRestoreArm();
     },8200);
@@ -6434,13 +6436,13 @@ async function restoreBackup(){
   }
   resetRestoreArm();
   setBackupBusy(true);
-  setBackupStatus('restore','Restoring backup...','Pulling the latest saved backup from your Sheet. Keep this window open for a moment.','Restoring');
+  setBackupStatus('restore','Restoring backup...','Pulling the latest verified backup from Drive. Keep this window open for a moment.','Restoring');
   try{
     var sep=appUrl.indexOf('?')>=0?'&':'?';
     var res=await fetch(appUrl+sep+'action=get_backup&_='+Date.now(),{method:'GET',redirect:'follow'});
     var data=await res.json();
     if(!data.backup||!data.backup.payload){
-      setBackupStatus('warn','No backup found','No saved backup was found in your Sheet yet. Save a backup first, then restore can pull from it.','Missing');
+      setBackupStatus('warn','No backup found','No saved Drive backup was found yet. Save a backup first, then restore can pull from it.','Missing');
       return;
     }
     var payload=JSON.parse(data.backup.payload);
@@ -12771,7 +12773,7 @@ var MISSION_EDUCATION_LIBRARY={
   },
   syncConcepts:{
     notion_brain:{title:'Notion as Company Brain',concept:'Notion holds the structured source of truth.',why:'The OS gets smarter when Notion data is clean and connected.',use:'Use Notion for CRM, content, production, logs, and specs.',watch:'Watch connection status and database access.'},
-    sheets_backup:{title:'Sheets as Backup/Audit',concept:'Google Sheets is the backup and audit layer.',why:'It gives a second place to verify logs and saves.',use:'Use Sheets to confirm saves when Notion sync is questionable.',watch:'Watch Activity Log and sync audit rows.'},
+    sheets_backup:{title:'Sheets as Index/Audit',concept:'Google Sheets is the audit and backup-index layer; Drive stores full backup files.',why:'It gives a second place to verify logs and saves without bloating the workbook.',use:'Use Sheets to confirm index rows when Notion sync is questionable.',watch:'Watch Activity Log, State Backups index rows, and sync audit rows.'},
     apps_script_bridge:{title:'Apps Script Bridge',concept:'Apps Script connects the browser app to Sheets and Notion.',why:'The browser should never expose Notion secrets directly.',use:'Redeploy Apps Script after backend changes.',watch:'Watch latest deployment, endpoint, and Activity Log.'}
   }
 };
