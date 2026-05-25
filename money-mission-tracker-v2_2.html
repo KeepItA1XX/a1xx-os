@@ -3843,9 +3843,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 21:21 ET · OS v2_2 chat storage compaction';
+var APP_BUILD_STAMP='2026-05-24 21:34 ET · OS v2_2 chat alias slimming';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-2121';
+var APP_CACHE_TOKEN='mmos-20260524-2134';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -28170,12 +28170,18 @@ function normalizeMissionChatSessionsV11(sessions){
   });
 }
 
+function missionChatSessionsAreFullV22(sessions){
+  return Array.isArray(sessions)&&sessions.some(function(session){
+    return session&&Array.isArray(session.messages);
+  });
+}
+
 function missionHasActiveChatSessionV11(){
   try{
     var sessions=getStore(MISSION_CHAT_SESSIONS_KEY);
-    if(!Array.isArray(sessions)){
+    if(!missionChatSessionsAreFullV22(sessions)){
       var aliasSessions=getStore(MISSION_CHAT_HISTORY_ALIAS_KEY);
-      if(Array.isArray(aliasSessions)&&aliasSessions.length)sessions=aliasSessions;
+      if(missionChatSessionsAreFullV22(aliasSessions))sessions=aliasSessions;
     }
     sessions=Array.isArray(sessions)?sessions:[];
     return getMissionActiveSessionIndexV11(sessions)>=0;
@@ -28378,9 +28384,9 @@ function setActiveMissionProject(name){
 
 function getMissionChatSessions(){
   var sessions=getStore(MISSION_CHAT_SESSIONS_KEY);
-  if(!Array.isArray(sessions)){
+  if(!missionChatSessionsAreFullV22(sessions)){
     var aliasSessions=getStore(MISSION_CHAT_HISTORY_ALIAS_KEY);
-    if(Array.isArray(aliasSessions)&&aliasSessions.length)sessions=aliasSessions;
+    if(missionChatSessionsAreFullV22(aliasSessions))sessions=aliasSessions;
   }
   if(Array.isArray(sessions))return normalizeMissionChatSessionsV11(sessions);
   var old=getMissionGlobalChatHistoryV11();
@@ -28424,10 +28430,35 @@ function saveMissionChatSessions(sessions){
   var activeForStore=active.map(function(s){return compactMissionSessionForStorageV22(s,'active');});
   var archiveForStore=archived.map(function(s){return compactMissionSessionForStorageV22(s,'archive');});
   setCompactedJsonLocalStorageV22(MISSION_CHAT_SESSIONS_KEY,activeForStore);
-  setCompactedJsonLocalStorageV22(MISSION_CHAT_HISTORY_ALIAS_KEY,activeForStore);
+  setCompactedJsonLocalStorageV22(MISSION_CHAT_HISTORY_ALIAS_KEY,compactMissionChatAliasIndexV22(activeForStore));
   setCompactedJsonLocalStorageV22(MISSION_CHAT_ARCHIVE_KEY,archiveForStore);
   var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';
   if(activeId)localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,activeId);
+}
+
+function compactMissionChatAliasIndexV22(sessions){
+  return (Array.isArray(sessions)?sessions:[]).slice(0,MISSION_CHAT_ACTIVE_LIMIT).map(function(session){
+    session=session||{};
+    var messages=Array.isArray(session.messages)?session.messages:[];
+    var lastUser='',lastAssistant='';
+    for(var i=messages.length-1;i>=0;i--){
+      if(!lastUser&&messages[i].role==='user')lastUser=messages[i].body||'';
+      if(!lastAssistant&&messages[i].role==='assistant')lastAssistant=messages[i].body||'';
+      if(lastUser&&lastAssistant)break;
+    }
+    return {
+      id:session.id||'',
+      title:String(session.title||'Mission Command').slice(0,90),
+      project:String(session.project||'').slice(0,80),
+      createdAt:session.createdAt||'',
+      updatedAt:session.updatedAt||'',
+      archivedAt:session.archivedAt||'',
+      tags:Array.isArray(session.tags)?session.tags.slice(0,8):[],
+      messageCount:messages.length,
+      lastUser:String(lastUser||'').slice(0,180),
+      lastAssistant:String(lastAssistant||'').slice(0,180)
+    };
+  });
 }
 
 function compactMissionTurnHistoryV22(turns,limit){
