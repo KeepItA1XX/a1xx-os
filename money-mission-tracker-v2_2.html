@@ -3840,9 +3840,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 20:01 ET · OS v2_2 close log storage fallback';
+var APP_BUILD_STAMP='2026-05-24 20:10 ET · OS v2_2 close log dual persistence';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-2001';
+var APP_CACHE_TOKEN='mmos-20260524-2010';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -4798,19 +4798,22 @@ function logDevChange(agent,layer,summary,session){
 window.logDevChange=logDevChange;
 // ────────────────────────────────────────────────────────────────────────────
 
-function getCloseLog(){
+function mergeCloseLogsV22(){
+  var fallback=Array.isArray(window.__closeLogSessionFallbackV22)?window.__closeLogSessionFallbackV22:[];
   var stored=getStore(CLOSE_LOG_KEY);
   var base=Array.isArray(stored)?stored:[];
-  var fallback=Array.isArray(window.__closeLogSessionFallbackV22)?window.__closeLogSessionFallbackV22:[];
-  if(!fallback.length)return base;
+  var main=getStore(STORE);
+  var secondary=Array.isArray(main&&main.closeLogV22)?main.closeLogV22:[];
   var seen={};
-  return fallback.concat(base).filter(function(item){
+  return fallback.concat(base,secondary).filter(function(item){
     var key=String(item&&item.ts||'')+'|'+String(item&&item.name||'')+'|'+String(item&&item.amount||'');
     if(seen[key])return false;
     seen[key]=true;
     return true;
   });
 }
+
+function getCloseLog(){return mergeCloseLogsV22();}
 
 function getCloseStreak(){
   var log=getCloseLog();
@@ -4873,25 +4876,43 @@ function setCloseLogSessionFallbackV22(log){
   window.__closeLogSessionFallbackV22=Array.isArray(log)?log.slice(0,50):[];
 }
 
+function closeLogContainsTsV22(list,expectedTs){
+  return Array.isArray(list)&&list.some(function(item){return String(item&&item.ts||'')===String(expectedTs);});
+}
+
+function saveCloseLogSecondaryV22(log,expectedTs){
+  try{
+    var main=getStore(STORE)||{};
+    main.closeLogV22=Array.isArray(log)?log.slice(0,50):[];
+    localStorage.setItem(STORE,JSON.stringify(main));
+    touchLastModified();
+    var verified=getStore(STORE)||{};
+    return closeLogContainsTsV22(verified.closeLogV22,expectedTs)
+      ? {ok:true,reason:'secondary_verified'}
+      : {ok:false,reason:'secondary_readback_miss',message:'Close did not verify in main app snapshot.'};
+  }catch(e){
+    return {ok:false,reason:'secondary_storage_error',message:e&&e.message?e.message:'Main app snapshot rejected the close.'};
+  }
+}
+
 function saveCloseLogWithReadbackV22(log,expectedTs){
   var raw='';
+  var primary={ok:false,reason:'not_checked'};
   try{
     raw=JSON.stringify(log);
     localStorage.setItem(CLOSE_LOG_KEY,raw);
     touchLastModified();
-  }catch(e){
-    setCloseLogSessionFallbackV22(log);
-    return {ok:false,reason:'storage_error',message:e&&e.message?e.message:'Browser storage rejected the close.'};
-  }
-  try{
     var saved=JSON.parse(localStorage.getItem(CLOSE_LOG_KEY)||'[]');
-    if(Array.isArray(saved)&&saved.some(function(item){return String(item&&item.ts||'')===String(expectedTs);}))return {ok:true,reason:'verified'};
-  }catch(e2){
-    setCloseLogSessionFallbackV22(log);
-    return {ok:false,reason:'read_error',message:e2&&e2.message?e2.message:'Close saved but readback failed.'};
+    primary=closeLogContainsTsV22(saved,expectedTs)
+      ? {ok:true,reason:'primary_verified'}
+      : {ok:false,reason:'primary_readback_miss',message:'Close did not verify in Close Log storage.'};
+  }catch(e){
+    primary={ok:false,reason:'primary_storage_error',message:e&&e.message?e.message:'Close Log storage rejected the close.'};
   }
+  var secondary=saveCloseLogSecondaryV22(log,expectedTs);
+  if(primary.ok||secondary.ok)return {ok:true,reason:primary.ok?primary.reason:secondary.reason,primary:primary,secondary:secondary};
   setCloseLogSessionFallbackV22(log);
-  return {ok:false,reason:'readback_miss',message:'Close did not appear in browser storage after save.'};
+  return {ok:false,reason:'storage_unverified',message:(primary.message||secondary.message||'Close did not verify in browser storage.'),primary:primary,secondary:secondary};
 }
 
 function saveClose(){
@@ -4921,7 +4942,7 @@ function saveClose(){
   }
   if(!saveResult.ok){
     resetCloseSaveBusyV22();
-    setCloseFormStatusV22('warn','Close is visible for this session, but browser storage did not verify. Do not refresh yet. Check storage/backup before adding another close.');
+    setCloseFormStatusV22('warn','Close is visible for this session, but storage still did not verify: '+(saveResult.message||saveResult.reason)+'. Do not refresh yet.');
     return;
   }
   clearCloseFormFieldsV22();
@@ -8655,7 +8676,7 @@ function captureWeekData(){
     // Original short keys (kept for loadWeekData + exportCSV + any legacy callers)
     rev:rev,wk:wk,ad:ad,sw:sw,sv:sv,ot:ot,
     dms:dms,resp:resp,calls:calls,closes:closes,content:content,sessions:sessions,
-    noteWin:noteWin,noteLesson:noteLesson,streams:streams,weekRevs:weekRevs,
+    noteWin:noteWin,noteLesson:noteLesson,streams:streams,weekRevs:weekRevs,closeLogV22:getCloseLog().slice(0,50),
     // Apps Script Weekly Saves row keys
     timestamp:new Date().toISOString(),
     date:new Date().toLocaleDateString(),
