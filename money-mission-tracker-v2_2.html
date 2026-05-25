@@ -3895,9 +3895,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 10:15 ET · OS v2_2 bridge endpoint probe';
+var APP_BUILD_STAMP='2026-05-25 10:23 ET · OS v2_2 source trust bridge read';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1015';
+var APP_CACHE_TOKEN='mmos-20260525-1023';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -21135,6 +21135,33 @@ function runMissionBroadRegressionHardeningV1(){
     if(!/I am looking at this right now|CRM leads|System health/i.test(shortLoadedVisible)||/voice or workflow memory/i.test(shortLoadedVisible))failures.push('short_loaded_data_trust_guard');
     var shortTrustVisible=String(getMissionCommandResponse('ask',ctx,'what should i trust',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
     if(!/I am looking at this right now|System health|Sync health|Result trust/i.test(shortTrustVisible)||/Finish the current block step|Open your saved IG/i.test(shortTrustVisible))failures.push('short_trust_data_trust_guard');
+    var savedBridgePulseForTrust=null;
+    var savedBridgeProbeForTrust=null;
+    try{savedBridgePulseForTrust=sessionStorage.getItem(BRIDGE_PULSE_KEY_V22);}catch(e){}
+    try{savedBridgeProbeForTrust=sessionStorage.getItem(BRIDGE_ENDPOINT_PROBE_KEY_V22);}catch(e){}
+    try{
+      sessionStorage.setItem(BRIDGE_PULSE_KEY_V22,JSON.stringify([
+        {label:'Google Calendar',status:'ok',durationMs:2800,msg:'loaded',ts:Date.now()},
+        {label:'resource library',status:'ok',durationMs:2300,msg:'loaded',ts:Date.now()}
+      ]));
+      sessionStorage.setItem(BRIDGE_ENDPOINT_PROBE_KEY_V22,JSON.stringify({checkedAt:Date.now(),rows:[
+        {label:'Health',action:'health',status:'ok',durationMs:300,summary:'health ok'},
+        {label:'Calendar',action:'calendar',status:'ok',durationMs:2800,summary:'9 event(s)'}
+      ]}));
+      var bridgeTrustVisible=String(getMissionCommandResponse('ask',ctx,'what data are you using',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
+      if(!/Bridge trust|Bridge Pulse|Endpoint Probe|Bridge checks are clean enough/i.test(bridgeTrustVisible))failures.push('data_trust_bridge_source_read_guard');
+    }catch(e){
+      failures.push('data_trust_bridge_source_read_exception');
+    }finally{
+      try{
+        if(savedBridgePulseForTrust===null)sessionStorage.removeItem(BRIDGE_PULSE_KEY_V22);
+        else sessionStorage.setItem(BRIDGE_PULSE_KEY_V22,savedBridgePulseForTrust);
+      }catch(e){}
+      try{
+        if(savedBridgeProbeForTrust===null)sessionStorage.removeItem(BRIDGE_ENDPOINT_PROBE_KEY_V22);
+        else sessionStorage.setItem(BRIDGE_ENDPOINT_PROBE_KEY_V22,savedBridgeProbeForTrust);
+      }catch(e){}
+    }
     var savedHealthForDataTrust=getStore(HEALTH_KEY);
     setStore(HEALTH_KEY,{lastSync:Date.now(),services:{content:{status:'ok'},resources:{status:'loading'},calendar:{status:'err'},crm:{status:'ok'},todoist:{status:'ok'}}});
     var weakHealthTrustVisible=String(getMissionCommandResponse('ask',ctx,'do I trust this',{})).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ');
@@ -21397,6 +21424,53 @@ function getMissionClarificationResponse(route,ctx,question,conv){
   return '<p><strong>I can read that two ways.</strong></p><p>Are you asking about:</p><p>1) Pipeline<br>2) Money<br>3) Content<br>4) Production<br>5) Sync</p><p>Pick the lane and I will run it.</p>';
 }
 
+function getMissionBridgeSourceTrustReadV22(){
+  var lines=[];
+  try{
+    if(typeof getBridgePulseSnapshotV22==='function'){
+      var pulse=getBridgePulseSnapshotV22();
+      var pulseRows=(pulse.rows||[]).filter(function(row){return row&&row.label&&!/^self-check|probe:/i.test(row.label);});
+      var pulseSlow=pulseRows.filter(function(row){return row.status==='err'||(row.durationMs||0)>=BRIDGE_PULSE_SLOW_MS_V22;});
+      var pulseReview=pulseRows.filter(function(row){return row.status==='err'||(row.durationMs||0)>=BRIDGE_PULSE_REVIEW_MS_V22;});
+      if(pulseReview.length){
+        lines.push('Bridge Pulse needs review: '+pulseReview.slice(0,3).map(function(row){return row.label+' '+formatBridgePulseDurationV22(row.durationMs);}).join(', ')+'.');
+      }else if(pulseSlow.length){
+        lines.push('Bridge Pulse is responding, with slow lane: '+pulseSlow.slice(0,3).map(function(row){return row.label+' '+formatBridgePulseDurationV22(row.durationMs);}).join(', ')+'.');
+      }else if(pulseRows.length){
+        lines.push('Bridge Pulse: '+pulseRows.length+' loaded lane'+(pulseRows.length===1?'':'s')+' responded inside the safe window.');
+      }
+    }
+  }catch(e){}
+  try{
+    if(typeof renderBridgeEndpointProbeDiagnosticsV22==='function'){
+      var probe=renderBridgeEndpointProbeDiagnosticsV22();
+      var rows=(probe&&probe.rows)||[];
+      if(probe&&probe.reviews&&probe.reviews.length){
+        lines.push('Endpoint Probe needs review: '+probe.reviews.slice(0,3).map(function(row){return row.label+' '+(row.summary||'review');}).join(', ')+'.');
+      }else if(probe&&probe.watches&&probe.watches.length){
+        lines.push('Endpoint Probe is clean but slow: '+probe.watches.slice(0,3).map(function(row){return row.label+' '+formatBridgePulseDurationV22(row.durationMs);}).join(', ')+'.');
+      }else if(rows.length){
+        lines.push('Endpoint Probe: all '+rows.length+' checked bridge action'+(rows.length===1?'':'s')+' responded.');
+      }
+    }
+  }catch(e){}
+  return lines.length?'Bridge trust:<br>'+lines.map(function(line){return '<div>'+escapeHtml(line)+'</div>';}).join(''):'';
+}
+
+function getMissionBridgeTrustLineV22(){
+  try{
+    var pulse=typeof getBridgePulseSnapshotV22==='function'?getBridgePulseSnapshotV22():null;
+    var probe=typeof renderBridgeEndpointProbeDiagnosticsV22==='function'?renderBridgeEndpointProbeDiagnosticsV22():null;
+    var pulseReview=pulse&&(pulse.review||[]).filter(function(row){return row&&row.label&&!/^self-check|probe:/i.test(row.label);});
+    var pulseSlow=pulse&&(pulse.slow||[]).filter(function(row){return row&&row.label&&!/^self-check|probe:/i.test(row.label);});
+    if(probe&&probe.reviews&&probe.reviews.length)return 'Do not treat the reviewed endpoint as fully trusted until it responds clean.';
+    if(pulseReview&&pulseReview.length)return 'Do not treat that slow or failed bridge lane as locked until it responds clean.';
+    if(probe&&probe.watches&&probe.watches.length||pulseSlow&&pulseSlow.length)return 'The sources are usable, but slow lanes should be verified before exact timing or counts matter.';
+    if(probe&&probe.rows&&probe.rows.length||pulse&&pulse.rows&&pulse.rows.length)return 'Bridge checks are clean enough to use for one safe next move.';
+  }catch(e){}
+  return '';
+}
+
 function getMissionDataConfidenceResponse(route,ctx,question){
   var q=normalizeMissionQuestion(question||'');
   if(!isMissionDataTrustPromptV12(q))return '';
@@ -21431,11 +21505,14 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var healthItems=serviceNames.slice(0,5).map(function(name){var s=services[name]||{};return name+': '+(s.status||'checked');});
   var healthLine=serviceNames.length?blockLines(healthItems):'Sync health has not been checked in detail yet.';
   var healthRead=serviceNames.length?'System health is loaded like this:<br>'+healthLine:healthLine;
+  var bridgeRead=getMissionBridgeSourceTrustReadV22();
   var weakServiceLine=weakServiceNames.map(function(name){var s=services[name]||{};return name+' '+(s.status||'needs review');}).join(', ');
   var missingText=missing.length?missing.join(', '):'nothing obvious from the current app packet';
   if(weakServiceLine)missingText+=(missing.length?'. ':'; ')+'sync health needs attention: '+weakServiceLine;
   var missingLine=escapeHtml(missingText);
   var trustLine=(missing.length||weakServiceNames.length)?'I would use this for one safe next move, but I would not treat final counts as locked until sync is checked.':'I would trust this for one safe next move. Run sync first only if exact counts matter.';
+  var bridgeTrustLine=getMissionBridgeTrustLineV22();
+  if(bridgeTrustLine)trustLine=trustLine+' '+bridgeTrustLine;
   var resultTrustLine=typeof getMissionResultTruthTrustLineV15==='function'?getMissionResultTruthTrustLineV15(ctx):'';
   var resultTrustBlock=resultTrustLine?'<br><br>'+escapeHtml(resultTrustLine):'';
   var resultTrustMove=typeof getMissionResultTruthNextMoveV15==='function'?getMissionResultTruthNextMoveV15(ctx):'';
@@ -21444,25 +21521,25 @@ function getMissionDataConfidenceResponse(route,ctx,question){
   var resultLogTarget=(latestResult&&latestResult.type&&typeof getMissionResultLogTargetAnswerV14==='function')?getMissionResultLogTargetAnswerV14(latestResult,q):'';
   var wantsDataPlusLog=/\b(data|loaded|source|trust|sync|what data|what do you see|show me)\b/.test(q)&&/\b(what do i log|what should i log|what to log|tell me what to log|tell me what i should log|what should change|what changes in the app|what should i update|where do i log|what counts as done|what should i come back with)\b/.test(q);
   if(wantsDataPlusLog&&resultLogTarget){
-    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Log target:<br><br>'+resultLogTarget;
+    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+(bridgeRead?'<br><br>'+bridgeRead:'')+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Log target:<br><br>'+resultLogTarget;
   }
   if(/\b(show me the data.*tell me the move|show me data.*tell me the move|data.*then.*move)\b/.test(q)){
-    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Use the cleanest loaded signal: '+escapeHtml(safeMove)+'.';
+    return 'Here is the data I can use right now.<br><br>'+usingLine+'<br><br>'+healthRead+(bridgeRead?'<br><br>'+bridgeRead:'')+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Use the cleanest loaded signal: '+escapeHtml(safeMove)+'.';
   }
   if(/\b(where is that coming from|where is this coming from|where did that come from|what is that based on|what is this based on|what source is this from|what database is this from|source of truth)\b/.test(q)){
-    return 'That read is coming from the current app packet and sync health.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
+    return 'That read is coming from the current app packet, sync health, and bridge checks.<br><br>'+usingLine+'<br><br>'+healthRead+(bridgeRead?'<br><br>'+bridgeRead:'')+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what data are you using|what data do you have|what do you see|what can you see|what are you reading|what(?:'|’|\s+)?s loaded|what is loaded|what data is loaded|what sources are loaded|what sources are you using|what data should i trust|what data can i trust|what should i trust(?: from this)?|what can i trust|do i trust this|can i trust this|trust this|what is trusted|what is safe to act on|what is not safe to assume|source check|trust check)\b/.test(q)){
-    return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
+    return 'I am looking at this right now.<br><br>'+usingLine+'<br><br>'+healthRead+(bridgeRead?'<br><br>'+bridgeRead:'')+resultTrustBlock+'<br><br>'+escapeHtml(trustLine);
   }
   if(/\b(what is missing|what data is missing|data missing|missing data|what can you not see|what can you not see about my time)\b/.test(q)){
     var syncTail=/\b(run sync|sync is checked)\b/i.test(trustLine)?'':'<br><br>Only run sync if this decision needs current numbers.';
-    return 'I cannot fully see this yet:<br><br>'+missingLine+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+syncTail;
+    return 'I cannot fully see this yet:<br><br>'+missingLine+(bridgeRead?'<br><br>'+bridgeRead:'')+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+syncTail;
   }
   if(/\b(is this current|is this data current|is calendar current|calendar current|is this block current|block current|time current|current data|data current|is this live|calendar stale|data stale|stale data)\b/.test(q)){
-    return 'It is current enough for a safe next move, not final enough for locked numbers.<br><br>I am seeing:<br>'+usingLine+'<br><br>'+healthRead+resultTrustBlock+'<br><br>Run sync first only if the decision depends on exact counts.';
+    return 'It is current enough for a safe next move, not final enough for locked numbers.<br><br>I am seeing:<br>'+usingLine+'<br><br>'+healthRead+(bridgeRead?'<br><br>'+bridgeRead:'')+resultTrustBlock+'<br><br>Run sync first only if the decision depends on exact counts.';
   }
-  return (missing.length?'The data is partial. I cannot fully see '+escapeHtml(missing.join(', '))+'.':'The current app packet is clean enough for the next move.')+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Run sync only if the decision needs current numbers.';
+  return (missing.length?'The data is partial. I cannot fully see '+escapeHtml(missing.join(', '))+'.':'The current app packet is clean enough for the next move.')+(bridgeRead?'<br><br>'+bridgeRead:'')+resultTrustBlock+'<br><br>'+escapeHtml(trustLine)+'<br><br>Run sync only if the decision needs current numbers.';
 }
 
 function getMissionFriendlyActionTextV1(action,fallback){
