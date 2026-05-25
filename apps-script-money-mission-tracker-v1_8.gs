@@ -1093,6 +1093,15 @@ function parseBackupChunkV18(payload) {
   }
 }
 
+function isBackupProbePayloadV18(payload) {
+  try {
+    var parsed = JSON.parse(String(payload || '{}'));
+    return parsed.__mmos_backup_probe_v22 === true;
+  } catch (err) {
+    return false;
+  }
+}
+
 function saveBackupChunkV18(d) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
@@ -1163,13 +1172,18 @@ function makeLatestBackupResponseV18(sheet) {
   var lastRow = sheet.getLastRow();
   var scanStart = Math.max(2, lastRow - 249);
   var values = sheet.getRange(scanStart, 1, lastRow - scanStart + 1, 4).getValues();
-  var latest = values[values.length - 1];
-  var chunk = parseBackupChunkV18(latest[3]);
-  if (chunk && chunk.__mmos_backup_chunk_v22) {
-    var rebuilt = reconstructBackupFromRowsV18(values, scanStart, chunk.__mmos_backup_chunk_v22.backupId);
-    if (rebuilt) return rebuilt;
+  for (var i = values.length - 1; i >= 0; i--) {
+    var latest = values[i];
+    if (isBackupProbePayloadV18(latest[3])) continue;
+    var chunk = parseBackupChunkV18(latest[3]);
+    if (chunk && chunk.__mmos_backup_chunk_v22) {
+      var rebuilt = reconstructBackupFromRowsV18(values, scanStart, chunk.__mmos_backup_chunk_v22.backupId);
+      if (rebuilt) return rebuilt;
+    }
+    return makeBackupResponseV18(latest, scanStart + i, extractBackupMarkerV18(latest[3]), 'latest');
   }
-  return makeBackupResponseV18(latest, lastRow, extractBackupMarkerV18(latest[3]), 'latest');
+  var fallback = values[values.length - 1];
+  return makeBackupResponseV18(fallback, lastRow, extractBackupMarkerV18(fallback[3]), 'latest_probe_only');
 }
 
 function getBackup(e) {

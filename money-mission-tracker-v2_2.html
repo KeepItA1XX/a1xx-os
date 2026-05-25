@@ -3976,9 +3976,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 17:57 ET · OS v2_2 client chunked backup upload';
+var APP_BUILD_STAMP='2026-05-25 18:04 ET · OS v2_2 backup POST probe';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1757';
+var APP_CACHE_TOKEN='mmos-20260525-1804';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -6065,6 +6065,38 @@ async function sendBackupPayloadToSheetsV22(appUrl,json,keyCount,backupMarker){
   return {mode:'chunked',parts:total};
 }
 
+async function runBackupPostProbeV22(appUrl,targetMarker){
+  var probeMarker={
+    id:'probe_'+targetMarker.id,
+    ts:Date.now(),
+    build:APP_CACHE_TOKEN,
+    target:targetMarker.id
+  };
+  var probePayload=JSON.stringify({
+    __mmos_backup_verification_v22:probeMarker,
+    __mmos_backup_probe_v22:true,
+    targetMarker:targetMarker.id,
+    build:APP_CACHE_TOKEN
+  });
+  await postToAppsScript(appUrl,{
+    type:'backup_save',
+    payload:probePayload,
+    keyCount:1,
+    size:probePayload.length,
+    backupMarker:probeMarker,
+    backupMarkerId:probeMarker.id,
+    build:APP_CACHE_TOKEN,
+    savedAt:new Date().toISOString()
+  });
+  for(var attempt=0;attempt<3;attempt++){
+    await waitMs(attempt===0?900:1400);
+    var res=await getAppsScriptJson('get_backup',{marker:probeMarker.id}, {timeoutMs:18000, tries:1});
+    var marker=(res&&res.marker)||getBackupVerificationMarkerV22(res&&res.backup&&res.backup.payload);
+    if(marker&&marker.id===probeMarker.id)return {ok:true,row:res&&res.matchedRow};
+  }
+  return {ok:false};
+}
+
 async function sendBackup(silent){
   var appUrl=localStorage.getItem(SHEETS_KEY);
   if(!appUrl){
@@ -6091,6 +6123,8 @@ async function sendBackup(silent){
   }
   try{
     var startedAt=Date.now();
+    var probe=await runBackupPostProbeV22(appUrl,backupMarker);
+    if(!probe.ok)throw new Error('Tiny backup POST probe did not write to State Backups. Check the Web App URL, webhook token, Apps Script deployment, and Activity Log POST errors.');
     var beforeBackup=null;
     try{beforeBackup=await getAppsScriptJson('get_backup',{}, {timeoutMs:18000, tries:1});}catch(beforeErr){}
     var beforeRow=beforeBackup&&beforeBackup.matchedRow?Number(beforeBackup.matchedRow)||0:0;
