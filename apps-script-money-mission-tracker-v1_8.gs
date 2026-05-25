@@ -110,6 +110,7 @@ function doPost(e) {
     var data = JSON.parse(raw);
     var expectedToken = PropertiesService.getScriptProperties().getProperty('A1XX_WEBHOOK_TOKEN');
     if (expectedToken && data.token !== expectedToken) {
+      logActivity('Unauthorized POST blocked — type: ' + (data.type || '?') + ' — token sent: ' + (data.token ? 'yes' : 'no'));
       return ContentService.createTextOutput(JSON.stringify({ ok:false, error:'Unauthorized' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
