@@ -1053,21 +1053,52 @@ function saveBackup(d) {
       json = JSON.stringify(parsed);
     } catch (err) {}
   }
-  sheet.appendRow([new Date().toISOString(), d.keyCount || 0, json.length, json]);
+  var savedAt = new Date().toISOString();
+  var markerId = marker && marker.id ? String(marker.id) : ('backup_' + Date.now());
+  if (json.length > 45000) {
+    var chunkSize = 39000;
+    var total = Math.ceil(json.length / chunkSize);
+    for (var i = 0; i < total; i++) {
+      var envelope = {
+        __mmos_backup_chunk_v22: {
+          backupId: markerId,
+          part: i,
+          total: total,
+          marker: marker || null,
+          savedAt: savedAt,
+          build: d.build || ''
+        },
+        data: json.slice(i * chunkSize, (i + 1) * chunkSize)
+      };
+      sheet.appendRow([savedAt, d.keyCount || 0, json.length, JSON.stringify(envelope)]);
+    }
+  } else {
+    sheet.appendRow([savedAt, d.keyCount || 0, json.length, json]);
+  }
   var savedMarker = extractBackupMarkerV18(json);
   if (savedMarker && savedMarker.id) logActivity('Backup marker saved — ' + savedMarker.id + ' — row ' + sheet.getLastRow());
+}
+
+function parseBackupChunkV18(payload) {
+  try {
+    var parsed = JSON.parse(String(payload || '{}'));
+    return parsed.__mmos_backup_chunk_v22 ? parsed : null;
+  } catch (err) {
+    return null;
+  }
 }
 
 function extractBackupMarkerV18(payload) {
   try {
     var parsed = JSON.parse(String(payload || '{}'));
+    if (parsed.__mmos_backup_chunk_v22) return parsed.__mmos_backup_chunk_v22.marker || null;
     return parsed.__mmos_backup_verification_v22 || null;
   } catch (err) {
     return null;
   }
 }
 
-function makeBackupResponseV18(row, rowNumber, marker, markerSearch) {
+function makeBackupResponseV18(row, rowNumber, marker, markerSearch, payloadOverride) {
   return {
     status: 'ok',
     markerSearch: markerSearch || '',
@@ -1077,9 +1108,40 @@ function makeBackupResponseV18(row, rowNumber, marker, markerSearch) {
       savedAt: row[0],
       keyCount: row[1],
       size: row[2],
-      payload: row[3]
+      payload: payloadOverride !== undefined ? payloadOverride : row[3]
     }
   };
+}
+
+function reconstructBackupFromRowsV18(values, start, backupId) {
+  var chunks = [];
+  var lastRow = 0;
+  var sample = null;
+  for (var i = 0; i < values.length; i++) {
+    var parsed = parseBackupChunkV18(values[i][3]);
+    if (!parsed) continue;
+    var meta = parsed.__mmos_backup_chunk_v22 || {};
+    if (String(meta.backupId || '') !== String(backupId || '')) continue;
+    chunks.push({ part: Number(meta.part) || 0, data: String(parsed.data || '') });
+    lastRow = start + i;
+    sample = { row: values[i], marker: meta.marker || null };
+  }
+  if (!sample || !chunks.length) return null;
+  chunks.sort(function(a, b) { return a.part - b.part; });
+  return makeBackupResponseV18(sample.row, lastRow, sample.marker, 'matched_chunked', chunks.map(function(item) { return item.data; }).join(''));
+}
+
+function makeLatestBackupResponseV18(sheet) {
+  var lastRow = sheet.getLastRow();
+  var scanStart = Math.max(2, lastRow - 249);
+  var values = sheet.getRange(scanStart, 1, lastRow - scanStart + 1, 4).getValues();
+  var latest = values[values.length - 1];
+  var chunk = parseBackupChunkV18(latest[3]);
+  if (chunk && chunk.__mmos_backup_chunk_v22) {
+    var rebuilt = reconstructBackupFromRowsV18(values, scanStart, chunk.__mmos_backup_chunk_v22.backupId);
+    if (rebuilt) return rebuilt;
+  }
+  return makeBackupResponseV18(latest, lastRow, extractBackupMarkerV18(latest[3]), 'latest');
 }
 
 function getBackup(e) {
@@ -1092,11 +1154,17 @@ function getBackup(e) {
   var markerId = e && e.parameter ? String(e.parameter.marker || '').trim() : '';
   var lastRow = sheet.getLastRow();
   if (markerId) {
-    var start = Math.max(2, lastRow - 24);
+    var start = Math.max(2, lastRow - 249);
     var values = sheet.getRange(start, 1, lastRow - start + 1, 4).getValues();
     for (var i = values.length - 1; i >= 0; i--) {
       var payload = String(values[i][3] || '');
       if (payload.indexOf(markerId) === -1) continue;
+      var chunk = parseBackupChunkV18(payload);
+      if (chunk && chunk.__mmos_backup_chunk_v22) {
+        var rebuilt = reconstructBackupFromRowsV18(values, start, chunk.__mmos_backup_chunk_v22.backupId);
+        if (rebuilt) return ContentService.createTextOutput(JSON.stringify(rebuilt))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       var marker = extractBackupMarkerV18(payload);
       if (marker && String(marker.id || '') === markerId) {
         return ContentService.createTextOutput(JSON.stringify(makeBackupResponseV18(values[i], start + i, marker, 'matched_recent')))
@@ -1104,8 +1172,9 @@ function getBackup(e) {
       }
     }
   }
-  var row = sheet.getRange(lastRow, 1, 1, 4).getValues()[0];
-  return ContentService.createTextOutput(JSON.stringify(makeBackupResponseV18(row, lastRow, extractBackupMarkerV18(row[3]), markerId ? 'not_found_recent' : 'latest')))
+  var latest = makeLatestBackupResponseV18(sheet);
+  if (markerId) latest.markerSearch = 'not_found_recent';
+  return ContentService.createTextOutput(JSON.stringify(latest))
     .setMimeType(ContentService.MimeType.JSON);
 }
 

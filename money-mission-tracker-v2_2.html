@@ -3976,9 +3976,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 17:42 ET · OS v2_2 backup write proof';
+var APP_BUILD_STAMP='2026-05-25 17:50 ET · OS v2_2 chunked State Backups';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1742';
+var APP_CACHE_TOKEN='mmos-20260525-1750';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -6060,7 +6060,7 @@ async function sendBackup(silent){
     var size=Math.max(1,Math.round(json.length/1000));
     var largest=payloadAudit.top&&payloadAudit.top.length?(' Largest: '+payloadAudit.top[0].key+' · '+payloadAudit.top[0].kb+'KB.'):'';
     var skipped=backupBuild.skipped&&backupBuild.skipped.length?(' Skipped '+backupBuild.skipped.length+' transient keys.'):'';
-    setBackupStatus(json.length>45000?'warn':'','Saving backup...','Sending '+keyCount+' lean keys ('+size+'KB) to your Sheet.'+largest+skipped+' Keep this window open for a moment.','Saving');
+    setBackupStatus(json.length>45000?'warn':'','Saving backup...','Sending '+keyCount+' lean keys ('+size+'KB) to your Sheet.'+(json.length>45000?' Large backups are chunked safely.':'')+largest+skipped+' Keep this window open for a moment.','Saving');
     setBackupBusy(true);
   }
   try{
