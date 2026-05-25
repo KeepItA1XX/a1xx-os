@@ -2529,6 +2529,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <div class="settings-row"><div><div class="settings-row-name">Last captured issue</div><div class="settings-row-meta" id="settings-self-hardening-last-error">No issue captured yet.</div></div><span class="settings-badge off">Error</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Suggested check</div><div class="settings-row-meta" id="settings-self-hardening-action">No action needed yet.</div></div><span class="settings-badge off" id="settings-self-hardening-action-badge">Next</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Recent issues</div><div class="settings-row-meta" id="settings-self-hardening-recent-issues">No recent issues captured.</div></div><span class="settings-badge off" id="settings-self-hardening-recent-badge">0</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Issue lifecycle</div><div class="settings-row-meta" id="settings-self-hardening-lifecycle">No issue lifecycle recorded yet.</div></div><span class="settings-badge off" id="settings-self-hardening-lifecycle-badge">Clear</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Turn monitor</div><div class="settings-row-meta" id="settings-self-hardening-turns">No Mission Command turns recorded yet.</div></div><span class="settings-badge off">Turns</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Last self-check</div><div class="settings-row-meta" id="settings-self-hardening-check">Not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-check-badge">Check</span></div>
             </div>
@@ -3926,9 +3927,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 10:50 ET · OS v2_2 diagnostics cleanup';
+var APP_BUILD_STAMP='2026-05-25 15:16 ET · OS v2_2 self-hardening issue lifecycle';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1050';
+var APP_CACHE_TOKEN='mmos-20260525-1516';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -4231,6 +4232,50 @@ function mcIssueIsActiveDataWarningV10(item,nowMs){
   if(!isFinite(ts))return true;
   return (nowMs-ts)<=MC_DATA_WARNING_ACTIVE_MS_V10;
 }
+function mcNormalizeIssueLaneV10(value){
+  var text=String(value||'').toLowerCase().replace(/^safeload:/,'').replace(/[^a-z0-9]+/g,' ').trim();
+  if(!text)return '';
+  if(text.indexOf('google calendar')>=0||text==='calendar')return 'calendar';
+  if(text.indexOf('resource')>=0)return 'resources';
+  if(text.indexOf('production')>=0)return 'production pipeline';
+  if(text.indexOf('content pipeline')>=0)return 'content pipeline';
+  if(text.indexOf('notion content')>=0)return 'notion content';
+  if(text.indexOf('crm')>=0||text.indexOf('leads')>=0)return 'crm leads';
+  if(text.indexOf('todoist')>=0)return 'todoist';
+  if(text.indexOf('live events')>=0)return 'live events';
+  return text;
+}
+function mcGetBridgeRecoveryStateForIssueV10(item){
+  if(!item)return null;
+  var lane=mcNormalizeIssueLaneV10(item.source);
+  var issueTs=Date.parse(item.ts||'')||0;
+  var candidates=[];
+  try{
+    var pulse=typeof getBridgePulseSnapshotV22==='function'?getBridgePulseSnapshotV22():null;
+    (pulse&&pulse.rows||[]).forEach(function(row){
+      if(mcNormalizeIssueLaneV10(row.label)===lane)candidates.push({kind:'pulse',label:row.label,status:row.status,durationMs:row.durationMs||0,ts:row.ts||0});
+    });
+  }catch(e){}
+  try{
+    var probe=typeof getBridgeEndpointProbeLogV22==='function'?getBridgeEndpointProbeLogV22():null;
+    (probe&&probe.rows||[]).forEach(function(row){
+      if(mcNormalizeIssueLaneV10(row.label)===lane)candidates.push({kind:'probe',label:row.label,status:row.status,durationMs:row.durationMs||0,ts:probe.checkedAt||row.ts||0,review:typeof classifyBridgeEndpointProbeRowV22==='function'?classifyBridgeEndpointProbeRowV22(row):''});
+    });
+  }catch(e){}
+  candidates=candidates.filter(function(row){return !issueTs||(row.ts||0)>=issueTs;}).sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+  if(!candidates.length)return {state:'unknown',lane:lane};
+  var latest=candidates[0];
+  if(latest.status==='ok'&&latest.review!=='review'&&(latest.durationMs||0)<BRIDGE_PULSE_REVIEW_MS_V22)return {state:'recovered',lane:lane,via:latest.kind,label:latest.label,durationMs:latest.durationMs,ts:latest.ts};
+  return {state:'active',lane:lane,via:latest.kind,label:latest.label,durationMs:latest.durationMs,ts:latest.ts};
+}
+function mcGetIssueLifecycleV10(item,nowMs){
+  var issueClass=item&&item.severity||mcClassifyRuntimeIssueV10(item&&item.source,item&&item.message).severity;
+  if(issueClass==='runtime')return {state:'active',label:'Active',reason:'runtime'};
+  var recovery=mcGetBridgeRecoveryStateForIssueV10(item);
+  if(recovery&&recovery.state==='recovered')return {state:'recovered',label:'Recovered',reason:recovery.via||'bridge',recovery:recovery};
+  if(mcIssueIsActiveDataWarningV10(item,nowMs))return {state:'active',label:'Active',reason:'recent data delay',recovery:recovery};
+  return {state:'history',label:'History',reason:'older data delay',recovery:recovery};
+}
 function mcRecordRuntimeErrorV10(err,source,extra){
   try{
     var log=mcReadJsonV10(MC_RUNTIME_ERROR_LOG_KEY_V10,[]);
@@ -4293,8 +4338,29 @@ function mcGetSelfHardeningSummaryV10(){
   var nowMs=Date.now();
   var runtimeErrors=(errors||[]).filter(function(item){return (item.severity||mcClassifyRuntimeIssueV10(item.source,item.message).severity)==='runtime';});
   var dataWarnings=(errors||[]).filter(function(item){return (item.severity||mcClassifyRuntimeIssueV10(item.source,item.message).severity)==='data';});
-  var activeDataWarnings=dataWarnings.filter(function(item){return mcIssueIsActiveDataWarningV10(item,nowMs);});
-  return {phase:MC_SELF_HARDENING_PHASE_V10,turns:health.turns||0,errors:Math.max(health.errors||0,errors?errors.length:0),runtimeErrors:runtimeErrors.length,dataWarnings:dataWarnings.length,activeDataWarnings:activeDataWarnings.length,fallbacks:health.fallbacks||0,lastRoute:health.lastRoute||'',lastTurnAt:health.lastTurnAt||'',lastError:last||null,recentErrors:(errors||[]).slice(-5).reverse()};
+  var dataLifecycle=dataWarnings.map(function(item){return {item:item,life:mcGetIssueLifecycleV10(item,nowMs)};});
+  var activeDataWarnings=dataLifecycle.filter(function(row){return row.life.state==='active';});
+  var recoveredDataWarnings=dataLifecycle.filter(function(row){return row.life.state==='recovered';});
+  var historicalDataWarnings=dataLifecycle.filter(function(row){return row.life.state==='history';});
+  var activeRuntimeErrors=runtimeErrors.length;
+  var activeCount=activeRuntimeErrors+activeDataWarnings.length;
+  return {
+    phase:MC_SELF_HARDENING_PHASE_V10,
+    turns:health.turns||0,
+    errors:Math.max(health.errors||0,errors?errors.length:0),
+    runtimeErrors:runtimeErrors.length,
+    activeRuntimeErrors:activeRuntimeErrors,
+    dataWarnings:dataWarnings.length,
+    activeDataWarnings:activeDataWarnings.length,
+    recoveredDataWarnings:recoveredDataWarnings.length,
+    historicalDataWarnings:historicalDataWarnings.length,
+    activeIssues:activeCount,
+    fallbacks:health.fallbacks||0,
+    lastRoute:health.lastRoute||'',
+    lastTurnAt:health.lastTurnAt||'',
+    lastError:last||null,
+    recentErrors:(errors||[]).slice(-5).reverse()
+  };
 }
 function mcFormatRecentIssuesV10(items){
   if(!items||!items.length)return 'No recent issues captured.';
@@ -4302,8 +4368,15 @@ function mcFormatRecentIssuesV10(items){
     var when=item.ts?new Date(item.ts).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'time unknown';
     var build=item.build?(' · '+item.build):'';
     var issueClass=item.label||mcClassifyRuntimeIssueV10(item.source,item.message).label;
-    return when+' · '+issueClass+' · '+(item.source||'runtime')+' · '+(item.message||'unknown issue')+build;
+    var life=mcGetIssueLifecycleV10(item,Date.now());
+    return when+' · '+life.label+' · '+issueClass+' · '+(item.source||'runtime')+' · '+(item.message||'unknown issue')+build;
   }).join(' | ');
+}
+function mcFormatIssueLifecycleSummaryV10(summary){
+  summary=summary||mcGetSelfHardeningSummaryV10();
+  if(summary.activeIssues)return summary.activeIssues+' active · '+(summary.recoveredDataWarnings||0)+' recovered · '+(summary.historicalDataWarnings||0)+' history.';
+  if(summary.recoveredDataWarnings||summary.historicalDataWarnings)return '0 active · '+(summary.recoveredDataWarnings||0)+' recovered · '+(summary.historicalDataWarnings||0)+' history.';
+  return 'No issue lifecycle recorded yet.';
 }
 function mcGetSelfHardeningActionHintV10(summary){
   summary=summary||mcGetSelfHardeningSummaryV10();
@@ -4316,6 +4389,9 @@ function mcGetSelfHardeningActionHintV10(summary){
   }
   if(summary.activeDataWarnings){
     return {status:'watch',label:'Data',text:'Run sync check, then Probe endpoints. Trust the lane only after Bridge Pulse or Endpoint Probe is clean.'};
+  }
+  if(summary.recoveredDataWarnings){
+    return {status:'clean',label:'Recovered',text:'Older data delay recovered. If Bridge Pulse stays green, keep moving.'};
   }
   if(summary.dataWarnings){
     return {status:'watch',label:'History',text:'Older data delays are recorded. If the lane is green now, keep moving.'};
@@ -4338,10 +4414,13 @@ function renderSelfHardeningDiagnosticsV10(){
     var actionBadge=document.getElementById('settings-self-hardening-action-badge');
     var recent=document.getElementById('settings-self-hardening-recent-issues');
     var recentBadge=document.getElementById('settings-self-hardening-recent-badge');
+    var lifecycle=document.getElementById('settings-self-hardening-lifecycle');
+    var lifecycleBadge=document.getElementById('settings-self-hardening-lifecycle-badge');
     var turns=document.getElementById('settings-self-hardening-turns');
     if(row){
       if(summary.runtimeErrors)row.textContent='Review needed. '+summary.runtimeErrors+' runtime issue'+(summary.runtimeErrors===1?'':'s')+' captured; open details before changing data.';
       else if(summary.activeDataWarnings)row.textContent='Data delay. '+summary.activeDataWarnings+' active source timeout'+(summary.activeDataWarnings===1?'':'s')+' captured; verify freshness before trusting those lanes.';
+      else if(summary.recoveredDataWarnings)row.textContent='Clean. '+summary.recoveredDataWarnings+' older data delay'+(summary.recoveredDataWarnings===1?' has':'s have')+' recovered; keep moving if Bridge Pulse stays green.';
       else if(summary.dataWarnings&&summary.turns)row.textContent='Clean. Watching Mission Command turns. Older data delay history is in details.';
       else if(summary.turns)row.textContent='Clean. Watching Mission Command turns with no captured issues.';
       else row.textContent='Ready. Passive monitor is armed; run Mission Command or check self-hardening.';
@@ -4359,8 +4438,13 @@ function renderSelfHardeningDiagnosticsV10(){
     }
     if(recent)recent.textContent=mcFormatRecentIssuesV10(summary.recentErrors);
     if(recentBadge){
-      recentBadge.textContent=summary.recentErrors&&summary.recentErrors.length?String(summary.recentErrors.length):'0';
-      recentBadge.className='settings-badge '+(summary.recentErrors&&summary.recentErrors.length?'warn':'off');
+      recentBadge.textContent=summary.activeIssues?String(summary.activeIssues):(summary.recentErrors&&summary.recentErrors.length?'History':'0');
+      recentBadge.className='settings-badge '+(summary.activeIssues?'warn':'off');
+    }
+    if(lifecycle)lifecycle.textContent=mcFormatIssueLifecycleSummaryV10(summary);
+    if(lifecycleBadge){
+      lifecycleBadge.textContent=summary.activeIssues?'Active':summary.recoveredDataWarnings?'Recovered':summary.historicalDataWarnings?'History':'Clear';
+      lifecycleBadge.className='settings-badge '+(summary.activeIssues?'warn':'off');
     }
     if(turns)turns.textContent=summary.lastTurnAt?('Watching '+summary.turns+' turn'+(summary.turns===1?'':'s')+' · last route '+(summary.lastRoute||'unknown')+' · '+summary.fallbacks+' fallback'+(summary.fallbacks===1?'':'s')):'No Mission Command turns recorded yet.';
   }catch(e){}
@@ -4386,6 +4470,7 @@ function runSelfHardeningPhase1SelfCheckV10(){
   var failures=[];
   var priorError=localStorage.getItem(MC_RUNTIME_ERROR_LOG_KEY_V10);
   var priorHealth=localStorage.getItem(MC_TURN_HEALTH_KEY_V10);
+  var priorPulse=sessionStorage.getItem(BRIDGE_PULSE_KEY_V22);
   try{
     localStorage.removeItem(MC_RUNTIME_ERROR_LOG_KEY_V10);
     localStorage.removeItem(MC_TURN_HEALTH_KEY_V10);
@@ -4402,11 +4487,19 @@ function runSelfHardeningPhase1SelfCheckV10(){
     if(runtimeHint.label!=='Render'||runtimeHint.status!=='review')failures.push('action_hint_runtime_failed');
     var dataHint=mcGetSelfHardeningActionHintV10({runtimeErrors:0,activeDataWarnings:1,dataWarnings:1,fallbacks:0,turns:1,lastError:{source:'safeLoad:Calendar',message:'timeout'},recentErrors:[]});
     if(dataHint.label!=='Data'||dataHint.status!=='watch'||!/Probe endpoints/i.test(dataHint.text))failures.push('action_hint_data_failed');
+    var issueTs=new Date(Date.now()-60000).toISOString();
+    localStorage.setItem(MC_RUNTIME_ERROR_LOG_KEY_V10,JSON.stringify([{ts:issueTs,source:'safeLoad:Google Calendar',message:'Google Calendar timed out',severity:'data',label:'Data delay',build:'self-check'}]));
+    sessionStorage.setItem(BRIDGE_PULSE_KEY_V22,JSON.stringify([{label:'Google Calendar',status:'ok',durationMs:2500,msg:'loaded',ts:Date.now()}]));
+    var recoveredSummary=mcGetSelfHardeningSummaryV10();
+    if(recoveredSummary.activeDataWarnings||!recoveredSummary.recoveredDataWarnings)failures.push('issue_lifecycle_recovery_failed');
+    var recoveredHint=mcGetSelfHardeningActionHintV10(recoveredSummary);
+    if(recoveredHint.label!=='Recovered'||recoveredHint.status!=='clean')failures.push('issue_lifecycle_hint_failed');
     if(shouldIncludeInBackupPayloadV22(MC_RUNTIME_ERROR_LOG_KEY_V10)||shouldIncludeInBackupPayloadV22(MC_TURN_HEALTH_KEY_V10))failures.push('self_hardening_logs_should_not_backup');
   }catch(e){failures.push(e&&e.message?e.message:String(e));}
   finally{
     if(priorError===null)localStorage.removeItem(MC_RUNTIME_ERROR_LOG_KEY_V10);else localStorage.setItem(MC_RUNTIME_ERROR_LOG_KEY_V10,priorError);
     if(priorHealth===null)localStorage.removeItem(MC_TURN_HEALTH_KEY_V10);else localStorage.setItem(MC_TURN_HEALTH_KEY_V10,priorHealth);
+    if(priorPulse===null)sessionStorage.removeItem(BRIDGE_PULSE_KEY_V22);else sessionStorage.setItem(BRIDGE_PULSE_KEY_V22,priorPulse);
   }
   return {passed:!failures.length,failures:failures,total:3};
 }
