@@ -3843,9 +3843,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 21:06 ET · OS v2_2 storage health phase 0/1';
+var APP_BUILD_STAMP='2026-05-24 21:21 ET · OS v2_2 chat storage compaction';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-2106';
+var APP_CACHE_TOKEN='mmos-20260524-2121';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -3881,8 +3881,8 @@ var MISSION_CHAT_SYNC_STAMP_KEY='a1xx_mission_command_sync_stamp_v1';
 var MISSION_CHAT_ACTIVE_ALIAS_KEY='a1xx_mc_active_chat';
 var MISSION_CHAT_HISTORY_ALIAS_KEY='a1xx_mc_chat_history';
 var MISSION_CHAT_ARCHIVE_KEY='a1xx_mc_chat_archive';
-var MISSION_CHAT_ACTIVE_LIMIT=30;
-var MISSION_CHAT_ARCHIVE_LIMIT=100;
+var MISSION_CHAT_ACTIVE_LIMIT=20;
+var MISSION_CHAT_ARCHIVE_LIMIT=25;
 var MISSION_COMMAND_AUDIT_KEY='a1xx_mission_command_safety_audit_v1';
 var MISSION_WORKER_AUDIT_KEY='a1xx_mc_audit_v1';
 var MISSION_MEMORY_GOALS_KEY='a1xx_mc_goals_v1';
@@ -4016,6 +4016,18 @@ function getStorageHealthSnapshotV22(){
 function formatStorageTopKeysV22(rows){
   if(!rows||!rows.length)return 'No stored keys found.';
   return rows.slice(0,5).map(function(row){return row.key+' · '+row.kb+'KB';}).join(' | ');
+}
+function setCompactedJsonLocalStorageV22(key,value){
+  var raw='';
+  try{raw=JSON.stringify(value);}catch(e){return {ok:false,message:'Could not prepare compacted data.'};}
+  var written=safeSetLocalStorageV22(key,raw);
+  if(written.ok)return written;
+  if(written.quota){
+    try{localStorage.removeItem(key);}catch(e){}
+    written=safeSetLocalStorageV22(key,raw);
+    if(written.ok)return {ok:true,compactedReplace:true};
+  }
+  return written;
 }
 function flash(id){var t=document.getElementById(id);if(!t)return;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 
@@ -4231,8 +4243,13 @@ function renderStorageHealthDiagnosticsV22(){
   var top=document.getElementById('settings-storage-top-keys');
   var backup=document.getElementById('settings-storage-backup-size');
   var audit=getStorageHealthSnapshotV22();
+  var compacted=null;
+  if(audit.percent>=85&&typeof compactMissionChatStorageNowV22==='function'){
+    compacted=compactMissionChatStorageNowV22('diagnostics_'+audit.label.toLowerCase());
+    audit=getStorageHealthSnapshotV22();
+  }
   if(summary)summary.textContent='Local '+audit.local.totalKB+'KB across '+audit.local.count+' keys · Session '+audit.session.totalKB+'KB across '+audit.session.count+' keys · '+audit.percent+'% of 5MB budget.';
-  if(top)top.textContent=formatStorageTopKeysV22(audit.local.top);
+  if(top)top.textContent=(compacted&&compacted.ok?'Compacted chat storage. ':'')+formatStorageTopKeysV22(audit.local.top);
   if(badge){
     badge.textContent=audit.label;
     badge.className='settings-badge '+(audit.zone==='ok'?'':audit.zone==='warn'?'warn':'warn');
@@ -4268,6 +4285,8 @@ function runStorageHealthSelfCheckV22(){
   if(!audit||!audit.local||typeof audit.local.count!=='number')failures.push('storage_audit_shape_failed');
   var payloadAudit=getBackupPayloadAuditV22({a:'12345',b:'67890'});
   if(!payloadAudit||payloadAudit.count!==2||payloadAudit.totalChars<10)failures.push('backup_audit_shape_failed');
+  var archived=compactMissionSessionForStorageV22({id:'test_archive',title:'Archive',archivedAt:'2026-05-24',messages:[{role:'user',body:'x'.repeat(3000),ts:'1'}],memory:{heavy:'x'.repeat(1000)}},'archive');
+  if(archived.memory||archived.messages[0].body.length>700)failures.push('archive_compaction_failed');
   return {pass:failures.length===0,failures:failures,audit:audit};
 }
 
@@ -28402,11 +28421,62 @@ function saveMissionChatSessions(sessions){
     archived=overflow.concat(archived);
   }
   archived=dedupeMissionSessions(archived).slice(0,MISSION_CHAT_ARCHIVE_LIMIT);
-  setStore(MISSION_CHAT_SESSIONS_KEY,active);
-  setStore(MISSION_CHAT_HISTORY_ALIAS_KEY,active);
-  setStore(MISSION_CHAT_ARCHIVE_KEY,archived);
+  var activeForStore=active.map(function(s){return compactMissionSessionForStorageV22(s,'active');});
+  var archiveForStore=archived.map(function(s){return compactMissionSessionForStorageV22(s,'archive');});
+  setCompactedJsonLocalStorageV22(MISSION_CHAT_SESSIONS_KEY,activeForStore);
+  setCompactedJsonLocalStorageV22(MISSION_CHAT_HISTORY_ALIAS_KEY,activeForStore);
+  setCompactedJsonLocalStorageV22(MISSION_CHAT_ARCHIVE_KEY,archiveForStore);
   var activeId=localStorage.getItem(MISSION_CHAT_ACTIVE_SESSION_KEY)||'';
   if(activeId)localStorage.setItem(MISSION_CHAT_ACTIVE_ALIAS_KEY,activeId);
+}
+
+function compactMissionTurnHistoryV22(turns,limit){
+  return (Array.isArray(turns)?turns:[]).slice(-(limit||20)).map(function(turn){
+    turn=turn||{};
+    return {
+      question:String(turn.question||'').slice(0,500),
+      answer:String(turn.answer||'').slice(0,900),
+      followUp:String(turn.followUp||'').slice(0,500),
+      ts:turn.ts||turn.timestamp||''
+    };
+  });
+}
+
+function compactMissionCheckpointHistoryV22(items,limit){
+  return (Array.isArray(items)?items:[]).slice(0,limit||20).map(function(item){
+    item=item||{};
+    return {
+      turnId:item.turnId||item.id||'',
+      timestamp:item.timestamp||item.ts||'',
+      rawInput:String(item.rawInput||'').slice(0,260),
+      selectedRoute:item.selectedRoute||item.route||'',
+      selectedWorker:item.selectedWorker||'',
+      decisionIntent:item.decisionIntent||null,
+      contextArbitration:item.contextArbitration||null,
+      responseShape:item.responseShape||'',
+      dataConfidence:item.dataConfidence||'',
+      nextBestMove:String(item.nextBestMove||'').slice(0,260),
+      integrityFlags:Array.isArray(item.integrityFlags)?item.integrityFlags.slice(0,8):[]
+    };
+  });
+}
+
+function compactMissionChatStorageNowV22(reason){
+  var before=typeof getStorageHealthSnapshotV22==='function'?getStorageHealthSnapshotV22():null;
+  try{
+    var sessions=normalizeMissionChatSessionsV11(getStore(MISSION_CHAT_SESSIONS_KEY)||getStore(MISSION_CHAT_HISTORY_ALIAS_KEY)||[]);
+    saveMissionChatSessions(sessions);
+  }catch(e){}
+  try{
+    var globalHistory=compactMissionTurnHistoryV22(getStore(MISSION_CHAT_HISTORY_KEY)||[],20);
+    setCompactedJsonLocalStorageV22(MISSION_CHAT_HISTORY_KEY,globalHistory);
+  }catch(e){}
+  try{
+    var checkpoints=compactMissionCheckpointHistoryV22(getStore(MISSION_TURN_CHECKPOINTS_KEY)||[],20);
+    setCompactedJsonLocalStorageV22(MISSION_TURN_CHECKPOINTS_KEY,checkpoints);
+  }catch(e){}
+  var after=typeof getStorageHealthSnapshotV22==='function'?getStorageHealthSnapshotV22():null;
+  return {ok:true,reason:reason||'manual',beforeKB:before&&before.local&&before.local.totalKB,afterKB:after&&after.local&&after.local.totalKB,savedKB:before&&after?Math.round((before.local.totalKB-after.local.totalKB)*100)/100:0};
 }
 
 function dedupeMissionSessions(sessions){
@@ -28416,6 +28486,42 @@ function dedupeMissionSessions(sessions){
     seen[s.id]=true;
     return true;
   });
+}
+
+function compactMissionMessageForStorageV22(msg,maxChars){
+  msg=msg||{};
+  return {
+    role:msg.role||'assistant',
+    body:String(msg.body||'').slice(0,maxChars||1000),
+    ts:msg.ts||''
+  };
+}
+
+function compactMissionSessionForStorageV22(session,mode){
+  session=session||{};
+  var archive=mode==='archive'||!!session.archivedAt;
+  var maxMessages=archive?8:40;
+  var maxBody=archive?700:1800;
+  var compact={
+    id:session.id||('mc_session_'+Date.now()),
+    title:String(session.title||'Mission Command').slice(0,90),
+    project:String(session.project||getActiveMissionProject()).slice(0,80),
+    createdAt:session.createdAt||session.updatedAt||new Date().toISOString(),
+    updatedAt:session.updatedAt||session.createdAt||new Date().toISOString(),
+    archivedAt:session.archivedAt||'',
+    tags:Array.isArray(session.tags)?session.tags.slice(0,8):[],
+    contextWindow:archive?'':String(session.contextWindow||'').slice(0,800),
+    messages:(Array.isArray(session.messages)?session.messages:[]).slice(-maxMessages).map(function(msg){return compactMissionMessageForStorageV22(msg,maxBody);})
+  };
+  if(!archive){
+    compact.memory=session.memory||{};
+    compact.cache=session.cache||{};
+    compact.checkpoints=Array.isArray(session.checkpoints)?session.checkpoints.slice(0,12):[];
+    compact.arc=session.arc||{};
+    compact.sil=session.sil||{};
+    compact.appMemoryRefs=Array.isArray(session.appMemoryRefs)?session.appMemoryRefs.slice(-10):[];
+  }
+  return compact;
 }
 
 function getMissionArchivedSessions(){
