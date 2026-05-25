@@ -2476,9 +2476,12 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="settings-list" id="settings-diagnostics-list">
             <div class="settings-row"><div><div class="settings-row-name">Recent checks</div><div class="settings-row-meta">Run sync check to refresh live services. Activity Log remains the source of truth for backend events.</div></div><span class="settings-badge warn">Review</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Cycle Archive</div><div class="settings-row-meta">Use the two-click Archive Cycle flow, then confirm Activity Log shows ping, archive, and Notion upsert.</div></div><span class="settings-badge">Ready</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Storage Health</div><div class="settings-row-meta" id="settings-storage-health-summary">Open diagnostics to measure browser storage.</div></div><span class="settings-badge off" id="settings-storage-health-badge">Check</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Largest local keys</div><div class="settings-row-meta" id="settings-storage-top-keys">Not checked yet.</div></div><span class="settings-badge off">Audit</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Backup payload</div><div class="settings-row-meta" id="settings-storage-backup-size">Not checked yet.</div></div><span class="settings-badge off">Size</span></div>
           </div>
         </div>
-        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
+        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
       </div>
       <div class="health-subpane" id="health-subpane-version">
         <div class="settings-section">
@@ -3840,9 +3843,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-24 20:10 ET · OS v2_2 close log dual persistence';
+var APP_BUILD_STAMP='2026-05-24 21:06 ET · OS v2_2 storage health phase 0/1';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260524-2010';
+var APP_CACHE_TOKEN='mmos-20260524-2106';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -3953,11 +3956,66 @@ function fmtS(s){return pd(s).toLocaleDateString('en-US',{month:'short',day:'num
 function nowMins(){var n=new Date();return n.getHours()*60+n.getMinutes();}
 function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function getStore(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
+function isStorageQuotaErrorV22(e){
+  var name=String(e&&e.name||'').toLowerCase();
+  var msg=String(e&&e.message||'').toLowerCase();
+  return name.indexOf('quota')>=0||msg.indexOf('quota')>=0||msg.indexOf('exceeded')>=0;
+}
+function safeSetLocalStorageV22(key,value){
+  try{
+    localStorage.setItem(key,value);
+    return {ok:true};
+  }catch(e){
+    return {ok:false,quota:isStorageQuotaErrorV22(e),message:e&&e.message?e.message:String(e||'storage error')};
+  }
+}
 function setStore(k,v){
   try{
     localStorage.setItem(k,JSON.stringify(v));
     if(k!=='a1xx_auto_backup_meta_v1')touchLastModified();
   }catch(e){console.warn('A1XX local save skipped',k,e);}
+}
+function getStorageAreaAuditV22(area){
+  var rows=[],total=0;
+  try{
+    for(var i=0;i<area.length;i++){
+      var key=area.key(i);
+      var value=area.getItem(key)||'';
+      var size=String(key||'').length+String(value||'').length;
+      total+=size;
+      rows.push({key:key,size:size,kb:Math.round(size/10.24)/100});
+    }
+  }catch(e){}
+  rows.sort(function(a,b){return b.size-a.size;});
+  return {totalChars:total,totalKB:Math.round(total/10.24)/100,count:rows.length,top:rows.slice(0,8)};
+}
+function getBackupPayloadAuditV22(payload){
+  var rows=[],total=0;
+  Object.keys(payload||{}).forEach(function(key){
+    var value=payload[key]||'';
+    var size=String(key||'').length+String(value||'').length;
+    total+=size;
+    rows.push({key:key,size:size,kb:Math.round(size/10.24)/100});
+  });
+  rows.sort(function(a,b){return b.size-a.size;});
+  return {totalChars:total,totalKB:Math.round(total/10.24)/100,count:rows.length,top:rows.slice(0,5)};
+}
+function getStorageHealthSnapshotV22(){
+  var local=getStorageAreaAuditV22(localStorage);
+  var session=getStorageAreaAuditV22(sessionStorage);
+  var percent=Math.round((local.totalKB/5000)*100);
+  var zone='ok',label='Green';
+  if(percent>=95){zone='err';label='Critical';}
+  else if(percent>=85){zone='warn';label='Red';}
+  else if(percent>=70){zone='warn';label='Yellow';}
+  var danger=local.top.filter(function(row){
+    return row.size>250000||/history|sessions|backup|close|ledger|archive/i.test(row.key||'');
+  }).slice(0,5);
+  return {local:local,session:session,percent:percent,zone:zone,label:label,danger:danger,checkedAt:new Date().toISOString()};
+}
+function formatStorageTopKeysV22(rows){
+  if(!rows||!rows.length)return 'No stored keys found.';
+  return rows.slice(0,5).map(function(row){return row.key+' · '+row.kb+'KB';}).join(' | ');
 }
 function flash(id){var t=document.getElementById(id);if(!t)return;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 
@@ -4141,6 +4199,11 @@ function renderSystemHealth(){
   if(!grid)return;
   var storageOk=true,storageMsg='Local browser storage available';
   try{localStorage.setItem('a1xx_health_test','1');localStorage.removeItem('a1xx_health_test');}catch(e){storageOk=false;storageMsg='Local storage blocked';}
+  var storageAudit=storageOk&&typeof getStorageHealthSnapshotV22==='function'?getStorageHealthSnapshotV22():null;
+  if(storageAudit){
+    storageMsg='Local storage '+storageAudit.label.toLowerCase()+' · '+storageAudit.local.totalKB+'KB · '+storageAudit.percent+'% of 5MB budget';
+    if(storageAudit.percent>=70)storageOk=false;
+  }
   var services=[
     ['dailyOps','Daily DPC Log'],
     ['weeklyOps','Weekly Review Log'],
@@ -4157,9 +4220,55 @@ function renderSystemHealth(){
     cycleOps:{status:'ok',msg:'Last live test passed. Archive ping, Sheet row, and Notion upsert are working.'}
   };
   grid.innerHTML=services.map(function(s){
-    var rec=s[0]==='storage'?{status:storageOk?'ok':'err',msg:storageMsg}:((h.services||{})[s[0]]||defaults[s[0]]||{status:'loading',msg:'Waiting for sync'});
+    var rec=s[0]==='storage'?{status:storageOk?'ok':(storageAudit&&storageAudit.percent>=70?'warn':'err'),msg:storageMsg}:((h.services||{})[s[0]]||defaults[s[0]]||{status:'loading',msg:'Waiting for sync'});
     return '<div class="system-item"><div class="system-item-top"><div class="system-name">'+s[1]+'</div><div class="system-dot '+rec.status+'"></div></div><div class="system-msg">'+escapeHtml(rec.msg||'')+'</div></div>';
   }).join('');
+}
+
+function renderStorageHealthDiagnosticsV22(){
+  var summary=document.getElementById('settings-storage-health-summary');
+  var badge=document.getElementById('settings-storage-health-badge');
+  var top=document.getElementById('settings-storage-top-keys');
+  var backup=document.getElementById('settings-storage-backup-size');
+  var audit=getStorageHealthSnapshotV22();
+  if(summary)summary.textContent='Local '+audit.local.totalKB+'KB across '+audit.local.count+' keys · Session '+audit.session.totalKB+'KB across '+audit.session.count+' keys · '+audit.percent+'% of 5MB budget.';
+  if(top)top.textContent=formatStorageTopKeysV22(audit.local.top);
+  if(badge){
+    badge.textContent=audit.label;
+    badge.className='settings-badge '+(audit.zone==='ok'?'':audit.zone==='warn'?'warn':'warn');
+  }
+  if(backup){
+    var payload={};
+    try{
+      for(var i=0;i<localStorage.length;i++){
+        var k=localStorage.key(i);
+        if(k&&k.indexOf('a1xx_')===0)payload[k]=localStorage.getItem(k);
+      }
+    }catch(e){}
+    var payloadAudit=getBackupPayloadAuditV22(payload);
+    backup.textContent='Backup payload estimate: '+payloadAudit.totalKB+'KB across '+payloadAudit.count+' a1xx_* keys. Largest: '+formatStorageTopKeysV22(payloadAudit.top);
+  }
+  return audit;
+}
+
+function runStorageHealthSelfCheckV22(){
+  var failures=[];
+  var tempKey='a1xx_storage_health_temp_v22';
+  try{
+    var written=safeSetLocalStorageV22(tempKey,'ok');
+    if(!written.ok)failures.push('temp_write_failed');
+    if(localStorage.getItem(tempKey)!=='ok')failures.push('temp_readback_failed');
+  }catch(e){failures.push('temp_storage_exception');}
+  try{localStorage.removeItem(tempKey);}catch(e){}
+  var sampleTs=Date.now();
+  var compact=compactCloseLogForStorageV22([{date:'2026-05-24',name:'A'.repeat(200),product:'B'.repeat(120),amount:'1000',source:'Instagram DM',ts:sampleTs}],50);
+  if(!compact.length||compact[0].name.length>120||compact[0].product.length>80)failures.push('close_compaction_failed');
+  if(!closeLogContainsTsV22(compact,sampleTs))failures.push('close_ts_missing_after_compact');
+  var audit=getStorageHealthSnapshotV22();
+  if(!audit||!audit.local||typeof audit.local.count!=='number')failures.push('storage_audit_shape_failed');
+  var payloadAudit=getBackupPayloadAuditV22({a:'12345',b:'67890'});
+  if(!payloadAudit||payloadAudit.count!==2||payloadAudit.totalChars<10)failures.push('backup_audit_shape_failed');
+  return {pass:failures.length===0,failures:failures,audit:audit};
 }
 
 async function fetchWithRetry(url,opts,tries,timeoutMs){
@@ -4536,6 +4645,7 @@ function setHealthSubTab(tab){
     pane.classList.toggle('active',pane.id==='health-subpane-'+window.__healthSubTab);
   });
   if(window.__healthSubTab==='status')renderSystemHealth();
+  if(window.__healthSubTab==='diagnostics')renderStorageHealthDiagnosticsV22();
   if(window.__healthSubTab==='version')renderMissionBuildStampV1();
 }
 
@@ -4733,10 +4843,12 @@ async function sendBackup(silent){
   }
   var json=JSON.stringify(payload);
   var keyCount=Object.keys(payload).length;
+  var payloadAudit=typeof getBackupPayloadAuditV22==='function'?getBackupPayloadAuditV22(payload):{totalKB:Math.round(json.length/1000),top:[]};
   if(!silent){
     openBackupSettings();
     var size=Math.max(1,Math.round(json.length/1000));
-    setBackupStatus(json.length>45000?'warn':'','Saving backup...','Sending '+keyCount+' keys ('+size+'KB) to your Sheet. Keep this window open for a moment.','Saving');
+    var largest=payloadAudit.top&&payloadAudit.top.length?(' Largest: '+payloadAudit.top[0].key+' · '+payloadAudit.top[0].kb+'KB.'):'';
+    setBackupStatus(json.length>45000?'warn':'','Saving backup...','Sending '+keyCount+' keys ('+size+'KB) to your Sheet.'+largest+' Keep this window open for a moment.','Saving');
     setBackupBusy(true);
   }
   try{
@@ -4876,15 +4988,53 @@ function setCloseLogSessionFallbackV22(log){
   window.__closeLogSessionFallbackV22=Array.isArray(log)?log.slice(0,50):[];
 }
 
+function compactCloseLogForStorageV22(log,limit){
+  return (Array.isArray(log)?log:[]).filter(Boolean).slice(0,limit||50).map(function(item){
+    return {
+      date:item.date||dateKey(new Date()),
+      name:String(item.name||'').slice(0,120),
+      product:String(item.product||'').slice(0,80),
+      amount:parseFloat(item.amount)||0,
+      source:String(item.source||'').slice(0,80),
+      ts:item.ts||Date.now()
+    };
+  });
+}
+
 function closeLogContainsTsV22(list,expectedTs){
   return Array.isArray(list)&&list.some(function(item){return String(item&&item.ts||'')===String(expectedTs);});
+}
+
+function writeCloseLogKeyWithRetriesV22(key,log,expectedTs){
+  var limits=[50,25,10,1];
+  var lastError='';
+  for(var i=0;i<limits.length;i++){
+    var candidate=compactCloseLogForStorageV22(log,limits[i]);
+    try{
+      var written=safeSetLocalStorageV22(key,JSON.stringify(candidate));
+      if(!written.ok){
+        lastError=written.message||'storage write failed';
+        continue;
+      }
+      var saved=JSON.parse(localStorage.getItem(key)||'[]');
+      if(closeLogContainsTsV22(saved,expectedTs)){
+        touchLastModified();
+        return {ok:true,reason:limits[i]===50?'verified':'verified_compacted_'+limits[i],limit:limits[i],rows:candidate.length};
+      }
+      lastError='readback missed at '+limits[i]+' rows';
+    }catch(e){
+      lastError=e&&e.message?e.message:String(e||'storage error');
+    }
+  }
+  return {ok:false,reason:'quota_compact_failed',message:lastError||'Close Log storage rejected compacted rows.'};
 }
 
 function saveCloseLogSecondaryV22(log,expectedTs){
   try{
     var main=getStore(STORE)||{};
-    main.closeLogV22=Array.isArray(log)?log.slice(0,50):[];
-    localStorage.setItem(STORE,JSON.stringify(main));
+    main.closeLogV22=compactCloseLogForStorageV22(log,50);
+    var written=safeSetLocalStorageV22(STORE,JSON.stringify(main));
+    if(!written.ok)return {ok:false,reason:written.quota?'secondary_quota_error':'secondary_storage_error',message:written.message||'Main app snapshot rejected the close.'};
     touchLastModified();
     var verified=getStore(STORE)||{};
     return closeLogContainsTsV22(verified.closeLogV22,expectedTs)
@@ -4896,19 +5046,9 @@ function saveCloseLogSecondaryV22(log,expectedTs){
 }
 
 function saveCloseLogWithReadbackV22(log,expectedTs){
-  var raw='';
   var primary={ok:false,reason:'not_checked'};
-  try{
-    raw=JSON.stringify(log);
-    localStorage.setItem(CLOSE_LOG_KEY,raw);
-    touchLastModified();
-    var saved=JSON.parse(localStorage.getItem(CLOSE_LOG_KEY)||'[]');
-    primary=closeLogContainsTsV22(saved,expectedTs)
-      ? {ok:true,reason:'primary_verified'}
-      : {ok:false,reason:'primary_readback_miss',message:'Close did not verify in Close Log storage.'};
-  }catch(e){
-    primary={ok:false,reason:'primary_storage_error',message:e&&e.message?e.message:'Close Log storage rejected the close.'};
-  }
+  primary=writeCloseLogKeyWithRetriesV22(CLOSE_LOG_KEY,log,expectedTs);
+  if(primary.ok)primary.reason='primary_'+primary.reason;
   var secondary=saveCloseLogSecondaryV22(log,expectedTs);
   if(primary.ok||secondary.ok)return {ok:true,reason:primary.ok?primary.reason:secondary.reason,primary:primary,secondary:secondary};
   setCloseLogSessionFallbackV22(log);
@@ -8676,7 +8816,7 @@ function captureWeekData(){
     // Original short keys (kept for loadWeekData + exportCSV + any legacy callers)
     rev:rev,wk:wk,ad:ad,sw:sw,sv:sv,ot:ot,
     dms:dms,resp:resp,calls:calls,closes:closes,content:content,sessions:sessions,
-    noteWin:noteWin,noteLesson:noteLesson,streams:streams,weekRevs:weekRevs,closeLogV22:getCloseLog().slice(0,50),
+    noteWin:noteWin,noteLesson:noteLesson,streams:streams,weekRevs:weekRevs,closeLogV22:compactCloseLogForStorageV22(getCloseLog(),50),
     // Apps Script Weekly Saves row keys
     timestamp:new Date().toISOString(),
     date:new Date().toLocaleDateString(),
