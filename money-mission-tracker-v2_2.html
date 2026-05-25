@@ -3890,11 +3890,16 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 09:59 ET · OS v2_2 drift watch phase 1';
+var APP_BUILD_STAMP='2026-05-25 10:06 ET · OS v2_2 bridge timeout tuning';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-0959';
+var APP_CACHE_TOKEN='mmos-20260525-1006';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
+var BRIDGE_TIMEOUT_FAST_V22=12000;
+var BRIDGE_TIMEOUT_STANDARD_V22=22000;
+var BRIDGE_TIMEOUT_NOTION_V22=26000;
+var BRIDGE_TIMEOUT_HEAVY_V22=30000;
+var BRIDGE_TIMEOUT_SAFELOAD_HEAVY_V22=33000;
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
 var MISSION_SHEETS_RETRY_KEY='a1xx_mc_sheets_retry_v11';
 var TODOIST_KEY='a1xx_todoist_v1';
@@ -4727,7 +4732,7 @@ function runStorageHealthSelfCheckV22(){
 
 async function fetchWithRetry(url,opts,tries,timeoutMs){
   tries=tries||2;
-  timeoutMs=timeoutMs||12000;
+  timeoutMs=timeoutMs||BRIDGE_TIMEOUT_FAST_V22||12000;
   var lastErr;
   for(var i=0;i<tries;i++){
     try{
@@ -4745,7 +4750,7 @@ async function fetchWithRetry(url,opts,tries,timeoutMs){
 }
 
 function fetchWithTimeout(url,opts,ms){
-  ms=ms||12000;
+  ms=ms||BRIDGE_TIMEOUT_FAST_V22||12000;
   if(typeof AbortController==='undefined'){
     return Promise.race([
       fetch(url,opts||{}),
@@ -8123,7 +8128,7 @@ async function loadContentToday(){
 async function fetchNotionContent(appUrl,date,databaseId,dateField){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
   var qs='action=content&date='+encodeURIComponent(date)+'&databaseId='+encodeURIComponent(databaseId)+'&dateField='+encodeURIComponent(dateField)+'&_='+Date.now();
-  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
+  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},1,BRIDGE_TIMEOUT_NOTION_V22);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
   var data;
@@ -8158,7 +8163,7 @@ async function loadContentPipeline(fallbackPieces){
 async function fetchNotionPipeline(appUrl,databaseId){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
   var qs='action=content_pipeline&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
-  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
+  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},1,BRIDGE_TIMEOUT_NOTION_V22);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
   var data;
@@ -8206,13 +8211,16 @@ function getProductionPipelineHint(message){
   if(/NOTION_SECRET/i.test(text)){
     return 'Add NOTION_SECRET to Apps Script Properties.';
   }
+  if(/timed out|timeout/i.test(text)){
+    return 'The bridge was slow. Run sync check again after the Apps Script cold start, then verify the production endpoint if it repeats.';
+  }
   return 'Check Apps Script deployment and Notion integration access, then refresh.';
 }
 
 async function fetchProductionPipeline(appUrl,databaseId){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
   var qs='action=production_pipeline&databaseId='+encodeURIComponent(databaseId)+'&_='+Date.now();
-  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
+  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},1,BRIDGE_TIMEOUT_HEAVY_V22);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
   var data;
@@ -8250,7 +8258,7 @@ async function loadResources(){
 async function fetchResources(appUrl){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
   var qs='action=resources&_='+Date.now();
-  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
+  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},1,BRIDGE_TIMEOUT_HEAVY_V22);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
   var data;
@@ -8311,7 +8319,7 @@ async function loadCRMLeads(){
 async function fetchCRMLeads(appUrl){
   var sep=appUrl.indexOf('?')>=0?'&':'?';
   var qs='action=crm_leads&_='+Date.now();
-  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},2);
+  var res=await fetchWithRetry(appUrl+sep+qs,{method:'GET',redirect:'follow'},1,BRIDGE_TIMEOUT_NOTION_V22);
   if(!res.ok)throw new Error('Apps Script HTTP '+res.status);
   var text=await res.text();
   var data;
@@ -8633,7 +8641,7 @@ async function loadCalendar(){
   setHealth('calendar','loading','Loading Google Calendar');
   try{
     var sep=url.indexOf('?')>=0?'&':'?';
-    var res=await fetchWithRetry(url+sep+'action=calendar&_='+Date.now(),{method:'GET',redirect:'follow'},2);
+    var res=await fetchWithRetry(url+sep+'action=calendar&_='+Date.now(),{method:'GET',redirect:'follow'},1,BRIDGE_TIMEOUT_HEAVY_V22);
     if(!res.ok)throw new Error('HTTP '+res.status);
     var text=await res.text();
     var data;
@@ -30602,17 +30610,17 @@ window.renderMissionJourney=renderMissionJourney;
 /* INIT */
 async function loadTodayData(){
   safeRender('time block',function(){updateTimeBlock();updateGolden();});
-  var notionPieces=await safeLoad('Notion content',function(){return loadContentToday();},[],15000);
+  var notionPieces=await safeLoad('Notion content',function(){return loadContentToday();},[],BRIDGE_TIMEOUT_NOTION_V22+3000);
   window.__contentPieces=notionPieces||[];
   safeRender('early content render',function(){renderContentCard();renderMissionBrief(notionPieces||[],window.__calEvents||[]);});
 
   var loaded=await Promise.all([
-    safeLoad('content pipeline',function(){return loadContentPipeline(notionPieces||[]);},notionPieces||[],12000),
-    safeLoad('production pipeline',function(){return loadProductionPipeline();},[],12000),
-    safeLoad('resource library',function(){return loadResources();},[],12000),
-    safeLoad('CRM leads',function(){return loadCRMLeads();},[],12000),
-    safeLoad('Google Calendar',function(){return loadCalendar();},[],12000),
-    safeLoad('live events',function(){return loadLiveEvents();},[],12000)
+    safeLoad('content pipeline',function(){return loadContentPipeline(notionPieces||[]);},notionPieces||[],BRIDGE_TIMEOUT_NOTION_V22+3000),
+    safeLoad('production pipeline',function(){return loadProductionPipeline();},[],BRIDGE_TIMEOUT_SAFELOAD_HEAVY_V22),
+    safeLoad('resource library',function(){return loadResources();},[],BRIDGE_TIMEOUT_SAFELOAD_HEAVY_V22),
+    safeLoad('CRM leads',function(){return loadCRMLeads();},[],BRIDGE_TIMEOUT_NOTION_V22+3000),
+    safeLoad('Google Calendar',function(){return loadCalendar();},[],BRIDGE_TIMEOUT_SAFELOAD_HEAVY_V22),
+    safeLoad('live events',function(){return loadLiveEvents();},[],BRIDGE_TIMEOUT_STANDARD_V22)
   ]);
   var pipelinePieces=loaded[0]||notionPieces||[];
   var productionPieces=loaded[1]||[];
@@ -30631,7 +30639,7 @@ async function loadTodayData(){
   clearMissionSessionDataCacheV1('data_load_complete');
   safeRender('day type',function(){initDayType(calEvents||[]);});
   safeRender('week strip',function(){buildWeekStrip(calEvents||[],notionPieces||[]);});
-  await safeLoad('Todoist',function(){return loadTodoist();},null,12000);
+  await safeLoad('Todoist',function(){return loadTodoist();},null,BRIDGE_TIMEOUT_FAST_V22);
   safeRender('content card',function(){renderContentCard();});
   safeRender('production card',function(){renderProductionCard();});
   // ARCHIVED 2026-05-10 — resource drawers removed from manager card per A1XX
