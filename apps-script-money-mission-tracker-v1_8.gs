@@ -1045,7 +1045,17 @@ function saveBackup(d) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = getOrCreateSheet(ss, SHEET_BACKUP, ['Saved At', 'Key Count', 'Size (chars)', 'Data']);
   var json = d.payload || '{}';
+  var marker = d.backupMarker || null;
+  if (marker && !extractBackupMarkerV18(json)) {
+    try {
+      var parsed = JSON.parse(String(json || '{}'));
+      parsed.__mmos_backup_verification_v22 = marker;
+      json = JSON.stringify(parsed);
+    } catch (err) {}
+  }
   sheet.appendRow([new Date().toISOString(), d.keyCount || 0, json.length, json]);
+  var savedMarker = extractBackupMarkerV18(json);
+  if (savedMarker && savedMarker.id) logActivity('Backup marker saved — ' + savedMarker.id + ' — row ' + sheet.getLastRow());
 }
 
 function extractBackupMarkerV18(payload) {

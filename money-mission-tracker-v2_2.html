@@ -3976,9 +3976,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 17:36 ET · OS v2_2 backup marker recent-row search';
+var APP_BUILD_STAMP='2026-05-25 17:42 ET · OS v2_2 backup write proof';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1736';
+var APP_CACHE_TOKEN='mmos-20260525-1742';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -6065,8 +6065,11 @@ async function sendBackup(silent){
   }
   try{
     var startedAt=Date.now();
-    await postToAppsScript(appUrl,{type:'backup_save',payload:json,keyCount:keyCount,size:json.length});
-    var verified=await verifyBackupSavedToSheetsV1(keyCount,json.length,startedAt,backupMarker);
+    var beforeBackup=null;
+    try{beforeBackup=await getAppsScriptJson('get_backup',{}, {timeoutMs:18000, tries:1});}catch(beforeErr){}
+    var beforeRow=beforeBackup&&beforeBackup.matchedRow?Number(beforeBackup.matchedRow)||0:0;
+    await postToAppsScript(appUrl,{type:'backup_save',payload:json,keyCount:keyCount,size:json.length,backupMarker:backupMarker,backupMarkerId:backupMarker.id,build:APP_CACHE_TOKEN});
+    var verified=await verifyBackupSavedToSheetsV1(keyCount,json.length,startedAt,backupMarker,beforeRow);
     if(!verified.ok)throw new Error(verified.error||'Backup was sent, but the newest Sheet row could not be verified.');
     if(!silent)setBackupStatus('ok','Backup verified','Saved '+keyCount+' keys to Google Sheets and verified backup marker '+backupMarker.id+'.','Done');
     if(!silent)logDevChange('Claude (A1XX OS)','data → Sheets','Manual backup: '+keyCount+' keys, '+Math.round(json.length/1000)+'KB');
@@ -6079,15 +6082,17 @@ async function sendBackup(silent){
   }
 }
 
-async function verifyBackupSavedToSheetsV1(keyCount,size,startedAt,expectedMarker){
+async function verifyBackupSavedToSheetsV1(keyCount,size,startedAt,expectedMarker,beforeRow){
   try{
     var res=null;
     var backup=null;
+    var lastSeenRow=0;
     for(var attempt=0;attempt<3;attempt++){
       await waitMs(attempt===0?1400:1800);
       var markerParams=expectedMarker&&expectedMarker.id?{marker:expectedMarker.id}:{};
       res=await getAppsScriptJson('get_backup',markerParams, {timeoutMs:26000, tries:2});
       backup=res&&res.backup;
+      if(res&&res.matchedRow)lastSeenRow=Math.max(lastSeenRow,Number(res.matchedRow)||0);
       if(!backup)continue;
       if(expectedMarker){
         var marker=(res&&res.marker)||getBackupVerificationMarkerV22(backup.payload);
@@ -6097,7 +6102,10 @@ async function verifyBackupSavedToSheetsV1(keyCount,size,startedAt,expectedMarke
     if(!backup)return {ok:false,error:'No backup row came back from Sheets.'};
     if(expectedMarker){
       var returnedMarker=getBackupVerificationMarkerV22(backup.payload);
-      if(!returnedMarker)return {ok:false,error:'Sheets did not find the new backup marker in recent backup rows yet. Close older app tabs, redeploy Apps Script v1.8 from the latest file, then run backup again.'};
+      if(!returnedMarker){
+        if(beforeRow&&lastSeenRow&&lastSeenRow<=beforeRow)return {ok:false,error:'No new backup row appeared in Sheets after Save backup. Check webhook token, Apps Script deployment, and Web App URL, then run backup again.'};
+        return {ok:false,error:'Sheets added or returned a backup row, but the new backup marker was not in the recent rows. Close older app tabs, redeploy Apps Script v1.8 from the latest file, then run backup again.'};
+      }
       return {ok:false,error:'Sheets returned backup marker '+returnedMarker.id+', not the new marker '+expectedMarker.id+'.'};
     }
     var savedAtMs=Date.parse(backup.savedAt||'');
