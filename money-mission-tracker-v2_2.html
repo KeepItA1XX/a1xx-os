@@ -2486,6 +2486,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Backup payload</div><div class="settings-row-meta" id="settings-storage-backup-size">Not checked yet.</div></div><span class="settings-badge off">Size</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Storage guardrails</div><div class="settings-row-meta" id="settings-storage-guardrails">Not checked yet.</div></div><span class="settings-badge off" id="settings-storage-guardrails-badge">Safe</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Self-Hardening</div><div class="settings-row-meta" id="settings-self-hardening-summary">Passive monitor not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-badge">Passive</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Drift Watch</div><div class="settings-row-meta" id="settings-drift-watch-summary">Passive stale-state watch not checked yet.</div></div><span class="settings-badge off" id="settings-drift-watch-badge">Check</span></div>
           </div>
           <details class="diagnostics-detail">
             <summary><span>Storage details</span><span class="settings-badge off">Details</span></summary>
@@ -2517,8 +2518,17 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <div class="settings-row"><div><div class="settings-row-name">Last self-check</div><div class="settings-row-meta" id="settings-self-hardening-check">Not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-check-badge">Check</span></div>
             </div>
           </details>
+          <details class="diagnostics-detail">
+            <summary><span>Drift watch details</span><span class="settings-badge off">Details</span></summary>
+            <div class="settings-list diagnostics-detail-list">
+              <div class="settings-row"><div><div class="settings-row-name">Source freshness</div><div class="settings-row-meta" id="settings-drift-watch-sources">Not checked yet.</div></div><span class="settings-badge off" id="settings-drift-watch-source-badge">Sources</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Chat boundary</div><div class="settings-row-meta" id="settings-drift-watch-chat">Not checked yet.</div></div><span class="settings-badge off">Chat</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Session memory</div><div class="settings-row-meta" id="settings-drift-watch-memory">Not checked yet.</div></div><span class="settings-badge off">Memory</span></div>
+              <div class="settings-row"><div><div class="settings-row-name">Last drift check</div><div class="settings-row-meta" id="settings-drift-watch-check">Not checked yet.</div></div><span class="settings-badge off" id="settings-drift-watch-check-badge">Check</span></div>
+            </div>
+          </details>
         </div>
-        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button><button class="btn" onclick="runSelfHardeningDiagnosticsCheckV10()">Check self-hardening</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
+        <div class="btn-row"><button class="btn" onclick="loadTodayData()">Run sync check</button><button class="btn" onclick="renderStorageHealthDiagnosticsV22()">Check storage</button><button class="btn" onclick="runSelfHardeningDiagnosticsCheckV10()">Check self-hardening</button><button class="btn" onclick="runDriftWatchDiagnosticsCheckV10()">Check drift</button><button class="btn" onclick="checkAutoBackup(true)">Save diagnostic backup</button></div>
       </div>
       <div class="health-subpane" id="health-subpane-version">
         <div class="settings-section">
@@ -3880,9 +3890,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 09:53 ET · OS v2_2 self-hardening active data window';
+var APP_BUILD_STAMP='2026-05-25 09:59 ET · OS v2_2 drift watch phase 1';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-0953';
+var APP_CACHE_TOKEN='mmos-20260525-0959';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var MISSION_SHEETS_CONFIG_KEY='a1xx_mc_sheets_config_v11';
@@ -3938,6 +3948,7 @@ var MC_RUNTIME_ERROR_LOG_KEY_V10='a1xx_mc_runtime_error_log_v10';
 var MC_TURN_HEALTH_KEY_V10='a1xx_mc_turn_health_v10';
 var MC_SESSION_ID_KEY_V10='a1xx_mc_session_id_v10';
 var MC_DATA_WARNING_ACTIVE_MS_V10=15*60*1000;
+var MC_DRIFT_SOURCE_STALE_MS_V10=30*60*1000;
 
 var CYCLES=[
   {num:1,name:'Foundation',start:'2026-05-04',end:'2026-06-28',target:1500},
@@ -4319,6 +4330,114 @@ function runSelfHardeningPhase1SelfCheckV10(){
   }
   return {passed:!failures.length,failures:failures,total:3};
 }
+function mcGetStorageValueV10(storage,key){
+  try{return storage&&key?storage.getItem(key):null;}catch(e){return null;}
+}
+function mcGetJsonStorageValueV10(storage,key,fallback){
+  try{
+    var raw=mcGetStorageValueV10(storage,key);
+    return raw?JSON.parse(raw):fallback;
+  }catch(e){return fallback;}
+}
+function mcFormatDriftAgeV10(ts,nowMs){
+  if(!ts)return 'never';
+  var age=Math.max(0,nowMs-ts);
+  if(age<60000)return 'just now';
+  if(age<3600000)return Math.round(age/60000)+'m ago';
+  return Math.round(age/3600000)+'h ago';
+}
+function mcBuildDriftWatchSnapshotV10(opts){
+  opts=opts||{};
+  var nowMs=opts.nowMs||Date.now();
+  var health=opts.health||getHealth();
+  var services=health.services||{};
+  var serviceNames=['content','calendar','crm','todoist','resources'];
+  var staleSources=[];
+  var sourceRows=serviceNames.map(function(name){
+    var rec=services[name]||{};
+    var ts=rec.ts||0;
+    var stale=!!(ts&&(nowMs-ts)>MC_DRIFT_SOURCE_STALE_MS_V10);
+    if(stale)staleSources.push(name);
+    return name+': '+(rec.status||'not checked')+' · '+mcFormatDriftAgeV10(ts,nowMs);
+  });
+  var activeChat=opts.activeChat;
+  if(activeChat===undefined)activeChat=mcGetStorageValueV10(localStorage,MISSION_CHAT_ACTIVE_SESSION_KEY)||mcGetStorageValueV10(localStorage,MISSION_CHAT_ACTIVE_ALIAS_KEY)||'';
+  var sessions=opts.sessions;
+  if(!Array.isArray(sessions))sessions=getStore(MISSION_CHAT_SESSIONS_KEY)||getStore(MISSION_CHAT_HISTORY_ALIAS_KEY)||[];
+  sessions=Array.isArray(sessions)?sessions:[];
+  var activeExists=!activeChat||sessions.some(function(item){return item&&item.id===activeChat;});
+  var brainRaw=opts.brainRaw;
+  if(brainRaw===undefined)brainRaw=mcGetStorageValueV10(sessionStorage,typeof MISSION_BRAIN_SESSION_V2_KEY!=='undefined'?MISSION_BRAIN_SESSION_V2_KEY:'');
+  var cacheRaw=opts.cacheRaw;
+  if(cacheRaw===undefined)cacheRaw=mcGetStorageValueV10(sessionStorage,typeof MISSION_SESSION_DATA_CACHE_KEY!=='undefined'?MISSION_SESSION_DATA_CACHE_KEY:'');
+  var warnings=[];
+  var reviews=[];
+  if(staleSources.length)warnings.push(staleSources.length+' stale source'+(staleSources.length===1?'':'s'));
+  if(activeChat&&!activeExists)reviews.push('active chat missing from session list');
+  if((brainRaw||cacheRaw)&&!activeChat)reviews.push('session memory exists without active chat');
+  return {
+    status:reviews.length?'review':warnings.length?'watch':'clean',
+    warnings:warnings,
+    reviews:reviews,
+    sourceRows:sourceRows,
+    staleSources:staleSources,
+    activeChat:activeChat||'none',
+    sessionCount:sessions.length,
+    brainPresent:!!brainRaw,
+    cachePresent:!!cacheRaw,
+    checkedAt:nowMs
+  };
+}
+function renderDriftWatchDiagnosticsV10(){
+  var snap=mcBuildDriftWatchSnapshotV10();
+  var summary=document.getElementById('settings-drift-watch-summary');
+  var badge=document.getElementById('settings-drift-watch-badge');
+  var sources=document.getElementById('settings-drift-watch-sources');
+  var sourceBadge=document.getElementById('settings-drift-watch-source-badge');
+  var chat=document.getElementById('settings-drift-watch-chat');
+  var memory=document.getElementById('settings-drift-watch-memory');
+  if(summary){
+    if(snap.status==='review')summary.textContent='Review. '+snap.reviews.join(' | ')+'.';
+    else if(snap.status==='watch')summary.textContent='Watch. '+snap.warnings.join(' | ')+'; run sync before trusting stale lanes.';
+    else summary.textContent='Clean. No stale source or chat-boundary drift detected.';
+  }
+  if(badge){
+    badge.textContent=snap.status==='review'?'Review':snap.status==='watch'?'Watch':'Clean';
+    badge.className='settings-badge '+(snap.status==='clean'?'':'warn');
+  }
+  if(sources)sources.textContent=snap.sourceRows.join(' | ');
+  if(sourceBadge){
+    sourceBadge.textContent=snap.staleSources.length?String(snap.staleSources.length):'Fresh';
+    sourceBadge.className='settings-badge '+(snap.staleSources.length?'warn':'off');
+  }
+  if(chat)chat.textContent='Active chat: '+snap.activeChat+' · sessions loaded: '+snap.sessionCount+(snap.reviews.length?' · '+snap.reviews.join(' | '):'');
+  if(memory)memory.textContent='Session brain: '+(snap.brainPresent?'present':'clear')+' · data cache: '+(snap.cachePresent?'present':'clear')+'.';
+  return snap;
+}
+function runDriftWatchDiagnosticsCheckV10(){
+  var row=document.getElementById('settings-drift-watch-check');
+  var badge=document.getElementById('settings-drift-watch-check-badge');
+  var result=runDriftWatchSelfCheckV10();
+  var checkedLabel=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+  if(row)row.textContent=result.passed?'Checked '+checkedLabel+' · stale source and chat-boundary detection passed.':'Checked '+checkedLabel+' · review: '+result.failures.join(' | ');
+  if(badge){
+    badge.textContent=result.passed?'Passed':'Review';
+    badge.className='settings-badge '+(result.passed?'':'warn');
+  }
+  renderDriftWatchDiagnosticsV10();
+  return result;
+}
+function runDriftWatchSelfCheckV10(){
+  var failures=[];
+  var now=Date.now();
+  var clean=mcBuildDriftWatchSnapshotV10({nowMs:now,health:{services:{content:{status:'ok',ts:now},calendar:{status:'ok',ts:now}}},sessions:[{id:'chat1'}],activeChat:'chat1',brainRaw:'{}',cacheRaw:''});
+  if(clean.status!=='clean')failures.push('clean_snapshot_failed');
+  var stale=mcBuildDriftWatchSnapshotV10({nowMs:now,health:{services:{calendar:{status:'ok',ts:now-MC_DRIFT_SOURCE_STALE_MS_V10-1000}}},sessions:[{id:'chat1'}],activeChat:'chat1'});
+  if(stale.status!=='watch'||stale.staleSources.indexOf('calendar')<0)failures.push('stale_source_failed');
+  var review=mcBuildDriftWatchSnapshotV10({nowMs:now,health:{services:{}},sessions:[{id:'chat1'}],activeChat:'missing'});
+  if(review.status!=='review')failures.push('chat_boundary_failed');
+  return {passed:!failures.length,failures:failures,total:3};
+}
 function flash(id){var t=document.getElementById(id);if(!t)return;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 
 function getAccount(){return getStore(ACCOUNT_KEY);}
@@ -4567,6 +4686,7 @@ function renderStorageHealthDiagnosticsV22(){
     }
   }
   if(typeof renderSelfHardeningDiagnosticsV10==='function')renderSelfHardeningDiagnosticsV10();
+  if(typeof renderDriftWatchDiagnosticsV10==='function')renderDriftWatchDiagnosticsV10();
   return audit;
 }
 
