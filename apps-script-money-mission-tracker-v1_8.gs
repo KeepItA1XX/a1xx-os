@@ -1048,6 +1048,30 @@ function saveBackup(d) {
   sheet.appendRow([new Date().toISOString(), d.keyCount || 0, json.length, json]);
 }
 
+function extractBackupMarkerV18(payload) {
+  try {
+    var parsed = JSON.parse(String(payload || '{}'));
+    return parsed.__mmos_backup_verification_v22 || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function makeBackupResponseV18(row, rowNumber, marker, markerSearch) {
+  return {
+    status: 'ok',
+    markerSearch: markerSearch || '',
+    matchedRow: rowNumber || '',
+    marker: marker || null,
+    backup: {
+      savedAt: row[0],
+      keyCount: row[1],
+      size: row[2],
+      payload: row[3]
+    }
+  };
+}
+
 function getBackup(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_BACKUP);
@@ -1055,10 +1079,24 @@ function getBackup(e) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', backup: null }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-  var row = sheet.getRange(sheet.getLastRow(), 1, 1, 4).getValues()[0];
-  return ContentService.createTextOutput(JSON.stringify({
-    status: 'ok', backup: { savedAt: row[0], keyCount: row[1], size: row[2], payload: row[3] }
-  })).setMimeType(ContentService.MimeType.JSON);
+  var markerId = e && e.parameter ? String(e.parameter.marker || '').trim() : '';
+  var lastRow = sheet.getLastRow();
+  if (markerId) {
+    var start = Math.max(2, lastRow - 24);
+    var values = sheet.getRange(start, 1, lastRow - start + 1, 4).getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      var payload = String(values[i][3] || '');
+      if (payload.indexOf(markerId) === -1) continue;
+      var marker = extractBackupMarkerV18(payload);
+      if (marker && String(marker.id || '') === markerId) {
+        return ContentService.createTextOutput(JSON.stringify(makeBackupResponseV18(values[i], start + i, marker, 'matched_recent')))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  }
+  var row = sheet.getRange(lastRow, 1, 1, 4).getValues()[0];
+  return ContentService.createTextOutput(JSON.stringify(makeBackupResponseV18(row, lastRow, extractBackupMarkerV18(row[3]), markerId ? 'not_found_recent' : 'latest')))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function getHealthCheck(e) {
