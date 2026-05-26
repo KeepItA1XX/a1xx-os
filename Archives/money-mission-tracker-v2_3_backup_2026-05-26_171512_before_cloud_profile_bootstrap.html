@@ -2300,24 +2300,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="reset-status" id="device-transfer-copy-status"></div>
         </div>
-        <div class="settings-section">
-          <div class="settings-section-title">Cloud Profile Bootstrap</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Profile source</div><div class="settings-row-meta" id="cloud-profile-source">Use this device as the local source after Device Readiness is clean.</div></div><span class="settings-badge off" id="cloud-profile-source-badge">Plan</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Sync design</div><div class="settings-row-meta" id="cloud-profile-sync">Future cloud profile will use Drive/Sheets indexes; no login behavior changes yet.</div></div><span class="settings-badge off" id="cloud-profile-sync-badge">Future</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Upgrade gate</div><div class="settings-row-meta" id="cloud-profile-gate">Do not enable full auth until setup, backup, and device registry are verified.</div></div><span class="settings-badge off" id="cloud-profile-gate-badge">Blocked</span></div>
-          </div>
-          <div class="settings-field" style="margin-top:10px">
-            <label for="cloud-profile-bootstrap-note">Bootstrap blueprint</label>
-            <textarea id="cloud-profile-bootstrap-note" rows="10" readonly placeholder="Build the future cloud profile plan after this device is anchored."></textarea>
-          </div>
-          <div class="btn-row">
-            <button class="btn primary" onclick="buildCloudProfileBootstrapPlanV23()">Build bootstrap plan</button>
-            <button class="btn" onclick="copyCloudProfileBootstrapPlanV23()">Copy plan</button>
-            <button class="btn" onclick="refreshCloudProfileBootstrapAnchorV23()">Check anchor</button>
-          </div>
-          <div class="reset-status" id="cloud-profile-bootstrap-status"></div>
-        </div>
       </div>
       <div class="account-subpane" id="account-subpane-signin">
         <div class="settings-section">
@@ -4096,9 +4078,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 17:15 ET · OS v2_3 cloud profile bootstrap plan';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + cloud profile bootstrap';
-var APP_CACHE_TOKEN='mmos-20260526-1715-v23-cloud-profile-bootstrap';
+var APP_BUILD_STAMP='2026-05-26 16:39 ET · OS v2_3 setup transfer anchor guard';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + device profile + transfer guard';
+var APP_CACHE_TOKEN='mmos-20260526-1639-v23-transfer-anchor-guard';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5149,7 +5131,6 @@ function renderAccountIdentity(){
   if(typeof renderDeviceProfileV23==='function')renderDeviceProfileV23();
   if(typeof renderDeviceReadinessV23==='function')renderDeviceReadinessV23();
   if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
-  if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
 }
 
 function getDeviceReadinessSnapshotV23(){
@@ -5407,160 +5388,6 @@ async function copyDeviceTransferChecklistV23(){
     if(status){
       status.className='reset-status err';
       status.textContent='Copy blocked by the browser. Select the checklist text manually.';
-    }
-  }
-}
-
-function getCloudProfileBootstrapSnapshotV23(){
-  var readiness=typeof getDeviceReadinessSnapshotV23==='function'?getDeviceReadinessSnapshotV23():{};
-  var device=readiness.deviceProfile||(typeof getDeviceProfileV23==='function'?getDeviceProfileV23():null)||{};
-  var anchor=typeof getDeviceTransferAnchorStatusV23==='function'?getDeviceTransferAnchorStatusV23(readiness):{ready:false,message:'Run device check before using this as the profile source.'};
-  var latest=readiness.latestBackup||{};
-  return {
-    readiness:readiness,
-    device:device,
-    anchor:anchor,
-    latestBackup:latest,
-    ready:!!(device.deviceId&&anchor.ready)
-  };
-}
-
-function getCloudProfileBootstrapStatusV23(snapshot){
-  snapshot=snapshot||getCloudProfileBootstrapSnapshotV23();
-  if(!snapshot.device.deviceId)return {state:'warn',label:'Device',summary:'Create a local Device Profile before planning cloud profile sync.'};
-  if(!snapshot.anchor.ready)return {state:'warn',label:'Anchor',summary:'Run Check anchor so the source device has live bridge and Drive backup proof.'};
-  return {state:'clean',label:'Ready',summary:'This device can be used as the source for a future cloud profile bootstrap plan.'};
-}
-
-function getCloudProfileBootstrapPlanTextV23(snapshot){
-  snapshot=snapshot||getCloudProfileBootstrapSnapshotV23();
-  var status=getCloudProfileBootstrapStatusV23(snapshot);
-  var device=snapshot.device||{};
-  var health=snapshot.readiness&&snapshot.readiness.health||{};
-  var latest=snapshot.latestBackup||{};
-  var lines=[
-    'Money Mission OS v2_3 cloud profile bootstrap plan',
-    'Generated: '+new Date().toLocaleString(),
-    'Build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),
-    '',
-    'Bootstrap state',
-    '- Status: '+status.label,
-    '- Source device: '+(device.label||'Unlabeled device'),
-    '- Device ID: '+(device.deviceId||'not created'),
-    '- Anchor: '+(snapshot.anchor.ready?'Ready':'Needs check'),
-    '- Bridge: Sheets '+(health.sheets||'not checked')+' · Notion '+(health.notion||'not checked')+' · Calendar '+(health.calendar||'not checked'),
-    '- Latest backup: '+(latest.backupId?latest.backupId+' · Sheet row '+(latest.matchedRow||'?')+' · '+Math.round((Number(latest.size)||0)/1000)+'KB':'not checked'),
-    '',
-    'Future cloud profile pieces',
-    '1. Profile record: A1XX identity, timezone, preferred routes, build channel.',
-    '2. Device registry: device ID, label, last check-in, trusted status, last backup marker.',
-    '3. Setup pointer map: Apps Script URL, clean workbook pointer, backup folder ID, Notion config page ID.',
-    '4. Restore policy: restore approved data keys only; never overwrite protected setup keys by default.',
-    '5. Auth upgrade gate: keep current local sign-in until backend account auth is intentionally added.',
-    '',
-    'Implementation order',
-    '1. Keep this local Device Profile as the source proof.',
-    '2. Add backend endpoints later for profile read/write and device registry read/write.',
-    '3. Store large profile artifacts in Drive and small profile index rows in Sheets.',
-    '4. Mirror human-readable profile/config records in Notion only after schemas are stable.',
-    '5. Add true account sign-in last, after backup, restore, and device registry are verified.',
-    '',
-    'Blocked for now',
-    '- No full cloud auth in this phase.',
-    '- No token export in this phase.',
-    '- No automatic restore across devices in this phase.',
-    '- No setup key overwrite in this phase.'
-  ];
-  return lines.join('\n');
-}
-
-function renderCloudProfileBootstrapV23(snapshot){
-  snapshot=snapshot||getCloudProfileBootstrapSnapshotV23();
-  var status=getCloudProfileBootstrapStatusV23(snapshot);
-  var source=document.getElementById('cloud-profile-source');
-  var sourceBadge=document.getElementById('cloud-profile-source-badge');
-  var sync=document.getElementById('cloud-profile-sync');
-  var syncBadge=document.getElementById('cloud-profile-sync-badge');
-  var gate=document.getElementById('cloud-profile-gate');
-  var gateBadge=document.getElementById('cloud-profile-gate-badge');
-  var note=document.getElementById('cloud-profile-bootstrap-note');
-  if(source)source.textContent=status.summary;
-  if(sourceBadge){
-    sourceBadge.textContent=status.label;
-    sourceBadge.className=setupDoctorBadgeClassV23(status.state);
-  }
-  if(sync)sync.textContent='Use Drive for large profile artifacts, Sheets for small indexes, and Notion for organized knowledge views.';
-  if(syncBadge){
-    syncBadge.textContent='Plan';
-    syncBadge.className=setupDoctorBadgeClassV23('ready');
-  }
-  if(gate)gate.textContent='Full auth stays blocked until device registry, restore policy, and backend profile endpoints are approved.';
-  if(gateBadge){
-    gateBadge.textContent='Later';
-    gateBadge.className=setupDoctorBadgeClassV23('warn');
-  }
-  if(note&&!note.value)note.value=getCloudProfileBootstrapPlanTextV23(snapshot);
-  return {snapshot:snapshot,status:status};
-}
-
-function buildCloudProfileBootstrapPlanV23(){
-  var rendered=renderCloudProfileBootstrapV23();
-  var note=document.getElementById('cloud-profile-bootstrap-note');
-  var status=document.getElementById('cloud-profile-bootstrap-status');
-  if(note){
-    note.value=getCloudProfileBootstrapPlanTextV23(rendered.snapshot);
-    note.focus();
-    note.select();
-  }
-  if(status){
-    status.className='reset-status '+(rendered.snapshot.ready?'ok':'warn');
-    status.textContent=rendered.snapshot.ready
-      ? 'Bootstrap plan built from this anchored source device. No auth changes made.'
-      : 'Bootstrap plan built as a draft. Run Check anchor before using this device as the source.';
-  }
-  return rendered;
-}
-
-async function refreshCloudProfileBootstrapAnchorV23(){
-  var status=document.getElementById('cloud-profile-bootstrap-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking source device anchor...';
-  }
-  if(typeof refreshDeviceTransferAnchorV23==='function')await refreshDeviceTransferAnchorV23();
-  var rendered=renderCloudProfileBootstrapV23();
-  var note=document.getElementById('cloud-profile-bootstrap-note');
-  if(note)note.value=getCloudProfileBootstrapPlanTextV23(rendered.snapshot);
-  if(status){
-    status.className='reset-status '+(rendered.snapshot.ready?'ok':'warn');
-    status.textContent=rendered.snapshot.ready?'Source device anchor is ready for future cloud profile planning.':'Source device still needs a clean anchor.';
-  }
-  return rendered;
-}
-
-async function copyCloudProfileBootstrapPlanV23(){
-  var note=document.getElementById('cloud-profile-bootstrap-note');
-  var status=document.getElementById('cloud-profile-bootstrap-status');
-  if(!note||!note.value)buildCloudProfileBootstrapPlanV23();
-  var rendered=renderCloudProfileBootstrapV23();
-  note=document.getElementById('cloud-profile-bootstrap-note');
-  try{
-    if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(note.value);
-    else{
-      note.focus();
-      note.select();
-      document.execCommand('copy');
-    }
-    if(status){
-      status.className='reset-status '+(rendered.snapshot.ready?'ok':'warn');
-      status.textContent=rendered.snapshot.ready
-        ? 'Bootstrap plan copied. It is a plan only; no auth changes were made.'
-        : 'Draft bootstrap plan copied. Check anchor before using it as a source-device plan.';
-    }
-  }catch(err){
-    if(status){
-      status.className='reset-status err';
-      status.textContent='Copy blocked by the browser. Select the bootstrap plan manually.';
     }
   }
 }
@@ -6899,7 +6726,6 @@ function setAccountSubTab(tab){
     if(typeof renderDeviceProfileV23==='function')renderDeviceProfileV23();
     if(typeof renderDeviceReadinessV23==='function')renderDeviceReadinessV23();
     if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
-    if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
   }
 }
 
