@@ -2150,7 +2150,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
     <label class="auth-remember"><input id="auth-remember" type="checkbox" checked/> Remember this device</label>
     <button class="auth-btn" id="auth-submit" onclick="handleAuthSubmit()">Sign in</button>
     <div class="auth-status" id="auth-status"></div>
-    <div class="auth-note">v2.3 Alpha local sign-in protects this browser session. Full backend accounts can come later.</div>
+    <div class="auth-note">v2.2 Alpha local sign-in protects this browser session. Full backend accounts can come later.</div>
   </div>
 </div>
 <div class="app">
@@ -2196,7 +2196,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
     <div class="streak" style="margin-top:14px"><span style="font-size:12px">🔥</span><span class="streak-num" id="streak-n">0</span><span class="streak-lbl">week streak</span></div>
     <div class="streak close-streak" style="margin-top:14px"><span style="font-size:12px">💰</span><span class="streak-num" id="close-streak-n">0</span><span class="streak-lbl">close streak</span></div>
     <div class="cycle-stack">
-      <div style="font-size:8px;color:#7ec845;text-transform:uppercase;letter-spacing:.14em;font-weight:900;margin-bottom:2px">v2.3 Alpha</div>
+      <div style="font-size:8px;color:#7ec845;text-transform:uppercase;letter-spacing:.14em;font-weight:900;margin-bottom:2px">v2.2 Alpha</div>
       <div class="cycle-pill" id="cycle-pill">Cycle 1 · Loading...</div>
     </div>
   </div>
@@ -2253,7 +2253,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
       </div>
       <div class="account-subpane" id="account-subpane-signin">
         <div class="settings-section">
-          <div class="settings-section-title">v2.3 Alpha Sign-In</div>
+          <div class="settings-section-title">v2.2 Alpha Sign-In</div>
           <div class="settings-field"><label for="account-username">Username</label><input id="account-username" type="text" value="A1XX"/></div>
           <div class="settings-field"><label for="account-password">New password</label><input id="account-password" type="password" placeholder="Leave blank to keep current password"/></div>
           <div class="btn-row">
@@ -2262,7 +2262,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="reset-status" id="account-status"></div>
         </div>
-        <div class="settings-ai-box">v2.3 Alpha sign-in is stored locally in this browser. It gives the OS a private front door now; real backend auth can replace it later.</div>
+        <div class="settings-ai-box">v2.2 Alpha sign-in is stored locally in this browser. It gives the OS a private front door now; real backend auth can replace it later.</div>
       </div>
     </div>
 
@@ -4028,9 +4028,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 15:53 ET · OS v2_3 stability closeout';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + closeout';
-var APP_CACHE_TOKEN='mmos-20260526-1553-v23-stability-closeout';
+var APP_BUILD_STAMP='2026-05-26 15:39 ET · OS v2_3 setup doctor safe mode';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor';
+var APP_CACHE_TOKEN='mmos-20260526-1539-v23-setup-doctor';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -6636,7 +6636,7 @@ async function verifyBackupSavedToSheetsV1(keyCount,size,startedAt,expectedMarke
       var returnedMarker=getBackupVerificationMarkerV22(backup.payload);
       if(!returnedMarker){
         if(beforeRow&&lastSeenRow&&lastSeenRow<=beforeRow)return {ok:false,error:'No new backup index row appeared after Save backup. Check webhook token, Apps Script deployment, and Web App URL, then run backup again.'};
-        return {ok:false,error:'The backup index updated, but the new backup marker was not in the recent rows. Close older app tabs, redeploy Apps Script v1.9 from the latest file, then run backup again.'};
+        return {ok:false,error:'The backup index updated, but the new backup marker was not in the recent rows. Close older app tabs, redeploy Apps Script v1.8 from the latest file, then run backup again.'};
       }
       return {ok:false,error:'Backup readback returned marker '+returnedMarker.id+', not the new marker '+expectedMarker.id+'.'};
     }
@@ -17030,10 +17030,10 @@ function missionSheetsSendTestEventV11(){
           updateMissionSyncStatusUI();
           alert('Mission Command Events verified. Check the Mission Command Events tab.');
         }else{
-          alert('Event sent, but not verified. Deploy Apps Script v1.9 and confirm the Web App URL points to that deployment.');
+          alert('Event sent, but not verified. Deploy Apps Script v1.8 and confirm the Web App URL points to that deployment.');
         }
       }).catch(function(e){
-        alert('Event readback failed. This usually means Apps Script v1.9 is not deployed yet. '+(e&&e.message?e.message:''));
+        alert('Event readback failed. This usually means Apps Script v1.8 is not deployed yet. '+(e&&e.message?e.message:''));
       });
     },1600);
     return true;
@@ -26821,7 +26821,7 @@ function getMissionBackupSystemAnswerV22(ctx,question){
   var storageEl=document.getElementById('settings-storage-health-summary');
   var archiveEl=document.getElementById('settings-storage-backup-size');
   var bridgeEl=document.getElementById('settings-bridge-pulse-summary');
-  var probeEl=document.getElementById('settings-bridge-probe-summary');
+  var probeEl=document.getElementById('settings-endpoint-probe-summary');
   var storageLine=storageEl&&storageEl.textContent?storageEl.textContent.trim():'Storage Health should be Green before risky changes.';
   var archiveLine=archiveEl&&archiveEl.textContent?archiveEl.textContent.trim():'Drive backup archive should be active and verified.';
   var bridgeLine=bridgeEl&&bridgeEl.textContent?bridgeEl.textContent.trim():'Bridge Pulse should be Clean before trusting external data.';
@@ -26830,7 +26830,7 @@ function getMissionBackupSystemAnswerV22(ctx,question){
     return 'Backup read:<br><br>Safe path is Drive file plus small Sheet index. The active Sheet should not store full backup payloads anymore.<br><br>'+escapeHtml(archiveLine)+'<br>'+escapeHtml(storageLine)+'<br><br>Before a risky change: Save backup, wait for Backup verified, then continue.';
   }
   if(/\b(before adding new features|check before adding new features|safe to build|feature stability)\b/.test(q)){
-    return 'Pre-build check:<br><br>1. Storage Health Green.<br>2. Backup archive verified.<br>3. Bridge Pulse Clean.<br>4. Endpoint Probe Clean.<br>5. Setup Doctor Clean.<br>6. Live QA passed.<br><br>If those are clean, v2_3 is stable enough to close out before the next build phase.';
+    return 'Pre-build check:<br><br>1. Storage Health Green.<br>2. Backup archive verified.<br>3. Bridge Pulse Clean.<br>4. Endpoint Probe Clean.<br>5. Live QA passed.<br><br>If those are clean, v2_2 is safe to close and v2_3 can start.';
   }
   return 'System read:<br><br>'+escapeHtml(storageLine)+'<br>'+escapeHtml(bridgeLine)+'<br>'+escapeHtml(probeLine)+'<br><br>If all three are clean, trust the app for one next move. Run sync first only when exact counts matter.';
 }
