@@ -2250,21 +2250,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Profile name</div><div class="settings-row-meta">Display identity used across the OS.</div></div><span class="settings-badge off">Local</span></div>
           </div>
         </div>
-        <div class="settings-section">
-          <div class="settings-section-title">Device Readiness</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">This device</div><div class="settings-row-meta" id="device-readiness-current">Checking local setup...</div></div><span class="settings-badge off" id="device-readiness-current-badge">Check</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Cloud bridge</div><div class="settings-row-meta" id="device-readiness-bridge">Run device check to verify Sheets, Notion, and Calendar.</div></div><span class="settings-badge off" id="device-readiness-bridge-badge">Bridge</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Drive backup</div><div class="settings-row-meta" id="device-readiness-backup">Run device check to verify latest Drive backup.</div></div><span class="settings-badge off" id="device-readiness-backup-badge">Backup</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">New device path</div><div class="settings-row-meta" id="device-readiness-next">Use Setup Doctor first, then restore only after the Drive backup is verified.</div></div><span class="settings-badge off" id="device-readiness-next-badge">Next</span></div>
-          </div>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="runDeviceReadinessCheckV23()">Run device check</button>
-            <button class="btn" onclick="openSetupRepairV23()">Open setup</button>
-            <button class="btn" onclick="openBackupRepairV23()">Open backups</button>
-            <button class="btn" onclick="setSettingsTab('health');setHealthSubTab('diagnostics');runSetupDoctorCheckV23()">Run setup doctor</button>
-          </div>
-        </div>
       </div>
       <div class="account-subpane" id="account-subpane-signin">
         <div class="settings-section">
@@ -4043,9 +4028,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 16:07 ET · OS v2_3 device readiness phase 0';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + device readiness';
-var APP_CACHE_TOKEN='mmos-20260526-1607-v23-device-readiness';
+var APP_BUILD_STAMP='2026-05-26 15:53 ET · OS v2_3 stability closeout';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + closeout';
+var APP_CACHE_TOKEN='mmos-20260526-1553-v23-stability-closeout';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -4995,92 +4980,6 @@ function renderAccountIdentity(){
   if(signed)signed.textContent=name+' · Executive Producer';
   if(accountUser)accountUser.value=name;
   if(rpName)rpName.textContent=name;
-  if(typeof renderDeviceReadinessV23==='function')renderDeviceReadinessV23();
-}
-
-function getDeviceReadinessSnapshotV23(){
-  var acct=getAccount()||{};
-  var setup=typeof getSetupDoctorSnapshotV23==='function'?getSetupDoctorSnapshotV23():null;
-  var status=setup&&typeof getSetupDoctorStatusV23==='function'?getSetupDoctorStatusV23(setup):{state:'missing',label:'Check',summary:'Setup Doctor is not available yet.',next:'Open setup and verify this device.'};
-  var backup=setup&&setup.backup?setup.backup:(window.__lastBackupArchiveStatusV22||null);
-  var latest=backup&&backup.latest?backup.latest:null;
-  var health=setup&&setup.health&&setup.health.health?setup.health.health:null;
-  var setupReady=setup&&setup.url&&setup.hasToken&&setup.hasMissionConfig&&setup.hasTodoist;
-  return {
-    accountName:acct.username||'A1XX',
-    hasAccount:!!(acct&&acct.passHash),
-    hasSession:typeof hasAccountSession==='function'?hasAccountSession():false,
-    setup:setup,
-    setupStatus:status,
-    setupReady:!!setupReady,
-    backup:backup,
-    latestBackup:latest,
-    health:health
-  };
-}
-
-function getDeviceReadinessStatusV23(snapshot){
-  snapshot=snapshot||getDeviceReadinessSnapshotV23();
-  var health=snapshot.health||{};
-  var bridgeOk=health.sheets==='ok'&&health.notion==='ok'&&health.calendar==='ok';
-  if(!snapshot.hasAccount)return {state:'warn',label:'Local',summary:'Local account is not created on this device yet.',next:'Create the local sign-in first, then run device check.'};
-  if(!snapshot.setupReady)return {state:'missing',label:'Setup',summary:'This device is missing one or more setup keys.',next:'Open setup and paste Apps Script URL, webhook token, Mission sync config, and Todoist token as needed.'};
-  if(snapshot.health&&!bridgeOk)return {state:'review',label:'Review',summary:'This device has setup keys, but the live bridge is not fully clean.',next:'Run Setup Doctor and check Sheets, Notion, and Calendar before restoring.'};
-  if(snapshot.backup&&snapshot.backup.status==='error')return {state:'review',label:'Review',summary:'Drive backup status could not be verified.',next:'Open backups and save a fresh Drive backup before using another device.'};
-  if(!snapshot.latestBackup)return {state:'ready',label:'Ready',summary:'This device has setup keys. Latest Drive backup has not been checked yet.',next:'Run device check, then save a fresh backup before moving devices.'};
-  return {state:'clean',label:'Ready',summary:'This device can reach the bridge and see the latest Drive backup.',next:'On a new device: paste setup keys, run Setup Doctor, then use Restore preview only after backup is verified.'};
-}
-
-function renderDeviceReadinessV23(snapshot){
-  snapshot=snapshot||getDeviceReadinessSnapshotV23();
-  var status=getDeviceReadinessStatusV23(snapshot);
-  var current=document.getElementById('device-readiness-current');
-  var currentBadge=document.getElementById('device-readiness-current-badge');
-  var bridge=document.getElementById('device-readiness-bridge');
-  var bridgeBadge=document.getElementById('device-readiness-bridge-badge');
-  var backup=document.getElementById('device-readiness-backup');
-  var backupBadge=document.getElementById('device-readiness-backup-badge');
-  var next=document.getElementById('device-readiness-next');
-  var nextBadge=document.getElementById('device-readiness-next-badge');
-  var setup=snapshot.setup||{};
-  var health=snapshot.health||{};
-  var readyCount=0;
-  if(setup.url)readyCount++;
-  if(setup.hasToken)readyCount++;
-  if(setup.hasMissionConfig)readyCount++;
-  if(setup.hasTodoist)readyCount++;
-  if(current)current.textContent=status.summary+' Local setup: '+readyCount+' of 4 pieces ready.';
-  if(currentBadge){
-    currentBadge.textContent=status.label;
-    currentBadge.className=setupDoctorBadgeClassV23(status.state);
-  }
-  if(bridge)bridge.textContent=snapshot.health
-    ? 'Sheets '+(health.sheets||'unknown')+' · Notion '+(health.notion||'unknown')+' · Calendar '+(health.calendar||'unknown')+'.'
-    : (setup.url?'Bridge URL is set. Run device check for live status.':'Bridge URL is missing on this device.');
-  if(bridgeBadge){
-    var bridgeOk=health.sheets==='ok'&&health.notion==='ok'&&health.calendar==='ok';
-    bridgeBadge.textContent=bridgeOk?'Live':(setup.url?'Check':'Missing');
-    bridgeBadge.className=setupDoctorBadgeClassV23(bridgeOk?'ready':setup.url?'warn':'missing');
-  }
-  if(backup)backup.textContent=snapshot.latestBackup
-    ? 'Latest '+(snapshot.latestBackup.backupId||'backup')+' · Sheet row '+(snapshot.latestBackup.matchedRow||'?')+' · '+Math.round((Number(snapshot.latestBackup.size)||0)/1000)+'KB.'
-    : (snapshot.backup&&snapshot.backup.storage==='drive'?'Drive archive active. No latest backup indexed yet.':'Latest Drive backup has not been checked yet.');
-  if(backupBadge){
-    backupBadge.textContent=snapshot.latestBackup?'Drive':'Check';
-    backupBadge.className=setupDoctorBadgeClassV23(snapshot.latestBackup?'ready':'warn');
-  }
-  if(next)next.textContent=status.next;
-  if(nextBadge){
-    nextBadge.textContent=status.state==='clean'?'Path':'Next';
-    nextBadge.className=setupDoctorBadgeClassV23(status.state);
-  }
-  return {snapshot:snapshot,status:status};
-}
-
-async function runDeviceReadinessCheckV23(){
-  renderDeviceReadinessV23();
-  if(typeof runSetupDoctorCheckV23==='function')await runSetupDoctorCheckV23();
-  return renderDeviceReadinessV23();
 }
 function initAuth(){
   var acct=getAccount();
@@ -6413,7 +6312,6 @@ function setAccountSubTab(tab){
   document.querySelectorAll('.account-subpane').forEach(function(pane){
     pane.classList.toggle('active',pane.id==='account-subpane-'+window.__accountSubTab);
   });
-  if(window.__accountSubTab==='profile'&&typeof renderDeviceReadinessV23==='function')renderDeviceReadinessV23();
 }
 
 function setHealthSubTab(tab){
