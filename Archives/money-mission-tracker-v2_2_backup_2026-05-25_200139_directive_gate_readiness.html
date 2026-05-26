@@ -2531,7 +2531,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Endpoint Probe</div><div class="settings-row-meta" id="settings-bridge-probe-summary">Probe one source when a lane keeps failing.</div></div><span class="settings-badge off" id="settings-bridge-probe-badge">Probe</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Self-Hardening</div><div class="settings-row-meta" id="settings-self-hardening-summary">Passive monitor not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-badge">Passive</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Drift Watch</div><div class="settings-row-meta" id="settings-drift-watch-summary">Passive stale-state watch not checked yet.</div></div><span class="settings-badge off" id="settings-drift-watch-badge">Check</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Directive Gates</div><div class="settings-row-meta" id="settings-directive-gates-summary">Integration packs are gated until approval and stability checks are complete.</div></div><span class="settings-badge off" id="settings-directive-gates-badge">Gate</span></div>
           </div>
           <details class="diagnostics-detail">
             <summary><span>Storage details</span><span class="settings-badge off">Details</span></summary>
@@ -2587,14 +2586,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <div class="settings-qa-results" id="settings-live-qa-results">
                 <div class="settings-qa-row"><div><div class="settings-qa-name">Live QA</div><div class="settings-qa-meta">Storage, bridge, self-hardening, drift, and Mission Command route smoke.</div></div><span class="settings-qa-pill">Idle</span></div>
               </div>
-            </div>
-          </details>
-          <details class="diagnostics-detail">
-            <summary><span>Directive gates</span><span class="settings-badge off">Details</span></summary>
-            <div class="settings-list diagnostics-detail-list">
-              <div class="settings-row"><div><div class="settings-row-name">Integration & Automation</div><div class="settings-row-meta" id="settings-directive-integrations">Blocked until approval gates are cleared.</div></div><span class="settings-badge off" id="settings-directive-integrations-badge">Blocked</span></div>
-              <div class="settings-row"><div><div class="settings-row-name">Notion Deep Integration</div><div class="settings-row-meta" id="settings-directive-notion-deep">Starts after Integration Phase 1 is stable.</div></div><span class="settings-badge off" id="settings-directive-notion-deep-badge">Later</span></div>
-              <div class="settings-row"><div><div class="settings-row-name">Next gate</div><div class="settings-row-meta" id="settings-directive-next-gate">Run Live QA, confirm storage/backup green, answer open questions, then create the approval Decision Log.</div></div><span class="settings-badge off">Approval</span></div>
             </div>
           </details>
         </div>
@@ -3985,9 +3976,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 20:01 ET · OS v2_2 directive gate readiness';
+var APP_BUILD_STAMP='2026-05-25 19:58 ET · OS v2_2 Live QA backup archive check';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-2001';
+var APP_CACHE_TOKEN='mmos-20260525-1958';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -5295,35 +5286,9 @@ async function withDiagnosticsActionBusyV22(label,fn,button){
     return null;
   }
 }
-function renderDirectiveGateDiagnosticsV22(){
-  var summary=document.getElementById('settings-directive-gates-summary');
-  var badge=document.getElementById('settings-directive-gates-badge');
-  var integrations=document.getElementById('settings-directive-integrations');
-  var integrationsBadge=document.getElementById('settings-directive-integrations-badge');
-  var notionDeep=document.getElementById('settings-directive-notion-deep');
-  var notionDeepBadge=document.getElementById('settings-directive-notion-deep-badge');
-  var nextGate=document.getElementById('settings-directive-next-gate');
-  if(summary)summary.textContent='2 active directives are intentionally gated: Integration & Automation first, Notion Deep after Phase 1 stability.';
-  if(badge){
-    badge.textContent='Gated';
-    badge.className='settings-badge off';
-  }
-  if(integrations)integrations.textContent='Blocked by directive until Live QA/regression is clean, storage + Drive backup stay green, open questions are answered, and A1XX approves by Decision Log.';
-  if(integrationsBadge){
-    integrationsBadge.textContent='Blocked';
-    integrationsBadge.className='settings-badge warn';
-  }
-  if(notionDeep)notionDeep.textContent='Blocked by directive until mc_integrations_v10 Phase 1 is installed, stable through its gate, and approved. No Notion Deep code should install before that.';
-  if(notionDeepBadge){
-    notionDeepBadge.textContent='Later';
-    notionDeepBadge.className='settings-badge off';
-  }
-  if(nextGate)nextGate.textContent='Next: keep stability green, answer the Integration open questions, then create the approval Decision Log before installing Phase 1.';
-}
 function renderSystemHealth(){
   var h=getHealth();
   if(typeof renderHealthCommandReadV22==='function')renderHealthCommandReadV22('status');
-  if(typeof renderDirectiveGateDiagnosticsV22==='function')renderDirectiveGateDiagnosticsV22();
   // Update topbar dot
   var dot=document.getElementById('health-dot-main');
   var lbl=document.getElementById('health-dot-lbl');
@@ -5418,7 +5383,6 @@ function renderStorageHealthDiagnosticsV22(){
   if(typeof renderBridgeEndpointProbeDiagnosticsV22==='function')renderBridgeEndpointProbeDiagnosticsV22();
   if(typeof renderSelfHardeningDiagnosticsV10==='function')renderSelfHardeningDiagnosticsV10();
   if(typeof renderDriftWatchDiagnosticsV10==='function')renderDriftWatchDiagnosticsV10();
-  if(typeof renderDirectiveGateDiagnosticsV22==='function')renderDirectiveGateDiagnosticsV22();
   if(typeof renderHealthCommandReadV22==='function')renderHealthCommandReadV22('diagnostics');
   return audit;
 }
