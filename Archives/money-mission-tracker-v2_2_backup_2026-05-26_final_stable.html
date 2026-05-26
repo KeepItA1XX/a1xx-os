@@ -2532,7 +2532,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Self-Hardening</div><div class="settings-row-meta" id="settings-self-hardening-summary">Passive monitor not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-badge">Passive</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Drift Watch</div><div class="settings-row-meta" id="settings-drift-watch-summary">Passive stale-state watch not checked yet.</div></div><span class="settings-badge off" id="settings-drift-watch-badge">Check</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Directive Gates</div><div class="settings-row-meta" id="settings-directive-gates-summary">Integration packs are gated until approval and stability checks are complete.</div></div><span class="settings-badge off" id="settings-directive-gates-badge">Gate</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Foundation Modules</div><div class="settings-row-meta" id="settings-foundation-summary">v2_3 scaffolds are reserved but inactive.</div></div><span class="settings-badge off" id="settings-foundation-badge">Stub</span></div>
           </div>
           <details class="diagnostics-detail">
             <summary><span>Storage details</span><span class="settings-badge off">Details</span></summary>
@@ -2558,12 +2557,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <div class="settings-row"><div><div class="settings-row-name">Endpoint results</div><div class="settings-row-meta" id="settings-bridge-probe-details">No endpoint probe run yet.</div></div><span class="settings-badge off" id="settings-bridge-probe-detail-badge">Actions</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Cycle Archive</div><div class="settings-row-meta">Use the two-click Archive Cycle flow, then confirm Activity Log shows ping, archive, and Notion upsert.</div></div><span class="settings-badge">Ready</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Source of truth</div><div class="settings-row-meta">Activity Log remains the source of truth for backend events.</div></div><span class="settings-badge off">Log</span></div>
-            </div>
-          </details>
-          <details class="diagnostics-detail">
-            <summary><span>Foundation details</span><span class="settings-badge off">Details</span></summary>
-            <div class="settings-list diagnostics-detail-list">
-              <div class="settings-row"><div><div class="settings-row-name">Stub inventory</div><div class="settings-row-meta" id="settings-foundation-details">No module check run yet.</div></div><span class="settings-badge off">Stubs</span></div>
             </div>
           </details>
           <details class="diagnostics-detail">
@@ -3991,11 +3984,11 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 /* ══════════════════════════════════════════════════════════
    CONSTANTS & STATE
 ══════════════════════════════════════════════════════════ */
-var APP_VERSION='v2.3 Alpha';
-var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 14:06 ET · OS v2_3 foundation pass scaffold';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation scaffolds';
-var APP_CACHE_TOKEN='mmos-20260526-1406-v23-foundation';
+var APP_VERSION='v2.2 Alpha';
+var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
+var APP_BUILD_STAMP='2026-05-26 10:50 ET · OS v2_2 backup route answer fix';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
+var APP_CACHE_TOKEN='mmos-20260526-1050';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -4062,152 +4055,6 @@ var MC_TURN_HEALTH_KEY_V10='a1xx_mc_turn_health_v10';
 var MC_SESSION_ID_KEY_V10='a1xx_mc_session_id_v10';
 var MC_DATA_WARNING_ACTIVE_MS_V10=15*60*1000;
 var MC_DRIFT_SOURCE_STALE_MS_V10=30*60*1000;
-var MC_MASTER_CONFIG_PAGE_ID='36b61152-81da-80de-aa91-ff7456260b92';
-var MC_FOUNDATION_STATUS_KEY_V23='a1xx_mc_foundation_status_v23';
-
-/* v2_3 reserved namespaces only. Do not write active pack data in this pass.
-   localStorage: a1xx_mc_auth_*, a1xx_mc_registry_*, a1xx_mc_schema_*,
-   a1xx_mc_feature_flags_*, a1xx_mc_migrations_*, a1xx_mc_rollbacks_*.
-   sessionStorage: a1xx_mc_runtime_*, a1xx_mc_dev_*, a1xx_mc_skill_runtime_*.
-   Drive-backed future stores: MC Memory Vault, MC Skills Library, Call Notes Studio. */
-
-var MC_FOUNDATION_MODULES_V23=[
-  {name:'mc_module_registry_v10',target:'v2_3',initFn:'mcInitModuleRegistryV10',namespace:'a1xx_mc_registry_*',phase:'foundation'},
-  {name:'mc_data_schema_registry_v10',target:'v2_3',initFn:'mcInitDataSchemaRegistryV10',namespace:'a1xx_mc_schema_*',phase:'foundation'},
-  {name:'mc_error_boundary_v10',target:'v2_3',initFn:'mcInitErrorBoundaryV10',namespace:'a1xx_mc_runtime_errors_*',phase:'foundation'},
-  {name:'mc_event_bus_v10',target:'v2_3',initFn:'mcInitEventBusV10',namespace:'a1xx_mc_runtime_events_*',phase:'foundation'},
-  {name:'mc_dependency_gate_v10',target:'v2_3',initFn:'mcInitDependencyGateV10',namespace:'a1xx_mc_dependency_*',phase:'foundation'},
-  {name:'mc_permission_boundary_v10',target:'v2_3',initFn:'mcInitPermissionBoundaryV10',namespace:'a1xx_mc_permissions_*',phase:'foundation'},
-  {name:'mc_feature_flags_v10',target:'v2_3',initFn:'mcInitFeatureFlagsV10',namespace:'a1xx_mc_feature_flags_*',phase:'foundation'},
-  {name:'mc_migration_runner_v10',target:'v2_3',initFn:'mcInitMigrationRunnerV10',namespace:'a1xx_mc_migrations_*',phase:'foundation'},
-  {name:'mc_rollback_manager_v10',target:'v2_3',initFn:'mcInitRollbackManagerV10',namespace:'a1xx_mc_rollbacks_*',phase:'foundation'},
-  {name:'mc_qa_harness_v10',target:'v2_3',initFn:'mcInitQaHarnessV10',namespace:'a1xx_mc_qa_*',phase:'foundation'},
-  {name:'mc_dev_mode_v10',target:'v2_3',initFn:'mcInitDevModeV10',namespace:'a1xx_mc_dev_*',phase:'hidden'},
-  {name:'mc_auth_sync_v10',target:'v2_4',initFn:'mcInitAuthSyncV10',namespace:'a1xx_mc_auth_*',phase:'stub'},
-  {name:'mc_integrations_v10',target:'v2_5',initFn:'mcInitIntegrationsV10',namespace:'a1xx_mc_integrations_*',phase:'stub'},
-  {name:'mc_notion_deep_v10',target:'v2_6',initFn:'mcInitNotionDeepV10',namespace:'a1xx_mc_notion_deep_*',phase:'stub'},
-  {name:'mc_memory_vault_v10',target:'v2_7',initFn:'mcInitMemoryVaultV10',namespace:'drive:MC Memory Vault',phase:'stub'},
-  {name:'mc_skill_loader_v10',target:'v2_9',initFn:'mcInitSkillLoaderV10',namespace:'drive:MC Skills Library',phase:'stub'},
-  {name:'mc_notebook_v10',target:'v2_9',initFn:'mcInitNotebookV10',namespace:'drive:Call Notes Studio',phase:'stub'},
-  {name:'mc_content_calendar_v10',target:'v2_10',initFn:'mcInitContentCalendarV10',namespace:'a1xx_mc_content_calendar_*',phase:'blocked'},
-  {name:'mc_content_intelligence_v10',target:'v2_11',initFn:'mcInitContentIntelligenceV10',namespace:'a1xx_mc_content_intelligence_*',phase:'blocked'},
-  {name:'mc_card_sync_v10',target:'v2_12',initFn:'mcInitCardSyncV10',namespace:'a1xx_mc_card_sync_*',phase:'blocked'},
-  {name:'mc_brain_context_boundary_v10',target:'v2_3',initFn:'mcInitBrainContextBoundaryV10',namespace:'brain:context-boundary',phase:'foundation'},
-  {name:'mc_brain_route_protection_v10',target:'v2_3',initFn:'mcInitBrainRouteProtectionV10',namespace:'brain:route-protection',phase:'foundation'},
-  {name:'mc_brain_source_trust_v10',target:'v2_3',initFn:'mcInitBrainSourceTrustV10',namespace:'brain:source-trust',phase:'foundation'},
-  {name:'mc_brain_time_intelligence_v10',target:'v2_4',initFn:'mcInitBrainTimeIntelligenceV10',namespace:'brain:time-intelligence',phase:'stub'},
-  {name:'mc_brain_memory_read_v10',target:'v2_7',initFn:'mcInitBrainMemoryReadV10',namespace:'brain:memory-read',phase:'stub'},
-  {name:'mc_brain_language_understanding_v10',target:'v2_4',initFn:'mcInitBrainLanguageUnderstandingV10',namespace:'brain:language-understanding',phase:'stub'},
-  {name:'mc_brain_acknowledgment_v10',target:'v2_4',initFn:'mcInitBrainAcknowledgmentV10',namespace:'brain:acknowledgment',phase:'stub'},
-  {name:'mc_brain_answer_quality_v10',target:'v2_4',initFn:'mcInitBrainAnswerQualityV10',namespace:'brain:answer-quality',phase:'stub'},
-  {name:'mc_brain_sales_call_prep_v10',target:'v2_9',initFn:'mcInitBrainSalesCallPrepV10',namespace:'brain:sales-call-prep',phase:'stub'},
-  {name:'mc_brain_content_decision_v10',target:'v2_10',initFn:'mcInitBrainContentDecisionV10',namespace:'brain:content-decision',phase:'blocked'}
-];
-
-function mcFoundationLogV23(message){
-  if(window.__mcFoundationDebugV23===true)console.log('[MC Foundation]',message);
-}
-function mcFoundationStubStatusV23(name,target,phase){
-  return {name:name,status:'STUB',active:false,target:target||'future',phase:phase||'stub'};
-}
-function mcFoundationStubByNameV23(name){
-  var mod=MC_FOUNDATION_MODULES_V23.filter(function(item){return item.name===name;})[0]||{};
-  mcFoundationLogV23(name+' registered as '+(mod.phase||'stub'));
-  return mcFoundationStubStatusV23(name,mod.target,mod.phase);
-}
-function mcGetFoundationModulesV23(){
-  return MC_FOUNDATION_MODULES_V23.map(function(item){
-    return {
-      name:item.name,
-      target:item.target,
-      initFn:item.initFn,
-      namespace:item.namespace,
-      phase:item.phase,
-      status:'STUB',
-      active:false
-    };
-  });
-}
-function mcGetFoundationModuleStatusV23(name){
-  return mcGetFoundationModulesV23().filter(function(item){return item.name===name;})[0]||null;
-}
-function mcGetFoundationStatusV23(){
-  var modules=mcGetFoundationModulesV23();
-  return {
-    status:'ok',
-    active:false,
-    mode:'scaffold_only',
-    build:APP_CACHE_TOKEN,
-    masterConfigPageId:MC_MASTER_CONFIG_PAGE_ID,
-    total:modules.length,
-    modules:modules
-  };
-}
-function mcInitModuleRegistryV10(){return mcFoundationStubByNameV23('mc_module_registry_v10');}
-function mcInitDataSchemaRegistryV10(){return mcFoundationStubByNameV23('mc_data_schema_registry_v10');}
-function mcInitErrorBoundaryV10(){return mcFoundationStubByNameV23('mc_error_boundary_v10');}
-function mcInitEventBusV10(){return mcFoundationStubByNameV23('mc_event_bus_v10');}
-function mcInitDependencyGateV10(){return mcFoundationStubByNameV23('mc_dependency_gate_v10');}
-function mcInitPermissionBoundaryV10(){return mcFoundationStubByNameV23('mc_permission_boundary_v10');}
-function mcInitFeatureFlagsV10(){return mcFoundationStubByNameV23('mc_feature_flags_v10');}
-function mcInitMigrationRunnerV10(){return mcFoundationStubByNameV23('mc_migration_runner_v10');}
-function mcInitRollbackManagerV10(){return mcFoundationStubByNameV23('mc_rollback_manager_v10');}
-function mcInitQaHarnessV10(){return mcFoundationStubByNameV23('mc_qa_harness_v10');}
-function mcInitDevModeV10(){return mcFoundationStubByNameV23('mc_dev_mode_v10');}
-function mcInitAuthSyncV10(){window._mcAuthReady=true;return mcFoundationStubByNameV23('mc_auth_sync_v10');}
-function mcInitIntegrationsV10(){return mcFoundationStubByNameV23('mc_integrations_v10');}
-function mcInitNotionDeepV10(){return mcFoundationStubByNameV23('mc_notion_deep_v10');}
-function mcInitMemoryVaultV10(){return mcFoundationStubByNameV23('mc_memory_vault_v10');}
-function mcInitSkillLoaderV10(){return mcFoundationStubByNameV23('mc_skill_loader_v10');}
-function mcInitNotebookV10(){return mcFoundationStubByNameV23('mc_notebook_v10');}
-function mcInitContentCalendarV10(){return mcFoundationStubByNameV23('mc_content_calendar_v10');}
-function mcInitContentIntelligenceV10(){return mcFoundationStubByNameV23('mc_content_intelligence_v10');}
-function mcInitCardSyncV10(){return mcFoundationStubByNameV23('mc_card_sync_v10');}
-function mcInitBrainContextBoundaryV10(){return mcFoundationStubByNameV23('mc_brain_context_boundary_v10');}
-function mcInitBrainRouteProtectionV10(){return mcFoundationStubByNameV23('mc_brain_route_protection_v10');}
-function mcInitBrainSourceTrustV10(){return mcFoundationStubByNameV23('mc_brain_source_trust_v10');}
-function mcInitBrainTimeIntelligenceV10(){return mcFoundationStubByNameV23('mc_brain_time_intelligence_v10');}
-function mcInitBrainMemoryReadV10(){return mcFoundationStubByNameV23('mc_brain_memory_read_v10');}
-function mcInitBrainLanguageUnderstandingV10(){return mcFoundationStubByNameV23('mc_brain_language_understanding_v10');}
-function mcInitBrainAcknowledgmentV10(){return mcFoundationStubByNameV23('mc_brain_acknowledgment_v10');}
-function mcInitBrainAnswerQualityV10(){return mcFoundationStubByNameV23('mc_brain_answer_quality_v10');}
-function mcInitBrainSalesCallPrepV10(){return mcFoundationStubByNameV23('mc_brain_sales_call_prep_v10');}
-function mcInitBrainContentDecisionV10(){return mcFoundationStubByNameV23('mc_brain_content_decision_v10');}
-async function mcDeriveKeyFromPinV10(){return null;}
-async function mcEncryptTokenV10(){return null;}
-async function mcDecryptTokenV10(){return null;}
-function mcInitFoundationPassV23(){
-  window._mcFoundationModulesV23=mcGetFoundationModulesV23();
-  if(typeof mcInitAuthSyncV10==='function')mcInitAuthSyncV10();
-  return mcGetFoundationStatusV23();
-}
-function runFoundationModuleSelfCheckV10(){
-  var failures=[];
-  var modules=mcGetFoundationModulesV23();
-  modules.forEach(function(item){
-    if(typeof window[item.initFn]!=='function')failures.push(item.name+' missing '+item.initFn);
-    if(item.status!=='STUB'||item.active!==false)failures.push(item.name+' is not scaffold-only');
-  });
-  if(!MC_MASTER_CONFIG_PAGE_ID)failures.push('MC_MASTER_CONFIG_PAGE_ID missing');
-  return {passed:failures.length===0,total:modules.length,failures:failures,mode:'scaffold_only'};
-}
-function renderFoundationDiagnosticsV23(){
-  var summary=document.getElementById('settings-foundation-summary');
-  var badge=document.getElementById('settings-foundation-badge');
-  var details=document.getElementById('settings-foundation-details');
-  var check=runFoundationModuleSelfCheckV10();
-  if(summary)summary.textContent=check.passed?'Scaffold ready · '+check.total+' modules reserved · no active packs.':'Review foundation scaffolds before adding packs.';
-  if(badge){
-    badge.textContent=check.passed?'Ready':'Review';
-    badge.className='settings-badge '+(check.passed?'':'warn');
-  }
-  if(details){
-    details.textContent=mcGetFoundationModulesV23().map(function(item){
-      return item.name+' · '+item.status+' · '+item.target;
-    }).join(' | ');
-  }
-  return check;
-}
 
 var CYCLES=[
   {num:1,name:'Foundation',start:'2026-05-04',end:'2026-06-28',target:1500},
@@ -5580,7 +5427,6 @@ function renderStorageHealthDiagnosticsV22(){
   if(typeof renderSelfHardeningDiagnosticsV10==='function')renderSelfHardeningDiagnosticsV10();
   if(typeof renderDriftWatchDiagnosticsV10==='function')renderDriftWatchDiagnosticsV10();
   if(typeof renderDirectiveGateDiagnosticsV22==='function')renderDirectiveGateDiagnosticsV22();
-  if(typeof renderFoundationDiagnosticsV23==='function')renderFoundationDiagnosticsV23();
   if(typeof renderHealthCommandReadV22==='function')renderHealthCommandReadV22('diagnostics');
   return audit;
 }
@@ -6120,8 +5966,8 @@ function setHealthSubTab(tab){
 
 function getMissionBuildStampV1(){
   return {
-    appVersion:typeof APP_VERSION!=='undefined'?APP_VERSION:'v2.3 Alpha',
-    file:typeof APP_BUILD_FILE!=='undefined'?APP_BUILD_FILE:'money-mission-tracker-v2_3.html',
+    appVersion:typeof APP_VERSION!=='undefined'?APP_VERSION:'v2.2 Alpha',
+    file:typeof APP_BUILD_FILE!=='undefined'?APP_BUILD_FILE:'money-mission-tracker-v2_2.html',
     buildStamp:typeof APP_BUILD_STAMP!=='undefined'?APP_BUILD_STAMP:'unknown build',
     brainBuild:typeof APP_BRAIN_BUILD!=='undefined'?APP_BRAIN_BUILD:'unknown brain build',
     cacheToken:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown-cache-token'
@@ -29730,7 +29576,7 @@ function getMissionDataPacket(question){
        for a future AI endpoint. All writes start disabled. confirmationRequired stays true
        until A1XX explicitly enables writes in Settings > AI Controls (planned v2.0). */
     llmBridge:{
-      version:typeof APP_VERSION!=='undefined'?APP_VERSION:'v2.3 Alpha',
+      version:typeof APP_VERSION!=='undefined'?APP_VERSION:'v2.2 Alpha',
       buildStamp:typeof APP_BUILD_STAMP!=='undefined'?APP_BUILD_STAMP:'',
       cacheToken:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
       mode:'local',
@@ -33593,7 +33439,6 @@ function startA1XX(){
   }
   __a1xxStarted=true;
   try{
-    if(typeof mcInitFoundationPassV23==='function')mcInitFoundationPassV23();
     init();
     if(typeof mcInitSelfHardeningPhase1V10==='function')mcInitSelfHardeningPhase1V10();
     setTimeout(initUniversalCardCollapse,0);
