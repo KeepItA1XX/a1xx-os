@@ -5,8 +5,6 @@
 //   - Added Foundation Pass Drive read endpoints for future skill/vault packs.
 //   - Added action=read_skill_file, action=list_skill_files, and action=read_vault_file.
 //   - Read-only Drive access only; no writes, deletes, or active pack behavior.
-//   - Added OS Profile Index / Device Registry metadata endpoints for future
-//     cross-device auth foundation. New devices remain Pending by default.
 // Changes in 1.8 (2026-05-24):
 //   - Added Mission Command v1.1 Sheets event receiver.
 //   - Added SHEET_MISSION_EVENTS = 'Mission Command Events' tab.
@@ -47,9 +45,6 @@ var SHEET_MISSION_CHAT = 'Mission Command Chat Log';
 var SHEET_MISSION_SESSIONS = 'Mission Command Sessions';
 var SHEET_MISSION_SYNC_AUDIT = 'Mission Command Sync Audit';
 var SHEET_MISSION_EVENTS = 'Mission Command Events';
-var SHEET_OS_PROFILE_INDEX = 'OS Profile Index';
-var SHEET_OS_DEVICE_REGISTRY = 'OS Device Registry';
-var SHEET_OS_SETUP_POINTERS = 'OS Setup Pointer Index';
 
 var NOTION_CONTENT_DB    = '1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18: was incorrectly set to the data source ID (...8188...). Notion /v1/databases/{id}/query expects the DATABASE ID (URL slug). Parent database "Master Beat Catalog" lives at notion.so/1a76115281da8199a5dffc423d447f31. */
@@ -116,25 +111,6 @@ var MISSION_EVENT_HEADERS = [
   'Received At','Event Type','Event Timestamp','Source','Action','Route',
   'Result','Status','Lead','Amount','Title','Summary','Session ID',
   'Active Chat ID','Prompt','Payload JSON'
-];
-
-var OS_PROFILE_INDEX_HEADERS = [
-  'Profile ID','Display Name','Role','Timezone','Preferred Routes','Build Channel',
-  'Active Device ID','Latest Backup Marker','Latest Backup Sheet Row',
-  'Latest Backup Drive File ID','Latest Backup Size','Last Verified At',
-  'Status','Notes'
-];
-
-var OS_DEVICE_REGISTRY_HEADERS = [
-  'Device ID','Profile ID','Device Label','Device Type','First Seen At',
-  'Last Seen At','Last Anchor Check At','Last Backup Marker',
-  'Last Backup Sheet Row','Trusted Status','Trust Reason','Build Token',
-  'App File','Status','Notes'
-];
-
-var OS_SETUP_POINTER_HEADERS = [
-  'Pointer Key','Pointer Label','Pointer Type','Pointer Value','Updated At',
-  'Updated By Device ID','Status','Notes'
 ];
 
 function getMoneyMissionSpreadsheet() {
@@ -219,16 +195,6 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: eventRow }))
         .setMimeType(ContentService.MimeType.JSON);
     }
-    if (data.type === 'profile_index_upsert') {
-      var profileRow = saveOsProfileIndexV19(data);
-      logActivity('OS profile index upsert — ' + profileRow.profileId + ' — device ' + (profileRow.activeDeviceId || 'none'));
-      return jsonResponseV19({ status: 'ok', row: profileRow });
-    }
-    if (data.type === 'device_registry_upsert') {
-      var deviceRow = saveOsDeviceRegistryV19(data);
-      logActivity('OS device registry upsert — ' + deviceRow.deviceId + ' — ' + deviceRow.trustedStatus);
-      return jsonResponseV19({ status: 'ok', row: deviceRow });
-    }
     if (data.type === 'prospect_save') {
       var rec = saveProspectSnapshot(data);
       logActivity('Prospect save — ' + (data.stageName || data.realName || '(unnamed)') + ' (' + (data.source || 'no source') + ')');
@@ -272,9 +238,6 @@ function doGet(e) {
     if (e.parameter.action === 'read_skill_file')     return readSkillFileV19(e);
     if (e.parameter.action === 'list_skill_files')    return listSkillFilesV19(e);
     if (e.parameter.action === 'read_vault_file')     return readVaultFileV19(e);
-    if (e.parameter.action === 'profile_index')        return getOsProfileIndexV19(e);
-    if (e.parameter.action === 'device_registry')      return getOsDeviceRegistryV19(e);
-    if (e.parameter.action === 'setup_pointers')       return getOsSetupPointersV19(e);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
     if (e.parameter.action === 'mission_events')      return getMissionCommandEventsV18(e);
@@ -1050,210 +1013,6 @@ function getMissionCommandEventsV18(e) {
   });
   return ContentService.createTextOutput(JSON.stringify({ status: 'ok', rows: rows }))
     .setMimeType(ContentService.MimeType.JSON);
-}
-
-function cellTextV19(value, maxLen) {
-  var text = value === null || value === undefined ? '' : String(value);
-  maxLen = maxLen || 1000;
-  return text.length > maxLen ? text.slice(0, maxLen) : text;
-}
-
-function cellNumberV19(value) {
-  var n = Number(value);
-  return isNaN(n) ? '' : n;
-}
-
-function profileIdV19(value) {
-  return cellTextV19(value || 'a1xx-primary', 80);
-}
-
-function findRowByFirstColumnV19(sheet, id) {
-  if (!sheet || sheet.getLastRow() < 2 || !id) return 0;
-  var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
-  for (var i = 0; i < values.length; i++) {
-    if (String(values[i][0]) === String(id)) return i + 2;
-  }
-  return 0;
-}
-
-function rowToObjectV19(headers, row) {
-  var obj = {};
-  for (var i = 0; i < headers.length; i++) obj[headers[i]] = row[i];
-  return obj;
-}
-
-function normalizeTrustedStatusV19(value) {
-  var status = cellTextV19(value || 'Pending', 40);
-  var allowed = { Pending: 1, Trusted: 1, Review: 1, Revoked: 1, Archived: 1 };
-  return allowed[status] ? status : 'Pending';
-}
-
-function getOsProfileSheetV19() {
-  return getOrCreateSheet(getMoneyMissionSpreadsheet(), SHEET_OS_PROFILE_INDEX, OS_PROFILE_INDEX_HEADERS, {
-    matchPrefix: true,
-    renameMatched: true
-  });
-}
-
-function getOsDeviceRegistrySheetV19() {
-  return getOrCreateSheet(getMoneyMissionSpreadsheet(), SHEET_OS_DEVICE_REGISTRY, OS_DEVICE_REGISTRY_HEADERS, {
-    matchPrefix: true,
-    renameMatched: true
-  });
-}
-
-function getOsSetupPointersSheetV19() {
-  return getOrCreateSheet(getMoneyMissionSpreadsheet(), SHEET_OS_SETUP_POINTERS, OS_SETUP_POINTER_HEADERS, {
-    matchPrefix: true,
-    renameMatched: true
-  });
-}
-
-function saveOsProfileIndexV19(d) {
-  var sheet = getOsProfileSheetV19();
-  var profileId = profileIdV19(d.profileId);
-  var nowIso = new Date().toISOString();
-  var row = [
-    profileId,
-    cellTextV19(d.displayName || 'A1XX', 120),
-    cellTextV19(d.role || 'Executive Producer', 120),
-    cellTextV19(d.timezone || 'America/New_York', 80),
-    cellTextV19(Array.isArray(d.preferredRoutes) ? d.preferredRoutes.join(',') : (d.preferredRoutes || ''), 250),
-    cellTextV19(d.buildChannel || d.build || '', 120),
-    cellTextV19(d.activeDeviceId || '', 120),
-    cellTextV19(d.latestBackupMarker || d.backupMarker || '', 120),
-    cellNumberV19(d.latestBackupSheetRow || d.backupSheetRow),
-    cellTextV19(d.latestBackupDriveFileId || d.driveFileId || '', 160),
-    cellNumberV19(d.latestBackupSize || d.backupSize),
-    cellTextV19(d.lastVerifiedAt || nowIso, 80),
-    cellTextV19(d.status || 'Active', 80),
-    cellTextV19(d.notes || '', 1000)
-  ];
-  var targetRow = findRowByFirstColumnV19(sheet, profileId);
-  if (targetRow) sheet.getRange(targetRow, 1, 1, OS_PROFILE_INDEX_HEADERS.length).setValues([row]);
-  else sheet.appendRow(row);
-  formatSheet(sheet);
-  return {
-    profileId: profileId,
-    row: targetRow || sheet.getLastRow(),
-    activeDeviceId: row[6],
-    latestBackupMarker: row[7],
-    latestBackupSheetRow: row[8],
-    updatedAt: row[11],
-    status: row[12]
-  };
-}
-
-function saveOsDeviceRegistryV19(d) {
-  var sheet = getOsDeviceRegistrySheetV19();
-  var deviceId = cellTextV19(d.deviceId || '', 120);
-  if (!deviceId) throw new Error('device_registry_upsert: missing deviceId');
-  var profileId = profileIdV19(d.profileId);
-  var nowIso = new Date().toISOString();
-  var targetRow = findRowByFirstColumnV19(sheet, deviceId);
-  var existing = targetRow ? sheet.getRange(targetRow, 1, 1, OS_DEVICE_REGISTRY_HEADERS.length).getValues()[0] : null;
-  var existingTrusted = existing ? normalizeTrustedStatusV19(existing[9]) : 'Pending';
-  var incomingTrusted = normalizeTrustedStatusV19(d.trustedStatus);
-  var trustedStatus = existingTrusted;
-  if (!existing) trustedStatus = 'Pending';
-  else if (existingTrusted === 'Trusted') trustedStatus = 'Trusted';
-  else if (incomingTrusted === 'Review' || incomingTrusted === 'Revoked' || incomingTrusted === 'Archived') trustedStatus = incomingTrusted;
-  var firstSeen = existing && existing[4] ? existing[4] : (d.firstSeenAt || nowIso);
-  var row = [
-    deviceId,
-    profileId,
-    cellTextV19(d.deviceLabel || d.label || '', 120),
-    cellTextV19(d.deviceType || 'browser', 80),
-    cellTextV19(firstSeen, 80),
-    cellTextV19(d.lastSeenAt || nowIso, 80),
-    cellTextV19(d.lastAnchorCheckAt || d.lastReadyCheckAt || '', 80),
-    cellTextV19(d.lastBackupMarker || d.latestBackupMarker || d.backupMarker || '', 120),
-    cellNumberV19(d.lastBackupSheetRow || d.latestBackupSheetRow || d.backupSheetRow),
-    trustedStatus,
-    cellTextV19(d.trustReason || (trustedStatus === 'Pending' ? 'New device pending manual trust.' : ''), 500),
-    cellTextV19(d.buildToken || d.build || '', 160),
-    cellTextV19(d.appFile || '', 160),
-    cellTextV19(d.status || 'Active', 80),
-    cellTextV19(d.notes || '', 1000)
-  ];
-  if (targetRow) sheet.getRange(targetRow, 1, 1, OS_DEVICE_REGISTRY_HEADERS.length).setValues([row]);
-  else sheet.appendRow(row);
-  formatSheet(sheet);
-  return {
-    deviceId: deviceId,
-    profileId: profileId,
-    row: targetRow || sheet.getLastRow(),
-    trustedStatus: trustedStatus,
-    lastBackupMarker: row[7],
-    updatedAt: row[5]
-  };
-}
-
-function getOsProfileIndexV19(e) {
-  var sheet = getOsProfileSheetV19();
-  var requested = profileIdV19(e && e.parameter ? e.parameter.profileId : '');
-  var targetRow = findRowByFirstColumnV19(sheet, requested);
-  if (!targetRow && sheet.getLastRow() >= 2) targetRow = 2;
-  if (!targetRow) return jsonResponseV19({ status: 'ok', profile: null, latestBackup: null, activeDevice: null });
-  var row = sheet.getRange(targetRow, 1, 1, OS_PROFILE_INDEX_HEADERS.length).getValues()[0];
-  var profile = rowToObjectV19(OS_PROFILE_INDEX_HEADERS, row);
-  return jsonResponseV19({
-    status: 'ok',
-    profile: profile,
-    latestBackup: {
-      marker: profile['Latest Backup Marker'] || '',
-      sheetRow: profile['Latest Backup Sheet Row'] || '',
-      driveFileId: profile['Latest Backup Drive File ID'] || '',
-      size: profile['Latest Backup Size'] || ''
-    },
-    activeDevice: profile['Active Device ID'] || ''
-  });
-}
-
-function getOsDeviceRegistryV19(e) {
-  var sheet = getOsDeviceRegistrySheetV19();
-  var requested = profileIdV19(e && e.parameter ? e.parameter.profileId : '');
-  var rows = [];
-  var trustedCount = 0;
-  var reviewCount = 0;
-  if (sheet.getLastRow() >= 2) {
-    var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, OS_DEVICE_REGISTRY_HEADERS.length).getValues();
-    for (var i = 0; i < values.length; i++) {
-      if (String(values[i][1] || requested) !== requested) continue;
-      var item = rowToObjectV19(OS_DEVICE_REGISTRY_HEADERS, values[i]);
-      if (item['Trusted Status'] === 'Trusted') trustedCount++;
-      if (item['Trusted Status'] === 'Review' || item['Trusted Status'] === 'Pending') reviewCount++;
-      rows.push(item);
-    }
-  }
-  return jsonResponseV19({ status: 'ok', profileId: requested, devices: rows, trustedCount: trustedCount, reviewCount: reviewCount });
-}
-
-function isSafeSetupPointerTypeV19(type) {
-  var safe = {
-    'Apps Script Web App URL': 1,
-    'Clean Workbook ID': 1,
-    'Backup Folder ID': 1,
-    'MC Master Config Page ID': 1,
-    'Team Chat Database ID': 1,
-    'Intelligence HQ Page ID': 1
-  };
-  return !!safe[cellTextV19(type, 120)];
-}
-
-function getOsSetupPointersV19(e) {
-  var sheet = getOsSetupPointersSheetV19();
-  var rows = [];
-  if (sheet.getLastRow() >= 2) {
-    var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, OS_SETUP_POINTER_HEADERS.length).getValues();
-    for (var i = 0; i < values.length; i++) {
-      var item = rowToObjectV19(OS_SETUP_POINTER_HEADERS, values[i]);
-      if (String(item.Status || item['Status'] || 'Active') === 'Archived') continue;
-      if (!isSafeSetupPointerTypeV19(item['Pointer Type'])) continue;
-      rows.push(item);
-    }
-  }
-  return jsonResponseV19({ status: 'ok', pointers: rows });
 }
 
 function ensureSheetHeaders(sheet, headers) {
@@ -2156,38 +1915,6 @@ function testProspectSave() {
 function testResetTestData() {
   var r = resetTestData({ daily: true, prospects: true, reason: 'smoke test via Apps Script editor' });
   Logger.log('Reset result: ' + JSON.stringify(r));
-}
-
-function testOsProfileDeviceRegistryV19() {
-  var profile = saveOsProfileIndexV19({
-    profileId: 'a1xx-primary',
-    displayName: 'A1XX',
-    role: 'Executive Producer',
-    timezone: 'America/New_York',
-    preferredRoutes: 'sales,pipeline,manager',
-    buildChannel: 'v2_3',
-    activeDeviceId: 'device_smoke_test',
-    latestBackupMarker: 'backup_smoke_test',
-    latestBackupSheetRow: 0,
-    latestBackupSize: 0,
-    status: 'Active',
-    notes: 'Manual Apps Script smoke test.'
-  });
-  var device = saveOsDeviceRegistryV19({
-    profileId: 'a1xx-primary',
-    deviceId: 'device_smoke_test',
-    deviceLabel: 'Smoke Test Device',
-    deviceType: 'browser',
-    lastAnchorCheckAt: new Date().toISOString(),
-    lastBackupMarker: 'backup_smoke_test',
-    lastBackupSheetRow: 0,
-    trustedStatus: 'Trusted',
-    buildToken: 'manual-smoke',
-    appFile: 'money-mission-tracker-v2_3.html',
-    status: 'Active',
-    notes: 'Should remain Pending unless manually trusted in the Sheet.'
-  });
-  Logger.log(JSON.stringify({ profile: profile, device: device }));
 }
 
 function testCycleArchiveSync() {
