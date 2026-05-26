@@ -3986,9 +3986,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-26 10:04 ET · OS v2_2 context route closeout';
+var APP_BUILD_STAMP='2026-05-25 20:09 ET · OS v2_2 integration gate answers';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260526-1004';
+var APP_CACHE_TOKEN='mmos-20260525-2009';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -26388,8 +26388,6 @@ function getMissionSalesSubtypeV1_1(q){
 
 function getMissionOutputRouteOverrideV1_1(route,q){
   q=String(q||'').toLowerCase();
-  var routeCloseout=typeof getMissionDirectRouteOverrideV22==='function'?getMissionDirectRouteOverrideV22(q,route):'';
-  if(routeCloseout)return routeCloseout;
   if(isMissionSalesModeExitSignal(q))return route||'now';
   if(typeof getMissionSalesPhraseBridgeV1==='function'&&getMissionSalesPhraseBridgeV1(q))return 'sales';
   if(/\b(data stale|source|where is this coming from|webhook|web hook|token|bridge|is this current|sync check|did this save|sheets|notion)\b/.test(q))return 'sync';
@@ -26398,116 +26396,6 @@ function getMissionOutputRouteOverrideV1_1(route,q){
   if(route==='money')return 'report';
   if(route==='diagnostic')return 'sync';
   return route||'now';
-}
-
-function missionRouteCloseoutNormalizeV22(question){
-  return normalizeMissionUserPromptForRoutingV1(question||'');
-}
-
-function missionHtmlLinesV22(text){
-  return escapeHtml(String(text||'')).replace(/\n/g,'<br>');
-}
-
-function isMissionFreshContextOverridePromptV22(question){
-  var q=missionRouteCloseoutNormalizeV22(question);
-  return /\b(treat this as (a )?fresh question|treat this like (a )?fresh question|fresh question|fresh ask|clean question|start over|new question|ignore (the )?(old|last|previous) context|stop using (old|last|previous) context|you are using old context|using old context|clear context|reset context|that is not what i meant|that's not what i meant|not what i meant)\b/.test(q);
-}
-
-function isMissionBackupSystemPromptV22(question){
-  var q=missionRouteCloseoutNormalizeV22(question);
-  return /\b(backup system|is backup safe|backup safe|restore ready|restore backup|drive backup|backup archive|state backups|state backup|storage safe|storage protection|will storage fill|storage full|what is broken|what's broken|whats broken|broken right now|system health|before adding new features|check before adding new features|feature stability|safe to build|safe before new features)\b/.test(q);
-}
-
-function isMissionMemoryReadPromptV22(question){
-  var q=missionRouteCloseoutNormalizeV22(question);
-  return /\b(what did i just ask you to remember|what did i ask you to remember|what memory are you using|what are you remembering|are you using memory|what did you carry over|are you carrying over|chat history|what did we leave open|what did we talk about|what did i just ask|what was the last question|what is the active loop|what is the current context)\b/.test(q);
-}
-
-function isMissionContentCreationPromptV22(question){
-  var q=missionRouteCloseoutNormalizeV22(question);
-  return /\b(help me turn this idea into a post|turn this idea into a post|turn .* into a post|what should i film|what should i make today|what should i make|what should i post|make me a post|write a post|content idea|content ideas|script this|write a hook|make this a reel|proof post|film next)\b/.test(q);
-}
-
-function isMissionProductionMovePromptV22(question){
-  var q=missionRouteCloseoutNormalizeV22(question);
-  return /\b(what production item should i move forward|what production item should i move|which production item|what project should i move forward|which project should i move forward|what beat should i move forward|which beat should i move|production item|production move|move forward in production|what needs metadata|what can ship today)\b/.test(q);
-}
-
-function getMissionDirectRouteOverrideV22(question,route){
-  var q=missionRouteCloseoutNormalizeV22(question);
-  if(!q)return '';
-  if(isMissionBackupSystemPromptV22(q))return 'sync';
-  if(isMissionMemoryReadPromptV22(q)||/\b(remember this|save this as memory|save this as a rule|keep this in mind|save this style|voice preference)\b/.test(q))return 'memory';
-  if(isMissionProductionMovePromptV22(q))return 'production';
-  if(isMissionContentCreationPromptV22(q))return 'content';
-  if(isMissionFreshContextOverridePromptV22(q))return 'sync';
-  return '';
-}
-
-function getMissionFreshContextOverrideAnswerV22(question){
-  if(!isMissionFreshContextOverridePromptV22(question))return '';
-  return 'Fresh read.<br><br>I will drop the old action loop for this answer.<br><br>Ask the question again clean, or name the lane: sales, content, production, money, calendar, or system.';
-}
-
-function getMissionBackupSystemAnswerV22(ctx,question){
-  if(!isMissionBackupSystemPromptV22(question))return '';
-  var q=missionRouteCloseoutNormalizeV22(question);
-  var storageEl=document.getElementById('settings-storage-health-summary');
-  var archiveEl=document.getElementById('settings-storage-backup-size');
-  var bridgeEl=document.getElementById('settings-bridge-pulse-summary');
-  var probeEl=document.getElementById('settings-endpoint-probe-summary');
-  var storageLine=storageEl&&storageEl.textContent?storageEl.textContent.trim():'Storage Health should be Green before risky changes.';
-  var archiveLine=archiveEl&&archiveEl.textContent?archiveEl.textContent.trim():'Drive backup archive should be active and verified.';
-  var bridgeLine=bridgeEl&&bridgeEl.textContent?bridgeEl.textContent.trim():'Bridge Pulse should be Clean before trusting external data.';
-  var probeLine=probeEl&&probeEl.textContent?probeEl.textContent.trim():'Endpoint Probe should be Clean before trusting exact counts.';
-  if(/\b(backup|restore|drive|state backup|state backups|storage)\b/.test(q)){
-    return 'Backup read:<br><br>Safe path is Drive file plus small Sheet index. The active Sheet should not store full backup payloads anymore.<br><br>'+escapeHtml(archiveLine)+'<br>'+escapeHtml(storageLine)+'<br><br>Before a risky change: Save backup, wait for Backup verified, then continue.';
-  }
-  if(/\b(before adding new features|check before adding new features|safe to build|feature stability)\b/.test(q)){
-    return 'Pre-build check:<br><br>1. Storage Health Green.<br>2. Backup archive verified.<br>3. Bridge Pulse Clean.<br>4. Endpoint Probe Clean.<br>5. Live QA passed.<br><br>If those are clean, v2_2 is safe to close and v2_3 can start.';
-  }
-  return 'System read:<br><br>'+escapeHtml(storageLine)+'<br>'+escapeHtml(bridgeLine)+'<br>'+escapeHtml(probeLine)+'<br><br>If all three are clean, trust the app for one next move. Run sync first only when exact counts matter.';
-}
-
-function getMissionMemoryReadAnswerV22(question){
-  if(!isMissionMemoryReadPromptV22(question))return '';
-  var q=missionRouteCloseoutNormalizeV22(question);
-  var prefs=[];
-  var notes=[];
-  var hist=[];
-  try{prefs=getStore(MISSION_MEMORY_PREFS_KEY)||[];}catch(e){prefs=[];}
-  try{notes=getStore(MISSION_MEMORY_NOTES_KEY)||[];}catch(e){notes=[];}
-  try{hist=getMissionChatHistory()||[];}catch(e){hist=[];}
-  if(/\b(what did i just ask you to remember|what did i ask you to remember)\b/.test(q)){
-    var saved=notes.concat(prefs).filter(Boolean).slice(-1)[0];
-    if(saved&&saved.text)return 'Memory read:<br><br>Last saved memory candidate I can see: '+escapeHtml(saved.text)+'.';
-    for(var i=hist.length-1;i>=0;i--){
-      var hq=String(hist[i]&&hist[i].question||'');
-      if(/\bremember this|save this|keep this in mind\b/i.test(hq))return 'Memory read:<br><br>The last remember-style prompt I can see was: '+escapeHtml(hq)+'.<br><br>I do not see it saved as a durable rule yet.';
-    }
-    return 'Memory read:<br><br>I do not see a saved memory from this prompt yet.<br><br>If you want it permanent, say: remember this: [rule].';
-  }
-  var summary=typeof getMissionLongMemorySummary==='function'?getMissionLongMemorySummary():'';
-  var activeRoute=window.__missionCommandActiveTopicRoute||'';
-  var activeQuestion=window.__missionCommandActiveTopicQuestion||'';
-  var lastTurn=hist.length?hist[hist.length-1]:null;
-  var parts=[];
-  if(activeRoute)parts.push('Active lane: '+getMissionRouteLabelV2(activeRoute));
-  if(activeQuestion)parts.push('Active question: '+activeQuestion);
-  if(lastTurn&&lastTurn.question)parts.push('Last question: '+lastTurn.question);
-  if(summary)parts.push('Long memory: '+summary);
-  if(!parts.length)parts.push('No active Mission Command memory is visible in this browser yet.');
-  return 'Memory read:<br><br>'+missionHtmlLinesV22(parts.join('\n'));
-}
-
-function getMissionContextRouteCloseoutAnswerV22(ctx,question,route,brainState,turn){
-  var fresh=getMissionFreshContextOverrideAnswerV22(question);
-  if(fresh)return fresh;
-  var backup=getMissionBackupSystemAnswerV22(ctx,question);
-  if(backup)return backup;
-  var memory=getMissionMemoryReadAnswerV22(question);
-  if(memory)return memory;
-  return '';
 }
 
 function getMissionSalesDeepOfferKeyV1(q){
@@ -27686,11 +27574,11 @@ function getMissionProtectedRouteAnswerV1(route,ctx,question,brainState,turn){
     if(outreachAnswer)return outreachAnswer;
     return getMissionCommandRouteAnswer('leads',ctx,question);
   }
-  if(route==='content'&&/\b(content card|content pipeline|proof should i post|what proof should i post|what should i post|what should i make|what should i make today|what should i film|what should i film next|caption|hook|post today|content stuck|stuck in the content|turn this idea into a post|help me turn this idea into a post|content idea|content ideas|proof post|film next|script this|make this a reel)\b/.test(q)){
+  if(route==='content'&&/\b(content card|content pipeline|proof should i post|what proof should i post|what should i post|caption|hook|post today|content stuck|stuck in the content)\b/.test(q)){
     var contentAnswer=getMissionContentCardIntelligenceResponseV11('content',ctx,question,brainState||{},turn);
     return contentAnswer||getMissionCommandRouteAnswer('content',ctx,question);
   }
-  if(route==='production'&&/\b(beat card|production card|what can ship today|what can ship|ship today|metadata|dsp|production pipeline|production studio session|studio session|bangin plus|bangin\+|what production item should i move forward|what production item should i move|which production item|what project should i move forward|which project should i move forward|what beat should i move forward|which beat should i move|production item|production move)\b/.test(q)){
+  if(route==='production'&&/\b(beat card|production card|what can ship today|what can ship|ship today|metadata|dsp|production pipeline|production studio session|studio session|bangin plus|bangin\+)\b/.test(q)){
     var productionAnswer=getMissionProductionCardIntelligenceResponseV11('production',ctx,question,brainState||{},turn);
     return productionAnswer||getMissionCommandRouteAnswer('production',ctx,question);
   }
@@ -28070,8 +27958,6 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
   var intent=multi.primary;
   var conv=getMissionConversationType(cleanQuestion||'',ctx,intent,brainState);
   var route=(conv&&conv.route)||intent.route;
-  var closeoutDirectRoute=typeof getMissionDirectRouteOverrideV22==='function'?getMissionDirectRouteOverrideV22(cleanQuestion||question||'',route):'';
-  if(closeoutDirectRoute)directRouteOverride=closeoutDirectRoute;
   var preflightCorrectionTarget=getMissionCorrectionTargetRouteV2(question||'')||getMissionCorrectionTargetRouteV2(rawQ)||getMissionCorrectionTargetRouteV2(q);
   if(preflightCorrectionTarget)directRouteOverride=preflightCorrectionTarget;
   var preflightResultSignal=getMissionResultSignalV1(question||cleanQuestion||'');
@@ -28154,11 +28040,9 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     }
     shaped=applyMissionContextAnswerGuardV11(shaped,turnV2,turnV2&&turnV2.contextArbitration||window.__missionLastContextArbitrationV11);
 	    return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
-		  }
-		  var routeCloseoutAnswer=typeof getMissionContextRouteCloseoutAnswerV22==='function'?getMissionContextRouteCloseoutAnswerV22(ctx,cleanQuestion||question||'',route,brainState,turnV2):'';
-		  if(routeCloseoutAnswer)return finishMissionAnswer(routeCloseoutAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false,stylePreference:directRouteOverride==='sync'?false:undefined});
-		  var bookedFollowupAnswer=getMissionFreshBookedFollowupAnswerV12(cleanQuestion||question||'');
-		  if(bookedFollowupAnswer)return finishMissionAnswer(bookedFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
+	  }
+	  var bookedFollowupAnswer=getMissionFreshBookedFollowupAnswerV12(cleanQuestion||question||'');
+	  if(bookedFollowupAnswer)return finishMissionAnswer(bookedFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
 	  var recentCorrectionFollowupAnswer=typeof getMissionRecentCorrectionFollowupAnswerV18==='function'?getMissionRecentCorrectionFollowupAnswerV18(cleanQuestion||question||'',ctx):'';
 	  if(recentCorrectionFollowupAnswer)return finishMissionAnswer(recentCorrectionFollowupAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false});
 	  var earlyCalendarEventPrepAnswer=typeof getMissionCalendarEventPrepAnswerV21==='function'?getMissionCalendarEventPrepAnswerV21(cleanQuestion||question||'',ctx):'';
@@ -28319,9 +28203,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
     }
   }
   var gapLine=ctx.gap>0?"You still have "+fmt(ctx.gap)+" left against this week's target.":'Weekly target pressure is protected right now.';
-  if(q.indexOf('remember')>=0||q.indexOf('history')>=0||q.indexOf('asked')>=0){
-    return finishMissionAnswer(getMissionMemoryReadAnswerV22(cleanQuestion||question||'')||getMissionMemoryAnswer(cleanQuestion||question||''),{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false});
-  }
+  if(q.indexOf('remember')>=0||q.indexOf('history')>=0||q.indexOf('asked')>=0)return finishMissionAnswer('<strong>Memory:</strong> I can now keep recent Mission Command questions in this browser and send them to the Mission Command Chat Log once Apps Script is redeployed. I will use the recent turns as context for future answers.');
   if(q.indexOf('calendar')>=0||q.indexOf('meeting')>=0||q.indexOf('class')>=0||q.indexOf('call')>=0)return finishMissionAnswer('<strong>Calendar read:</strong> '+(ctx.nextEvent?('Next up is '+escapeHtml(ctx.nextEvent.title||'an event')+' at '+escapeHtml(ctx.nextEvent.startTime||'the scheduled time')+'. Prep the one outcome you need before it starts.'):('I do not see a loaded upcoming event in the current packet. If Calendar is connected, refresh and I will read it again.')));
   if(q.indexOf('sync')>=0||q.indexOf('health')>=0||q.indexOf('broken')>=0||q.indexOf('error')>=0)return finishMissionAnswer('<strong>System read:</strong> I am watching local system health and sync status in the packet. If something looks wrong, ask me about the exact service and I will point you to the likely next check.');
   if(q.indexOf('lead')>=0||q.indexOf('follow')>=0||q.indexOf('dm')>=0||q.indexOf('who')>=0)return finishMissionAnswer('<strong>Lead focus:</strong> '+escapeHtml(ctx.leadText)+'. Start there, then log the outcome so the next answer has fresher context.');
@@ -28946,17 +28828,10 @@ function runMissionCommandSelfCheck(){
 	    {q:'no not pipeline sales',route:'sales',mustAny:['sales lane','ask','what did they say back']},
 	    {q:'nah production not content',route:'production',mustAny:['production','asset','ship','status']},
 	    {q:'not content i mean production',route:'production',mustAny:['production','asset','ship','status']},
-		    {q:'i meant pipeline not sales',route:'leads',mustAny:['pipeline','lead','offer','hit list']},
-		    {q:'call finished',route:'sales',mustAny:['call mode closed','booked','follow-up','paid']},
-		    {q:'off the phone',route:'sales',mustAny:['call mode closed','booked','follow-up','paid']},
-		    {q:'no, treat this as a fresh question',route:'sync',mustAny:['fresh read','old action loop','name the lane']},
-		    {q:'you are using old context',route:'sync',mustAny:['fresh read','old action loop','name the lane']},
-		    {q:'is the backup system safe',route:'sync',mustAny:['backup read','drive file','sheet index']},
-		    {q:'what should i check before adding new features',route:'sync',mustAny:['pre-build check','backup archive','live qa']},
-		    {q:'what did i just ask you to remember',route:'memory',mustAny:['memory read','saved memory','remember']},
-		    {q:'help me turn this idea into a post: rappers keep waiting for perfect timing',route:'content',mustAny:['content','post','proof','idea']},
-		    {q:'what production item should i move forward',route:'production',mustAny:['production','asset','status','ship']}
-		  ];
+	    {q:'i meant pipeline not sales',route:'leads',mustAny:['pipeline','lead','offer','hit list']},
+	    {q:'call finished',route:'sales',mustAny:['call mode closed','booked','follow-up','paid']},
+	    {q:'off the phone',route:'sales',mustAny:['call mode closed','booked','follow-up','paid']}
+	  ];
   checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
