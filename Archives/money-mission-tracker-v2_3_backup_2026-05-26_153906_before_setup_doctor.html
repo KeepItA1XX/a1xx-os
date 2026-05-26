@@ -304,13 +304,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .diagnostics-action-title{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:#68727c;margin-bottom:7px}
 .diagnostics-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .diagnostics-action-grid .btn{width:100%;height:30px;margin:0;font-size:10px;padding:0 8px}
-.safe-mode-panel{display:none;background:#080b0d;border:0.5px solid #263039;border-radius:9px;padding:9px;margin-top:8px}
-.safe-mode-panel.open{display:block}
-.safe-mode-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:7px}
-.safe-mode-title{font-size:11px;font-weight:900;color:#d7dde3}
-.safe-mode-copy{font-size:10px;color:#8b949e;line-height:1.45;margin-top:2px}
-.safe-mode-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}
-.safe-mode-actions .btn{width:100%;height:30px;margin:0;font-size:10px;padding:0 8px}
 .settings-field{margin-bottom:9px}
 .settings-field label{display:block;font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:5px}
 .settings-field input{width:100%;height:34px;background:#080a0c;border:0.5px solid #2a3036;border-radius:8px;color:#f0f3f5;font-size:12px;font-weight:700;padding:0 10px;outline:none}
@@ -2318,7 +2311,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="btn-row">
             <button class="btn" onclick="toggleSetup('sheets')">Sheets / Notion setup</button>
             <button class="btn" onclick="toggleSetup('todoist')">Todoist setup</button>
-            <button class="btn" onclick="setSettingsTab('health');setHealthSubTab('diagnostics');runSetupDoctorCheckV23();">Run setup doctor</button>
           </div>
           <div class="setup-panel" id="setup-sheets">
             <div class="setup-panel-title">Connect Google Sheets + Calendar</div>
@@ -2539,7 +2531,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Endpoint Probe</div><div class="settings-row-meta" id="settings-bridge-probe-summary">Probe one source when a lane keeps failing.</div></div><span class="settings-badge off" id="settings-bridge-probe-badge">Probe</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Self-Hardening</div><div class="settings-row-meta" id="settings-self-hardening-summary">Passive monitor not checked yet.</div></div><span class="settings-badge off" id="settings-self-hardening-badge">Passive</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Drift Watch</div><div class="settings-row-meta" id="settings-drift-watch-summary">Passive stale-state watch not checked yet.</div></div><span class="settings-badge off" id="settings-drift-watch-badge">Check</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Setup Doctor</div><div class="settings-row-meta" id="settings-setup-doctor-summary">Run Setup Doctor before a device move, reset, or new feature install.</div></div><span class="settings-badge off" id="settings-setup-doctor-badge">Check</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Directive Gates</div><div class="settings-row-meta" id="settings-directive-gates-summary">Integration packs are gated until approval and stability checks are complete.</div></div><span class="settings-badge off" id="settings-directive-gates-badge">Gate</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Foundation Modules</div><div class="settings-row-meta" id="settings-foundation-summary">v2_3 scaffolds are reserved but inactive.</div></div><span class="settings-badge off" id="settings-foundation-badge">Stub</span></div>
           </div>
@@ -2573,30 +2564,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <summary><span>Foundation details</span><span class="settings-badge off">Details</span></summary>
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Stub inventory</div><div class="settings-row-meta" id="settings-foundation-details">No module check run yet.</div></div><span class="settings-badge off">Stubs</span></div>
-            </div>
-          </details>
-          <details class="diagnostics-detail">
-            <summary><span>Setup Doctor details</span><span class="settings-badge off" id="settings-setup-doctor-detail-badge">Details</span></summary>
-            <div class="settings-list diagnostics-detail-list">
-              <div class="settings-row"><div><div class="settings-row-name">Critical setup</div><div class="settings-row-meta" id="settings-setup-doctor-critical">Not checked yet.</div></div><span class="settings-badge off" id="settings-setup-doctor-critical-badge">Setup</span></div>
-              <div class="settings-row"><div><div class="settings-row-name">Bridge path</div><div class="settings-row-meta" id="settings-setup-doctor-bridge">Not checked yet.</div></div><span class="settings-badge off" id="settings-setup-doctor-bridge-badge">Bridge</span></div>
-              <div class="settings-row"><div><div class="settings-row-name">Backup readiness</div><div class="settings-row-meta" id="settings-setup-doctor-backup">Not checked yet.</div></div><span class="settings-badge off" id="settings-setup-doctor-backup-badge">Backup</span></div>
-              <div class="settings-row"><div><div class="settings-row-name">Next repair</div><div class="settings-row-meta" id="settings-setup-doctor-next">Not checked yet.</div></div><span class="settings-badge off">Next</span></div>
-            </div>
-            <div class="safe-mode-panel" id="safe-mode-panel-v23">
-              <div class="safe-mode-top">
-                <div>
-                  <div class="safe-mode-title" id="safe-mode-title-v23">Safe Mode</div>
-                  <div class="safe-mode-copy" id="safe-mode-copy-v23">Run Setup Doctor first, then use the repair shortcuts below.</div>
-                </div>
-                <span class="settings-badge off" id="safe-mode-badge-v23">Idle</span>
-              </div>
-              <div class="safe-mode-actions">
-                <button class="btn" onclick="openSetupRepairV23()">Open setup</button>
-                <button class="btn" onclick="openBackupRepairV23()">Open backups</button>
-                <button class="btn" onclick="withDiagnosticsActionBusyV22('Saving safe backup',function(){return checkAutoBackup(true);},this)">Save backup</button>
-                <button class="btn" onclick="closeSafeModeV23()">Close safe mode</button>
-              </div>
             </div>
           </details>
           <details class="diagnostics-detail">
@@ -2659,8 +2626,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
                 <button class="btn" onclick="withDiagnosticsActionBusyV22('Checking storage',function(){return renderStorageHealthDiagnosticsV22();},this)">Check storage</button>
                 <button class="btn" onclick="withDiagnosticsActionBusyV22('Checking self-hardening',function(){return runSelfHardeningDiagnosticsCheckV10();},this)">Check self-hardening</button>
                 <button class="btn" onclick="withDiagnosticsActionBusyV22('Checking drift',function(){return runDriftWatchDiagnosticsCheckV10();},this)">Check drift</button>
-                <button class="btn" onclick="withDiagnosticsActionBusyV22('Running Setup Doctor',function(){return runSetupDoctorCheckV23();},this)">Run setup doctor</button>
-                <button class="btn" onclick="openSafeModeV23(this)">Open safe mode</button>
                 <button class="btn" onclick="withDiagnosticsActionBusyV22('Running Live QA',function(){return runHealthLiveQACheckV22();},this)">Run Live QA</button>
                 <button class="btn" onclick="withDiagnosticsActionBusyV22('Saving diagnostic backup',function(){return checkAutoBackup(true);},this)">Save diagnostic backup</button>
               </div>
@@ -2672,11 +2637,11 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
         <div class="settings-section">
           <div class="settings-section-title">Version / Build</div>
           <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">App version</div><div class="settings-row-meta">Money Mission OS v2.3 Alpha · Foundation operating build</div></div><span class="settings-badge">v2.3 Alpha</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Operating file</div><div class="settings-row-meta">money-mission-tracker-v2_3.html · v2_2 preserved as stable checkpoint</div></div><span class="settings-badge warn">Active</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">App version</div><div class="settings-row-meta">Money Mission OS v2.2 Alpha · Flat Signal operating build</div></div><span class="settings-badge">v2.2 Alpha</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Operating file</div><div class="settings-row-meta">money-mission-tracker-v2_2.html · v2_1 preserved as checkpoint</div></div><span class="settings-badge warn">Active</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Mission Command build</div><div class="settings-row-meta" id="settings-build-stamp">Loading build stamp...</div></div><span class="settings-badge" id="settings-build-badge">Check</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Cache check token</div><div class="settings-row-meta" id="settings-cache-token">Loading cache token...</div></div><span class="settings-badge off">Local</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Sheets checkpoint</div><div class="settings-row-meta">Sheets v1.1 verified end to end. Apps Script v1.9 is the backend baseline for OS v2_3.</div></div><span class="settings-badge">Verified</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Sheets checkpoint</div><div class="settings-row-meta">Sheets v1.1 verified end to end. Apps Script v1.8 is the backend baseline for OS v2_2.</div></div><span class="settings-badge">Verified</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Apps Script</div><div class="settings-row-meta">Redeploy after backend changes. HTML-only changes need a hard refresh.</div></div><span class="settings-badge off">Manual</span></div>
           </div>
         </div>
@@ -4028,9 +3993,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 15:39 ET · OS v2_3 setup doctor safe mode';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor';
-var APP_CACHE_TOKEN='mmos-20260526-1539-v23-setup-doctor';
+var APP_BUILD_STAMP='2026-05-26 14:06 ET · OS v2_3 foundation pass scaffold';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation scaffolds';
+var APP_CACHE_TOKEN='mmos-20260526-1406-v23-foundation';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -5616,7 +5581,6 @@ function renderStorageHealthDiagnosticsV22(){
   if(typeof renderDriftWatchDiagnosticsV10==='function')renderDriftWatchDiagnosticsV10();
   if(typeof renderDirectiveGateDiagnosticsV22==='function')renderDirectiveGateDiagnosticsV22();
   if(typeof renderFoundationDiagnosticsV23==='function')renderFoundationDiagnosticsV23();
-  if(typeof renderSetupDoctorDiagnosticsV23==='function')renderSetupDoctorDiagnosticsV23();
   if(typeof renderHealthCommandReadV22==='function')renderHealthCommandReadV22('diagnostics');
   return audit;
 }
@@ -5629,7 +5593,6 @@ async function refreshBackupArchiveStatusV22(){
   try{
     var status=await getAppsScriptJson('backup_status',{}, {timeoutMs:12000, tries:1});
     if(!status||status.status!=='ok'||status.storage!=='drive')return;
-    window.__lastBackupArchiveStatusV22=status;
     if(backup){
       var latest=status.latest;
       backup.textContent=latest
@@ -5640,179 +5603,6 @@ async function refreshBackupArchiveStatusV22(){
       backupDetail.textContent='Latest size '+Math.round((Number(status.latest.size)||0)/1000)+'KB · file '+(status.latest.driveFileId||'available')+' · status '+(status.latest.indexStatus||'indexed')+'.';
     }
   }catch(e){}
-}
-
-function setupDoctorBadgeClassV23(state){
-  if(state==='clean'||state==='ready'||state==='ok')return 'settings-badge';
-  if(state==='review'||state==='missing'||state==='warn')return 'settings-badge warn';
-  return 'settings-badge off';
-}
-
-function getSetupDoctorSnapshotV23(){
-  var url=(localStorage.getItem(SHEETS_KEY)||'').trim();
-  var token=typeof getWebhookToken==='function'?getWebhookToken():'';
-  var missionConfig=localStorage.getItem(MISSION_SHEETS_CONFIG_KEY)||'';
-  var todoist=(localStorage.getItem(TODOIST_KEY)||'').trim();
-  var storage=typeof getStorageHealthSnapshotV22==='function'?getStorageHealthSnapshotV22():null;
-  var backup=window.__lastBackupArchiveStatusV22||null;
-  var health=window.__lastSetupDoctorHealthV23||null;
-  var critical=[
-    {label:'Apps Script URL',ok:!!url},
-    {label:'Webhook token',ok:!!token},
-    {label:'Mission sync config',ok:!!missionConfig},
-    {label:'Todoist token',ok:!!todoist}
-  ];
-  return {
-    checkedAt:new Date().toISOString(),
-    url:url,
-    hasToken:!!token,
-    hasMissionConfig:!!missionConfig,
-    hasTodoist:!!todoist,
-    storage:storage,
-    backup:backup,
-    health:health,
-    critical:critical
-  };
-}
-
-function getSetupDoctorStatusV23(snapshot){
-  snapshot=snapshot||getSetupDoctorSnapshotV23();
-  var missing=snapshot.critical.filter(function(item){return !item.ok;}).map(function(item){return item.label;});
-  var storagePercent=snapshot.storage&&typeof snapshot.storage.percent==='number'?snapshot.storage.percent:0;
-  var health=snapshot.health&&snapshot.health.health?snapshot.health.health:null;
-  var healthOk=health&&health.sheets==='ok'&&health.notion==='ok'&&health.calendar==='ok'&&health.cache==='ok';
-  var backupOk=snapshot.backup&&snapshot.backup.status==='ok'&&snapshot.backup.storage==='drive'&&snapshot.backup.latest;
-  if(!snapshot.url)return {state:'missing',label:'Missing',summary:'Apps Script URL is missing. Setup cannot verify the cloud bridge yet.',next:'Open Connections > Setup and paste the Apps Script Web App URL.'};
-  if(storagePercent>=70)return {state:'review',label:'Review',summary:'Browser storage is above the safe window.',next:'Save a Drive backup, then run storage cleanup before adding features.'};
-  if(snapshot.health&&snapshot.health.status!=='ok')return {state:'review',label:'Review',summary:'Bridge health check returned a response that needs review.',next:'Use Test connection in Setup, then confirm the Web App URL and webhook token.'};
-  if(snapshot.health&&!healthOk)return {state:'review',label:'Review',summary:'Bridge responded, but one live service is not clean yet.',next:'Check Apps Script deployment, the clean workbook pointer, Notion access, and Calendar access.'};
-  if(snapshot.backup&&snapshot.backup.status==='error')return {state:'review',label:'Review',summary:'Backup status could not be verified from the bridge.',next:'Run Save diagnostic backup, then check the Drive file + Sheet index status.'};
-  if(snapshot.backup&&snapshot.backup.status==='ok'&&snapshot.backup.storage!=='drive')return {state:'review',label:'Review',summary:'Backup endpoint responded, but Drive archive mode is not confirmed.',next:'Save diagnostic backup and verify Drive file + Sheet index.'};
-  if(snapshot.backup&&!backupOk)return {state:'review',label:'Review',summary:'Drive backup mode exists, but no latest backup is verified yet.',next:'Run Save diagnostic backup and wait for Backup verified.'};
-  if(missing.length)return {state:'warn',label:'Partial',summary:'Setup is usable, but '+missing.join(', ')+' still need attention.',next:'Open Connections > Setup and fill the missing setup pieces when needed.'};
-  if(!snapshot.health||!snapshot.backup)return {state:'ready',label:'Ready',summary:'Local setup looks ready. Run Setup Doctor to verify bridge and backup live.',next:'Run Setup Doctor before a device move, reset, or new feature install.'};
-  return {state:'clean',label:'Clean',summary:'Setup, bridge, storage, and Drive backup are ready.',next:'Safe to continue after one fresh backup if the next change is risky.'};
-}
-
-function renderSetupDoctorDiagnosticsV23(snapshot){
-  snapshot=snapshot||getSetupDoctorSnapshotV23();
-  var status=getSetupDoctorStatusV23(snapshot);
-  var summary=document.getElementById('settings-setup-doctor-summary');
-  var badge=document.getElementById('settings-setup-doctor-badge');
-  var detailBadge=document.getElementById('settings-setup-doctor-detail-badge');
-  var critical=document.getElementById('settings-setup-doctor-critical');
-  var criticalBadge=document.getElementById('settings-setup-doctor-critical-badge');
-  var bridge=document.getElementById('settings-setup-doctor-bridge');
-  var bridgeBadge=document.getElementById('settings-setup-doctor-bridge-badge');
-  var backup=document.getElementById('settings-setup-doctor-backup');
-  var backupBadge=document.getElementById('settings-setup-doctor-backup-badge');
-  var next=document.getElementById('settings-setup-doctor-next');
-  var missing=snapshot.critical.filter(function(item){return !item.ok;}).map(function(item){return item.label;});
-  var readyCount=snapshot.critical.length-missing.length;
-  var health=snapshot.health&&snapshot.health.health?snapshot.health.health:null;
-  var backupLatest=snapshot.backup&&snapshot.backup.latest?snapshot.backup.latest:null;
-  if(summary)summary.textContent=status.summary;
-  if(badge){
-    badge.textContent=status.label;
-    badge.className=setupDoctorBadgeClassV23(status.state);
-  }
-  if(detailBadge){
-    detailBadge.textContent=status.label;
-    detailBadge.className=setupDoctorBadgeClassV23(status.state);
-  }
-  if(critical)critical.textContent=missing.length
-    ? readyCount+' of '+snapshot.critical.length+' ready · Missing: '+missing.join(', ')+'.'
-    : 'All '+snapshot.critical.length+' setup pieces are present locally.';
-  if(criticalBadge){
-    criticalBadge.textContent=missing.length?'Partial':'Ready';
-    criticalBadge.className=setupDoctorBadgeClassV23(missing.length?'warn':'ready');
-  }
-  if(bridge)bridge.textContent=health
-    ? 'Sheets '+(health.sheets||'unknown')+' · Notion '+(health.notion||'unknown')+' · Calendar '+(health.calendar||'unknown')+' · source '+(health.sheetsSource||'default')+'.'
-    : (snapshot.url?'Bridge URL is set. Live health has not been checked in this panel yet.':'Bridge URL is missing.');
-  if(bridgeBadge){
-    var bridgeOk=health&&health.sheets==='ok'&&health.notion==='ok'&&health.calendar==='ok';
-    bridgeBadge.textContent=bridgeOk?'Live':(snapshot.url?'Check':'Missing');
-    bridgeBadge.className=setupDoctorBadgeClassV23(bridgeOk?'ready':snapshot.url?'warn':'missing');
-  }
-  if(backup)backup.textContent=backupLatest
-    ? 'Drive archive active · latest '+(backupLatest.backupId||'backup')+' · Sheet index row '+(backupLatest.matchedRow||'?')+'.'
-    : (snapshot.backup&&snapshot.backup.storage==='drive'?'Drive archive active · no latest backup indexed yet.':'Backup archive not verified in this panel yet.');
-  if(backupBadge){
-    backupBadge.textContent=backupLatest?'Drive':'Check';
-    backupBadge.className=setupDoctorBadgeClassV23(backupLatest?'ready':'warn');
-  }
-  if(next)next.textContent=status.next;
-  renderSafeModePanelV23(snapshot,status);
-  return {snapshot:snapshot,status:status};
-}
-
-async function runSetupDoctorCheckV23(){
-  var snapshot=getSetupDoctorSnapshotV23();
-  renderSetupDoctorDiagnosticsV23(snapshot);
-  if(!snapshot.url)return renderSetupDoctorDiagnosticsV23(snapshot);
-  var healthError='';
-  try{
-    window.__lastSetupDoctorHealthV23=await getAppsScriptJson('health',{}, {timeoutMs:12000, tries:1});
-  }catch(e){
-    healthError=e&&e.message?e.message:String(e);
-    window.__lastSetupDoctorHealthV23={status:'error',message:healthError};
-  }
-  try{
-    var backupStatus=await getAppsScriptJson('backup_status',{}, {timeoutMs:12000, tries:1});
-    if(backupStatus)window.__lastBackupArchiveStatusV22=backupStatus;
-  }catch(e){
-    window.__lastBackupArchiveStatusV22={status:'error',message:e&&e.message?e.message:String(e)};
-  }
-  snapshot=getSetupDoctorSnapshotV23();
-  return renderSetupDoctorDiagnosticsV23(snapshot);
-}
-
-function renderSafeModePanelV23(snapshot,status){
-  if(!window.__safeModeOpenV23)return;
-  snapshot=snapshot||getSetupDoctorSnapshotV23();
-  status=status||getSetupDoctorStatusV23(snapshot);
-  var panel=document.getElementById('safe-mode-panel-v23');
-  var title=document.getElementById('safe-mode-title-v23');
-  var copy=document.getElementById('safe-mode-copy-v23');
-  var badge=document.getElementById('safe-mode-badge-v23');
-  if(panel)panel.classList.add('open');
-  if(title)title.textContent=status.state==='clean'?'Safe Mode: ready':'Safe Mode: repair view';
-  if(copy)copy.textContent=status.next;
-  if(badge){
-    badge.textContent=status.label;
-    badge.className=setupDoctorBadgeClassV23(status.state);
-  }
-}
-
-function openSafeModeV23(button){
-  if(button){
-    button.disabled=true;
-    setTimeout(function(){button.disabled=false;},900);
-  }
-  window.__safeModeOpenV23=true;
-  if(typeof setSettingsTab==='function')setSettingsTab('health');
-  if(typeof setHealthSubTab==='function')setHealthSubTab('diagnostics');
-  renderSetupDoctorDiagnosticsV23();
-  runSetupDoctorCheckV23();
-}
-
-function closeSafeModeV23(){
-  window.__safeModeOpenV23=false;
-  var panel=document.getElementById('safe-mode-panel-v23');
-  if(panel)panel.classList.remove('open');
-}
-
-function openSetupRepairV23(){
-  if(typeof setSettingsTab==='function')setSettingsTab('connections');
-  if(typeof setConnectionsSubTab==='function')setConnectionsSubTab('setup');
-  var panel=document.getElementById('setup-sheets');
-  if(panel&&!panel.classList.contains('open'))toggleSetup('sheets');
-}
-
-function openBackupRepairV23(){
-  if(typeof setSettingsTab==='function')setSettingsTab('health');
-  if(typeof setHealthSubTab==='function')setHealthSubTab('backups');
 }
 
 function runStorageHealthSelfCheckV22(){
