@@ -2294,7 +2294,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="btn-row">
             <button class="btn primary" onclick="buildDeviceTransferChecklistV23()">Build checklist</button>
-            <button class="btn" onclick="refreshDeviceTransferAnchorV23()">Check anchor</button>
             <button class="btn" onclick="copyDeviceTransferChecklistV23()">Copy checklist</button>
             <button class="btn" onclick="openSetupRepairV23()">Open setup</button>
           </div>
@@ -4078,9 +4077,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 16:39 ET · OS v2_3 setup transfer anchor guard';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + device profile + transfer guard';
-var APP_CACHE_TOKEN='mmos-20260526-1639-v23-transfer-anchor-guard';
+var APP_BUILD_STAMP='2026-05-26 16:33 ET · OS v2_3 local device profile';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + device profile';
+var APP_CACHE_TOKEN='mmos-20260526-1633-v23-device-profile';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5224,22 +5223,6 @@ async function runDeviceReadinessCheckV23(){
   return result;
 }
 
-function getDeviceTransferAnchorStatusV23(snapshot){
-  snapshot=snapshot||getDeviceReadinessSnapshotV23();
-  var health=snapshot.health||{};
-  var bridgeOk=health.sheets==='ok'&&health.notion==='ok'&&health.calendar==='ok';
-  var backupOk=!!(snapshot.latestBackup&&snapshot.latestBackup.backupId);
-  return {
-    bridgeOk:bridgeOk,
-    backupOk:backupOk,
-    ready:bridgeOk&&backupOk,
-    label:bridgeOk&&backupOk?'Anchored':'Check',
-    message:bridgeOk&&backupOk
-      ? 'Transfer anchor is ready: live bridge and latest Drive backup are checked.'
-      : 'Run device check before copying this as a final transfer checklist.'
-  };
-}
-
 function getDeviceTransferChecklistTextV23(snapshot){
   snapshot=snapshot||getDeviceReadinessSnapshotV23();
   var setup=snapshot.setup||{};
@@ -5254,15 +5237,10 @@ function getDeviceTransferChecklistTextV23(snapshot){
   var backupLine=latest.backupId
     ? latest.backupId+' · Sheet row '+(latest.matchedRow||'?')+' · '+Math.round((Number(latest.size)||0)/1000)+'KB'
     : 'No latest Drive backup marker checked yet';
-  var anchor=getDeviceTransferAnchorStatusV23(snapshot);
   var lines=[
     'Money Mission OS v2_3 setup transfer checklist',
     'Generated: '+new Date().toLocaleString(),
     'Build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),
-    '',
-    'Transfer anchor',
-    '- Status: '+(anchor.ready?'Ready':'Needs device check'),
-    '- Note: '+anchor.message,
     '',
     'Device profile',
     '- Label: '+(device.label||'Unlabeled device'),
@@ -5310,7 +5288,6 @@ function renderDeviceTransferV23(snapshot){
   var backupBadge=document.getElementById('device-transfer-backup-badge');
   var note=document.getElementById('device-transfer-note');
   var latest=snapshot.latestBackup||{};
-  var anchor=getDeviceTransferAnchorStatusV23(snapshot);
   if(statusEl)statusEl.textContent=status.summary;
   if(statusBadge){
     statusBadge.textContent=status.label;
@@ -5318,10 +5295,10 @@ function renderDeviceTransferV23(snapshot){
   }
   if(backupEl)backupEl.textContent=latest.backupId
     ? 'Anchor '+latest.backupId+' · Sheet row '+(latest.matchedRow||'?')+' · '+Math.round((Number(latest.size)||0)/1000)+'KB.'
-    : 'No Drive backup anchor checked yet. Run device check before copying the checklist.';
+    : 'No Drive backup anchor checked yet. Run device check or save backup first.';
   if(backupBadge){
-    backupBadge.textContent=anchor.label;
-    backupBadge.className=setupDoctorBadgeClassV23(anchor.ready?'ready':'warn');
+    backupBadge.textContent=latest.backupId?'Anchored':'Check';
+    backupBadge.className=setupDoctorBadgeClassV23(latest.backupId?'ready':'warn');
   }
   if(note&&!note.value)note.value=getDeviceTransferChecklistTextV23(snapshot);
   return {snapshot:snapshot,status:status};
@@ -5337,39 +5314,16 @@ function buildDeviceTransferChecklistV23(){
     note.select();
   }
   if(status){
-    var anchor=getDeviceTransferAnchorStatusV23(rendered.snapshot);
-    status.className='reset-status '+(anchor.ready?'ok':'warn');
-    status.textContent=anchor.ready
-      ? 'Checklist built with live bridge and Drive backup anchor. No secrets included.'
-      : 'Checklist built as a draft. Run device check before copying it for a real device move.';
+    status.className='reset-status ok';
+    status.textContent='Checklist built. It contains no secrets; use private sources for tokens on the new device.';
   }
   return rendered;
-}
-
-async function refreshDeviceTransferAnchorV23(){
-  var status=document.getElementById('device-transfer-copy-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking bridge and latest Drive backup anchor...';
-  }
-  var result=typeof runDeviceReadinessCheckV23==='function'?await runDeviceReadinessCheckV23():renderDeviceTransferV23();
-  var note=document.getElementById('device-transfer-note');
-  var snapshot=result&&result.snapshot?result.snapshot:null;
-  var anchor=getDeviceTransferAnchorStatusV23(snapshot);
-  if(note)note.value=getDeviceTransferChecklistTextV23(snapshot);
-  if(status){
-    status.className='reset-status '+(anchor.ready?'ok':'warn');
-    status.textContent=anchor.message;
-  }
-  return result;
 }
 
 async function copyDeviceTransferChecklistV23(){
   var note=document.getElementById('device-transfer-note');
   var status=document.getElementById('device-transfer-copy-status');
   if(!note||!note.value)buildDeviceTransferChecklistV23();
-  var rendered=renderDeviceTransferV23();
-  var anchor=getDeviceTransferAnchorStatusV23(rendered.snapshot);
   note=document.getElementById('device-transfer-note');
   try{
     if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(note.value);
@@ -5379,10 +5333,8 @@ async function copyDeviceTransferChecklistV23(){
       document.execCommand('copy');
     }
     if(status){
-      status.className='reset-status '+(anchor.ready?'ok':'warn');
-      status.textContent=anchor.ready
-        ? 'Checklist copied with live bridge and Drive backup anchor. Secrets were not included.'
-        : 'Draft checklist copied. Run device check before using it for a real device move.';
+      status.className='reset-status ok';
+      status.textContent='Checklist copied. Secrets were not included.';
     }
   }catch(err){
     if(status){
