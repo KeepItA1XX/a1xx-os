@@ -3976,9 +3976,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.2 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_2.html';
-var APP_BUILD_STAMP='2026-05-25 19:58 ET · OS v2_2 Live QA backup archive check';
+var APP_BUILD_STAMP='2026-05-25 19:55 ET · OS v2_2 self-hardening recovered issue polish';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_2 flat UI + visual stability';
-var APP_CACHE_TOKEN='mmos-20260525-1958';
+var APP_CACHE_TOKEN='mmos-20260525-1955';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
@@ -5468,33 +5468,19 @@ function renderHealthLiveQARowsV22(rows){
     return '<div class="settings-qa-row"><div><div class="settings-qa-name">'+escapeHtml(row.name||'Check')+'</div><div class="settings-qa-meta">'+escapeHtml(row.meta||'')+'</div></div><span class="settings-qa-pill '+(pass?'pass':'fail')+'">'+(pass?'Pass':'Review')+'</span></div>';
   }).join('');
 }
-async function runBackupArchiveSelfCheckV22(){
-  try{
-    var status=await getAppsScriptJson('backup_status',{}, {timeoutMs:12000, tries:1});
-    if(!status||status.status!=='ok')return {passed:false,meta:'Backup status endpoint did not return ok.'};
-    if(status.storage!=='drive'||status.driveBackupActive!==true)return {passed:false,meta:'Drive backup archive is not active.'};
-    var latest=status.latest||{};
-    if(!latest.backupId||!latest.driveFileId)return {passed:false,meta:'Drive backup active, but no latest backup file is indexed yet.'};
-    if(!latest.matchedRow)return {passed:false,meta:'Drive backup exists, but Sheet index row was not reported.'};
-    return {passed:true,meta:'Drive archive active · latest '+latest.backupId+' · Sheet row '+latest.matchedRow+'.'};
-  }catch(e){
-    return {passed:false,meta:e&&e.message?e.message:String(e)};
-  }
-}
-async function runHealthLiveQACheckV22(){
+function runHealthLiveQACheckV22(){
   var summary=document.getElementById('settings-live-qa-summary');
   var badge=document.getElementById('settings-live-qa-badge');
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
     rows.push({name:name,passed:normalized.passed,meta:normalized.meta});
   }
   try{add('Storage Health',typeof runStorageHealthSelfCheckV22==='function'?runStorageHealthSelfCheckV22():{passed:false,meta:'Missing storage self-check'});}catch(e){add('Storage Health',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Backup Archive',typeof runBackupArchiveSelfCheckV22==='function'?await runBackupArchiveSelfCheckV22():{passed:false,meta:'Missing backup archive check'});}catch(e){add('Backup Archive',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
