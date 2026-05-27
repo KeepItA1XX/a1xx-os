@@ -2319,22 +2319,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="cloud-profile-bootstrap-status"></div>
         </div>
         <div class="settings-section">
-          <div class="settings-section-title">Cloud Profile Readiness</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Login boundary</div><div class="settings-row-meta" id="cloud-profile-boundary">Current username/password is local to this browser only.</div></div><span class="settings-badge warn" id="cloud-profile-boundary-badge">Local</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Profile index</div><div class="settings-row-meta" id="cloud-profile-index">Load registry to confirm the backend profile index.</div></div><span class="settings-badge off" id="cloud-profile-index-badge">Index</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Trusted device</div><div class="settings-row-meta" id="cloud-profile-device-trust">Load registry to confirm this device can become a cloud profile source.</div></div><span class="settings-badge off" id="cloud-profile-device-trust-badge">Trust</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Restore foundation</div><div class="settings-row-meta" id="cloud-profile-restore-foundation">Restore remains manual until trusted device and Drive backup are clean.</div></div><span class="settings-badge off" id="cloud-profile-restore-badge">Restore</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Next auth upgrade</div><div class="settings-row-meta" id="cloud-profile-next-auth">Full login-anywhere stays blocked until backend auth is approved.</div></div><span class="settings-badge warn" id="cloud-profile-next-auth-badge">Later</span></div>
-          </div>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="refreshCloudProfileReadinessV23()">Check cloud profile</button>
-            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
-            <button class="btn" onclick="setAccountSubTab('signin')">Open sign-in</button>
-          </div>
-          <div class="reset-status" id="cloud-profile-readiness-status"></div>
-        </div>
-        <div class="settings-section">
           <div class="settings-section-title">Device Registry</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Profile index</div><div class="settings-row-meta" id="device-registry-profile-read">Load registry to read the backend profile index.</div></div><span class="settings-badge off" id="device-registry-profile-badge">Read</span></div>
@@ -4144,9 +4128,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-27 09:32 ET · OS v2_3 cloud profile readiness';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + cloud profile readiness';
-var APP_CACHE_TOKEN='mmos-20260527-0932-v23-cloud-profile-readiness';
+var APP_BUILD_STAMP='2026-05-26 20:45 ET · OS v2_3 trusted restore readiness';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + trusted restore readiness';
+var APP_CACHE_TOKEN='mmos-20260526-2045-v23-trusted-restore-readiness';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5198,7 +5182,6 @@ function renderAccountIdentity(){
   if(typeof renderDeviceReadinessV23==='function')renderDeviceReadinessV23();
   if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
   if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
-  if(typeof renderCloudProfileReadinessV23==='function')renderCloudProfileReadinessV23();
   if(typeof renderDeviceRegistryReadPanelV23==='function')renderDeviceRegistryReadPanelV23();
   if(typeof renderTrustedRestoreReadinessV23==='function')renderTrustedRestoreReadinessV23();
 }
@@ -5613,144 +5596,6 @@ async function copyCloudProfileBootstrapPlanV23(){
       status.className='reset-status err';
       status.textContent='Copy blocked by the browser. Select the bootstrap plan manually.';
     }
-  }
-}
-
-function getCloudProfileReadinessSnapshotV23(){
-  var acct=typeof getAccount==='function'?getAccount():null;
-  var localSignIn=!!(acct&&acct.passHash);
-  var registryState=typeof getDeviceRegistryReadStateV23==='function'?getDeviceRegistryReadStateV23():null;
-  var registryRead=typeof renderDeviceRegistryReadPanelV23==='function'?renderDeviceRegistryReadPanelV23(registryState):{};
-  var profile=registryRead&&registryRead.profile?registryRead.profile:null;
-  var current=registryRead&&registryRead.current?registryRead.current:null;
-  var trust=current?String(current['Trusted Status']||current.trustedStatus||'Pending'):'Local';
-  var backup=window.__lastBackupArchiveStatusV22||null;
-  var latest=backup&&backup.latest?backup.latest:null;
-  var trustedRestore=typeof getTrustedRestoreReadinessStatusV23==='function'?getTrustedRestoreReadinessStatusV23(getTrustedRestoreReadinessSnapshotV23()):null;
-  var profileReady=!!profile;
-  var trusted=trust==='Trusted';
-  var backupReady=!!(latest&&latest.backupId);
-  return {
-    localSignIn:localSignIn,
-    registryState:registryState,
-    registryRead:registryRead,
-    profile:profile,
-    current:current,
-    trust:trust,
-    trusted:trusted,
-    backup:backup,
-    latest:latest,
-    backupReady:backupReady,
-    trustedRestore:trustedRestore,
-    profileReady:profileReady,
-    foundationReady:profileReady&&trusted&&backupReady
-  };
-}
-
-function getCloudProfileReadinessStatusV23(snapshot){
-  snapshot=snapshot||getCloudProfileReadinessSnapshotV23();
-  if(!snapshot.localSignIn)return {
-    state:'warn',
-    label:'Local',
-    text:'Create local sign-in on this device before using it as a cloud profile source.'
-  };
-  if(!snapshot.profileReady)return {
-    state:'warn',
-    label:'Index',
-    text:'Profile index has not been loaded yet. Load registry before planning cloud profile sync.'
-  };
-  if(!snapshot.trusted)return {
-    state:'warn',
-    label:snapshot.trust||'Trust',
-    text:'This device must be trusted before it can become the source for future cloud profile work.'
-  };
-  if(!snapshot.backupReady)return {
-    state:'warn',
-    label:'Backup',
-    text:'Trusted device found. Check the latest Drive backup before future cloud profile restore work.'
-  };
-  return {
-    state:'ready',
-    label:'Ready',
-    text:'Foundation is ready for future cloud profile design. Login-anywhere is still not active.'
-  };
-}
-
-function renderCloudProfileReadinessV23(snapshot){
-  snapshot=snapshot||getCloudProfileReadinessSnapshotV23();
-  var status=getCloudProfileReadinessStatusV23(snapshot);
-  var boundary=document.getElementById('cloud-profile-boundary');
-  var boundaryBadge=document.getElementById('cloud-profile-boundary-badge');
-  var index=document.getElementById('cloud-profile-index');
-  var indexBadge=document.getElementById('cloud-profile-index-badge');
-  var trust=document.getElementById('cloud-profile-device-trust');
-  var trustBadge=document.getElementById('cloud-profile-device-trust-badge');
-  var restore=document.getElementById('cloud-profile-restore-foundation');
-  var restoreBadge=document.getElementById('cloud-profile-restore-badge');
-  var next=document.getElementById('cloud-profile-next-auth');
-  var nextBadge=document.getElementById('cloud-profile-next-auth-badge');
-  if(boundary)boundary.textContent=snapshot.localSignIn
-    ? 'Local sign-in exists on this browser. It is not full account login across devices yet.'
-    : 'No local sign-in is saved on this browser yet.';
-  if(boundaryBadge){
-    boundaryBadge.textContent=snapshot.localSignIn?'Local':'Setup';
-    boundaryBadge.className=setupDoctorBadgeClassV23(snapshot.localSignIn?'warn':'missing');
-  }
-  if(index)index.textContent=snapshot.profile
-    ? 'Profile '+(snapshot.profile['Profile ID']||'a1xx-primary')+' · '+(snapshot.profile['Display Name']||'A1XX')+' · latest '+(snapshot.profile['Latest Backup Marker']||'no backup marker')+'.'
-    : 'Load registry to confirm the backend profile index.';
-  if(indexBadge){
-    indexBadge.textContent=snapshot.profileReady?'Loaded':'Index';
-    indexBadge.className=setupDoctorBadgeClassV23(snapshot.profileReady?'ready':'warn');
-  }
-  if(trust)trust.textContent=snapshot.current
-    ? 'This device is '+snapshot.trust+' · '+(snapshot.current['Device Label']||'unlabeled')+'.'
-    : 'This device is not matched to the registry yet.';
-  if(trustBadge){
-    trustBadge.textContent=snapshot.trust||'Trust';
-    trustBadge.className=setupDoctorBadgeClassV23(snapshot.trusted?'ready':snapshot.current?'warn':'off');
-  }
-  if(restore)restore.textContent=snapshot.latest
-    ? 'Drive backup '+(snapshot.latest.backupId||'backup')+' is visible. Restore remains manual and protected.'
-    : 'No latest Drive backup marker checked yet. Restore remains locked.';
-  if(restoreBadge){
-    restoreBadge.textContent=snapshot.backupReady?'Drive':'Restore';
-    restoreBadge.className=setupDoctorBadgeClassV23(snapshot.backupReady?'ready':'warn');
-  }
-  if(next)next.textContent=status.state==='ready'
-    ? 'Next auth upgrade can be planned, but full login-anywhere still needs explicit backend auth approval.'
-    : status.text;
-  if(nextBadge){
-    nextBadge.textContent=status.state==='ready'?'Plan':'Later';
-    nextBadge.className=setupDoctorBadgeClassV23(status.state==='ready'?'ready':'warn');
-  }
-  return {snapshot:snapshot,status:status};
-}
-
-async function refreshCloudProfileReadinessV23(){
-  var status=document.getElementById('cloud-profile-readiness-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking profile index, trusted device, Drive backup, and login boundary...';
-  }
-  try{
-    if(typeof loadDeviceRegistryReadPanelV23==='function')await loadDeviceRegistryReadPanelV23();
-    if(typeof refreshBackupArchiveStatusV22==='function')await refreshBackupArchiveStatusV22();
-    var rendered=renderCloudProfileReadinessV23();
-    if(status){
-      status.className='reset-status '+(rendered.status.state==='ready'?'ok':'warn');
-      status.textContent=rendered.status.state==='ready'
-        ? 'Cloud profile foundation is ready. Login-anywhere is still not active.'
-        : rendered.status.text;
-    }
-    return rendered;
-  }catch(err){
-    renderCloudProfileReadinessV23();
-    if(status){
-      status.className='reset-status err';
-      status.textContent=(err&&err.message)||'Cloud profile readiness check failed. Run Setup Doctor and load registry again.';
-    }
-    return null;
   }
 }
 
@@ -7468,7 +7313,6 @@ function setAccountSubTab(tab){
     if(typeof renderDeviceReadinessV23==='function')renderDeviceReadinessV23();
     if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
     if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
-    if(typeof renderCloudProfileReadinessV23==='function')renderCloudProfileReadinessV23();
     if(typeof renderDeviceRegistryReadPanelV23==='function')renderDeviceRegistryReadPanelV23();
     if(typeof renderTrustedRestoreReadinessV23==='function')renderTrustedRestoreReadinessV23();
   }
