@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 19:36 ET · OS v2_4 relative time planning';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + relative time planning';
-var APP_CACHE_TOKEN='mmos-20260527-1936-v24-relative-time-planning';
+var APP_BUILD_STAMP='2026-05-27 19:11 ET · OS v2_4 time-context wording polish';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + time-context wording polish';
+var APP_CACHE_TOKEN='mmos-20260527-1911-v24-time-context-wording-polish';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26265,7 +26265,6 @@ function getMissionBrainLanguageProfileV24(question,ctx,route,brainState){
     timeBox:/\b(only have|i have|got|gotta|before i leave|before my call|in \d+)\b.*\b(\d+|ten|fifteen|twenty|thirty|forty five|hour|minutes?|mins?)\b/.test(q),
     timeAsk:/\b(how long|how much time|how many minutes|time estimate|how long does it take)\b/.test(q),
     timeContextAsk:/\b(what fits in this window|what can i do in this window|what can i fit right now|do i have time|what should i do with this window|what should i do before (my |the )?(next )?(call|meeting|event)|before (my |the )?(next )?(call|meeting|event) what should i do|what should i do (tonight|this morning|this afternoon|this evening)|what can i do (tonight|this morning|this afternoon|this evening))\b/.test(q),
-    relativeTimeAsk:/\b(what should i do tomorrow|tomorrow plan|plan for tomorrow|what is tomorrow looking like|what should i focus on this week|what should i do this week|how is this week looking|rest of the week|weekly plan|week plan|where are we in the cycle|where am i in the cycle|where in the cycle|cycle check|cycle status|how many days left in the cycle|days left in cycle|what did i do yesterday|what happened yesterday|yesterday recap|what moved yesterday)\b/.test(q),
     broken:/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(q),
     styleCorrection:/\b(that answer is too much|too much|make it shorter|more direct|say it normal|say that normal|plain english|make it plain|less robotic|more natural|answer normal|that is not what i meant|not what i meant)\b/.test(q),
     misunderstanding:/\b(you misunderstood|you are misunderstanding|you misunderstood me|wrong read|wrong lane|not that|nah not that|no not that|that is not what i meant|that's not what i meant|not what i meant)\b/.test(q),
@@ -26287,7 +26286,7 @@ function missionBrainFoundationShouldOwnPromptV24(question){
   var profile=getMissionBrainLanguageProfileV24(question||'',{},'',null);
   if(!profile||!profile.q)return false;
   if(profile.responseFeelAsk)return true;
-  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.relativeTimeAsk||profile.limitMinutes>0||profile.why)return true;
+  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.limitMinutes>0||profile.why)return true;
   if(profile.misunderstanding||profile.plainLanguage||profile.meaningAsk||profile.acknowledgementAsk)return true;
   if(profile.styleCorrection&&profile.direct)return true;
   if(profile.broken&&/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(profile.q))return true;
@@ -26304,7 +26303,6 @@ function getMissionBrainLanguageIntentV24(profile){
   if(profile.acknowledgementAsk)return 'acknowledgment';
   if(profile.timeAsk)return 'time_estimate';
   if(profile.timeContextAsk)return 'time_context';
-  if(profile.relativeTimeAsk)return 'relative_time';
   if(profile.limitMinutes>0)return 'time_fit';
   if(profile.why)return 'why_move';
   if(profile.broken)return 'system_read';
@@ -26477,38 +26475,6 @@ function getMissionBrainTimeContextAnswerV24(profile,ctx,route){
   return 'Window read:<br><br>'+escapeHtml(windowLine)+'<br><br>Best fit: one measurable move, one status update, or one prep checkpoint. Then log the result.';
 }
 
-function getMissionBrainRelativeTimeAnswerV24(profile,ctx,route){
-  if(!profile||!profile.relativeTimeAsk)return '';
-  var q=profile.q||'';
-  ctx=ctx||{};
-  var cycle=ctx.cycle||((typeof CYCLES!=='undefined'&&typeof getCycleIdx==='function')?CYCLES[getCycleIdx()]:null)||{};
-  var ci=typeof getCycleIdx==='function'?getCycleIdx():0;
-  var left=typeof daysLeft==='function'?daysLeft(ci):0;
-  var elapsed=typeof daysElapsed==='function'?daysElapsed(ci):0;
-  var total=typeof totalDays==='function'?totalDays(ci):0;
-  var progress=total?Math.min(100,Math.max(0,Math.round(elapsed/total*100))):0;
-  var rev=parseFloat(ctx.rev)||0;
-  var wk=parseFloat(ctx.wk)||0;
-  var gap=parseFloat(ctx.gap)||0;
-  if(/\b(tomorrow|plan for tomorrow|tomorrow plan)\b/.test(q)){
-    return "Tomorrow read:<br><br>Set the first move before the day starts pulling on you.<br><br>Pick one: first money touch, first content proof, or first production checkpoint.<br><br>If exact timing matters, run sync before you lock the plan.";
-  }
-  if(/\b(this week|rest of the week|weekly plan|week plan|week looking)\b/.test(q)){
-    var moneyLine=wk?('This week: '+fmt(rev)+' of '+fmt(wk)+' logged'+(gap>0?', '+fmt(gap)+' still open.':', target covered.') ):'Use the weekly target as the guardrail.';
-    return 'Week read:<br><br>'+escapeHtml(moneyLine)+'<br><br>Best focus: protect money moves first, then stack one content proof and one production checkpoint.<br><br>Do not open a new lane until one result is logged.';
-  }
-  if(/\b(cycle|days left)\b/.test(q)){
-    var cycleName=cycle&&cycle.name?('Cycle '+cycle.num+' · '+cycle.name):'Current cycle';
-    var target=cycle&&cycle.target?(' · target '+fmt(cycle.target)):'';
-    var daysLine=left===1?'1 day left':left+' days left';
-    return 'Cycle read:<br><br>'+escapeHtml(cycleName+target)+'.<br><br>'+escapeHtml(daysLine+' · about '+progress+'% through the cycle.')+'<br><br>Use this phase to move the metric closest to money: offer, follow-up, booked call, delivery, or logged proof.';
-  }
-  if(/\b(yesterday|what moved yesterday)\b/.test(q)){
-    return 'Yesterday read:<br><br>I can only trust what was logged or synced.<br><br>Use it like this: pull one win, one drag, and one first move for today.<br><br>Run sync first if you need the exact recap.';
-  }
-  return '';
-}
-
 function getMissionBrainBlockLabelV24(name){
   name=String(name||'').trim();
   if(!name)return 'This window';
@@ -26533,8 +26499,6 @@ function getMissionBrainFoundationResponseV24(ctx,question,route,brainState,turn
   if(languageAnswer)return languageAnswer;
   var timeContextAnswer=getMissionBrainTimeContextAnswerV24(profile,ctx,route);
   if(timeContextAnswer)return timeContextAnswer;
-  var relativeTimeAnswer=getMissionBrainRelativeTimeAnswerV24(profile,ctx,route);
-  if(relativeTimeAnswer)return relativeTimeAnswer;
   if(profile.styleCorrection&&profile.direct&&!/\bwhy\b/.test(profile.q)){
     return 'Got it. Shorter and more direct from here.<br><br>Ask it again, and I will answer with the move first.';
   }
@@ -31795,11 +31759,7 @@ function runMissionCommandSelfCheck(){
 		    {q:'make all responses feel like this',route:['memory','now',''],mustAny:['response standard','acknowledge','real ask','one useful action']},
 		    {q:'what fits in this window',route:['now','calendar'],mustAny:['window read','best fit','log the result']},
 		    {q:'what should i do before my next call',route:['now','calendar'],mustAny:['time read','before the call','call-prep checkpoint']},
-		    {q:'what should i do tonight',route:['now','calendar'],mustAny:['tonight fit','close loops','tomorrow']},
-		    {q:'what should i do tomorrow',route:['now','calendar'],mustAny:['tomorrow read','first move','run sync']},
-		    {q:'what should i focus on this week',route:['weekly','now'],mustAny:['week read','money moves','result is logged']},
-		    {q:'where are we in the cycle',route:['cycle','report'],mustAny:['cycle read','days left','cycle']},
-		    {q:'what did i do yesterday',route:['report','memory'],mustAny:['yesterday read','logged or synced','exact recap']}
+		    {q:'what should i do tonight',route:['now','calendar'],mustAny:['tonight fit','close loops','tomorrow']}
 		  ];
   checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
