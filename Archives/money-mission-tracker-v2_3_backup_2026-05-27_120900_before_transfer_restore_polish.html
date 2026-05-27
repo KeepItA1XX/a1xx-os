@@ -2273,7 +2273,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">This device</div><div class="settings-row-meta" id="device-readiness-current">Checking local setup...</div></div><span class="settings-badge off" id="device-readiness-current-badge">Check</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Cloud bridge</div><div class="settings-row-meta" id="device-readiness-bridge">Run device check to verify Sheets, Notion, and Calendar.</div></div><span class="settings-badge off" id="device-readiness-bridge-badge">Bridge</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Drive backup</div><div class="settings-row-meta" id="device-readiness-backup">Run device check to verify latest Drive backup.</div></div><span class="settings-badge off" id="device-readiness-backup-badge">Backup</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">New device path</div><div class="settings-row-meta" id="device-readiness-next">Setup first, register/trust the device, preview restore, then confirm restore only after the Drive backup is verified.</div></div><span class="settings-badge off" id="device-readiness-next-badge">Next</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">New device path</div><div class="settings-row-meta" id="device-readiness-next">Use Setup Doctor first, then restore only after the Drive backup is verified.</div></div><span class="settings-badge off" id="device-readiness-next-badge">Next</span></div>
           </div>
           <div class="btn-row" style="margin-top:10px">
             <button class="btn primary" onclick="runDeviceReadinessCheckV23()">Run device check</button>
@@ -2287,7 +2287,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Transfer status</div><div class="settings-row-meta" id="device-transfer-status">Build a setup checklist before moving to another device.</div></div><span class="settings-badge off" id="device-transfer-status-badge">Idle</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Backup anchor</div><div class="settings-row-meta" id="device-transfer-backup">Run device check to confirm the latest Drive backup marker.</div></div><span class="settings-badge off" id="device-transfer-backup-badge">Backup</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">New-device safety</div><div class="settings-row-meta">Do not save a backup on a new device until restore is complete and Setup Doctor is clean.</div></div><span class="settings-badge warn">Guard</span></div>
           </div>
           <div class="settings-field" style="margin-top:10px">
             <label for="device-transfer-note">Transfer checklist</label>
@@ -2616,15 +2615,12 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <button class="btn primary" id="backup-save-btn" onclick="sendBackup()">Save backup ↑</button>
             <button class="btn" id="backup-restore-btn" onclick="restoreBackup()">Restore backup ↓</button>
           </div>
-          <div class="settings-list" style="margin-top:10px">
-            <div class="settings-row"><div><div class="settings-row-name">New-device backup rule</div><div class="settings-row-meta">On a new device, restore first, fill protected local setup keys, run Setup Doctor, then save backup.</div></div><span class="settings-badge warn">Guard</span></div>
-          </div>
           <div class="backup-status-box" id="backup-status-box">
             <div class="backup-status-top">
               <div class="backup-status-title" id="backup-status-title">Backup ready</div>
               <div class="settings-badge off" id="backup-status-badge">Idle</div>
             </div>
-            <div class="backup-status-detail" id="backup-status-detail">Use Save backup after this device is fully set up. Restore backup opens a preview first and does not restore until confirmed.</div>
+            <div class="backup-status-detail" id="backup-status-detail">Use Save backup to store app data in Drive with a small Google Sheets index row.</div>
             <div class="backup-status-track"><div class="backup-status-fill"></div></div>
           </div>
         </div>
@@ -4179,9 +4175,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-27 12:09 ET · OS v2_3 transfer restore polish';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + transfer restore polish';
-var APP_CACHE_TOKEN='mmos-20260527-1209-v23-transfer-restore-polish';
+var APP_BUILD_STAMP='2026-05-27 10:59 ET · OS v2_3 MCIL resource integrity';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + MCIL resource integrity';
+var APP_CACHE_TOKEN='mmos-20260527-1059-v23-mcil-resource-integrity';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -4575,19 +4571,6 @@ function getProtectedStorageKeysV22(){
 }
 function getProtectedRestoreKeysV22(){
   return getProtectedStorageKeysV22();
-}
-function getProtectedRestoreKeyLabelV23(key){
-  var labels={};
-  labels[SHEETS_KEY]='Apps Script URL';
-  labels[MISSION_SHEETS_CONFIG_KEY]='Mission sync config';
-  labels[WEBHOOK_TOKEN_KEY]='Webhook token';
-  labels[TODOIST_KEY]='Todoist token';
-  labels[NOTION_KEY]='Notion token';
-  labels.a1xx_ig_token='Instagram token';
-  return labels[key]||key;
-}
-function formatProtectedRestoreKeysV23(keys){
-  return (keys||[]).map(function(key){return getProtectedRestoreKeyLabelV23(key);}).join(', ');
 }
 function buildRestorePreviewV22(payload,backupMeta){
   payload=payload||{};
@@ -5280,11 +5263,11 @@ function getDeviceReadinessStatusV23(snapshot){
   var health=snapshot.health||{};
   var bridgeOk=health.sheets==='ok'&&health.notion==='ok'&&health.calendar==='ok';
   if(!snapshot.hasAccount)return {state:'warn',label:'Local',summary:'Local account is not created on this device yet.',next:'Create the local sign-in first, then run device check.'};
-  if(!snapshot.setupReady)return {state:'missing',label:'Setup',summary:'This device is missing one or more setup keys.',next:'Open setup and paste Apps Script URL, webhook token, Mission sync config, and Todoist token as needed. Do not save a new backup until Setup Doctor is clean.'};
+  if(!snapshot.setupReady)return {state:'missing',label:'Setup',summary:'This device is missing one or more setup keys.',next:'Open setup and paste Apps Script URL, webhook token, Mission sync config, and Todoist token as needed.'};
   if(snapshot.health&&!bridgeOk)return {state:'review',label:'Review',summary:'This device has setup keys, but the live bridge is not fully clean.',next:'Run Setup Doctor and check Sheets, Notion, and Calendar before restoring.'};
   if(snapshot.backup&&snapshot.backup.status==='error')return {state:'review',label:'Review',summary:'Drive backup status could not be verified.',next:'Open backups and save a fresh Drive backup before using another device.'};
   if(!snapshot.latestBackup)return {state:'ready',label:'Ready',summary:'This device has setup keys. Latest Drive backup has not been checked yet.',next:'Run device check, then save a fresh backup before moving devices.'};
-  return {state:'clean',label:'Ready',summary:'This device can reach the bridge and see the latest Drive backup.',next:'On a new device: setup keys, register/trust, restore preview, confirm restore, fill protected keys, then save backup.'};
+  return {state:'clean',label:'Ready',summary:'This device can reach the bridge and see the latest Drive backup.',next:'On a new device: paste setup keys, run Setup Doctor, then use Restore preview only after backup is verified.'};
 }
 
 function renderDeviceReadinessV23(snapshot){
@@ -5398,20 +5381,14 @@ function getDeviceTransferChecklistTextV23(snapshot){
     '2. Open System Hub > Connections > Setup.',
     '3. Paste the Apps Script Web App URL.',
     '4. Paste the webhook token only from the private source.',
-    '5. Paste Todoist and Mission sync setup if this device should use them.',
-    '6. Run Setup Doctor.',
-    '7. Open Device Registry, register this device, then manually mark it Trusted in OS Device Registry.',
-    '8. Load registry again and confirm this device is Trusted with 6 setup pointers readable.',
-    '9. Open Health > Backups and click Restore backup to preview the latest Drive backup.',
-    '10. Confirm safe restore only after the preview shows the expected backup marker.',
-    '11. After restore reloads the app, fill any protected local setup keys that were intentionally skipped.',
-    '12. Run Setup Doctor and v2_3 closeout until both are clean.',
-    '13. Save a fresh Drive backup from the fully restored device.',
+    '5. Paste Todoist and Mission sync setup only if used on that device.',
+    '6. Run Setup Doctor until bridge and backup readiness are clean.',
+    '7. Open Health > Backups and confirm the latest Drive backup marker.',
+    '8. Use Restore preview only after backup is verified.',
     '',
     'Safety rules',
     '- This checklist does not include secrets, passwords, or tokens.',
     '- Do not overwrite protected setup keys during restore.',
-    '- On a new device, do not save backup before restore + Setup Doctor clean.',
     '- Save a fresh Drive backup before moving devices or installing new features.'
   ];
   return lines.join('\n');
@@ -8094,7 +8071,7 @@ function setBackupStatus(state,title,detail,badge){
     box.className='backup-status-box active '+(state||'');
   }
   if(titleEl)titleEl.textContent=title||'Backup ready';
-  if(detailEl)detailEl.textContent=detail||'Use Save backup after this device is fully set up. Restore backup opens a preview first and does not restore until confirmed.';
+  if(detailEl)detailEl.textContent=detail||'Use Save backup to store app data in Drive with a small Google Sheets index row.';
   if(badgeEl){
     badgeEl.textContent=badge||'Idle';
     badgeEl.className='settings-badge '+(state==='ok'?'':state==='err'||state==='warn'?'warn':'off');
@@ -8126,27 +8103,6 @@ function resetRestoreArm(){
 function expireRestorePreviewV22(){
   resetRestoreArm();
   setBackupStatus('','Restore preview expired','No data was restored. Click Restore backup again when you want to preview the latest Drive backup.','Idle');
-}
-function getIncompleteSetupLabelsForBackupV23(){
-  if(typeof getSetupDoctorSnapshotV23!=='function')return [];
-  var snapshot=getSetupDoctorSnapshotV23();
-  return (snapshot.critical||[]).filter(function(item){return !item.ok;}).map(function(item){return item.label;});
-}
-function shouldWarnBeforePartialBackupV23(silent){
-  if(silent)return false;
-  var missing=getIncompleteSetupLabelsForBackupV23();
-  if(!missing.length)return false;
-  var now=Date.now();
-  var armed=window.__partialSetupBackupArmedUntilV23||0;
-  var same=window.__partialSetupBackupMissingV23===missing.join('|');
-  if(armed>now&&same)return false;
-  window.__partialSetupBackupArmedUntilV23=now+12000;
-  window.__partialSetupBackupMissingV23=missing.join('|');
-  setBackupStatus('warn','Setup not complete','Missing: '+missing.join(', ')+'. On a new device, restore and fill protected setup keys before saving backup. Click Save backup again within 12 seconds only if you intentionally want a partial-device backup.','Review');
-  setTimeout(function(){
-    if((window.__partialSetupBackupArmedUntilV23||0)<=Date.now())window.__partialSetupBackupMissingV23='';
-  },12200);
-  return true;
 }
 
 function createBackupVerificationMarkerV22(){
@@ -8214,13 +8170,6 @@ async function sendBackup(silent){
       setBackupStatus('err','Backup needs setup','Add your Apps Script URL in Sheets / Notion setup first.','Setup');
     }
     return {ok:false,error:'missing_url'};
-  }
-  var missingSetupForBackup=getIncompleteSetupLabelsForBackupV23();
-  if(silent&&missingSetupForBackup.length){
-    return {ok:false,error:'setup_incomplete_silent_backup_skipped'};
-  }
-  if(shouldWarnBeforePartialBackupV23(false)){
-    return {ok:false,error:'setup_incomplete_warning'};
   }
   var backupBuild=buildBackupPayloadV22();
   var payload=backupBuild.payload;
@@ -8558,8 +8507,8 @@ async function restoreBackup(){
         btn.textContent='Confirm safe restore';
       }
       var savedAt=preview.savedAt?new Date(preview.savedAt).toLocaleString():'the latest backup';
-      var protectedCopy=preview.protectedSkipped.length?(' Protected local setup kept on this device: '+formatProtectedRestoreKeysV23(preview.protectedSkipped)+'.'):' No protected setup keys found in this backup.';
-      setBackupStatus('restore','Restore preview ready','Will restore '+preview.restoreKeys.length+' of '+preview.totalKeys+' keys from '+savedAt+'.'+protectedCopy+' Confirm only if this is the backup you expected.','Preview');
+      var protectedCopy=preview.protectedSkipped.length?(' Protected setup keys kept: '+preview.protectedSkipped.join(', ')+'.'):' No protected setup keys found in this backup.';
+      setBackupStatus('restore','Restore preview ready','Will restore '+preview.restoreKeys.length+' of '+preview.totalKeys+' keys from '+savedAt+'.'+protectedCopy+' Tap Confirm safe restore within 12 seconds.','Preview');
       setTimeout(function(){
         if((window.__restoreBackupArmedUntil||0)<=Date.now())expireRestorePreviewV22();
       },12200);
@@ -8576,7 +8525,7 @@ async function restoreBackup(){
   try{
     preview.restoreKeys.forEach(function(k){localStorage.setItem(k,preview.payload[k]);});
     var savedAt2=preview.savedAt?new Date(preview.savedAt).toLocaleString():'the latest backup';
-    var skipped=preview.protectedSkipped.length?(' Protected local setup preserved: '+formatProtectedRestoreKeysV23(preview.protectedSkipped)+'.'):'';
+    var skipped=preview.protectedSkipped.length?(' Protected setup keys preserved: '+preview.protectedSkipped.length+'.'):'';
     resetRestoreArm();
     setBackupStatus('ok','Backup restored','Restored '+preview.restoreKeys.length+' keys from '+savedAt2+'.'+skipped+' Reloading the app now...','Done');
     setTimeout(function(){location.reload();},900);
