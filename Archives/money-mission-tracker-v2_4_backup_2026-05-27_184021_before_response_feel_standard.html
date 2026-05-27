@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 18:40 ET · OS v2_4 response-feel standard';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + language/time foundation';
-var APP_CACHE_TOKEN='mmos-20260527-1840-v24-response-feel-standard';
+var APP_BUILD_STAMP='2026-05-27 18:30 ET · OS v2_4 language time-call polish';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 language understanding + time-call polish';
+var APP_CACHE_TOKEN='mmos-20260527-1830-v24-language-time-call-polish';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26270,7 +26270,6 @@ function getMissionBrainLanguageProfileV24(question,ctx,route,brainState){
     plainLanguage:/\b(say it normal|say that normal|plain english|make it plain|less robotic|more natural|answer normal|explain it simple|say it simpler)\b/.test(q),
     meaningAsk:/\b(what do you think i mean|what am i asking|what do i mean|do you understand what i mean|what are you hearing|read what i mean)\b/.test(q),
     acknowledgementAsk:/\b(acknowledge what i said|answer like you understand|show me you understand|repeat back what i mean|reflect what i mean)\b/.test(q),
-    responseFeelAsk:/\b(this is how i want|make all responses feel|all responses to feel|respond like this|answer like this|use this style|use that style|response feel|response standard)\b/.test(q),
     taskEstimate:null,
     limitMinutes:0,
     languageIntent:'general'
@@ -26284,7 +26283,6 @@ function getMissionBrainLanguageProfileV24(question,ctx,route,brainState){
 function missionBrainFoundationShouldOwnPromptV24(question){
   var profile=getMissionBrainLanguageProfileV24(question||'',{},'',null);
   if(!profile||!profile.q)return false;
-  if(profile.responseFeelAsk)return true;
   if(profile.fresh||profile.timeAsk||profile.limitMinutes>0||profile.why)return true;
   if(profile.misunderstanding||profile.plainLanguage||profile.meaningAsk||profile.acknowledgementAsk)return true;
   if(profile.styleCorrection&&profile.direct)return true;
@@ -26295,7 +26293,6 @@ function missionBrainFoundationShouldOwnPromptV24(question){
 function getMissionBrainLanguageIntentV24(profile){
   if(!profile)return 'general';
   if(profile.fresh)return 'fresh_context';
-  if(profile.responseFeelAsk)return 'response_feel_standard';
   if(profile.misunderstanding)return 'misunderstanding';
   if(profile.plainLanguage)return 'plain_language';
   if(profile.meaningAsk)return 'meaning_read';
@@ -26339,9 +26336,6 @@ function getMissionBrainPlainLaneLabelV24(route){
 
 function getMissionBrainLanguageUnderstandingAnswerV24(ctx,question,route,profile){
   profile=profile||getMissionBrainLanguageProfileV24(question,ctx,route,null);
-  if(profile.responseFeelAsk){
-    return 'Locked.<br><br>Response standard:<br>1. Acknowledge first when it helps.<br>2. Name what I understand.<br>3. Answer the real ask first.<br>4. Keep the explanation short.<br>5. Point to one useful action.';
-  }
   if(profile.misunderstanding){
     return 'Got it. I read that wrong.<br><br>I will drop that interpretation and answer the actual ask next.<br><br>Give me the clean version, or name the lane: sales, content, production, money, calendar, or system.';
   }
@@ -26471,7 +26465,6 @@ function getMissionBrainFoundationResponseV24(ctx,question,route,brainState,turn
 
 function applyMissionBrainAnswerQualityV24(html,profile,opts){
   if(!profile||!html)return html;
-  opts=opts||{};
   var text=String(html||'');
   if(profile.direct||opts&&opts.responseBeforeReason===false){
     text=text.replace(/<br><br><span style="color:#8f9aa3">Want me to tighten this into one action\?<\/span>/gi,'');
@@ -26479,26 +26472,6 @@ function applyMissionBrainAnswerQualityV24(html,profile,opts){
   if(profile.styleCorrection&&text.length>700){
     var parts=text.split(/<br><br>/);
     text=parts.slice(0,3).join('<br><br>');
-  }
-  return applyMissionBrainResponseFeelStandardV24(text,profile,opts);
-}
-
-function applyMissionBrainResponseFeelStandardV24(html,profile,opts){
-  var text=String(html||'');
-  opts=opts||{};
-  if(!text||opts.responseFeelStandard===false)return text;
-  var q=profile&&profile.q||'';
-  var shouldTighten=!!(profile&&(profile.direct||profile.plainLanguage||profile.acknowledgementAsk||profile.meaningAsk||profile.misunderstanding||profile.timeAsk||profile.limitMinutes>0||profile.why||profile.broken||profile.responseFeelAsk));
-  if(!shouldTighten)return text;
-  text=text
-    .replace(/^(Here is the move|Keep it calm|Use one question|Take the next visible step)\.<br><br>/i,'')
-    .replace(/(<br><br>){3,}/g,'<br><br>')
-    .replace(/\bI will\b/g,"I'll")
-    .replace(/\bI am\b/g,"I'm")
-    .replace(/\bdo not\b/gi,"don't");
-  if(/\b(shorter|more direct|plain|normal|simple|bottom line)\b/.test(q)){
-    var blocks=text.split(/<br><br>/).filter(Boolean);
-    if(blocks.length>4)text=blocks.slice(0,4).join('<br><br>');
   }
   return text;
 }
@@ -31716,8 +31689,7 @@ function runMissionCommandSelfCheck(){
 		    {q:'say that normal',route:['memory','now',''],mustAny:['plain version','lead with the answer']},
 		    {q:'what do you think i mean',route:['memory','now',''],mustAny:['meaning read','actual ask','answer']},
 		    {q:'answer like you understand what i mean',route:['memory','now',''],mustAny:['i hear you','reflect the ask','give the move']},
-		    {q:'no not that, i mean what should i do with 20 minutes before my call',route:['now','calendar','sync'],mustAny:['read that wrong','20-minute fit','log the result']},
-		    {q:'make all responses feel like this',route:['memory','now',''],mustAny:['response standard','acknowledge','real ask','one useful action']}
+		    {q:'no not that, i mean what should i do with 20 minutes before my call',route:['now','calendar','sync'],mustAny:['read that wrong','20-minute fit','log the result']}
 		  ];
   checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
