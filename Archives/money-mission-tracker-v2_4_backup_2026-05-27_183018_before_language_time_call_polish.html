@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 18:30 ET · OS v2_4 language time-call polish';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 language understanding + time-call polish';
-var APP_CACHE_TOKEN='mmos-20260527-1830-v24-language-time-call-polish';
+var APP_BUILD_STAMP='2026-05-27 18:11 ET · OS v2_4 language mixed-prompt polish';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 language understanding + mixed-prompt polish';
+var APP_CACHE_TOKEN='mmos-20260527-1811-v24-language-mixed-prompt-polish';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26320,7 +26320,7 @@ function getMissionBrainPlainLaneLabelV24(route){
   var map={
     sales:'sales',
     leads:'pipeline',
-    now:'next-move',
+    now:'current-move',
     report:'money',
     money:'money',
     sync:'system',
@@ -26420,7 +26420,6 @@ function getMissionBrainTimeFitAnswerV24(profile,ctx,route){
   var fit=getMissionBrainTimeFitV24(profile&&profile.raw||q,ctx,route);
   var estimate=fit.estimate;
   var limit=fit.limitMinutes;
-  var callAware=/\b(before|prep|prepare|next)\b.*\b(call|meeting|event)\b|\b(call|meeting|event)\b.*\b(in|within|before|next)\b/.test(q);
   if(profile&&profile.timeAsk&&estimate){
     return 'Time read:<br><br>'+escapeHtml(estimate.label)+' usually takes '+escapeHtml(estimate.range)+'.<br><br>Use the first clean checkpoint, not the whole project, if the window is tight.';
   }
@@ -26430,9 +26429,6 @@ function getMissionBrainTimeFitAnswerV24(profile,ctx,route){
     }
     if(estimate&&fit.fits===true){
       return limit+'-minute fit:<br><br>'+escapeHtml(estimate.label)+' fits this window.<br><br>Do one clean pass, stop when the timer ends, then log the result.';
-    }
-    if(callAware){
-      return limit+'-minute fit:<br><br>Before the call, do one measurable move: one follow-up, one DM, one quick status update, or one call-prep checkpoint.<br><br>Then log the result so the OS has something real to use.';
     }
     return limit+'-minute fit:<br><br>Do one measurable move: one follow-up, one DM, one quick status update, or one production checkpoint.<br><br>Then log the result so the OS has something real to use.';
   }
