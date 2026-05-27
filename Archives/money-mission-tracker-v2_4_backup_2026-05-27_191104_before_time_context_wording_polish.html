@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 19:11 ET · OS v2_4 time-context wording polish';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + time-context wording polish';
-var APP_CACHE_TOKEN='mmos-20260527-1911-v24-time-context-wording-polish';
+var APP_BUILD_STAMP='2026-05-27 18:54 ET · OS v2_4 time-context awareness';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + time-context awareness';
+var APP_CACHE_TOKEN='mmos-20260527-1854-v24-time-context-awareness';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26451,7 +26451,7 @@ function getMissionBrainTimeContextAnswerV24(profile,ctx,route){
   if(!profile||!profile.timeContextAsk)return '';
   var q=profile.q||'';
   var timeCtx=getMissionBrainCurrentTimeContextV24(ctx);
-  var blockName=getMissionBrainBlockLabelV24(timeCtx.blockName);
+  var blockName=timeCtx.blockName||'this window';
   var minutes=timeCtx.minutesLeft||0;
   var isCallWindow=/\b(call|meeting|event)\b/.test(q);
   var isTonight=/\b(tonight|this evening)\b/.test(q);
@@ -26461,7 +26461,7 @@ function getMissionBrainTimeContextAnswerV24(profile,ctx,route){
     return 'Time read:<br><br>You want the useful move before the next call.<br><br>Before the call, do one call-prep checkpoint: write the opening question, confirm the outcome, or send one quick follow-up.<br><br>Then log the result.';
   }
   if(isTonight){
-    return "Tonight fit:<br><br>Close loops. Do not open a new project.<br><br>Pick one: log DPC, send one follow-up, prep tomorrow's first move, or clean one production/status checkpoint.<br><br>Pick one and stop there.";
+    return "Tonight fit:<br><br>Close loops. Do not open a new project.<br><br>Pick one: log DPC, send one follow-up, prep tomorrow's first move, or clean one production/status checkpoint.";
   }
   if(isMorning){
     return 'Morning fit:<br><br>Put one measurable action on the board first.<br><br>Pick one: send one DM, touch one warm lead, or capture the first proof/status move.';
@@ -26473,13 +26473,6 @@ function getMissionBrainTimeContextAnswerV24(profile,ctx,route){
     return 'Window read:<br><br>'+escapeHtml(windowLine)+'<br><br>Best fit: one proof piece, one production checkpoint, or one status move that gets an asset closer to shipped.';
   }
   return 'Window read:<br><br>'+escapeHtml(windowLine)+'<br><br>Best fit: one measurable move, one status update, or one prep checkpoint. Then log the result.';
-}
-
-function getMissionBrainBlockLabelV24(name){
-  name=String(name||'').trim();
-  if(!name)return 'This window';
-  if(/\b(block|window|time)\b/i.test(name))return name;
-  return name+' block';
 }
 
 function getMissionBrainWhyMoveAnswerV24(ctx,question,route,brainState){
