@@ -7,7 +7,6 @@
 //   - Read-only Drive access only; no writes, deletes, or active pack behavior.
 //   - Added OS Profile Index / Device Registry metadata endpoints for future
 //     cross-device auth foundation. New devices remain Pending by default.
-//   - Added safe OS Setup Pointer Index population for non-secret cloud pointers.
 // Changes in 1.8 (2026-05-24):
 //   - Added Mission Command v1.1 Sheets event receiver.
 //   - Added SHEET_MISSION_EVENTS = 'Mission Command Events' tab.
@@ -229,11 +228,6 @@ function doPost(e) {
       var deviceRow = saveOsDeviceRegistryV19(data);
       logActivity('OS device registry upsert — ' + deviceRow.deviceId + ' — ' + deviceRow.trustedStatus);
       return jsonResponseV19({ status: 'ok', row: deviceRow });
-    }
-    if (data.type === 'setup_pointers_upsert') {
-      var pointerResult = saveOsSetupPointersV19(data);
-      logActivity('OS setup pointers upsert — saved ' + pointerResult.saved.length + ' — skipped ' + pointerResult.skipped.length);
-      return jsonResponseV19({ status: 'ok', result: pointerResult });
     }
     if (data.type === 'prospect_save') {
       var rec = saveProspectSnapshot(data);
@@ -1245,51 +1239,6 @@ function isSafeSetupPointerTypeV19(type) {
     'Intelligence HQ Page ID': 1
   };
   return !!safe[cellTextV19(type, 120)];
-}
-
-function normalizeSetupPointerStatusV19(value) {
-  var status = cellTextV19(value || 'Active', 40);
-  var allowed = { Active: 1, Review: 1, Archived: 1 };
-  return allowed[status] ? status : 'Active';
-}
-
-function saveOsSetupPointersV19(d) {
-  var sheet = getOsSetupPointersSheetV19();
-  var pointers = Array.isArray(d.pointers) ? d.pointers : [];
-  var updatedAt = new Date().toISOString();
-  var deviceId = cellTextV19(d.deviceId || d.updatedByDeviceId || '', 120);
-  var saved = [];
-  var skipped = [];
-  for (var i = 0; i < pointers.length; i++) {
-    var item = pointers[i] || {};
-    var key = cellTextV19(item.pointerKey || item.key || '', 120);
-    var type = cellTextV19(item.pointerType || item.type || '', 120);
-    var value = cellTextV19(item.pointerValue || item.value || '', 1000);
-    if (!key || !type || !value) {
-      skipped.push({ key: key || '(missing)', reason: 'missing key/type/value' });
-      continue;
-    }
-    if (!isSafeSetupPointerTypeV19(type)) {
-      skipped.push({ key: key, reason: 'unsafe pointer type' });
-      continue;
-    }
-    var row = [
-      key,
-      cellTextV19(item.pointerLabel || item.label || key, 160),
-      type,
-      value,
-      cellTextV19(item.updatedAt || updatedAt, 80),
-      deviceId,
-      normalizeSetupPointerStatusV19(item.status),
-      cellTextV19(item.notes || 'Safe setup pointer only. No secret token stored.', 1000)
-    ];
-    var targetRow = findRowByFirstColumnV19(sheet, key);
-    if (targetRow) sheet.getRange(targetRow, 1, 1, OS_SETUP_POINTER_HEADERS.length).setValues([row]);
-    else sheet.appendRow(row);
-    saved.push({ key: key, type: type, row: targetRow || sheet.getLastRow(), status: row[6] });
-  }
-  formatSheet(sheet);
-  return { saved: saved, skipped: skipped, updatedAt: updatedAt };
 }
 
 function getOsSetupPointersV19(e) {

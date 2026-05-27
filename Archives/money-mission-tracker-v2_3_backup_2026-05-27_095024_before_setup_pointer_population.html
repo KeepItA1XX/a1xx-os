@@ -2335,24 +2335,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="cloud-profile-readiness-status"></div>
         </div>
         <div class="settings-section">
-          <div class="settings-section-title">Setup Pointer Index</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Pointer gaps</div><div class="settings-row-meta" id="setup-pointer-gaps">Preview safe pointers before saving the index.</div></div><span class="settings-badge off" id="setup-pointer-gaps-badge">Check</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Safety rule</div><div class="settings-row-meta" id="setup-pointer-safety">Stores IDs and URLs only. No webhook, Todoist, Notion, or password tokens.</div></div><span class="settings-badge" id="setup-pointer-safety-badge">Safe</span></div>
-          </div>
-          <div class="settings-field" style="margin-top:10px">
-            <label for="setup-pointer-preview">Pointer preview</label>
-            <textarea id="setup-pointer-preview" rows="7" readonly placeholder="Preview the safe setup pointer map before saving."></textarea>
-          </div>
-          <div class="btn-row">
-            <button class="btn primary" onclick="previewSetupPointersV23()">Preview safe pointers</button>
-            <button class="btn" id="setup-pointer-save-btn" onclick="saveSetupPointersV23(this)">Save safe pointers</button>
-            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
-          </div>
-          <div class="reset-status" id="setup-pointer-status"></div>
-        </div>
-        <div class="settings-section">
           <div class="settings-section-title">Device Registry</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Profile index</div><div class="settings-row-meta" id="device-registry-profile-read">Load registry to read the backend profile index.</div></div><span class="settings-badge off" id="device-registry-profile-badge">Read</span></div>
@@ -4162,9 +4144,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-27 09:50 ET · OS v2_3 setup pointer population';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + setup pointer population';
-var APP_CACHE_TOKEN='mmos-20260527-0950-v23-setup-pointer-population';
+var APP_BUILD_STAMP='2026-05-27 09:32 ET · OS v2_3 cloud profile readiness';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + cloud profile readiness';
+var APP_CACHE_TOKEN='mmos-20260527-0932-v23-cloud-profile-readiness';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5217,7 +5199,6 @@ function renderAccountIdentity(){
   if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
   if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
   if(typeof renderCloudProfileReadinessV23==='function')renderCloudProfileReadinessV23();
-  if(typeof renderSetupPointerIndexV23==='function')renderSetupPointerIndexV23();
   if(typeof renderDeviceRegistryReadPanelV23==='function')renderDeviceRegistryReadPanelV23();
   if(typeof renderTrustedRestoreReadinessV23==='function')renderTrustedRestoreReadinessV23();
 }
@@ -5770,240 +5751,6 @@ async function refreshCloudProfileReadinessV23(){
       status.textContent=(err&&err.message)||'Cloud profile readiness check failed. Run Setup Doctor and load registry again.';
     }
     return null;
-  }
-}
-
-function getSetupPointerRowsV23(){
-  var health=window.__lastSetupDoctorHealthV23&&window.__lastSetupDoctorHealthV23.health?window.__lastSetupDoctorHealthV23.health:{};
-  var backup=window.__lastBackupArchiveStatusV22||{};
-  var device=typeof getDeviceProfileV23==='function'?getDeviceProfileV23():{};
-  var appUrl=(localStorage.getItem(SHEETS_KEY)||'').trim();
-  var rows=[
-    {
-      pointerKey:'apps_script_web_app_url',
-      pointerLabel:'Apps Script Web App URL',
-      pointerType:'Apps Script Web App URL',
-      pointerValue:appUrl,
-      notes:'Private bridge URL pointer. No webhook token stored.'
-    },
-    {
-      pointerKey:'clean_workbook_id',
-      pointerLabel:'Clean Workbook ID',
-      pointerType:'Clean Workbook ID',
-      pointerValue:health.sheetsId||'',
-      notes:'Clean rescue workbook currently used by Apps Script.'
-    },
-    {
-      pointerKey:'backup_folder_id',
-      pointerLabel:'Money Mission OS Backups folder',
-      pointerType:'Backup Folder ID',
-      pointerValue:backup.folderId||'',
-      notes:'Drive folder for full backup JSON files.'
-    },
-    {
-      pointerKey:'mc_master_config_page_id',
-      pointerLabel:'MC Master Config page',
-      pointerType:'MC Master Config Page ID',
-      pointerValue:'36b61152-81da-80de-aa91-ff7456260b92',
-      notes:'Private workspace-level profile/config page.'
-    },
-    {
-      pointerKey:'team_chat_database_id',
-      pointerLabel:'Team Chat / Command Hub database',
-      pointerType:'Team Chat Database ID',
-      pointerValue:'35c61152-81da-8104-8f70-c541f56ff8d5',
-      notes:'Team Chat database for agent updates and handoffs.'
-    },
-    {
-      pointerKey:'intelligence_hq_page_id',
-      pointerLabel:'Intelligence HQ page',
-      pointerType:'Intelligence HQ Page ID',
-      pointerValue:'35c61152-81da-81fd-bbc2-e17f91b25f66',
-      notes:'Organized knowledge library root.'
-    }
-  ];
-  return rows.map(function(row){
-    return Object.assign({},row,{
-      updatedByDeviceId:device.deviceId||'',
-      status:row.pointerValue?'Active':'Review'
-    });
-  });
-}
-
-function getSetupPointerReadRowsV23(){
-  var state=typeof getDeviceRegistryReadStateV23==='function'?getDeviceRegistryReadStateV23():null;
-  return state&&state.pointers&&Array.isArray(state.pointers.pointers)?state.pointers.pointers:[];
-}
-
-function getSetupPointerSummaryV23(){
-  var expected=getSetupPointerRowsV23();
-  var existing=getSetupPointerReadRowsV23();
-  var existingKeys={};
-  existing.forEach(function(item){existingKeys[String(item['Pointer Key']||item.pointerKey||'')]=1;});
-  var readyExpected=expected.filter(function(item){return !!item.pointerValue;});
-  var missingValues=expected.filter(function(item){return !item.pointerValue;});
-  var missingRows=readyExpected.filter(function(item){return !existingKeys[item.pointerKey];});
-  return {
-    expected:expected,
-    readyExpected:readyExpected,
-    existing:existing,
-    missingValues:missingValues,
-    missingRows:missingRows,
-    complete:readyExpected.length>0&&missingValues.length===0&&missingRows.length===0&&existing.length>=readyExpected.length
-  };
-}
-
-function getSetupPointerPreviewTextV23(summary){
-  summary=summary||getSetupPointerSummaryV23();
-  var lines=[
-    'Money Mission OS v2_3 safe setup pointer map',
-    'Build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),
-    '',
-    'Safety',
-    '- Stores IDs and URLs only.',
-    '- Does not store webhook, Todoist, Notion, Instagram, password, or PIN values.',
-    '- Save uses a manual two-click gate.',
-    '',
-    'Pointers'
-  ];
-  summary.expected.forEach(function(item){
-    lines.push('- '+item.pointerLabel+': '+(item.pointerValue?'ready':'missing source')+' · '+item.pointerType);
-  });
-  if(summary.missingValues.length){
-    lines.push('');
-    lines.push('Missing source values');
-    summary.missingValues.forEach(function(item){lines.push('- '+item.pointerLabel);});
-  }
-  if(summary.missingRows.length){
-    lines.push('');
-    lines.push('Not saved to index yet');
-    summary.missingRows.forEach(function(item){lines.push('- '+item.pointerLabel);});
-  }
-  return lines.join('\n');
-}
-
-function renderSetupPointerIndexV23(summary){
-  summary=summary||getSetupPointerSummaryV23();
-  var count=document.getElementById('setup-pointer-count');
-  var countBadge=document.getElementById('setup-pointer-count-badge');
-  var gaps=document.getElementById('setup-pointer-gaps');
-  var gapsBadge=document.getElementById('setup-pointer-gaps-badge');
-  var safety=document.getElementById('setup-pointer-safety');
-  var safetyBadge=document.getElementById('setup-pointer-safety-badge');
-  var preview=document.getElementById('setup-pointer-preview');
-  if(count)count.textContent=summary.existing.length+' saved safe pointer(s) · '+summary.readyExpected.length+' ready from this device.';
-  if(countBadge){
-    countBadge.textContent=summary.complete?'Complete':summary.existing.length?'Partial':'Index';
-    countBadge.className=setupDoctorBadgeClassV23(summary.complete?'ready':summary.existing.length?'warn':'off');
-  }
-  if(gaps)gaps.textContent=summary.missingValues.length
-    ? summary.missingValues.length+' pointer source value(s) missing. Run Setup Doctor and Backup check first.'
-    : (summary.missingRows.length?summary.missingRows.length+' ready pointer(s) not saved to the index yet.':'Safe pointer index has the expected ready pointers.');
-  if(gapsBadge){
-    gapsBadge.textContent=summary.missingValues.length||summary.missingRows.length?'Review':'Clean';
-    gapsBadge.className=setupDoctorBadgeClassV23(summary.missingValues.length||summary.missingRows.length?'warn':'ready');
-  }
-  if(safety)safety.textContent='Stores IDs and URLs only. Secret tokens remain local/private and are not sent to this index.';
-  if(safetyBadge){
-    safetyBadge.textContent='Safe';
-    safetyBadge.className=setupDoctorBadgeClassV23('ready');
-  }
-  if(preview&&!preview.value)preview.value=getSetupPointerPreviewTextV23(summary);
-  return summary;
-}
-
-function previewSetupPointersV23(){
-  var summary=renderSetupPointerIndexV23();
-  var preview=document.getElementById('setup-pointer-preview');
-  var status=document.getElementById('setup-pointer-status');
-  if(preview){
-    preview.value=getSetupPointerPreviewTextV23(summary);
-    preview.focus();
-    preview.select();
-  }
-  if(status){
-    status.className='reset-status '+(summary.missingValues.length?'warn':'ok');
-    status.textContent=summary.missingValues.length
-      ? 'Preview built, but some pointer source values are missing. Run Setup Doctor and Backup check first.'
-      : 'Preview built. Safe pointers are ready to save with confirmation.';
-  }
-  return summary;
-}
-
-function resetSetupPointerSaveGateV23(button){
-  window.__setupPointerSaveArmedUntilV23=0;
-  if(button){
-    button.classList.remove('restore-armed');
-    button.textContent='Save safe pointers';
-    button.disabled=false;
-  }
-}
-
-async function saveSetupPointersV23(button){
-  var status=document.getElementById('setup-pointer-status');
-  var appUrl=(localStorage.getItem(SHEETS_KEY)||'').trim();
-  if(!appUrl){
-    if(status){
-      status.className='reset-status err';
-      status.textContent='Add Apps Script URL before saving setup pointers.';
-    }
-    return;
-  }
-  if(typeof runSetupDoctorCheckV23==='function')await runSetupDoctorCheckV23();
-  if(typeof refreshBackupArchiveStatusV22==='function')await refreshBackupArchiveStatusV22();
-  var summary=previewSetupPointersV23();
-  if(summary.missingValues.length){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Setup pointers not saved. Missing source values must be clean first.';
-    }
-    return;
-  }
-  var now=Date.now();
-  if((window.__setupPointerSaveArmedUntilV23||0)<now){
-    window.__setupPointerSaveArmedUntilV23=now+12000;
-    if(button){
-      button.classList.add('restore-armed');
-      button.textContent='Confirm save pointers';
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Ready to save '+summary.readyExpected.length+' safe pointers. No tokens will be sent. Click Confirm save pointers within 12 seconds.';
-    }
-    setTimeout(function(){
-      if((window.__setupPointerSaveArmedUntilV23||0)<=Date.now())resetSetupPointerSaveGateV23(button);
-    },12200);
-    return;
-  }
-  try{
-    if(button)button.disabled=true;
-    if(status){
-      status.className='reset-status';
-      status.textContent='Saving safe setup pointers to the backend index...';
-    }
-    var device=typeof getDeviceProfileV23==='function'?getDeviceProfileV23():{};
-    await postToAppsScript(appUrl,{
-      type:'setup_pointers_upsert',
-      profileId:'a1xx-primary',
-      deviceId:device.deviceId||'',
-      pointers:summary.readyExpected
-    });
-    await waitMs(1600);
-    resetSetupPointerSaveGateV23(button);
-    if(typeof loadDeviceRegistryReadPanelV23==='function')await loadDeviceRegistryReadPanelV23();
-    var next=renderSetupPointerIndexV23();
-    if(status){
-      status.className='reset-status '+(next.missingRows.length?'warn':'ok');
-      status.textContent=next.missingRows.length
-        ? 'Save request sent. Load registry again if some pointers are still catching up.'
-        : 'Safe setup pointers saved. No secret tokens were stored.';
-    }
-  }catch(err){
-    resetSetupPointerSaveGateV23(button);
-    if(status){
-      status.className='reset-status err';
-      status.textContent=(err&&err.message)||'Setup pointer save failed. Check Apps Script deployment and webhook token.';
-    }
   }
 }
 
@@ -7722,7 +7469,6 @@ function setAccountSubTab(tab){
     if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
     if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
     if(typeof renderCloudProfileReadinessV23==='function')renderCloudProfileReadinessV23();
-    if(typeof renderSetupPointerIndexV23==='function')renderSetupPointerIndexV23();
     if(typeof renderDeviceRegistryReadPanelV23==='function')renderDeviceRegistryReadPanelV23();
     if(typeof renderTrustedRestoreReadinessV23==='function')renderTrustedRestoreReadinessV23();
   }
