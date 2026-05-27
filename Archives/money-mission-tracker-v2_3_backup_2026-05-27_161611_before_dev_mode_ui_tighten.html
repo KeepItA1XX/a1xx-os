@@ -268,24 +268,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .settings-subtab{height:28px;border:0;border-radius:7px;background:transparent;color:#8b949e;font-size:10px;font-weight:800;cursor:pointer;transition:all .15s}
 .settings-subtab:hover{color:#d7dde3}
 .settings-subtab.active{background:#121712;border:0.5px solid #3a5a2a;color:#7ec845}
-.dev-command-bar{background:#0d1114;border:0.5px solid #222c34;border-radius:10px;padding:9px;margin-bottom:10px}
-.dev-command-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
-.dev-command-title{font-size:11px;font-weight:900;color:#f0f3f5}
-.dev-command-meta{font-size:9px;color:#7b858d;line-height:1.35;margin-top:2px}
-.dev-command-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
-.dev-command-actions .btn{width:100%;height:28px;margin:0;font-size:9px;padding:0 7px}
 .dev-section-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;background:#080a0c;border:0.5px solid #20272e;border-radius:9px;padding:4px;margin-bottom:10px}
 .dev-section-tab{min-height:30px;border:0;border-radius:7px;background:transparent;color:#8b949e;font-size:10px;font-weight:850;cursor:pointer;line-height:1.15;padding:3px 6px;transition:all .15s;text-align:center}
 .dev-section-tab:hover{color:#d7dde3;background:#0d1115}
 .dev-section-tab.active{background:#121712;border:0.5px solid #3a5a2a;color:#7ec845}
 .dev-section-pane{display:none}
 .dev-section-pane.active{display:block}
-.dev-section-summary{background:#0b0f12;border-color:#1b252c}
-.dev-section-summary .settings-list{gap:5px}
-.dev-section-summary .settings-row{padding:7px 8px;background:#080b0d;border-color:#151d22}
 .dev-placeholder{background:#090b0d;border:0.5px dashed #25303a;border-radius:9px;padding:10px;color:#7f8992;font-size:10px;line-height:1.5}
-@media(min-width:680px){.dev-section-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:420px){.dev-command-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.dev-command-top{display:block}.dev-command-top .settings-badge{display:inline-flex;margin-top:7px}}
+@media(min-width:680px){.dev-section-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .health-subpane{display:none}
 .health-subpane.active{display:block}
 .account-subpane{display:none}
@@ -2871,104 +2861,70 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
       </div>
     </div>
     <div class="settings-pane" id="settings-pane-dev">
-        <div class="dev-command-bar">
-          <div class="dev-command-top">
-            <div>
-              <div class="dev-command-title" id="dev-command-title">Developer Control Room</div>
-              <div class="dev-command-meta" id="dev-command-meta">Fast overview first. Details stay one layer deeper.</div>
-            </div>
-            <span class="settings-badge off" id="dev-command-badge">System</span>
-          </div>
-          <div class="dev-command-actions">
-            <button class="btn primary" onclick="withDiagnosticsActionBusyV22('Running quick system check',function(){return runSimpleDiagnosticsCheckV23();},this)">Run check</button>
-            <button class="btn" onclick="withDiagnosticsActionBusyV22('Running Live QA',function(){return runHealthLiveQACheckV22();},this)">Live QA</button>
-            <button class="btn" onclick="withDiagnosticsActionBusyV22('Saving diagnostic backup',function(){return checkAutoBackup(true);},this)">Save backup</button>
-            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Registry</button>
-            <button class="btn" onclick="openSetupRepairV23()">Setup</button>
-            <button class="btn" onclick="toggleDeveloperModeV23(false)">Hide dev</button>
-          </div>
-        </div>
         <div class="dev-section-tabs" role="tablist" aria-label="Developer Mode sections">
-          <button type="button" class="dev-section-tab active" data-dev-section-tab="overview" onclick="setDeveloperSectionV23('overview')">System</button>
+          <button type="button" class="dev-section-tab active" data-dev-section-tab="overview" onclick="setDeveloperSectionV23('overview')">Overview</button>
           <button type="button" class="dev-section-tab" data-dev-section-tab="diagnostics" onclick="setDeveloperSectionV23('diagnostics')">Diagnostics</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="setup" onclick="setDeveloperSectionV23('setup')">Devices</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="storage" onclick="setDeveloperSectionV23('storage')">Backups</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="modules" onclick="setDeveloperSectionV23('modules')">Modules</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="events" onclick="setDeveloperSectionV23('events')">Logs</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="workers" onclick="setDeveloperSectionV23('workers')">Workers</button>
+          <button type="button" class="dev-section-tab" data-dev-section-tab="setup" onclick="setDeveloperSectionV23('setup')">Setup & Devices</button>
+          <button type="button" class="dev-section-tab" data-dev-section-tab="storage" onclick="setDeveloperSectionV23('storage')">Storage & Backups</button>
+          <button type="button" class="dev-section-tab" data-dev-section-tab="modules" onclick="setDeveloperSectionV23('modules')">Modules & Flags</button>
+          <button type="button" class="dev-section-tab" data-dev-section-tab="events" onclick="setDeveloperSectionV23('events')">Events & Logs</button>
+          <button type="button" class="dev-section-tab" data-dev-section-tab="workers" onclick="setDeveloperSectionV23('workers')">Workers / Future</button>
         </div>
       <div class="dev-section-pane active" id="dev-section-overview">
-        <div class="settings-section dev-section-summary">
-          <div class="settings-section-title">System</div>
+        <div class="settings-section">
+          <div class="settings-section-title">Developer Mode</div>
           <div class="settings-list">
             <div class="settings-row is-primary"><div><div class="settings-row-name">Developer access</div><div class="settings-row-meta" id="dev-mode-state">Developer Mode is local-only and hidden from daily use.</div></div><span class="settings-badge off" id="dev-mode-state-badge">Hidden</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Checkpoint</div><div class="settings-row-meta">v2_3 foundation stable · second-device restore verified · Drive backup active.</div></div><span class="settings-badge">Stable</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta">Developer Mode does not change sync, backup, restore, auth, or Mission Command behavior.</div></div><span class="settings-badge">Read</span></div>
           </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn primary" onclick="withDiagnosticsActionBusyV22('Running quick system check',function(){return runSimpleDiagnosticsCheckV23();},this)">Run quick check</button>
+            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
+            <button class="btn" onclick="setSettingsTab('health');setHealthSubTab('backups')">Open backups</button>
+            <button class="btn" onclick="toggleDeveloperModeV23(false)">Hide developer mode</button>
+          </div>
         </div>
-        <div class="settings-section dev-section-summary">
-          <div class="settings-section-title">Surfaces</div>
+        <div class="settings-section">
+          <div class="settings-section-title">Backend Surfaces</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Device Registry</div><div class="settings-row-meta" id="dev-registry-summary">Load registry to read trusted devices and setup pointers.</div></div><span class="settings-badge off">Registry</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Directive Gates</div><div class="settings-row-meta" id="dev-directive-summary">Integration and Notion Deep gates stay blocked until explicit approval Decision Log.</div></div><span class="settings-badge warn">Gated</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Foundation Modules</div><div class="settings-row-meta" id="dev-foundation-summary">30 reserved module stubs are visible in Diagnostics only while Developer Mode is on.</div></div><span class="settings-badge off">Stubs</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Account backend panels</div><div class="settings-row-meta">Cloud profile, setup pointer index, device registry, and trusted restore panels are hidden from Account unless Developer Mode is on.</div></div><span class="settings-badge off">Hidden</span></div>
           </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Refresh account backend</button>
+            <button class="btn" onclick="runSimpleDiagnosticsCheckV23()">Refresh diagnostics</button>
+          </div>
         </div>
       </div>
       <div class="dev-section-pane" id="dev-section-diagnostics">
-        <div class="settings-section dev-section-summary">
+        <div class="settings-section">
           <div class="settings-section-title">Diagnostics</div>
-          <div class="settings-list">
-            <div class="settings-row is-primary"><div><div class="settings-row-name">Signal health</div><div class="settings-row-meta">Live QA, bridge timing, drift, and self-hardening live here. Details stay collapsed until needed.</div></div><span class="settings-badge off">Check</span></div>
-          </div>
+          <div id="dev-diagnostics-mount"></div>
         </div>
-        <div id="dev-diagnostics-mount"></div>
       </div>
       <div class="dev-section-pane" id="dev-section-setup">
-        <div class="settings-section dev-section-summary">
-          <div class="settings-section-title">Devices</div>
-          <div class="settings-list">
-            <div class="settings-row is-primary"><div><div class="settings-row-name">Device setup</div><div class="settings-row-meta">Device profile, transfer checklist, cloud profile readiness, setup pointers, and trust registry.</div></div><span class="settings-badge off">Registry</span></div>
-          </div>
-        </div>
         <div id="dev-setup-devices-mount"></div>
       </div>
       <div class="dev-section-pane" id="dev-section-storage">
-        <div class="settings-section dev-section-summary">
-          <div class="settings-section-title">Backups</div>
-          <div class="settings-list">
-            <div class="settings-row is-primary"><div><div class="settings-row-name">Storage safety</div><div class="settings-row-meta">Drive archive, Sheet index, restore readiness, protected keys, and storage audit details.</div></div><span class="settings-badge off">Drive</span></div>
-          </div>
-        </div>
         <div id="dev-storage-backups-mount"></div>
       </div>
       <div class="dev-section-pane" id="dev-section-modules">
-        <div class="settings-section dev-section-summary">
-          <div class="settings-section-title">Modules</div>
-          <div class="settings-list">
-            <div class="settings-row is-primary"><div><div class="settings-row-name">Install gates</div><div class="settings-row-meta">Foundation stubs, directive gates, future feature flags, and dependency checks.</div></div><span class="settings-badge warn">Gated</span></div>
-          </div>
-        </div>
         <div id="dev-modules-flags-mount"></div>
       </div>
       <div class="dev-section-pane" id="dev-section-events">
-        <div class="settings-section dev-section-summary">
-          <div class="settings-section-title">Logs</div>
-          <div class="settings-list">
-            <div class="settings-row is-primary"><div><div class="settings-row-name">Event trail</div><div class="settings-row-meta">Service notes, Activity Log references, and future event bus surfaces.</div></div><span class="settings-badge off">Logs</span></div>
-          </div>
-          <div class="dev-placeholder" style="margin-top:8px">Reserved for Mission events, worker events, and Activity Log shortcuts as those systems become active.</div>
+        <div class="settings-section">
+          <div class="settings-section-title">Events & Logs</div>
+          <div class="dev-placeholder">Event bus, Mission events, worker events, and Activity Log references will live here when those backend surfaces are active.</div>
         </div>
         <div id="dev-events-logs-mount"></div>
       </div>
       <div class="dev-section-pane" id="dev-section-workers">
-        <div class="settings-section dev-section-summary">
-          <div class="settings-section-title">Workers</div>
-          <div class="settings-list">
-            <div class="settings-row is-primary"><div><div class="settings-row-name">Automation lane</div><div class="settings-row-meta">Worker registry, schedules, permissions, pause controls, and task status will live here later.</div></div><span class="settings-badge off">Future</span></div>
-          </div>
-          <div class="dev-placeholder" style="margin-top:8px">No worker controls are active in this build. This section is intentionally reserved.</div>
+        <div class="settings-section">
+          <div class="settings-section-title">Workers / Future</div>
+          <div class="dev-placeholder">Worker registry, scheduled task status, and automation controls are reserved here for future phases.</div>
         </div>
         <div id="dev-workers-future-mount"></div>
       </div>
@@ -4318,9 +4274,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-27 16:16 ET · OS v2_3 developer mode UI tightening';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation stable + developer control room polish';
-var APP_CACHE_TOKEN='mmos-20260527-1616-v23-dev-mode-ui-tighten';
+var APP_BUILD_STAMP='2026-05-27 15:56 ET · OS v2_3 mission memo cleanup + dev sections';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation stable + mission memo cleanup + dev sections';
+var APP_CACHE_TOKEN='mmos-20260527-1556-v23-mission-memo-dev-sections';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8088,24 +8044,6 @@ function setDeveloperSectionV23(section){
   document.querySelectorAll('.dev-section-pane').forEach(function(pane){
     pane.classList.toggle('active',pane.id==='dev-section-'+section);
   });
-  var meta={
-    overview:{title:'Developer Control Room',badge:'System',copy:'Build, boundary, gates, and shared controls.'},
-    diagnostics:{title:'Diagnostics',badge:'Signals',copy:'Live QA, bridge timing, drift watch, and self-hardening details.'},
-    setup:{title:'Devices',badge:'Registry',copy:'Device profile, trusted device gate, setup pointers, and transfer readiness.'},
-    storage:{title:'Backups',badge:'Drive',copy:'Drive archive, restore readiness, storage details, and protected keys.'},
-    modules:{title:'Modules',badge:'Gated',copy:'Foundation modules, directive gates, future flags, and dependency checks.'},
-    events:{title:'Logs',badge:'Logs',copy:'Service notes, source-of-truth pointers, and future event trails.'},
-    workers:{title:'Workers',badge:'Future',copy:'Reserved worker registry, schedules, and automation controls.'}
-  }[section];
-  var title=document.getElementById('dev-command-title');
-  var copy=document.getElementById('dev-command-meta');
-  var badge=document.getElementById('dev-command-badge');
-  if(title)title.textContent=meta.title;
-  if(copy)copy.textContent=(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'current build')+' · '+meta.copy;
-  if(badge){
-    badge.textContent=meta.badge;
-    badge.className=section==='modules'?'settings-badge warn':(section==='workers'?'settings-badge off':'settings-badge');
-  }
 }
 
 function getDeveloperPanelTitleV23(node){
