@@ -2328,7 +2328,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="btn-row" style="margin-top:10px">
             <button class="btn primary" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
-            <button class="btn" id="device-registry-register-btn" onclick="registerCurrentDevicePendingV23(this)">Register this device</button>
             <button class="btn" onclick="refreshCloudProfileBootstrapAnchorV23()">Check anchor</button>
             <button class="btn" onclick="openSetupRepairV23()">Open setup</button>
           </div>
@@ -4112,9 +4111,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 20:21 ET · OS v2_3 register device gate';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + register device gate';
-var APP_CACHE_TOKEN='mmos-20260526-2021-v23-register-device-gate';
+var APP_BUILD_STAMP='2026-05-26 20:00 ET · OS v2_3 registry read panel';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + registry read panel';
+var APP_CACHE_TOKEN='mmos-20260526-2000-v23-registry-read-panel';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5617,7 +5616,6 @@ function renderDeviceRegistryReadPanelV23(state){
   var currentBadge=document.getElementById('device-registry-current-badge');
   var pointersEl=document.getElementById('device-registry-pointers-read');
   var pointersBadge=document.getElementById('device-registry-pointers-badge');
-  var registerBtn=document.getElementById('device-registry-register-btn');
   var profile=state&&state.profile&&state.profile.profile?state.profile.profile:null;
   var registry=state&&state.registry?state.registry:null;
   var pointers=state&&state.pointers&&Array.isArray(state.pointers.pointers)?state.pointers.pointers:[];
@@ -5654,10 +5652,6 @@ function renderDeviceRegistryReadPanelV23(state){
     pointersBadge.textContent=state?'Read':'Index';
     pointersBadge.className=setupDoctorBadgeClassV23(state?'ready':'warn');
   }
-  if(registerBtn){
-    registerBtn.textContent=current?'Registered':'Register this device';
-    registerBtn.disabled=!!(current&&String(current['Trusted Status']||'')==='Trusted');
-  }
   return {profile:profile,devices:devices,current:current,pointers:pointers,counts:counts};
 }
 
@@ -5692,114 +5686,6 @@ async function loadDeviceRegistryReadPanelV23(){
       status.textContent=(err&&err.message)||'Registry read failed. Check Apps Script deployment and run Setup Doctor.';
     }
     throw err;
-  }
-}
-
-function resetDeviceRegistryRegisterGateV23(button){
-  window.__deviceRegistryRegisterArmedUntilV23=0;
-  if(button){
-    button.classList.remove('restore-armed');
-    button.textContent='Register this device';
-    button.disabled=false;
-  }
-}
-
-function buildCurrentDeviceRegistryPayloadV23(){
-  var device=typeof getDeviceProfileV23==='function'?getDeviceProfileV23():{};
-  var readiness=typeof getDeviceReadinessSnapshotV23==='function'?getDeviceReadinessSnapshotV23():{};
-  var latest=readiness.latestBackup||{};
-  return {
-    type:'device_registry_upsert',
-    profileId:'a1xx-primary',
-    deviceId:device.deviceId||'',
-    deviceLabel:device.label||'Unlabeled device',
-    deviceType:'browser',
-    lastAnchorCheckAt:new Date().toISOString(),
-    lastBackupMarker:latest.backupId||'',
-    lastBackupSheetRow:latest.matchedRow||'',
-    trustedStatus:'Pending',
-    trustReason:'Registered from Money Mission OS. Manual trust required in Sheet.',
-    buildToken:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    appFile:typeof APP_BUILD_FILE!=='undefined'?APP_BUILD_FILE:'',
-    status:'Active',
-    notes:'Frontend manual register gate. Pending only; no auto trust.'
-  };
-}
-
-async function registerCurrentDevicePendingV23(button){
-  var status=document.getElementById('device-registry-status');
-  var state=getDeviceRegistryReadStateV23();
-  var rendered=renderDeviceRegistryReadPanelV23(state);
-  if(rendered.current){
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='This device is already in the registry as '+(rendered.current['Trusted Status']||'Pending')+'.';
-    }
-    return;
-  }
-  var appUrl=localStorage.getItem(SHEETS_KEY)||'';
-  if(!appUrl){
-    if(status){
-      status.className='reset-status err';
-      status.textContent='Add Apps Script URL before registering this device.';
-    }
-    return;
-  }
-  var anchor=typeof getDeviceTransferAnchorStatusV23==='function'?getDeviceTransferAnchorStatusV23(getDeviceReadinessSnapshotV23()):{ready:false};
-  if(!anchor.ready){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Run Check anchor first so this device registers with live bridge and Drive backup proof.';
-    }
-    return;
-  }
-  var payload=buildCurrentDeviceRegistryPayloadV23();
-  if(!payload.deviceId){
-    if(status){
-      status.className='reset-status err';
-      status.textContent='Local Device Profile is missing. Save or refresh Device Profile first.';
-    }
-    return;
-  }
-  var now=Date.now();
-  if((window.__deviceRegistryRegisterArmedUntilV23||0)<now){
-    window.__deviceRegistryRegisterArmedUntilV23=now+12000;
-    if(button){
-      button.classList.add('restore-armed');
-      button.textContent='Confirm register';
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Ready to register '+(payload.deviceLabel||payload.deviceId)+' as Pending. Click Confirm register within 12 seconds.';
-    }
-    setTimeout(function(){
-      if((window.__deviceRegistryRegisterArmedUntilV23||0)<=Date.now())resetDeviceRegistryRegisterGateV23(button);
-    },12200);
-    return;
-  }
-  try{
-    if(button)button.disabled=true;
-    if(status){
-      status.className='reset-status';
-      status.textContent='Registering this device as Pending...';
-    }
-    await postToAppsScript(appUrl,payload);
-    await waitMs(1600);
-    resetDeviceRegistryRegisterGateV23(button);
-    var next=await loadDeviceRegistryReadPanelV23();
-    var read=renderDeviceRegistryReadPanelV23(next);
-    if(status){
-      status.className='reset-status '+(read.current?'ok':'warn');
-      status.textContent=read.current
-        ? 'Device registered as '+(read.current['Trusted Status']||'Pending')+'. Trust remains manual in the Sheet.'
-        : 'Register request sent. Reload registry again if the row is still catching up.';
-    }
-  }catch(err){
-    resetDeviceRegistryRegisterGateV23(button);
-    if(status){
-      status.className='reset-status err';
-      status.textContent=(err&&err.message)||'Device registration failed. Check Apps Script deployment and webhook token.';
-    }
   }
 }
 function initAuth(){
