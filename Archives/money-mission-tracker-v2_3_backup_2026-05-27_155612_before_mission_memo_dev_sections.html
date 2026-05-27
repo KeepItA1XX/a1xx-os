@@ -268,14 +268,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .settings-subtab{height:28px;border:0;border-radius:7px;background:transparent;color:#8b949e;font-size:10px;font-weight:800;cursor:pointer;transition:all .15s}
 .settings-subtab:hover{color:#d7dde3}
 .settings-subtab.active{background:#121712;border:0.5px solid #3a5a2a;color:#7ec845}
-.dev-section-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;background:#080a0c;border:0.5px solid #20272e;border-radius:9px;padding:4px;margin-bottom:10px}
-.dev-section-tab{min-height:30px;border:0;border-radius:7px;background:transparent;color:#8b949e;font-size:10px;font-weight:850;cursor:pointer;line-height:1.15;padding:3px 6px;transition:all .15s;text-align:center}
-.dev-section-tab:hover{color:#d7dde3;background:#0d1115}
-.dev-section-tab.active{background:#121712;border:0.5px solid #3a5a2a;color:#7ec845}
-.dev-section-pane{display:none}
-.dev-section-pane.active{display:block}
-.dev-placeholder{background:#090b0d;border:0.5px dashed #25303a;border-radius:9px;padding:10px;color:#7f8992;font-size:10px;line-height:1.5}
-@media(min-width:680px){.dev-section-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .health-subpane{display:none}
 .health-subpane.active{display:block}
 .account-subpane{display:none}
@@ -2708,7 +2700,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row is-primary"><div><div class="settings-row-name">v2_3 Foundation Closeout</div><div class="settings-row-meta" id="settings-v23-closeout-summary">Run closeout after setup pointers, backup, registry, and Live QA are current.</div></div><span class="settings-badge off" id="settings-v23-closeout-badge">Closeout</span></div>
             <div class="settings-row is-primary"><div><div class="settings-row-name">v2_3 Stable Checkpoint</div><div class="settings-row-meta" id="settings-v23-stable-summary">Foundation closeout, second-device restore, and Drive backup are verified.</div></div><span class="settings-badge" id="settings-v23-stable-badge">Stable</span></div>
           </div>
-          <details class="diagnostics-detail" data-dev-detail="true">
+          <details class="diagnostics-detail" data-dev-detail="true" open>
             <summary><span>v2_3 closeout</span><span class="settings-badge off" id="settings-v23-closeout-detail-badge">Ready</span></summary>
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Setup + bridge</div><div class="settings-row-meta" id="settings-v23-closeout-setup">Run closeout check to verify Setup Doctor.</div></div><span class="settings-badge off" id="settings-v23-closeout-setup-badge">Setup</span></div>
@@ -2861,16 +2853,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
       </div>
     </div>
     <div class="settings-pane" id="settings-pane-dev">
-        <div class="dev-section-tabs" role="tablist" aria-label="Developer Mode sections">
-          <button type="button" class="dev-section-tab active" data-dev-section-tab="overview" onclick="setDeveloperSectionV23('overview')">Overview</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="diagnostics" onclick="setDeveloperSectionV23('diagnostics')">Diagnostics</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="setup" onclick="setDeveloperSectionV23('setup')">Setup & Devices</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="storage" onclick="setDeveloperSectionV23('storage')">Storage & Backups</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="modules" onclick="setDeveloperSectionV23('modules')">Modules & Flags</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="events" onclick="setDeveloperSectionV23('events')">Events & Logs</button>
-          <button type="button" class="dev-section-tab" data-dev-section-tab="workers" onclick="setDeveloperSectionV23('workers')">Workers / Future</button>
-        </div>
-      <div class="dev-section-pane active" id="dev-section-overview">
         <div class="settings-section">
           <div class="settings-section-title">Developer Mode</div>
           <div class="settings-list">
@@ -2898,38 +2880,16 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <button class="btn" onclick="runSimpleDiagnosticsCheckV23()">Refresh diagnostics</button>
           </div>
         </div>
-      </div>
-      <div class="dev-section-pane" id="dev-section-diagnostics">
         <div class="settings-section">
-          <div class="settings-section-title">Diagnostics</div>
+          <div class="settings-section-title">Account Backend</div>
+          <div id="dev-account-backend-mount"></div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Developer Diagnostics</div>
           <div id="dev-diagnostics-mount"></div>
         </div>
       </div>
-      <div class="dev-section-pane" id="dev-section-setup">
-        <div id="dev-setup-devices-mount"></div>
-      </div>
-      <div class="dev-section-pane" id="dev-section-storage">
-        <div id="dev-storage-backups-mount"></div>
-      </div>
-      <div class="dev-section-pane" id="dev-section-modules">
-        <div id="dev-modules-flags-mount"></div>
-      </div>
-      <div class="dev-section-pane" id="dev-section-events">
-        <div class="settings-section">
-          <div class="settings-section-title">Events & Logs</div>
-          <div class="dev-placeholder">Event bus, Mission events, worker events, and Activity Log references will live here when those backend surfaces are active.</div>
-        </div>
-        <div id="dev-events-logs-mount"></div>
-      </div>
-      <div class="dev-section-pane" id="dev-section-workers">
-        <div class="settings-section">
-          <div class="settings-section-title">Workers / Future</div>
-          <div class="dev-placeholder">Worker registry, scheduled task status, and automation controls are reserved here for future phases.</div>
-        </div>
-        <div id="dev-workers-future-mount"></div>
-      </div>
-      </div>
-  </div>
+    </div>
   </div>
 
 <!-- COMPANY HEALTH PANEL -->
@@ -2999,6 +2959,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
       <div class="mission-command-state">Local coach</div>
     </div>
   </div>
+  <button class="mission-nudge-strip" id="mission-nudge-strip" onclick="sendMissionNudgePrompt()" title="Ask Mission Command about this signal"></button>
   <div class="mission-history-drawer" id="mission-history-drawer" aria-hidden="true">
     <div class="mission-history-top">
       <div class="mission-history-title">Chats</div>
@@ -4274,9 +4235,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-27 15:56 ET · OS v2_3 mission memo cleanup + dev sections';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation stable + mission memo cleanup + dev sections';
-var APP_CACHE_TOKEN='mmos-20260527-1556-v23-mission-memo-dev-sections';
+var APP_BUILD_STAMP='2026-05-27 13:30 ET · OS v2_3 developer tab backend mount';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation stable + developer tab backend mount';
+var APP_CACHE_TOKEN='mmos-20260527-1330-v23-dev-tab-backend-mount';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8033,66 +7994,30 @@ function isDeveloperModeV23(){
   catch(e){return false;}
 }
 
-function setDeveloperSectionV23(section){
-  section=section||'overview';
-  var allowed=['overview','diagnostics','setup','storage','modules','events','workers'];
-  if(allowed.indexOf(section)<0)section='overview';
-  window.__developerSectionV23=section;
-  document.querySelectorAll('[data-dev-section-tab]').forEach(function(tab){
-    tab.classList.toggle('active',tab.getAttribute('data-dev-section-tab')===section);
-  });
-  document.querySelectorAll('.dev-section-pane').forEach(function(pane){
-    pane.classList.toggle('active',pane.id==='dev-section-'+section);
-  });
-}
-
-function getDeveloperPanelTitleV23(node){
-  if(!node)return '';
-  var title=node.querySelector&&node.querySelector('.settings-section-title');
-  if(title&&title.textContent)return title.textContent.trim();
-  var summary=node.querySelector&&node.querySelector('summary span:first-child');
-  if(summary&&summary.textContent)return summary.textContent.trim();
-  return (node.textContent||'').slice(0,80).trim();
-}
-
-function getDeveloperMountForPanelV23(node,source){
-  var title=getDeveloperPanelTitleV23(node).toLowerCase();
-  if(source==='account'){
-    if(title.indexOf('trusted restore')>=0)return 'dev-storage-backups-mount';
-    return 'dev-setup-devices-mount';
-  }
-  if(title.indexOf('storage')>=0||title.indexOf('backup')>=0||title.indexOf('restore')>=0)return 'dev-storage-backups-mount';
-  if(title.indexOf('foundation')>=0||title.indexOf('directive')>=0||title.indexOf('module')>=0||title.indexOf('flag')>=0)return 'dev-modules-flags-mount';
-  if(title.indexOf('service notes')>=0||title.indexOf('source of truth')>=0||title.indexOf('activity log')>=0)return 'dev-events-logs-mount';
-  return 'dev-diagnostics-mount';
-}
-
-function mountDeveloperPanelV23(node,source){
-  if(!node)return;
-  var mountId=getDeveloperMountForPanelV23(node,source);
-  var mount=document.getElementById(mountId)||document.getElementById('dev-diagnostics-mount');
-  if(mount&&node.parentNode!==mount)mount.appendChild(node);
-}
-
 function mountDeveloperModePanelsV23(){
-  document.querySelectorAll('#account-subpane-profile > [data-dev-detail="true"]').forEach(function(node){
-    mountDeveloperPanelV23(node,'account');
-  });
-  var diagnostics=document.getElementById('health-subpane-diagnostics');
-  if(diagnostics){
-    Array.prototype.slice.call(diagnostics.children).forEach(function(section){
-      if(section.getAttribute&&section.getAttribute('data-dev-detail')==='true'){
-        mountDeveloperPanelV23(section,'diagnostics');
-        return;
-      }
-      if(section.classList&&section.classList.contains('settings-section')){
-        Array.prototype.slice.call(section.children).forEach(function(child){
-          if(child.getAttribute&&child.getAttribute('data-dev-detail')==='true')mountDeveloperPanelV23(child,'diagnostics');
-        });
-      }
+  var accountMount=document.getElementById('dev-account-backend-mount');
+  var diagnosticsMount=document.getElementById('dev-diagnostics-mount');
+  if(accountMount){
+    document.querySelectorAll('#account-subpane-profile > [data-dev-detail="true"]').forEach(function(node){
+      accountMount.appendChild(node);
     });
   }
-  setDeveloperSectionV23(window.__developerSectionV23||'overview');
+  if(diagnosticsMount){
+    var diagnostics=document.getElementById('health-subpane-diagnostics');
+    if(diagnostics){
+      Array.prototype.slice.call(diagnostics.children).forEach(function(section){
+        if(section.getAttribute&&section.getAttribute('data-dev-detail')==='true'){
+          diagnosticsMount.appendChild(section);
+          return;
+        }
+        if(section.classList&&section.classList.contains('settings-section')){
+          Array.prototype.slice.call(section.children).forEach(function(child){
+            if(child.getAttribute&&child.getAttribute('data-dev-detail')==='true')diagnosticsMount.appendChild(child);
+          });
+        }
+      });
+    }
+  }
 }
 
 function renderDeveloperModeV23(){
@@ -29397,11 +29322,12 @@ function getMissionNudgePrompt(text){
 
 function renderMissionNudge(ctx){
   var el=document.getElementById('mission-nudge-strip');
-  if(el){
-    el.textContent='';
-    el.classList.remove('show');
-  }
-  window.__missionNudgePrompt='';
+  if(!el)return;
+  var text=getMissionNudgeText(ctx);
+  if(!text){el.textContent='';el.classList.remove('show');return;}
+  el.textContent=text.length>88?text.slice(0,85)+'...':text;
+  window.__missionNudgePrompt=getMissionNudgePrompt(text);
+  el.classList.add('show');
 }
 
 function sendMissionNudgePrompt(){
