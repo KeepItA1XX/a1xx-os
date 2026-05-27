@@ -2318,21 +2318,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="reset-status" id="cloud-profile-bootstrap-status"></div>
         </div>
-        <div class="settings-section">
-          <div class="settings-section-title">Device Registry</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Profile index</div><div class="settings-row-meta" id="device-registry-profile-read">Load registry to read the backend profile index.</div></div><span class="settings-badge off" id="device-registry-profile-badge">Read</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Known devices</div><div class="settings-row-meta" id="device-registry-devices-read">No registry read yet.</div></div><span class="settings-badge off" id="device-registry-devices-badge">Devices</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Current device trust</div><div class="settings-row-meta" id="device-registry-current-read">This panel reads only. Trust changes stay manual for now.</div></div><span class="settings-badge off" id="device-registry-current-badge">Local</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Setup pointers</div><div class="settings-row-meta" id="device-registry-pointers-read">Load registry to confirm the setup pointer index exists.</div></div><span class="settings-badge off" id="device-registry-pointers-badge">Index</span></div>
-          </div>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
-            <button class="btn" onclick="refreshCloudProfileBootstrapAnchorV23()">Check anchor</button>
-            <button class="btn" onclick="openSetupRepairV23()">Open setup</button>
-          </div>
-          <div class="reset-status" id="device-registry-status"></div>
-        </div>
       </div>
       <div class="account-subpane" id="account-subpane-signin">
         <div class="settings-section">
@@ -4111,9 +4096,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 20:00 ET · OS v2_3 registry read panel';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + registry read panel';
-var APP_CACHE_TOKEN='mmos-20260526-2000-v23-registry-read-panel';
+var APP_BUILD_STAMP='2026-05-26 17:15 ET · OS v2_3 cloud profile bootstrap plan';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + cloud profile bootstrap';
+var APP_CACHE_TOKEN='mmos-20260526-1715-v23-cloud-profile-bootstrap';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5165,7 +5150,6 @@ function renderAccountIdentity(){
   if(typeof renderDeviceReadinessV23==='function')renderDeviceReadinessV23();
   if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
   if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
-  if(typeof renderDeviceRegistryReadPanelV23==='function')renderDeviceRegistryReadPanelV23();
 }
 
 function getDeviceReadinessSnapshotV23(){
@@ -5578,114 +5562,6 @@ async function copyCloudProfileBootstrapPlanV23(){
       status.className='reset-status err';
       status.textContent='Copy blocked by the browser. Select the bootstrap plan manually.';
     }
-  }
-}
-
-function getDeviceRegistryReadStateV23(){
-  return window.__deviceRegistryReadV23||null;
-}
-
-function findCurrentDeviceRegistryRowV23(devices,deviceId){
-  devices=Array.isArray(devices)?devices:[];
-  deviceId=String(deviceId||'');
-  if(!deviceId)return null;
-  for(var i=0;i<devices.length;i++){
-    if(String(devices[i]['Device ID']||devices[i].deviceId||'')===deviceId)return devices[i];
-  }
-  return null;
-}
-
-function summarizeDeviceRegistryTrustV23(devices){
-  devices=Array.isArray(devices)?devices:[];
-  var counts={Trusted:0,Pending:0,Review:0,Revoked:0,Archived:0,Other:0};
-  devices.forEach(function(item){
-    var status=String(item['Trusted Status']||item.trustedStatus||'Other');
-    if(counts.hasOwnProperty(status))counts[status]++;
-    else counts.Other++;
-  });
-  return counts;
-}
-
-function renderDeviceRegistryReadPanelV23(state){
-  state=state||getDeviceRegistryReadStateV23();
-  var profileEl=document.getElementById('device-registry-profile-read');
-  var profileBadge=document.getElementById('device-registry-profile-badge');
-  var devicesEl=document.getElementById('device-registry-devices-read');
-  var devicesBadge=document.getElementById('device-registry-devices-badge');
-  var currentEl=document.getElementById('device-registry-current-read');
-  var currentBadge=document.getElementById('device-registry-current-badge');
-  var pointersEl=document.getElementById('device-registry-pointers-read');
-  var pointersBadge=document.getElementById('device-registry-pointers-badge');
-  var profile=state&&state.profile&&state.profile.profile?state.profile.profile:null;
-  var registry=state&&state.registry?state.registry:null;
-  var pointers=state&&state.pointers&&Array.isArray(state.pointers.pointers)?state.pointers.pointers:[];
-  var devices=registry&&Array.isArray(registry.devices)?registry.devices:[];
-  var deviceProfile=typeof getDeviceProfileV23==='function'?getDeviceProfileV23():{};
-  var current=findCurrentDeviceRegistryRowV23(devices,deviceProfile.deviceId);
-  var counts=summarizeDeviceRegistryTrustV23(devices);
-  if(profileEl)profileEl.textContent=profile
-    ? 'Profile '+(profile['Profile ID']||'a1xx-primary')+' · '+(profile['Display Name']||'A1XX')+' · latest '+(profile['Latest Backup Marker']||'no backup marker')+'.'
-    : 'Load registry to read the backend profile index.';
-  if(profileBadge){
-    profileBadge.textContent=profile?'Loaded':'Read';
-    profileBadge.className=setupDoctorBadgeClassV23(profile?'ready':'warn');
-  }
-  if(devicesEl)devicesEl.textContent=state
-    ? devices.length+' device(s) · '+counts.Trusted+' trusted · '+counts.Pending+' pending · '+counts.Review+' review.'
-    : 'No registry read yet.';
-  if(devicesBadge){
-    devicesBadge.textContent=state?'Read':'Devices';
-    devicesBadge.className=setupDoctorBadgeClassV23(state?'ready':'warn');
-  }
-  if(currentEl)currentEl.textContent=current
-    ? 'This device is '+(current['Trusted Status']||'Pending')+' · '+(current['Device Label']||deviceProfile.label||'unlabeled')+'.'
-    : (state?'This local device is not registered yet. Registering stays blocked until approved.':'This panel reads only. Trust changes stay manual for now.');
-  if(currentBadge){
-    var currentStatus=current?String(current['Trusted Status']||'Pending'):'Local';
-    currentBadge.textContent=currentStatus;
-    currentBadge.className=setupDoctorBadgeClassV23(currentStatus==='Trusted'?'ready':current?'warn':'off');
-  }
-  if(pointersEl)pointersEl.textContent=state
-    ? pointers.length+' safe setup pointer(s) readable from the backend index.'
-    : 'Load registry to confirm the setup pointer index exists.';
-  if(pointersBadge){
-    pointersBadge.textContent=state?'Read':'Index';
-    pointersBadge.className=setupDoctorBadgeClassV23(state?'ready':'warn');
-  }
-  return {profile:profile,devices:devices,current:current,pointers:pointers,counts:counts};
-}
-
-async function loadDeviceRegistryReadPanelV23(){
-  var status=document.getElementById('device-registry-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Reading Profile Index, Device Registry, and Setup Pointer Index...';
-  }
-  try{
-    var profileId='a1xx-primary';
-    var results=await Promise.all([
-      getAppsScriptJson('profile_index',{profileId:profileId},{timeoutMs:12000,tries:1}),
-      getAppsScriptJson('device_registry',{profileId:profileId},{timeoutMs:12000,tries:1}),
-      getAppsScriptJson('setup_pointers',{profileId:profileId},{timeoutMs:12000,tries:1})
-    ]);
-    window.__deviceRegistryReadV23={
-      checkedAt:new Date().toISOString(),
-      profile:results[0],
-      registry:results[1],
-      pointers:results[2]
-    };
-    var rendered=renderDeviceRegistryReadPanelV23(window.__deviceRegistryReadV23);
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Registry read complete. '+rendered.devices.length+' device(s), '+rendered.pointers.length+' setup pointer(s). Read-only mode.';
-    }
-    return window.__deviceRegistryReadV23;
-  }catch(err){
-    if(status){
-      status.className='reset-status err';
-      status.textContent=(err&&err.message)||'Registry read failed. Check Apps Script deployment and run Setup Doctor.';
-    }
-    throw err;
   }
 }
 function initAuth(){
@@ -7024,7 +6900,6 @@ function setAccountSubTab(tab){
     if(typeof renderDeviceReadinessV23==='function')renderDeviceReadinessV23();
     if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
     if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
-    if(typeof renderDeviceRegistryReadPanelV23==='function')renderDeviceRegistryReadPanelV23();
   }
 }
 
