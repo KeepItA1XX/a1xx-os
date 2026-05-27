@@ -2324,7 +2324,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Profile index</div><div class="settings-row-meta" id="device-registry-profile-read">Load registry to read the backend profile index.</div></div><span class="settings-badge off" id="device-registry-profile-badge">Read</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Known devices</div><div class="settings-row-meta" id="device-registry-devices-read">No registry read yet.</div></div><span class="settings-badge off" id="device-registry-devices-badge">Devices</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Current device trust</div><div class="settings-row-meta" id="device-registry-current-read">This panel reads only. Trust changes stay manual for now.</div></div><span class="settings-badge off" id="device-registry-current-badge">Local</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Trusted device gate</div><div class="settings-row-meta" id="device-registry-gate-read">Pending devices can be seen here, but trusted-device features remain locked.</div></div><span class="settings-badge off" id="device-registry-gate-badge">Gate</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Setup pointers</div><div class="settings-row-meta" id="device-registry-pointers-read">Load registry to confirm the setup pointer index exists.</div></div><span class="settings-badge off" id="device-registry-pointers-badge">Index</span></div>
           </div>
           <div class="btn-row" style="margin-top:10px">
@@ -4113,9 +4112,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 20:32 ET · OS v2_3 trusted device gate';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + trusted device gate';
-var APP_CACHE_TOKEN='mmos-20260526-2032-v23-trusted-device-gate';
+var APP_BUILD_STAMP='2026-05-26 20:21 ET · OS v2_3 register device gate';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + register device gate';
+var APP_CACHE_TOKEN='mmos-20260526-2021-v23-register-device-gate';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5608,40 +5607,6 @@ function summarizeDeviceRegistryTrustV23(devices){
   return counts;
 }
 
-function getTrustedDeviceGateReadV23(current){
-  var trust=current?String(current['Trusted Status']||current.trustedStatus||'Pending'):'Local';
-  if(trust==='Trusted')return {
-    state:'ready',
-    label:'Trusted',
-    text:'This device is manually trusted in the registry. Future trusted-device features can read from this state, but login-anywhere is still not active.'
-  };
-  if(trust==='Pending')return {
-    state:'warn',
-    label:'Pending',
-    text:'This device is registered but pending manual trust in the Sheet. Restore and cloud profile actions stay gated.'
-  };
-  if(trust==='Review')return {
-    state:'warn',
-    label:'Review',
-    text:'This device needs review before trusted-device features can be considered.'
-  };
-  if(trust==='Revoked')return {
-    state:'review',
-    label:'Revoked',
-    text:'This device is revoked in the registry. It should not be used for future profile sync.'
-  };
-  if(trust==='Archived')return {
-    state:'review',
-    label:'Archived',
-    text:'This device is archived. It remains visible for history only.'
-  };
-  return {
-    state:'off',
-    label:'Local',
-    text:'This local device is not registered yet. Register it as Pending before any trust review.'
-  };
-}
-
 function renderDeviceRegistryReadPanelV23(state){
   state=state||getDeviceRegistryReadStateV23();
   var profileEl=document.getElementById('device-registry-profile-read');
@@ -5650,8 +5615,6 @@ function renderDeviceRegistryReadPanelV23(state){
   var devicesBadge=document.getElementById('device-registry-devices-badge');
   var currentEl=document.getElementById('device-registry-current-read');
   var currentBadge=document.getElementById('device-registry-current-badge');
-  var gateEl=document.getElementById('device-registry-gate-read');
-  var gateBadge=document.getElementById('device-registry-gate-badge');
   var pointersEl=document.getElementById('device-registry-pointers-read');
   var pointersBadge=document.getElementById('device-registry-pointers-badge');
   var registerBtn=document.getElementById('device-registry-register-btn');
@@ -5662,7 +5625,6 @@ function renderDeviceRegistryReadPanelV23(state){
   var deviceProfile=typeof getDeviceProfileV23==='function'?getDeviceProfileV23():{};
   var current=findCurrentDeviceRegistryRowV23(devices,deviceProfile.deviceId);
   var counts=summarizeDeviceRegistryTrustV23(devices);
-  var gate=getTrustedDeviceGateReadV23(current);
   if(profileEl)profileEl.textContent=profile
     ? 'Profile '+(profile['Profile ID']||'a1xx-primary')+' · '+(profile['Display Name']||'A1XX')+' · latest '+(profile['Latest Backup Marker']||'no backup marker')+'.'
     : 'Load registry to read the backend profile index.';
@@ -5685,11 +5647,6 @@ function renderDeviceRegistryReadPanelV23(state){
     currentBadge.textContent=currentStatus;
     currentBadge.className=setupDoctorBadgeClassV23(currentStatus==='Trusted'?'ready':current?'warn':'off');
   }
-  if(gateEl)gateEl.textContent=state?gate.text:'Pending devices can be seen here, but trusted-device features remain locked.';
-  if(gateBadge){
-    gateBadge.textContent=state?gate.label:'Gate';
-    gateBadge.className=setupDoctorBadgeClassV23(gate.state);
-  }
   if(pointersEl)pointersEl.textContent=state
     ? pointers.length+' safe setup pointer(s) readable from the backend index.'
     : 'Load registry to confirm the setup pointer index exists.';
@@ -5701,7 +5658,7 @@ function renderDeviceRegistryReadPanelV23(state){
     registerBtn.textContent=current?'Registered':'Register this device';
     registerBtn.disabled=!!(current&&String(current['Trusted Status']||'')==='Trusted');
   }
-  return {profile:profile,devices:devices,current:current,pointers:pointers,counts:counts,gate:gate};
+  return {profile:profile,devices:devices,current:current,pointers:pointers,counts:counts};
 }
 
 async function loadDeviceRegistryReadPanelV23(){
