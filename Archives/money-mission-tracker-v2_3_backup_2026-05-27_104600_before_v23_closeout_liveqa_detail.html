@@ -4175,9 +4175,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-27 10:41 ET · OS v2_3 closeout Live QA detail';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + closeout detail';
-var APP_CACHE_TOKEN='mmos-20260527-1041-v23-closeout-liveqa-detail';
+var APP_BUILD_STAMP='2026-05-27 10:31 ET · OS v2_3 foundation closeout';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + foundation closeout';
+var APP_CACHE_TOKEN='mmos-20260527-1031-v23-foundation-closeout';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -7332,14 +7332,6 @@ function normalizeHealthLiveQAResultV22(result){
   if(!meta&&failures.length)meta=failures.slice(0,3).join(' | ');
   return {passed:passed,meta:meta||'Checked'};
 }
-function getHealthLiveQAFailureSummaryV22(rows){
-  var failed=(rows||[]).filter(function(row){return row&&!row.passed;});
-  if(!failed.length)return 'Passed. Live QA checks are clean.';
-  return failed.map(function(row){
-    var meta=String(row.meta||'').trim();
-    return (row.name||'Live QA')+(meta?': '+meta:'');
-  }).slice(0,2).join(' | ');
-}
 function renderHealthLiveQARowsV22(rows){
   var box=document.getElementById('settings-live-qa-results');
   if(!box)return;
@@ -7386,14 +7378,14 @@ async function runHealthLiveQACheckV22(){
   }catch(e){add('Mission Command Routes',{passed:false,meta:e&&e.message?e.message:String(e)});}
   var failed=rows.filter(function(row){return !row.passed;});
   renderHealthLiveQARowsV22(rows);
-  if(summary)summary.textContent=failed.length?('Review. '+getHealthLiveQAFailureSummaryV22(rows)):'Passed. Live QA checks are clean.';
+  if(summary)summary.textContent=failed.length?('Review. '+failed.length+' Live QA check'+(failed.length===1?' needs':'s need')+' attention.'):'Passed. Live QA checks are clean.';
   [badge,statusBadge].forEach(function(el){
     if(!el)return;
     el.textContent=failed.length?'Review':'Passed';
     el.className='settings-badge '+(failed.length?'warn':'');
   });
   if(typeof renderHealthCommandReadV22==='function')renderHealthCommandReadV22('diagnostics');
-  return {passed:!failed.length,rows:rows,failed:failed,summary:getHealthLiveQAFailureSummaryV22(rows)};
+  return {passed:!failed.length,rows:rows};
 }
 
 function getV23FoundationCloseoutSnapshot(liveQaResult){
@@ -7418,16 +7410,13 @@ function getV23FoundationCloseoutSnapshot(liveQaResult){
   var restoreOk=trustedRestore&&trustedRestore.state==='ready';
   var cloudOk=cloudReadiness&&cloudReadiness.state==='ready';
   var liveQaOk=!!(liveQa&&liveQa.passed);
-  var liveQaText=liveQa
-    ? (liveQaOk?'Passed. '+liveQa.rows.length+' Live QA row(s) checked.':'Review. '+(liveQa.summary||getHealthLiveQAFailureSummaryV22(liveQa.rows)))
-    : 'Live QA has not run in this closeout yet.';
   var checks=[
     {key:'setup',label:'Setup + bridge',ok:!!setupOk,state:setupStatus.state||'warn',text:setupStatus.summary||'Setup Doctor not checked yet.'},
     {key:'registry',label:'Cloud registry',ok:!!registryOk,state:registryOk?'ready':'warn',text:registryOk?'Trusted device and 6 setup pointers are readable.':'Load registry and confirm trusted device plus 6 setup pointers.'},
     {key:'pointers',label:'Setup pointers',ok:!!pointerOk,state:pointerOk?'ready':'warn',text:pointerOk?'Safe pointer index is complete.':'Setup pointer index is not complete yet.'},
     {key:'backup',label:'Backup + restore',ok:!!(backupOk&&restoreOk&&storageOk),state:(backupOk&&restoreOk&&storageOk)?'ready':'warn',text:backupOk&&restoreOk?'Drive backup and restore gate are ready.':'Verify Drive backup and trusted restore readiness.'},
     {key:'cloud',label:'Cloud profile',ok:!!cloudOk,state:cloudOk?'ready':'warn',text:cloudOk?'Cloud profile foundation is ready; login-anywhere remains future auth work.':'Cloud profile readiness needs review.'},
-    {key:'liveqa',label:'Live QA',ok:!!liveQaOk,state:liveQaOk?'ready':'warn',text:liveQaText}
+    {key:'liveqa',label:'Live QA',ok:!!liveQaOk,state:liveQaOk?'ready':'warn',text:liveQa?liveQa.rows.length+' Live QA row(s) checked.':'Live QA has not run in this closeout yet.'}
   ];
   var failed=checks.filter(function(item){return !item.ok;});
   return {
