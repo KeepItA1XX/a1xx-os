@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 19:47 ET · OS v2_4 decision tradeoff language';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + decision tradeoff language';
-var APP_CACHE_TOKEN='mmos-20260527-1947-v24-decision-tradeoff-language';
+var APP_BUILD_STAMP='2026-05-27 19:45 ET · OS v2_4 energy load awareness';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + energy load awareness';
+var APP_CACHE_TOKEN='mmos-20260527-1945-v24-energy-load-awareness';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26268,7 +26268,6 @@ function getMissionBrainLanguageProfileV24(question,ctx,route,brainState){
     nextEventAsk:/\b(how much time (do i have )?(before|until)|how long (do i have )?(before|until)|how many minutes (do i have )?(before|until)|when is my next|what is next on my calendar|what do i have next|what time is my next|how much runway|do i have time before)\b.*\b(call|meeting|event|calendar|next thing|next block)?\b/.test(q),
     relativeTimeAsk:/\b(what should i do tomorrow|tomorrow plan|plan for tomorrow|what is tomorrow looking like|what should i focus on this week|what should i do this week|how is this week looking|rest of the week|weekly plan|week plan|where are we in the cycle|where am i in the cycle|where in the cycle|cycle check|cycle status|how many days left in the cycle|days left in cycle|what did i do yesterday|what happened yesterday|yesterday recap|what moved yesterday)\b/.test(q),
     energyLoadAsk:/\b(i am tired|i'm tired|im tired|i am drained|i'm drained|im drained|low energy|no energy|burned out|burnt out|exhausted|dragging|foggy|overwhelmed|too much|scattered|all over the place|can only do something light|something light|light move|easy move|low lift|smallest move|minimum move|minimum viable move)\b/.test(q),
-    decisionTradeoffAsk:/\b(should i .+ or .+|should i .+ instead of .+|which one should i do|which should i do first|what should i do first|what should i prioritize|what is the priority|what can wait|what should wait|what should i not do|what should i avoid|what should i skip|is this worth doing now|worth doing right now|should i do this now|should i send this now|should i post this now)\b/.test(q),
     broken:/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(q),
     styleCorrection:/\b(that answer is too much|too much|make it shorter|more direct|say it normal|say that normal|plain english|make it plain|less robotic|more natural|answer normal|that is not what i meant|not what i meant)\b/.test(q),
     misunderstanding:/\b(you misunderstood|you are misunderstanding|you misunderstood me|wrong read|wrong lane|not that|nah not that|no not that|that is not what i meant|that's not what i meant|not what i meant)\b/.test(q),
@@ -26290,7 +26289,7 @@ function missionBrainFoundationShouldOwnPromptV24(question){
   var profile=getMissionBrainLanguageProfileV24(question||'',{},'',null);
   if(!profile||!profile.q)return false;
   if(profile.responseFeelAsk)return true;
-  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.nextEventAsk||profile.relativeTimeAsk||profile.energyLoadAsk||profile.decisionTradeoffAsk||profile.limitMinutes>0||profile.why)return true;
+  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.nextEventAsk||profile.relativeTimeAsk||profile.energyLoadAsk||profile.limitMinutes>0||profile.why)return true;
   if(profile.misunderstanding||profile.plainLanguage||profile.meaningAsk||profile.acknowledgementAsk)return true;
   if(profile.styleCorrection&&profile.direct)return true;
   if(profile.broken&&/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(profile.q))return true;
@@ -26310,7 +26309,6 @@ function getMissionBrainLanguageIntentV24(profile){
   if(profile.nextEventAsk)return 'next_event_time';
   if(profile.relativeTimeAsk)return 'relative_time';
   if(profile.energyLoadAsk)return 'energy_load';
-  if(profile.decisionTradeoffAsk)return 'decision_tradeoff';
   if(profile.limitMinutes>0)return 'time_fit';
   if(profile.why)return 'why_move';
   if(profile.broken)return 'system_read';
@@ -26553,25 +26551,6 @@ function getMissionBrainEnergyLoadAnswerV24(profile,ctx,route,brainState){
   return 'Low-energy read:<br><br>Keep the mission alive without forcing a heavy block.<br><br>Do the smallest version of '+escapeHtml(move)+', or choose one light move: follow-up, status update, DPC log, or tomorrow prep.<br><br>Log it and recover.';
 }
 
-function getMissionBrainDecisionTradeoffAnswerV24(profile,ctx,route,brainState){
-  if(!profile||!profile.decisionTradeoffAsk)return '';
-  var q=profile.q||'';
-  ctx=ctx||{};
-  var gap=parseFloat(ctx.gap)||0;
-  var move=brainState&&brainState.nextBestMove?brainState.nextBestMove:'the action closest to a logged result';
-  var moneyPressure=gap>0;
-  if(/\b(what can wait|what should wait|what should i not do|what should i avoid|what should i skip)\b/.test(q)){
-    return 'Cut list:<br><br>Wait on anything that does not create money, proof, delivery, or a clean log.<br><br>Skip: dashboard checking, new research, broad planning, and opening another lane.<br><br>Do this first: '+escapeHtml(move)+'.';
-  }
-  if(/\b(is this worth doing now|worth doing right now|should i do this now|should i send this now|should i post this now)\b/.test(q)){
-    return 'Worth-it read:<br><br>Yes if it creates one visible result: reply, booked call, payment step, shipped asset, posted proof, or clean status.<br><br>If it only feels productive, wait.<br><br>Make the smallest version and log it.';
-  }
-  if(/\b(which one should i do|which should i do first|what should i do first|what should i prioritize|what is the priority)\b/.test(q)){
-    return 'Priority read:<br><br>First: the move closest to money or a visible status change.<br><br>'+escapeHtml(moneyPressure?'Because the weekly gap is still open, cash-facing action wins the tie.':'If money pressure is covered, choose proof or delivery next.')+'<br><br>Pick one, finish the checkpoint, then log the result.';
-  }
-  return 'Tradeoff read:<br><br>Choose the option closest to money, proof, delivery, or a clean logged result.<br><br>If both are equal, pick the one that takes less time and creates clearer signal.<br><br>Everything else can wait one block.';
-}
-
 function getMissionBrainBlockLabelV24(name){
   name=String(name||'').trim();
   if(!name)return 'This window';
@@ -26602,8 +26581,6 @@ function getMissionBrainFoundationResponseV24(ctx,question,route,brainState,turn
   if(relativeTimeAnswer)return relativeTimeAnswer;
   var energyLoadAnswer=getMissionBrainEnergyLoadAnswerV24(profile,ctx,route,brainState);
   if(energyLoadAnswer)return energyLoadAnswer;
-  var decisionTradeoffAnswer=getMissionBrainDecisionTradeoffAnswerV24(profile,ctx,route,brainState);
-  if(decisionTradeoffAnswer)return decisionTradeoffAnswer;
   if(profile.styleCorrection&&profile.direct&&!/\bwhy\b/.test(profile.q)){
     return 'Got it. Shorter and more direct from here.<br><br>Ask it again, and I will answer with the move first.';
   }
@@ -31872,10 +31849,7 @@ function runMissionCommandSelfCheck(){
 		    {q:'what do i have next on my calendar',route:['calendar','now'],mustAny:['calendar read','next','sync']},
 		    {q:'i am tired what should i do',route:['now','calendar'],mustAny:['low-energy read','smallest version','log it']},
 		    {q:'i am overwhelmed and need something light',route:['now','calendar'],mustAny:['shrink-the-field','one lane','check back in']},
-		    {q:'give me a light move',route:['now','calendar'],mustAny:['light move','smallest useful action','no deep work']},
-		    {q:'what can wait right now',route:['now','calendar'],mustAny:['cut list','money','proof','delivery']},
-		    {q:'should i do content or follow up first',route:['now','content','leads'],mustAny:['tradeoff read','money','logged result']},
-		    {q:'is this worth doing now',route:['now','calendar'],mustAny:['worth-it read','visible result','wait']}
+		    {q:'give me a light move',route:['now','calendar'],mustAny:['light move','smallest useful action','no deep work']}
 		  ];
   checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
