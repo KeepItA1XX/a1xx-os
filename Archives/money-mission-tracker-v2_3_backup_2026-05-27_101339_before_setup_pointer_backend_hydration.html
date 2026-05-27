@@ -4163,9 +4163,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-27 10:13 ET · OS v2_3 setup pointer backend hydration';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + setup pointer backend hydration';
-var APP_CACHE_TOKEN='mmos-20260527-1013-v23-setup-pointer-backend-hydration';
+var APP_BUILD_STAMP='2026-05-27 10:07 ET · OS v2_3 setup pointer preview refresh';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + setup pointer preview refresh';
+var APP_CACHE_TOKEN='mmos-20260527-1007-v23-setup-pointer-preview-refresh';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5839,26 +5839,11 @@ function getSetupPointerReadRowsV23(){
 function getSetupPointerSummaryV23(){
   var expected=getSetupPointerRowsV23();
   var existing=getSetupPointerReadRowsV23();
-  var existingByKey={};
-  existing.forEach(function(item){
-    var key=String(item['Pointer Key']||item.pointerKey||'');
-    if(key)existingByKey[key]=item;
-  });
-  expected=expected.map(function(item){
-    var existingItem=existingByKey[item.pointerKey];
-    var existingValue=existingItem?String(existingItem['Pointer Value']||existingItem.pointerValue||''):'';
-    if(!item.pointerValue&&existingValue){
-      return Object.assign({},item,{
-        pointerValue:existingValue,
-        status:'Active',
-        hydratedFromIndex:true
-      });
-    }
-    return item;
-  });
+  var existingKeys={};
+  existing.forEach(function(item){existingKeys[String(item['Pointer Key']||item.pointerKey||'')]=1;});
   var readyExpected=expected.filter(function(item){return !!item.pointerValue;});
   var missingValues=expected.filter(function(item){return !item.pointerValue;});
-  var missingRows=readyExpected.filter(function(item){return !existingByKey[item.pointerKey];});
+  var missingRows=readyExpected.filter(function(item){return !existingKeys[item.pointerKey];});
   return {
     expected:expected,
     readyExpected:readyExpected,
