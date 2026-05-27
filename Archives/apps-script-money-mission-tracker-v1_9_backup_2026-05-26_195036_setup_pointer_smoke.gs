@@ -2187,16 +2187,7 @@ function testOsProfileDeviceRegistryV19() {
     status: 'Active',
     notes: 'Should remain Pending unless manually trusted in the Sheet.'
   });
-  var setupPointers = getOsSetupPointersSheetV19();
-  Logger.log(JSON.stringify({
-    profile: profile,
-    device: device,
-    setupPointers: {
-      sheetName: setupPointers.getName(),
-      rows: setupPointers.getLastRow(),
-      headers: OS_SETUP_POINTER_HEADERS.length
-    }
-  }));
+  Logger.log(JSON.stringify({ profile: profile, device: device }));
 }
 
 function testCycleArchiveSync() {
