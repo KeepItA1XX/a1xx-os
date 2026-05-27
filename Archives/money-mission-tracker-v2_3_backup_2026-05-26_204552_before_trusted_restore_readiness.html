@@ -2335,21 +2335,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="reset-status" id="device-registry-status"></div>
         </div>
-        <div class="settings-section">
-          <div class="settings-section-title">Trusted Restore Readiness</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Trusted device</div><div class="settings-row-meta" id="trusted-restore-device">Load registry to confirm this device is trusted.</div></div><span class="settings-badge off" id="trusted-restore-device-badge">Trust</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Drive backup</div><div class="settings-row-meta" id="trusted-restore-backup">Check restore readiness to verify latest Drive backup marker.</div></div><span class="settings-badge off" id="trusted-restore-backup-badge">Backup</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Protected keys</div><div class="settings-row-meta" id="trusted-restore-keys">Protected setup keys will stay skipped by default.</div></div><span class="settings-badge off" id="trusted-restore-keys-badge">Keys</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Restore gate</div><div class="settings-row-meta" id="trusted-restore-gate">Restore preview remains manual and locked until readiness is clean.</div></div><span class="settings-badge off" id="trusted-restore-gate-badge">Gate</span></div>
-          </div>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="checkTrustedRestoreReadinessV23()">Check restore readiness</button>
-            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
-            <button class="btn" onclick="openBackupRepairV23()">Open backups</button>
-          </div>
-          <div class="reset-status" id="trusted-restore-status"></div>
-        </div>
       </div>
       <div class="account-subpane" id="account-subpane-signin">
         <div class="settings-section">
@@ -4128,9 +4113,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-26 20:45 ET · OS v2_3 trusted restore readiness';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + trusted restore readiness';
-var APP_CACHE_TOKEN='mmos-20260526-2045-v23-trusted-restore-readiness';
+var APP_BUILD_STAMP='2026-05-26 20:32 ET · OS v2_3 trusted device gate';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation + setup doctor + trusted device gate';
+var APP_CACHE_TOKEN='mmos-20260526-2032-v23-trusted-device-gate';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5183,7 +5168,6 @@ function renderAccountIdentity(){
   if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
   if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
   if(typeof renderDeviceRegistryReadPanelV23==='function')renderDeviceRegistryReadPanelV23();
-  if(typeof renderTrustedRestoreReadinessV23==='function')renderTrustedRestoreReadinessV23();
 }
 
 function getDeviceReadinessSnapshotV23(){
@@ -5859,122 +5843,6 @@ async function registerCurrentDevicePendingV23(button){
       status.className='reset-status err';
       status.textContent=(err&&err.message)||'Device registration failed. Check Apps Script deployment and webhook token.';
     }
-  }
-}
-
-function getTrustedRestoreReadinessSnapshotV23(){
-  var registryState=getDeviceRegistryReadStateV23();
-  var registryRead=renderDeviceRegistryReadPanelV23(registryState);
-  var current=registryRead&&registryRead.current?registryRead.current:null;
-  var trust=current?String(current['Trusted Status']||current.trustedStatus||'Pending'):'Local';
-  var backup=window.__lastBackupArchiveStatusV22||null;
-  var latest=backup&&backup.latest?backup.latest:null;
-  var guard=typeof getStorageGuardrailReportV22==='function'?getStorageGuardrailReportV22():null;
-  var protectedCount=guard&&Array.isArray(guard.protectedKeys)?guard.protectedKeys.length:0;
-  var presentCount=guard&&Array.isArray(guard.present)?guard.present.length:0;
-  return {
-    registryState:registryState,
-    registryRead:registryRead,
-    current:current,
-    trust:trust,
-    trusted:trust==='Trusted',
-    backup:backup,
-    latest:latest,
-    hasLatestBackup:!!(latest&&latest.backupId),
-    guard:guard,
-    protectedCount:protectedCount,
-    presentCount:presentCount
-  };
-}
-
-function getTrustedRestoreReadinessStatusV23(snapshot){
-  snapshot=snapshot||getTrustedRestoreReadinessSnapshotV23();
-  if(!snapshot.current)return {
-    state:'warn',
-    label:'Local',
-    text:'Load registry or register this device first. Restore preview stays locked.'
-  };
-  if(!snapshot.trusted)return {
-    state:'warn',
-    label:snapshot.trust||'Pending',
-    text:'This device must be manually trusted in OS Device Registry before future restore work.'
-  };
-  if(!snapshot.hasLatestBackup)return {
-    state:'warn',
-    label:'Backup',
-    text:'Trusted device found. Check or save a latest Drive backup before future restore preview.'
-  };
-  return {
-    state:'ready',
-    label:'Ready',
-    text:'Ready for a future restore preview. No restore has run from this panel.'
-  };
-}
-
-function renderTrustedRestoreReadinessV23(snapshot){
-  snapshot=snapshot||getTrustedRestoreReadinessSnapshotV23();
-  var status=getTrustedRestoreReadinessStatusV23(snapshot);
-  var deviceEl=document.getElementById('trusted-restore-device');
-  var deviceBadge=document.getElementById('trusted-restore-device-badge');
-  var backupEl=document.getElementById('trusted-restore-backup');
-  var backupBadge=document.getElementById('trusted-restore-backup-badge');
-  var keysEl=document.getElementById('trusted-restore-keys');
-  var keysBadge=document.getElementById('trusted-restore-keys-badge');
-  var gateEl=document.getElementById('trusted-restore-gate');
-  var gateBadge=document.getElementById('trusted-restore-gate-badge');
-  if(deviceEl)deviceEl.textContent=snapshot.current
-    ? 'This device is '+snapshot.trust+' · '+(snapshot.current['Device Label']||'unlabeled')+'.'
-    : 'Load registry or register this device first.';
-  if(deviceBadge){
-    deviceBadge.textContent=snapshot.trust||'Trust';
-    deviceBadge.className=setupDoctorBadgeClassV23(snapshot.trusted?'ready':snapshot.current?'warn':'off');
-  }
-  if(backupEl)backupEl.textContent=snapshot.latest
-    ? 'Latest '+(snapshot.latest.backupId||'backup')+' · Sheet row '+(snapshot.latest.matchedRow||'?')+' · '+Math.round((Number(snapshot.latest.size)||0)/1000)+'KB.'
-    : 'No latest Drive backup marker checked yet.';
-  if(backupBadge){
-    backupBadge.textContent=snapshot.hasLatestBackup?'Drive':'Backup';
-    backupBadge.className=setupDoctorBadgeClassV23(snapshot.hasLatestBackup?'ready':'warn');
-  }
-  if(keysEl)keysEl.textContent=snapshot.guard
-    ? 'Protected setup keys: '+snapshot.protectedCount+' watched · '+snapshot.presentCount+' present · skipped by default.'
-    : 'Protected setup keys will stay skipped by default.';
-  if(keysBadge){
-    keysBadge.textContent=snapshot.guard?'Protected':'Keys';
-    keysBadge.className=setupDoctorBadgeClassV23(snapshot.guard?'ready':'warn');
-  }
-  if(gateEl)gateEl.textContent=status.text;
-  if(gateBadge){
-    gateBadge.textContent=status.label;
-    gateBadge.className=setupDoctorBadgeClassV23(status.state);
-  }
-  return {snapshot:snapshot,status:status};
-}
-
-async function checkTrustedRestoreReadinessV23(){
-  var status=document.getElementById('trusted-restore-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking trusted device, latest Drive backup, and protected key guardrails...';
-  }
-  try{
-    if(typeof loadDeviceRegistryReadPanelV23==='function')await loadDeviceRegistryReadPanelV23();
-    if(typeof refreshBackupArchiveStatusV22==='function')await refreshBackupArchiveStatusV22();
-    var rendered=renderTrustedRestoreReadinessV23();
-    if(status){
-      status.className='reset-status '+(rendered.status.state==='ready'?'ok':'warn');
-      status.textContent=rendered.status.state==='ready'
-        ? 'Trusted restore readiness is clean. No restore has run.'
-        : rendered.status.text;
-    }
-    return rendered;
-  }catch(err){
-    renderTrustedRestoreReadinessV23();
-    if(status){
-      status.className='reset-status err';
-      status.textContent=(err&&err.message)||'Trusted restore readiness check failed. Run Setup Doctor and load registry again.';
-    }
-    return null;
   }
 }
 function initAuth(){
@@ -7314,7 +7182,6 @@ function setAccountSubTab(tab){
     if(typeof renderDeviceTransferV23==='function')renderDeviceTransferV23();
     if(typeof renderCloudProfileBootstrapV23==='function')renderCloudProfileBootstrapV23();
     if(typeof renderDeviceRegistryReadPanelV23==='function')renderDeviceRegistryReadPanelV23();
-    if(typeof renderTrustedRestoreReadinessV23==='function')renderTrustedRestoreReadinessV23();
   }
 }
 
