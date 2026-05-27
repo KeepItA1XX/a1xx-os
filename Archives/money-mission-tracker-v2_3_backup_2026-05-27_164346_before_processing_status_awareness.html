@@ -264,17 +264,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .settings-close:hover{border-color:#3a444e;color:#f0f3f5}
 .settings-pane{display:none}
 .settings-pane.active{display:block}
-.global-processing-status{display:none;align-items:center;gap:7px;background:#090d10;border:0.5px solid #1f2830;border-radius:9px;padding:8px 9px;margin:0 0 10px;font-size:10px;color:#8b949e;line-height:1.35}
-.global-processing-status.show{display:flex}
-.global-processing-status.active{color:#d7dde3;border-color:#26323a}
-.global-processing-status.done{color:#7ec845;border-color:#2a4015;background:#0d1609}
-.global-processing-status.warn{color:#d4a017;border-color:#3a2800;background:#150e00}
-.global-processing-status.err{color:#ff8a70;border-color:#4a1d14;background:#190907}
-.global-processing-dot{width:7px;height:7px;border-radius:50%;background:#2a3036;flex:0 0 auto}
-.global-processing-status.active .global-processing-dot{background:#7ec845;animation:diagnosticsPulseV22 1s ease-in-out infinite}
-.global-processing-status.done .global-processing-dot{background:#7ec845}
-.global-processing-status.warn .global-processing-dot{background:#d4a017}
-.global-processing-status.err .global-processing-dot{background:#ff8a70}
 .settings-subtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#080a0c;border:0.5px solid #20272e;border-radius:9px;padding:3px;margin-bottom:10px}
 .settings-subtab{height:28px;border:0;border-radius:7px;background:transparent;color:#8b949e;font-size:10px;font-weight:800;cursor:pointer;transition:all .15s}
 .settings-subtab:hover{color:#d7dde3}
@@ -328,7 +317,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .diagnostics-busy.active .diagnostics-busy-dot{background:#7ec845;animation:diagnosticsPulseV22 1s ease-in-out infinite}
 .diagnostics-busy.done .diagnostics-busy-dot{background:#7ec845}
 .diagnostics-busy.warn .diagnostics-busy-dot{background:#d4a017}
-.btn.is-busy{cursor:wait;color:#7ec845}
 .diagnostics-action-grid .btn.is-busy{color:#7ec845;cursor:wait}
 @keyframes diagnosticsPulseV22{
   0%,100%{opacity:.35;transform:scale(.82)}
@@ -2270,10 +2258,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
       </div>
       <button class="settings-close" data-ui-dismiss="system-panel" onclick="return closeSystemPanel(event)" title="Close settings">×</button>
     </div>
-    <div class="global-processing-status" id="global-processing-status" aria-live="polite" aria-busy="false">
-      <span class="global-processing-dot"></span>
-      <span id="global-processing-text">Ready.</span>
-    </div>
 
     <div class="settings-pane active" id="settings-pane-account">
       <div class="settings-subtabs">
@@ -2315,10 +2299,10 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">New device path</div><div class="settings-row-meta" id="device-readiness-next">Setup first, register/trust the device, preview restore, then confirm restore only after the Drive backup is verified.</div></div><span class="settings-badge off" id="device-readiness-next-badge">Next</span></div>
           </div>
           <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Running device check',function(){return runDeviceReadinessCheckV23();},this,'Device check complete.')">Run device check</button>
+            <button class="btn primary" onclick="runDeviceReadinessCheckV23()">Run device check</button>
             <button class="btn" onclick="openSetupRepairV23()">Open setup</button>
             <button class="btn" onclick="openBackupRepairV23()">Open backups</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Running Setup Doctor',function(){setSettingsTab('health');setHealthSubTab('diagnostics');return runSetupDoctorCheckV23();},this,'Setup Doctor complete.')">Run setup doctor</button>
+            <button class="btn" onclick="setSettingsTab('health');setHealthSubTab('diagnostics');runSetupDoctorCheckV23()">Run setup doctor</button>
           </div>
         </div>
         <div class="settings-section" data-dev-detail="true">
@@ -2333,8 +2317,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <textarea id="device-transfer-note" rows="9" readonly placeholder="No secrets are exported. Build the checklist when this device is ready."></textarea>
           </div>
           <div class="btn-row">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Building checklist',function(){return buildDeviceTransferChecklistV23();},this,'Checklist built.')">Build checklist</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Checking transfer anchor',function(){return refreshDeviceTransferAnchorV23();},this,'Transfer anchor checked.')">Check anchor</button>
+            <button class="btn primary" onclick="buildDeviceTransferChecklistV23()">Build checklist</button>
+            <button class="btn" onclick="refreshDeviceTransferAnchorV23()">Check anchor</button>
             <button class="btn" onclick="copyDeviceTransferChecklistV23()">Copy checklist</button>
             <button class="btn" onclick="openSetupRepairV23()">Open setup</button>
           </div>
@@ -2352,9 +2336,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <textarea id="cloud-profile-bootstrap-note" rows="10" readonly placeholder="Build the future cloud profile plan after this device is anchored."></textarea>
           </div>
           <div class="btn-row">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Building bootstrap plan',function(){return buildCloudProfileBootstrapPlanV23();},this,'Bootstrap plan built.')">Build bootstrap plan</button>
+            <button class="btn primary" onclick="buildCloudProfileBootstrapPlanV23()">Build bootstrap plan</button>
             <button class="btn" onclick="copyCloudProfileBootstrapPlanV23()">Copy plan</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Checking profile anchor',function(){return refreshCloudProfileBootstrapAnchorV23();},this,'Profile anchor checked.')">Check anchor</button>
+            <button class="btn" onclick="refreshCloudProfileBootstrapAnchorV23()">Check anchor</button>
           </div>
           <div class="reset-status" id="cloud-profile-bootstrap-status"></div>
         </div>
@@ -2368,8 +2352,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Next auth upgrade</div><div class="settings-row-meta" id="cloud-profile-next-auth">Full login-anywhere stays blocked until backend auth is approved.</div></div><span class="settings-badge warn" id="cloud-profile-next-auth-badge">Later</span></div>
           </div>
           <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Checking cloud profile',function(){return refreshCloudProfileReadinessV23();},this,'Cloud profile checked.')">Check cloud profile</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Loading registry',function(){return loadDeviceRegistryReadPanelV23();},this,'Registry loaded.')">Load registry</button>
+            <button class="btn primary" onclick="refreshCloudProfileReadinessV23()">Check cloud profile</button>
+            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
             <button class="btn" onclick="setAccountSubTab('signin')">Open sign-in</button>
           </div>
           <div class="reset-status" id="cloud-profile-readiness-status"></div>
@@ -2386,10 +2370,10 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <textarea id="setup-pointer-preview" rows="7" readonly placeholder="Preview the safe setup pointer map before saving."></textarea>
           </div>
           <div class="btn-row">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Previewing safe pointers',function(){return previewSetupPointersV23();},this,'Pointer preview ready.')">Preview safe pointers</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Refreshing pointer sources',function(){return refreshSetupPointerSourcesV23();},this,'Pointer sources refreshed.')">Refresh sources</button>
+            <button class="btn primary" onclick="previewSetupPointersV23()">Preview safe pointers</button>
+            <button class="btn" onclick="refreshSetupPointerSourcesV23()">Refresh sources</button>
             <button class="btn" id="setup-pointer-save-btn" onclick="saveSetupPointersV23(this)">Save safe pointers</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Loading registry',function(){return loadDeviceRegistryReadPanelV23();},this,'Registry loaded.')">Load registry</button>
+            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
           </div>
           <div class="reset-status" id="setup-pointer-status"></div>
         </div>
@@ -2403,9 +2387,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Setup pointers</div><div class="settings-row-meta" id="device-registry-pointers-read">Load registry to confirm the setup pointer index exists.</div></div><span class="settings-badge off" id="device-registry-pointers-badge">Index</span></div>
           </div>
           <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Loading registry',function(){return loadDeviceRegistryReadPanelV23();},this,'Registry loaded.')">Load registry</button>
+            <button class="btn primary" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
             <button class="btn" id="device-registry-register-btn" onclick="registerCurrentDevicePendingV23(this)">Register this device</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Checking profile anchor',function(){return refreshCloudProfileBootstrapAnchorV23();},this,'Profile anchor checked.')">Check anchor</button>
+            <button class="btn" onclick="refreshCloudProfileBootstrapAnchorV23()">Check anchor</button>
             <button class="btn" onclick="openSetupRepairV23()">Open setup</button>
           </div>
           <div class="reset-status" id="device-registry-status"></div>
@@ -2419,8 +2403,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Restore gate</div><div class="settings-row-meta" id="trusted-restore-gate">Restore preview remains manual and locked until readiness is clean.</div></div><span class="settings-badge off" id="trusted-restore-gate-badge">Gate</span></div>
           </div>
           <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Checking restore readiness',function(){return checkTrustedRestoreReadinessV23();},this,'Restore readiness checked.')">Check restore readiness</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Loading registry',function(){return loadDeviceRegistryReadPanelV23();},this,'Registry loaded.')">Load registry</button>
+            <button class="btn primary" onclick="checkTrustedRestoreReadinessV23()">Check restore readiness</button>
+            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
             <button class="btn" onclick="openBackupRepairV23()">Open backups</button>
           </div>
           <div class="reset-status" id="trusted-restore-status"></div>
@@ -2899,7 +2883,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <button class="btn primary" onclick="withDiagnosticsActionBusyV22('Running quick system check',function(){return runSimpleDiagnosticsCheckV23();},this)">Run check</button>
             <button class="btn" onclick="withDiagnosticsActionBusyV22('Running Live QA',function(){return runHealthLiveQACheckV22();},this)">Live QA</button>
             <button class="btn" onclick="withDiagnosticsActionBusyV22('Saving diagnostic backup',function(){return checkAutoBackup(true);},this)">Save backup</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Loading registry',function(){return loadDeviceRegistryReadPanelV23();},this,'Registry loaded.')">Registry</button>
+            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Registry</button>
             <button class="btn" onclick="openSetupRepairV23()">Setup</button>
             <button class="btn" onclick="toggleDeveloperModeV23(false)">Hide dev</button>
           </div>
@@ -4334,9 +4318,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-27 16:43 ET · OS v2_3 processing status awareness';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation stable + processing status awareness';
-var APP_CACHE_TOKEN='mmos-20260527-1643-v23-processing-status-awareness';
+var APP_BUILD_STAMP='2026-05-27 16:16 ET · OS v2_3 developer mode UI tightening';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation stable + developer control room polish';
+var APP_CACHE_TOKEN='mmos-20260527-1616-v23-dev-mode-ui-tighten';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6180,17 +6164,13 @@ function resetSetupPointerSaveGateV23(button){
 async function saveSetupPointersV23(button){
   var status=document.getElementById('setup-pointer-status');
   var appUrl=(localStorage.getItem(SHEETS_KEY)||'').trim();
-  var globalRunId=null;
   if(!appUrl){
     if(status){
       status.className='reset-status err';
       status.textContent='Add Apps Script URL before saving setup pointers.';
     }
-    globalRunId=startGlobalProcessingV23('Checking setup pointers');
-    finishGlobalProcessingV23(globalRunId,'Review needed: Apps Script URL missing.','warn');
     return;
   }
-  globalRunId=startGlobalProcessingV23('Checking setup pointers');
   if(typeof runSetupDoctorCheckV23==='function')await runSetupDoctorCheckV23();
   if(typeof refreshBackupArchiveStatusV22==='function')await refreshBackupArchiveStatusV22();
   var summary=previewSetupPointersV23();
@@ -6199,7 +6179,6 @@ async function saveSetupPointersV23(button){
       status.className='reset-status warn';
       status.textContent='Setup pointers not saved. Missing source values must be clean first.';
     }
-    finishGlobalProcessingV23(globalRunId,'Review needed: pointer sources missing.','warn');
     return;
   }
   var now=Date.now();
@@ -6213,7 +6192,6 @@ async function saveSetupPointersV23(button){
       status.className='reset-status warn';
       status.textContent='Ready to save '+summary.readyExpected.length+' safe pointers. No tokens will be sent. Click Confirm save pointers within 12 seconds.';
     }
-    finishGlobalProcessingV23(globalRunId,'Ready to confirm safe pointers.','warn');
     setTimeout(function(){
       if((window.__setupPointerSaveArmedUntilV23||0)<=Date.now())resetSetupPointerSaveGateV23(button);
     },12200);
@@ -6221,7 +6199,6 @@ async function saveSetupPointersV23(button){
   }
   try{
     if(button)button.disabled=true;
-    setGlobalProcessingStatusV23('Saving safe pointers...','active');
     if(status){
       status.className='reset-status';
       status.textContent='Saving safe setup pointers to the backend index...';
@@ -6243,14 +6220,12 @@ async function saveSetupPointersV23(button){
         ? 'Save request sent. Load registry again if some pointers are still catching up.'
         : 'Safe setup pointers saved. No secret tokens were stored.';
     }
-    finishGlobalProcessingV23(globalRunId,next.missingRows.length?'Review needed: pointers may still be catching up.':'Safe pointers saved.',next.missingRows.length?'warn':'done');
   }catch(err){
     resetSetupPointerSaveGateV23(button);
     if(status){
       status.className='reset-status err';
       status.textContent=(err&&err.message)||'Setup pointer save failed. Check Apps Script deployment and webhook token.';
     }
-    finishGlobalProcessingV23(globalRunId,'Review needed: setup pointer save failed.','warn');
   }
 }
 
@@ -7074,96 +7049,6 @@ function renderHealthCommandReadV22(target){
 }
 var diagnosticsActionBusyTimerV22=null;
 var diagnosticsActionBusyRunV22=0;
-var globalProcessingRunV23=0;
-var globalProcessingTimersV23={slow:null,long:null,clear:null};
-function clearGlobalProcessingTimersV23(){
-  Object.keys(globalProcessingTimersV23).forEach(function(key){
-    if(globalProcessingTimersV23[key]){
-      clearTimeout(globalProcessingTimersV23[key]);
-      globalProcessingTimersV23[key]=null;
-    }
-  });
-}
-function setGlobalProcessingStatusV23(label,state,options){
-  options=options||{};
-  var box=document.getElementById('global-processing-status');
-  var text=document.getElementById('global-processing-text');
-  if(!box||!text)return;
-  if(!label){
-    box.className='global-processing-status';
-    box.setAttribute('aria-busy','false');
-    text.textContent='Ready.';
-    return;
-  }
-  box.className='global-processing-status show '+(state||'active');
-  box.setAttribute('aria-busy',state==='active'?'true':'false');
-  text.textContent=label;
-  if(options.title)box.setAttribute('title',options.title);
-  else box.removeAttribute('title');
-}
-function startGlobalProcessingV23(label){
-  var runId=++globalProcessingRunV23;
-  clearGlobalProcessingTimersV23();
-  setGlobalProcessingStatusV23((label||'Working')+'...','active');
-  globalProcessingTimersV23.slow=setTimeout(function(){
-    if(runId!==globalProcessingRunV23)return;
-    setGlobalProcessingStatusV23('Still working...','active');
-  },6000);
-  globalProcessingTimersV23.long=setTimeout(function(){
-    if(runId!==globalProcessingRunV23)return;
-    setGlobalProcessingStatusV23('Taking longer than usual. Keep this tab open.','active');
-  },18000);
-  return runId;
-}
-function finishGlobalProcessingV23(runId,label,state){
-  if(runId!==globalProcessingRunV23)return;
-  clearGlobalProcessingTimersV23();
-  setGlobalProcessingStatusV23(label||'Done.',state||'done');
-  var clearDelay=(state==='done'||!state)?3400:7200;
-  globalProcessingTimersV23.clear=setTimeout(function(){
-    if(runId!==globalProcessingRunV23)return;
-    setGlobalProcessingStatusV23('', '');
-  },clearDelay);
-}
-function makeGlobalDoneLabelV23(label){
-  var clean=String(label||'Action').replace(/\.\.\.$/,'').replace(/^Running\s+/i,'').replace(/^Saving\s+/i,'').replace(/^Checking\s+/i,'').replace(/^Loading\s+/i,'');
-  if(/backup/i.test(label||''))return 'Backup verified.';
-  if(/Live QA/i.test(label||''))return 'Live QA complete.';
-  if(/registry/i.test(label||''))return 'Registry loaded.';
-  if(/Setup Doctor/i.test(label||''))return 'Setup Doctor complete.';
-  if(/closeout/i.test(label||''))return 'Closeout check complete.';
-  if(/restore/i.test(label||''))return 'Restore check complete.';
-  return clean+' complete.';
-}
-async function withGlobalProcessingActionV23(label,fn,button,doneLabel){
-  var runId=startGlobalProcessingV23(label||'Working');
-  var original='';
-  if(button){
-    original=button.textContent;
-    button.disabled=true;
-    button.classList.add('is-busy');
-    button.setAttribute('aria-busy','true');
-    button.textContent='Working...';
-  }
-  try{
-    await waitForDiagnosticsActionPaintV22();
-    var result=await Promise.resolve().then(fn);
-    finishGlobalProcessingV23(runId,doneLabel||makeGlobalDoneLabelV23(label),'done');
-    return result;
-  }catch(e){
-    var msg=e&&e.message?e.message:String(e);
-    finishGlobalProcessingV23(runId,'Review needed: '+msg.slice(0,110),'warn');
-    try{console.warn('Global processing action failed:',e);}catch(_){}
-    return null;
-  }finally{
-    if(button){
-      button.disabled=false;
-      button.classList.remove('is-busy');
-      button.removeAttribute('aria-busy');
-      button.textContent=original;
-    }
-  }
-}
 function setDiagnosticsActionBusyV22(label,state,button){
   var runId=++diagnosticsActionBusyRunV22;
   var box=document.getElementById('diagnostics-action-busy');
@@ -7213,17 +7098,14 @@ function waitForDiagnosticsActionPaintV22(){
 }
 async function withDiagnosticsActionBusyV22(label,fn,button){
   var runId=setDiagnosticsActionBusyV22(label+'...', 'active', button);
-  var globalRunId=startGlobalProcessingV23(label||'Working');
   try{
     await waitForDiagnosticsActionPaintV22();
     var result=await Promise.resolve().then(fn);
     finishDiagnosticsActionBusyV22(runId,(label||'Action')+' complete.','done',button);
-    finishGlobalProcessingV23(globalRunId,makeGlobalDoneLabelV23(label),'done');
     return result;
   }catch(e){
     var msg=e&&e.message?e.message:String(e);
     finishDiagnosticsActionBusyV22(runId,'Review: '+msg.slice(0,120),'warn',button);
-    finishGlobalProcessingV23(globalRunId,'Review needed: '+msg.slice(0,110),'warn');
     try{console.warn('Diagnostics action failed:',e);}catch(_){}
     return null;
   }
@@ -8654,12 +8536,10 @@ async function runBackupPostProbeV22(appUrl,targetMarker){
 
 async function sendBackup(silent){
   var appUrl=localStorage.getItem(SHEETS_KEY);
-  var globalBackupRunId=!silent?startGlobalProcessingV23('Checking backup setup'):null;
   if(!appUrl){
     if(!silent){
       openBackupSettings();
       setBackupStatus('err','Backup needs setup','Add your Apps Script URL in Sheets / Notion setup first.','Setup');
-      finishGlobalProcessingV23(globalBackupRunId,'Review needed: backup setup missing.','warn');
     }
     return {ok:false,error:'missing_url'};
   }
@@ -8668,7 +8548,6 @@ async function sendBackup(silent){
     return {ok:false,error:'setup_incomplete_silent_backup_skipped'};
   }
   if(shouldWarnBeforePartialBackupV23(false)){
-    if(!silent)finishGlobalProcessingV23(globalBackupRunId,'Review needed: setup is incomplete.','warn');
     return {ok:false,error:'setup_incomplete_warning'};
   }
   var backupBuild=buildBackupPayloadV22();
@@ -8684,7 +8563,6 @@ async function sendBackup(silent){
     var largest=payloadAudit.top&&payloadAudit.top.length?(' Largest: '+payloadAudit.top[0].key+' · '+payloadAudit.top[0].kb+'KB.'):'';
     var skipped=backupBuild.skipped&&backupBuild.skipped.length?(' Skipped '+backupBuild.skipped.length+' transient keys.'):'';
     setBackupStatus('','Saving backup...','Sending '+keyCount+' lean keys ('+size+'KB) to Drive. Google Sheets will only keep a small index row.'+largest+skipped+' Keep this window open for a moment.','Saving');
-    setGlobalProcessingStatusV23('Saving Drive backup...','active');
     setBackupBusy(true);
   }
   try{
@@ -8699,12 +8577,10 @@ async function sendBackup(silent){
     if(!verified.ok)throw new Error(verified.error||'Backup was sent, but the newest Drive backup index could not be verified.');
     var storageLabel=verified.backup&&verified.backup.driveFileId?'Drive file + Sheet index':'backup index';
     if(!silent)setBackupStatus('ok','Backup verified','Saved '+keyCount+' keys to '+storageLabel+' and verified backup marker '+backupMarker.id+'.','Done');
-    if(!silent)finishGlobalProcessingV23(globalBackupRunId,'Backup verified.','done');
     if(!silent)logDevChange('Claude (A1XX OS)','data → Drive backup','Manual backup: '+keyCount+' keys, '+Math.round(json.length/1000)+'KB');
     return {ok:true,keyCount:keyCount,size:json.length,verified:true};
   }catch(e){
     if(!silent)setBackupStatus('err','Backup not verified',e.message||'The backup request did not verify. Check Apps Script deployment, webhook token, and target Sheet.','Review');
-    if(!silent)finishGlobalProcessingV23(globalBackupRunId,'Review needed: backup not verified.','warn');
     return {ok:false,error:e.message};
   }finally{
     if(!silent)setBackupBusy(false);
@@ -8982,10 +8858,8 @@ function renderCloseLog(){
 async function restoreBackup(){
   var appUrl=localStorage.getItem(SHEETS_KEY);
   openBackupSettings();
-  var globalRestoreRunId=startGlobalProcessingV23('Checking restore');
   if(!appUrl){
     setBackupStatus('err','Restore needs setup','Add your Apps Script URL in Sheets / Notion setup first.','Setup');
-    finishGlobalProcessingV23(globalRestoreRunId,'Review needed: restore setup missing.','warn');
     return;
   }
   var now=Date.now();
@@ -8995,14 +8869,12 @@ async function restoreBackup(){
   if(!preview||now>armedUntil){
     setBackupBusy(true);
     setBackupStatus('restore','Preparing restore preview','Reading the latest Drive backup and checking protected setup keys.','Checking');
-    setGlobalProcessingStatusV23('Preparing restore preview...','active');
     try{
       var sep=appUrl.indexOf('?')>=0?'&':'?';
       var res=await fetch(appUrl+sep+'action=get_backup&_='+Date.now(),{method:'GET',redirect:'follow'});
       var data=await res.json();
       if(!data.backup||!data.backup.payload){
         setBackupStatus('warn','No backup found','No saved Drive backup was found yet. Save a backup first, then restore can pull from it.','Missing');
-        finishGlobalProcessingV23(globalRestoreRunId,'Review needed: no backup found.','warn');
         return;
       }
       var payload=JSON.parse(data.backup.payload);
@@ -9016,14 +8888,12 @@ async function restoreBackup(){
       var savedAt=preview.savedAt?new Date(preview.savedAt).toLocaleString():'the latest backup';
       var protectedCopy=preview.protectedSkipped.length?(' Protected local setup kept on this device: '+formatProtectedRestoreKeysV23(preview.protectedSkipped)+'.'):' No protected setup keys found in this backup.';
       setBackupStatus('restore','Restore preview ready','Will restore '+preview.restoreKeys.length+' of '+preview.totalKeys+' keys from '+savedAt+'.'+protectedCopy+' Confirm only if this is the backup you expected.','Preview');
-      finishGlobalProcessingV23(globalRestoreRunId,'Restore preview ready. Confirm within 12 seconds.','warn');
       setTimeout(function(){
         if((window.__restoreBackupArmedUntil||0)<=Date.now())expireRestorePreviewV22();
       },12200);
     }catch(e){
       resetRestoreArm();
       setBackupStatus('err','Restore preview failed',e.message||'The restore preview did not complete. Check your Apps Script URL and try again.','Error');
-      finishGlobalProcessingV23(globalRestoreRunId,'Review needed: restore preview failed.','warn');
     }finally{
       setBackupBusy(false);
     }
@@ -9031,19 +8901,16 @@ async function restoreBackup(){
   }
   setBackupBusy(true);
   setBackupStatus('restore','Restoring backup...','Restoring approved keys only. Protected setup keys will stay unchanged.','Restoring');
-  setGlobalProcessingStatusV23('Restoring approved keys...','active');
   try{
     preview.restoreKeys.forEach(function(k){localStorage.setItem(k,preview.payload[k]);});
     var savedAt2=preview.savedAt?new Date(preview.savedAt).toLocaleString():'the latest backup';
     var skipped=preview.protectedSkipped.length?(' Protected local setup preserved: '+formatProtectedRestoreKeysV23(preview.protectedSkipped)+'.'):'';
     resetRestoreArm();
     setBackupStatus('ok','Backup restored','Restored '+preview.restoreKeys.length+' keys from '+savedAt2+'.'+skipped+' Reloading the app now...','Done');
-    finishGlobalProcessingV23(globalRestoreRunId,'Backup restored. Reloading app...','done');
     setTimeout(function(){location.reload();},900);
   }catch(e){
     resetRestoreArm();
     setBackupStatus('err','Restore failed',e.message||'The restore request did not complete. Check your Apps Script URL and try again.','Error');
-    finishGlobalProcessingV23(globalRestoreRunId,'Review needed: restore failed.','warn');
   }finally{
     setBackupBusy(false);
   }
