@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 18:11 ET · OS v2_4 language mixed-prompt polish';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 language understanding + mixed-prompt polish';
-var APP_CACHE_TOKEN='mmos-20260527-1811-v24-language-mixed-prompt-polish';
+var APP_BUILD_STAMP='2026-05-27 18:04 ET · OS v2_4 language understanding expansion';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 language understanding + time foundation';
+var APP_CACHE_TOKEN='mmos-20260527-1804-v24-language-understanding-expansion';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26307,31 +26307,13 @@ function getMissionBrainLanguageIntentV24(profile){
 
 function getMissionBrainMeaningReadV24(profile,route,ctx){
   var q=profile&&profile.q||'';
-  var lane=getMissionBrainPlainLaneLabelV24(route);
-  if(/\b(what should i do|next move|best move|move right now|today)\b/.test(q))return 'You want the next useful move, not a full dashboard read.';
-  if(/\b(why|reason|suggesting)\b/.test(q))return 'You want the reason behind the recommendation, not another task.';
-  if(/\b(time|minutes|how long|window)\b/.test(q))return 'You want what fits the time you actually have.';
-  if(/\b(broken|safe|trust|current|data|source|sync)\b/.test(q))return 'You want to know whether the system is trustworthy before you act.';
-  if(/\b(reply|say|dm|text|follow up|follow-up)\b/.test(q))return 'You want usable words you can send, not a strategy lecture.';
-  return 'You want a '+lane+' read. I will answer the actual ask first, then keep the explanation short.';
-}
-
-function getMissionBrainPlainLaneLabelV24(route){
-  var map={
-    sales:'sales',
-    leads:'pipeline',
-    now:'current-move',
-    report:'money',
-    money:'money',
-    sync:'system',
-    diagnostic:'system',
-    calendar:'calendar',
-    content:'content',
-    production:'production',
-    dpc:'DPC',
-    memory:'memory'
-  };
-  return map[route]||'current';
+  var lane=route?getMissionRouteLabelV2(route):'the current lane';
+  if(/\b(what should i do|next move|best move|move right now|today)\b/.test(q))return 'I hear you asking for the next useful move, not a full dashboard read.';
+  if(/\b(why|reason|suggesting)\b/.test(q))return 'I hear you asking for the reason behind the recommendation, not another task.';
+  if(/\b(time|minutes|how long|window)\b/.test(q))return 'I hear you asking what fits the time you actually have.';
+  if(/\b(broken|safe|trust|current|data|source|sync)\b/.test(q))return 'I hear you asking whether the system is trustworthy before you act.';
+  if(/\b(reply|say|dm|text|follow up|follow-up)\b/.test(q))return 'I hear you asking for usable words you can send, not a strategy lecture.';
+  return 'I hear this as a '+lane+' question. I will answer the actual ask first, then keep the explanation short.';
 }
 
 function getMissionBrainLanguageUnderstandingAnswerV24(ctx,question,route,profile){
@@ -26446,13 +26428,12 @@ function getMissionBrainWhyMoveAnswerV24(ctx,question,route,brainState){
 function getMissionBrainFoundationResponseV24(ctx,question,route,brainState,turn){
   var profile=getMissionBrainLanguageProfileV24(question,ctx,route,brainState);
   if(profile.fresh&&typeof getMissionFreshContextOverrideAnswerV22==='function')return getMissionFreshContextOverrideAnswerV22(question);
-  var timeAnswer=getMissionBrainTimeFitAnswerV24(profile,ctx,route);
-  if(profile.misunderstanding&&timeAnswer)return 'Got it. I read that wrong.<br><br>'+timeAnswer;
   var languageAnswer=getMissionBrainLanguageUnderstandingAnswerV24(ctx,question,route,profile);
   if(languageAnswer)return languageAnswer;
   if(profile.styleCorrection&&profile.direct&&!/\bwhy\b/.test(profile.q)){
     return 'Got it. Shorter and more direct from here.<br><br>Ask it again, and I will answer with the move first.';
   }
+  var timeAnswer=getMissionBrainTimeFitAnswerV24(profile,ctx,route);
   if(timeAnswer)return timeAnswer;
   if(profile.why)return getMissionBrainWhyMoveAnswerV24(ctx,question,route,brainState);
   if(profile.broken&&typeof getMissionBackupSystemAnswerV22==='function')return getMissionBackupSystemAnswerV22(ctx,question);
@@ -30871,7 +30852,7 @@ function getMissionCommandResponse(kind,ctx,question,brainState){
 	    return applyMissionPresenceLayer(shaped,route,cleanQuestion||question||'',opts);
 		  }
 		  var brainFoundationAnswerV24=typeof getMissionBrainFoundationResponseV24==='function'?getMissionBrainFoundationResponseV24(ctx,cleanQuestion||question||'',route,brainState,turnV2):'';
-		  if(brainFoundationAnswerV24)return finishMissionAnswer(brainFoundationAnswerV24,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false,firstSentenceRule:false,responseFrameGuard:false,b1ProseGuard:false,stylePreference:false});
+		  if(brainFoundationAnswerV24)return finishMissionAnswer(brainFoundationAnswerV24,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false,stylePreference:false});
 		  var routeCloseoutAnswer=typeof getMissionContextRouteCloseoutAnswerV22==='function'?getMissionContextRouteCloseoutAnswerV22(ctx,cleanQuestion||question||'',route,brainState,turnV2):'';
 		  if(routeCloseoutAnswer)return finishMissionAnswer(routeCloseoutAnswer,{sessionArc:false,closer:false,presence:false,explainDecision:false,actionLayer:false,unsaidQuestion:false,constraintGuidance:false,identicalResponseGuard:false,responseBeforeReason:false,stylePreference:directRouteOverride==='sync'?false:undefined});
 		  var bookedFollowupAnswer=getMissionFreshBookedFollowupAnswerV12(cleanQuestion||question||'');
@@ -31684,8 +31665,7 @@ function runMissionCommandSelfCheck(){
 		    {q:'you misunderstood me',route:['sync','now',''],mustAny:['read that wrong','actual ask','clean version']},
 		    {q:'say that normal',route:['memory','now',''],mustAny:['plain version','lead with the answer']},
 		    {q:'what do you think i mean',route:['memory','now',''],mustAny:['meaning read','actual ask','answer']},
-		    {q:'answer like you understand what i mean',route:['memory','now',''],mustAny:['i hear you','reflect the ask','give the move']},
-		    {q:'no not that, i mean what should i do with 20 minutes before my call',route:['now','calendar','sync'],mustAny:['read that wrong','20-minute fit','log the result']}
+		    {q:'answer like you understand what i mean',route:['memory','now',''],mustAny:['i hear you','reflect the ask','give the move']}
 		  ];
   checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
