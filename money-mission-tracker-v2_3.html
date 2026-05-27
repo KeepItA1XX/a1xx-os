@@ -255,6 +255,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .settings-tab{width:100%;height:34px;border:0.5px solid transparent;border-radius:7px;background:transparent;color:#7b838b;font-size:11px;font-weight:700;text-align:left;padding:0 10px;cursor:pointer}
 .settings-tab:hover{border-color:#222b33;color:#d7dde3;background:#101418}
 .settings-tab.active{border-color:#2a4015;background:#0f1a0a;color:#7ec845}
+.settings-tab.dev-mode-tab{display:none}
+.system-panel.dev-mode-enabled .settings-tab.dev-mode-tab{display:block}
+.system-panel:not(.dev-mode-enabled) [data-dev-detail="true"]{display:none}
 .settings-main{padding:16px 16px 18px;overflow:auto}
 .settings-close{width:28px;height:28px;border-radius:7px;border:0.5px solid #252b31;background:#0f1317;color:#8b949e;cursor:pointer;font-size:16px;line-height:1}
 .settings-close:hover{border-color:#3a444e;color:#f0f3f5}
@@ -2226,6 +2229,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
     <button class="settings-tab" data-settings-tab="connections" onclick="setSettingsTab('connections')">Connections</button>
     <button class="settings-tab" data-settings-tab="ai" onclick="setSettingsTab('ai')">AI Controls</button>
     <button class="settings-tab" data-settings-tab="health" onclick="setSettingsTab('health')">Health</button>
+    <button class="settings-tab dev-mode-tab" id="settings-tab-dev" data-settings-tab="dev" onclick="setSettingsTab('dev')">Developer</button>
   </div>
   <div class="settings-main">
     <div class="system-head">
@@ -2720,7 +2724,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <div class="settings-row"><div><div class="settings-row-name">Source of truth</div><div class="settings-row-meta">Activity Log remains the source of truth for backend events.</div></div><span class="settings-badge off">Log</span></div>
             </div>
           </details>
-          <details class="diagnostics-detail">
+          <details class="diagnostics-detail" data-dev-detail="true">
             <summary><span>Foundation details</span><span class="settings-badge off">Details</span></summary>
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Stub inventory</div><div class="settings-row-meta" id="settings-foundation-details">No module check run yet.</div></div><span class="settings-badge off">Stubs</span></div>
@@ -2780,7 +2784,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               </div>
             </div>
           </details>
-          <details class="diagnostics-detail">
+          <details class="diagnostics-detail" data-dev-detail="true">
             <summary><span>Directive gates</span><span class="settings-badge off">Details</span></summary>
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Integration & Automation</div><div class="settings-row-meta" id="settings-directive-integrations">Blocked until approval gates are cleared.</div></div><span class="settings-badge off" id="settings-directive-integrations-badge">Blocked</span></div>
@@ -2829,8 +2833,37 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Mission Command build</div><div class="settings-row-meta" id="settings-build-stamp">Loading build stamp...</div></div><span class="settings-badge" id="settings-build-badge">Check</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Cache check token</div><div class="settings-row-meta" id="settings-cache-token">Loading cache token...</div></div><span class="settings-badge off">Local</span></div>
             <div class="settings-row is-primary"><div><div class="settings-row-name">Foundation checkpoint</div><div class="settings-row-meta" id="settings-foundation-stable-checkpoint">v2_3 foundation is closed, backed up, and verified on a second device.</div></div><span class="settings-badge" id="settings-foundation-stable-badge">Stable</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Developer mode</div><div class="settings-row-meta" id="settings-dev-mode-summary">Hidden by default. Toggle it only when working on backend, registry, or diagnostic structure.</div></div><span class="settings-badge off" id="settings-dev-mode-badge">Hidden</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Sheets checkpoint</div><div class="settings-row-meta">Sheets v1.1 verified end to end. Apps Script v1.9 is the backend baseline for OS v2_3.</div></div><span class="settings-badge">Verified</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Apps Script</div><div class="settings-row-meta">Redeploy after backend changes. HTML-only changes need a hard refresh.</div></div><span class="settings-badge off">Manual</span></div>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn" onclick="toggleDeveloperModeV23()">Toggle developer mode</button>
+            <button class="btn" onclick="openDeveloperModeV23()">Open developer panel</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-pane" id="settings-pane-dev">
+        <div class="settings-section">
+          <div class="settings-section-title">Developer Mode</div>
+          <div class="settings-list">
+            <div class="settings-row is-primary"><div><div class="settings-row-name">Developer access</div><div class="settings-row-meta" id="dev-mode-state">Developer Mode is local-only and hidden from daily use.</div></div><span class="settings-badge off" id="dev-mode-state-badge">Hidden</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Checkpoint</div><div class="settings-row-meta">v2_3 foundation stable · second-device restore verified · Drive backup active.</div></div><span class="settings-badge">Stable</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta">Developer Mode does not change sync, backup, restore, auth, or Mission Command behavior.</div></div><span class="settings-badge">Read</span></div>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn primary" onclick="setSettingsTab('health');setHealthSubTab('diagnostics')">Open diagnostics</button>
+            <button class="btn" onclick="loadDeviceRegistryReadPanelV23()">Load registry</button>
+            <button class="btn" onclick="setSettingsTab('health');setHealthSubTab('backups')">Open backups</button>
+            <button class="btn" onclick="toggleDeveloperModeV23(false)">Hide developer mode</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Backend Surfaces</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Device Registry</div><div class="settings-row-meta">Profile index, trusted devices, and setup pointer index live under Account > Profile.</div></div><span class="settings-badge off">Registry</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Directive Gates</div><div class="settings-row-meta">Integration and Notion Deep gates stay blocked until explicit approval Decision Log.</div></div><span class="settings-badge warn">Gated</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Foundation Modules</div><div class="settings-row-meta">30 reserved module stubs are visible in Diagnostics only while Developer Mode is on.</div></div><span class="settings-badge off">Stubs</span></div>
           </div>
         </div>
       </div>
@@ -4181,12 +4214,13 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.3 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_3.html';
-var APP_BUILD_STAMP='2026-05-27 12:20 ET · OS v2_3 foundation stable checkpoint';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation stable + second-device restore verified';
-var APP_CACHE_TOKEN='mmos-20260527-1220-v23-foundation-stable';
+var APP_BUILD_STAMP='2026-05-27 12:37 ET · OS v2_3 developer mode panel';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_3 foundation stable + developer mode panel';
+var APP_CACHE_TOKEN='mmos-20260527-1237-v23-dev-mode-panel';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
+var DEV_MODE_KEY_V23='a1xx_dev_mode_v23';
 var BRIDGE_TIMEOUT_FAST_V22=12000;
 var BRIDGE_TIMEOUT_STANDARD_V22=22000;
 var BRIDGE_TIMEOUT_NOTION_V22=26000;
@@ -7723,7 +7757,7 @@ function toggleSystemPanel(e){
   if(open&&typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('system-panel-open',{system:true});
   p.classList.toggle('open',open);
   if(b)b.classList.toggle('open',open);
-  if(open){setSettingsTab(window.__settingsTab||'account');renderSystemHealth();}
+  if(open){renderDeveloperModeV23();setSettingsTab(window.__settingsTab||'account');renderSystemHealth();}
 }
 
 function closeSystemPanel(e){
@@ -7891,13 +7925,63 @@ function wireDismissibleUiStabilityV22(){
   });
 }
 
+function isDeveloperModeV23(){
+  try{return localStorage.getItem(DEV_MODE_KEY_V23)==='1';}
+  catch(e){return false;}
+}
+
+function renderDeveloperModeV23(){
+  var enabled=isDeveloperModeV23();
+  var panel=document.getElementById('system-panel');
+  if(panel)panel.classList.toggle('dev-mode-enabled',enabled);
+  var summary=document.getElementById('settings-dev-mode-summary');
+  var badge=document.getElementById('settings-dev-mode-badge');
+  var state=document.getElementById('dev-mode-state');
+  var stateBadge=document.getElementById('dev-mode-state-badge');
+  if(summary)summary.textContent=enabled?'Developer tab visible. Backend surfaces are available in this browser.':'Hidden by default. Press Command/Ctrl + Shift + D or use this button to reveal it.';
+  if(badge){badge.textContent=enabled?'Visible':'Hidden';badge.className=enabled?'settings-badge warn':'settings-badge off';}
+  if(state)state.textContent=enabled?'Developer Mode is visible on this browser. Use it for backend, registry, and diagnostic structure only.':'Developer Mode is local-only and hidden from daily use.';
+  if(stateBadge){stateBadge.textContent=enabled?'Visible':'Hidden';stateBadge.className=enabled?'settings-badge warn':'settings-badge off';}
+  return enabled;
+}
+
+function toggleDeveloperModeV23(force){
+  var next=typeof force==='boolean'?force:!isDeveloperModeV23();
+  try{localStorage.setItem(DEV_MODE_KEY_V23,next?'1':'0');}catch(e){}
+  var enabled=renderDeveloperModeV23();
+  if(!enabled&&window.__settingsTab==='dev')setSettingsTab('health');
+  return enabled;
+}
+
+function openDeveloperModeV23(){
+  if(!isDeveloperModeV23())toggleDeveloperModeV23(true);
+  setSettingsTab('dev');
+  return false;
+}
+
+function wireDeveloperModeShortcutV23(){
+  if(window.__devModeShortcutWiredV23)return;
+  window.__devModeShortcutWiredV23=true;
+  document.addEventListener('keydown',function(e){
+    var target=e&&e.target?e.target:null;
+    var tag=target&&target.tagName?String(target.tagName).toLowerCase():'';
+    if(tag==='input'||tag==='textarea'||(target&&target.isContentEditable))return;
+    if((e.metaKey||e.ctrlKey)&&e.shiftKey&&(e.key==='d'||e.key==='D')){
+      e.preventDefault();
+      toggleDeveloperModeV23();
+    }
+  });
+}
+
 function setSettingsTab(tab){
   if(tab==='backups'){
     tab='health';
     window.__healthSubTab='backups';
   }
-  if(['account','connections','ai','health'].indexOf(tab)<0)tab='account';
+  if(tab==='dev'&&!isDeveloperModeV23())tab='health';
+  if(['account','connections','ai','health','dev'].indexOf(tab)<0)tab='account';
   window.__settingsTab=tab||'account';
+  renderDeveloperModeV23();
   document.querySelectorAll('[data-settings-tab]').forEach(function(btn){
     btn.classList.toggle('active',btn.getAttribute('data-settings-tab')===window.__settingsTab);
   });
@@ -7910,6 +7994,7 @@ function setSettingsTab(tab){
   if(window.__settingsTab==='health')setHealthSubTab(window.__healthSubTab||'status');
   updateSettingsConnections();
   renderAccountIdentity();
+  if(window.__settingsTab==='dev'&&typeof renderDeviceRegistryReadPanelV23==='function')renderDeviceRegistryReadPanelV23();
 }
 
 function setAccountSubTab(tab){
@@ -7966,6 +8051,7 @@ function renderMissionBuildStampV1(){
   if(stampEl)stampEl.textContent=stamp.buildStamp+' · '+stamp.brainBuild;
   if(badgeEl){badgeEl.textContent='Loaded';badgeEl.className='settings-badge';}
   if(tokenEl)tokenEl.textContent=stamp.cacheToken+' · '+stamp.file;
+  if(typeof renderDeveloperModeV23==='function')renderDeveloperModeV23();
 }
 
 function setConnectionsSubTab(tab){
@@ -33822,6 +33908,7 @@ function init(){
   safeRender('dpc negative input clamp',function(){wireDpcNumberInputClampV22();});
   safeRender('global numeric input clamp',function(){wireNonNegativeNumberInputsV22();});
   safeRender('system hub subtabs',function(){wireSystemHubSubtabsV1();});
+  safeRender('developer mode panel',function(){wireDeveloperModeShortcutV23();renderDeveloperModeV23();});
   safeRender('initial dashboard',function(){loadWeekData();calcWeek();updateReport();loadGolden();buildCycles();buildWeekInputs(getCycleIdx());calcBI();updateStreams();renderContentCard();renderProductionCard();renderStreakChain();syncDPCtoWeekly();updateCompanyHealth();renderCloseLog();renderCloseStreak();updateTopbarBiz();if(typeof renderDpcDateView==='function')renderDpcDateView();if(typeof renderMissedDayBanner==='function')renderMissedDayBanner();if(typeof renderProspectList==='function')renderProspectList();if(typeof renderCalNowBanner==='function')renderCalNowBanner();if(typeof startCalNowTicker==='function')startCalNowTicker();});
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
