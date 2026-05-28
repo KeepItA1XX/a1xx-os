@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260528-1034-v24-phase7b-pointer-write-skeleton';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260528-1020-v24-phase7b-pointer-write-plan';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -238,9 +238,6 @@ function doPost(e) {
       logActivity('OS setup pointers upsert — saved ' + pointerResult.saved.length + ' — skipped ' + pointerResult.skipped.length);
       return jsonResponseV19({ status: 'ok', result: pointerResult });
     }
-    if (data.type === 'drive_file_index_pointer_write_skeleton') {
-      return getDriveFileIndexPointerWriteSkeletonV19(data);
-    }
     if (data.type === 'prospect_save') {
       var rec = saveProspectSnapshot(data);
       logActivity('Prospect save — ' + (data.stageName || data.realName || '(unnamed)') + ' (' + (data.source || 'no source') + ')');
@@ -291,7 +288,6 @@ function doGet(e) {
     if (e.parameter.action === 'get_os_registry_summary_v1') return getOsRegistrySummaryV19(e);
     if (e.parameter.action === 'os_registry_records')  return getOsRegistryRecordsV19(e);
     if (e.parameter.action === 'get_os_registry_records_v1') return getOsRegistryRecordsV19(e);
-    if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
     if (e.parameter.action === 'mission_events')      return getMissionCommandEventsV18(e);
@@ -1426,153 +1422,6 @@ function findOsRegistrySummaryConfigV19(key) {
     if (configs[i].key === wanted) return configs[i];
   }
   return null;
-}
-
-function getDriveFileIndexPointerWriteSkeletonV19(input) {
-  var checkedAt = new Date().toISOString();
-  var config = findOsRegistrySummaryConfigV19('driveFileIndex');
-  var unsafe = detectUnsafeDriveFileIndexPointerPayloadV19(input || {});
-  var preview = sanitizeDriveFileIndexPointerPreviewV19(input || {});
-  var missing = getDriveFileIndexPointerMissingFieldsV19(preview);
-  return jsonResponseV19({
-    status: unsafe.length ? 'review' : 'blocked',
-    ok: true,
-    mode: 'skeleton_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    targetRegistry: {
-      key: config ? config.key : 'driveFileIndex',
-      label: config ? config.label : 'Drive File Index',
-      databaseId: config ? config.databaseId : '',
-      dataSourceId: config ? config.dataSourceId : '',
-      url: config ? config.url : ''
-    },
-    preview: preview,
-    missingFields: missing,
-    unsafeFields: unsafe,
-    gates: {
-      approval: 'required_later',
-      b3Confirmation: 'required_later',
-      backupFirst: 'required_later',
-      readbackVerification: 'required_later',
-      writeEndpointActive: false,
-      writeExecuted: false
-    },
-    message: unsafe.length
-      ? 'Pointer payload needs review. No write executed.'
-      : 'Phase 7B skeleton is installed. Pointer writes remain blocked.',
-    safety: {
-      notion: 'No Notion create or update is executed by this skeleton.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, or deletes.',
-      secrets: 'Secret-like fields and values are rejected from the preview.',
-      workers: 'Workers and automations cannot call an active write path from this build.'
-    },
-    blockedActions: [
-      'notion_create',
-      'notion_update',
-      'sheet_write',
-      'drive_write',
-      'delete',
-      'move',
-      'rename',
-      'share',
-      'mass_edit',
-      'activate_automation',
-      'worker_triggered_write'
-    ]
-  });
-}
-
-function sanitizeDriveFileIndexPointerPreviewV19(input) {
-  var payload = input && input.pointer ? input.pointer : input || {};
-  return {
-    title: cellTextV19(payload.title || payload.name || '', 180),
-    objectType: normalizeDriveFileIndexObjectTypeV19(payload.objectType || payload.type || ''),
-    driveFileId: cellTextV19(payload.driveFileId || payload.fileId || '', 160),
-    driveUrl: cellTextV19(payload.driveUrl || payload.url || '', 500),
-    folderPath: cellTextV19(payload.folderPath || payload.folder || '', 260),
-    source: cellTextV19(payload.source || 'Money Mission OS', 140),
-    summary: cellTextV19(payload.summary || '', 500),
-    relatedContact: cellTextV19(payload.relatedContact || '', 160),
-    relatedOffer: cellTextV19(payload.relatedOffer || '', 160),
-    relatedCycle: cellTextV19(payload.relatedCycle || '', 160),
-    relatedWorker: cellTextV19(payload.relatedWorker || '', 160),
-    relatedSkill: cellTextV19(payload.relatedSkill || '', 160),
-    confidence: normalizeDriveFileIndexConfidenceV19(payload.confidence || ''),
-    status: normalizeDriveFileIndexPointerStatusV19(payload.status || ''),
-    archiveState: normalizeDriveFileIndexArchiveStateV19(payload.archiveState || ''),
-    lastVerified: cellTextV19(payload.lastVerified || payload.lastVerifiedAt || '', 80)
-  };
-}
-
-function getDriveFileIndexPointerMissingFieldsV19(preview) {
-  var required = ['title', 'objectType', 'driveFileId', 'driveUrl', 'folderPath', 'source', 'status', 'archiveState'];
-  var missing = [];
-  for (var i = 0; i < required.length; i++) {
-    var key = required[i];
-    if (!preview[key]) missing.push(key);
-  }
-  return missing;
-}
-
-function normalizeDriveFileIndexObjectTypeV19(value) {
-  var text = cellTextV19(value, 80).toLowerCase().replace(/\s+/g, '_');
-  if (text === 'folder' || text === 'folder_pointer') return 'folder_pointer';
-  if (text === 'file' || text === 'file_pointer') return 'file_pointer';
-  if (text === 'backup' || text === 'backup_pointer') return 'backup_pointer';
-  if (text === 'memory' || text === 'memory_pointer') return 'memory_pointer';
-  return text ? cellTextV19(text, 80) : '';
-}
-
-function normalizeDriveFileIndexPointerStatusV19(value) {
-  var text = cellTextV19(value || 'Verified', 80).toLowerCase();
-  if (text === 'verified') return 'Verified';
-  if (text === 'planned') return 'Planned';
-  if (text === 'review' || text === 'needs review') return 'Needs Review';
-  if (text === 'archived') return 'Archived';
-  return cellTextV19(value || 'Verified', 80);
-}
-
-function normalizeDriveFileIndexArchiveStateV19(value) {
-  var text = cellTextV19(value || 'Active', 80).toLowerCase();
-  if (text === 'active') return 'Active';
-  if (text === 'do not delete' || text === 'do_not_delete') return 'Do Not Delete';
-  if (text === 'superseded') return 'Superseded';
-  if (text === 'archived') return 'Archived';
-  return cellTextV19(value || 'Active', 80);
-}
-
-function normalizeDriveFileIndexConfidenceV19(value) {
-  var text = cellTextV19(value || 'High', 80).toLowerCase();
-  if (text === 'high') return 'High';
-  if (text === 'medium') return 'Medium';
-  if (text === 'low') return 'Low';
-  if (text === 'unverified') return 'Unverified';
-  return cellTextV19(value || 'High', 80);
-}
-
-function detectUnsafeDriveFileIndexPointerPayloadV19(input) {
-  var unsafe = [];
-  var deny = /(token|secret|password|credential|oauth|bearer|api[_ -]?key|webhook|notion_secret|todoist|private[_ -]?key)/i;
-  function scan(value, path) {
-    if (unsafe.length >= 12) return;
-    if (deny.test(String(path || ''))) {
-      unsafe.push(cellTextV19(path, 120));
-      return;
-    }
-    if (value === null || value === undefined) return;
-    if (typeof value === 'object') {
-      for (var key in value) {
-        if (Object.prototype.hasOwnProperty.call(value, key)) scan(value[key], path ? path + '.' + key : key);
-      }
-      return;
-    }
-    var text = String(value);
-    if (deny.test(text) || text.length > 1200) unsafe.push(cellTextV19(path || 'value', 120));
-  }
-  scan(input || {}, '');
-  return unsafe;
 }
 
 function getOsRegistrySummaryV19(e) {

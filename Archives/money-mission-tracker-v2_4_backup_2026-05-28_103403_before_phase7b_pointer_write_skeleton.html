@@ -3010,11 +3010,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Write boundary</div><div class="settings-row-meta" id="safe-write-boundary">Future writes require A1XX approval, B3 confirmation, backup-first, and archive-only rules.</div></div><span class="settings-badge warn" id="safe-write-boundary-badge">Gated</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Pointer target</div><div class="settings-row-meta" id="safe-write-pointer-target">First future write path should be Drive File Index pointer creation only.</div></div><span class="settings-badge off" id="safe-write-pointer-badge">Future</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Approval state</div><div class="settings-row-meta" id="safe-write-approval">Implementation stays blocked until A1XX explicitly approves Phase 7 safe write paths.</div></div><span class="settings-badge warn" id="safe-write-approval-badge">Blocked</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Backend skeleton</div><div class="settings-row-meta" id="safe-write-skeleton-summary">Check the Phase 7B skeleton after Apps Script is deployed. It must return blocked and preview-only.</div></div><span class="settings-badge off" id="safe-write-skeleton-badge">Skeleton</span></div>
           </div>
           <div class="settings-actions">
             <button class="btn primary" onclick="withGlobalProcessingActionV23('Checking safe write readiness',function(){return checkSafeWritePathReadinessV24();},this,'Safe write readiness checked.')">Check write readiness</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Checking pointer skeleton',function(){return checkPhase7BPointerWriteSkeletonV24();},this,'Pointer skeleton checked.')">Check skeleton</button>
             <button class="btn" onclick="buildPhase7BPointerWritePlanV24()">Build Phase 7B plan</button>
             <button class="btn" onclick="setDeveloperSectionV23('storage')">Open backups</button>
           </div>
@@ -4394,9 +4392,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-28 10:34 ET · OS v2_4 Phase 7B pointer write skeleton';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7B pointer write skeleton';
-var APP_CACHE_TOKEN='mmos-20260528-1034-v24-phase7b-pointer-write-skeleton';
+var APP_BUILD_STAMP='2026-05-28 10:20 ET · OS v2_4 Phase 7B pointer write plan';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7B pointer write plan';
+var APP_CACHE_TOKEN='mmos-20260528-1020-v24-phase7b-pointer-write-plan';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6902,9 +6900,6 @@ function renderSafeWritePathReadinessV24(snapshot){
   var pointerBadge=document.getElementById('safe-write-pointer-badge');
   var approval=document.getElementById('safe-write-approval');
   var approvalBadge=document.getElementById('safe-write-approval-badge');
-  var skeleton=document.getElementById('safe-write-skeleton-summary');
-  var skeletonBadge=document.getElementById('safe-write-skeleton-badge');
-  var skeletonState=window.__phase7BPointerWriteSkeletonV24||null;
   if(summary)summary.textContent=snapshot.summary;
   if(summaryBadge){
     summaryBadge.textContent=snapshot.label;
@@ -6924,15 +6919,6 @@ function renderSafeWritePathReadinessV24(snapshot){
   if(approvalBadge){
     approvalBadge.textContent='Blocked';
     approvalBadge.className=setupDoctorBadgeClassV23('warn');
-  }
-  if(skeleton){
-    skeleton.textContent=skeletonState
-      ? (skeletonState.passed?'Skeleton is installed and blocked correctly. No write can execute.':skeletonState.meta)
-      : 'Check the Phase 7B skeleton after Apps Script is deployed. It must return blocked and preview-only.';
-  }
-  if(skeletonBadge){
-    skeletonBadge.textContent=skeletonState?(skeletonState.passed?'Blocked':'Review'):'Skeleton';
-    skeletonBadge.className=setupDoctorBadgeClassV23(skeletonState?(skeletonState.passed?'ready':'warn'):'off');
   }
   return snapshot;
 }
@@ -6964,56 +6950,6 @@ function runSafeWritePathReadinessSelfCheckV24(){
     meta:snapshot.passed?'Future write path is gated · no active write endpoint.':snapshot.summary,
     failures:snapshot.failed.map(function(item){return item.label;})
   };
-}
-
-function getPhase7BPointerWriteSkeletonSampleV24(){
-  var today=new Date().toISOString().slice(0,10);
-  return {
-    title:'Phase 7B skeleton test - Money Mission OS root',
-    objectType:'folder_pointer',
-    driveFileId:'preview_only',
-    driveUrl:'https://drive.google.com/drive/folders/preview-only',
-    folderPath:'Money Mission OS',
-    source:'Developer Mode skeleton check',
-    summary:'Preview-only payload. No Notion, Sheet, or Drive write should execute.',
-    status:'Verified',
-    archiveState:'Active',
-    confidence:'High',
-    lastVerified:today
-  };
-}
-
-async function checkPhase7BPointerWriteSkeletonV24(){
-  var status=document.getElementById('safe-write-readiness-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking Phase 7B pointer skeleton...';
-  }
-  try{
-    var sample=getPhase7BPointerWriteSkeletonSampleV24();
-    var result=await getAppsScriptJson('drive_file_index_pointer_write_skeleton',sample,{timeoutMs:12000,tries:1});
-    var gates=result&&result.gates?result.gates:{};
-    var passed=!!(result&&result.ok===true&&result.mode==='skeleton_only'&&gates.writeEndpointActive===false&&gates.writeExecuted===false);
-    var meta=passed
-      ? 'Skeleton endpoint returned blocked/preview-only · no write executed.'
-      : 'Skeleton endpoint needs review before Phase 7B can continue.';
-    window.__phase7BPointerWriteSkeletonV24={passed:passed,meta:meta,result:result};
-    renderSafeWritePathReadinessV24();
-    if(status){
-      status.className='reset-status '+(passed?'ok':'warn');
-      status.textContent=meta;
-    }
-    return {passed:passed,meta:meta,failures:passed?[]:['Phase 7B pointer skeleton']};
-  }catch(e){
-    var message=e&&e.message?e.message:String(e);
-    window.__phase7BPointerWriteSkeletonV24={passed:false,meta:message,result:null};
-    renderSafeWritePathReadinessV24();
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Pointer skeleton check needs review: '+message;
-    }
-    return {passed:false,meta:message,failures:['Phase 7B pointer skeleton']};
-  }
 }
 
 function getPhase7BPointerWritePlanTextV24(){
@@ -8338,7 +8274,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -8348,7 +8284,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Backup Archive',typeof runBackupArchiveSelfCheckV22==='function'?await runBackupArchiveSelfCheckV22():{passed:false,meta:'Missing backup archive check'});}catch(e){add('Backup Archive',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Cloud Registry Gate',typeof runCloudRegistryQAGateSelfCheckV24==='function'?await runCloudRegistryQAGateSelfCheckV24():{passed:false,meta:'Missing cloud registry QA gate check'});}catch(e){add('Cloud Registry Gate',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Safe Write Readiness',typeof runSafeWritePathReadinessSelfCheckV24==='function'?runSafeWritePathReadinessSelfCheckV24():{passed:false,meta:'Missing safe write readiness check'});}catch(e){add('Safe Write Readiness',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 7B Skeleton',typeof checkPhase7BPointerWriteSkeletonV24==='function'?await checkPhase7BPointerWriteSkeletonV24():{passed:false,meta:'Missing Phase 7B skeleton check'});}catch(e){add('Phase 7B Skeleton',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
