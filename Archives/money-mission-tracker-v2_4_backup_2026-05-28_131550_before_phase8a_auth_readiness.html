@@ -2375,22 +2375,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="cloud-profile-readiness-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Auth Sync Readiness</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8A scope</div><div class="settings-row-meta" id="auth-sync-scope">Readiness only. No login-anywhere, worker auth, or automation activation.</div></div><span class="settings-badge warn" id="auth-sync-scope-badge">Gated</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Local sign-in</div><div class="settings-row-meta" id="auth-sync-local">Check local sign-in boundary before auth planning.</div></div><span class="settings-badge off" id="auth-sync-local-badge">Local</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Trusted source</div><div class="settings-row-meta" id="auth-sync-trusted">Load registry to confirm this device is trusted.</div></div><span class="settings-badge off" id="auth-sync-trusted-badge">Trust</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Profile + backup</div><div class="settings-row-meta" id="auth-sync-foundation">Load registry and backup marker before future auth sync work.</div></div><span class="settings-badge off" id="auth-sync-foundation-badge">Index</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Next auth gate</div><div class="settings-row-meta" id="auth-sync-next">Backend account auth remains blocked until A1XX approves a later build.</div></div><span class="settings-badge warn" id="auth-sync-next-badge">Blocked</span></div>
-          </div>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Checking auth readiness',function(){return refreshAuthSyncReadinessV24();},this,'Auth readiness checked.')">Check auth readiness</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Loading registry',function(){return loadDeviceRegistryReadPanelV23();},this,'Registry loaded.')">Load registry</button>
-            <button class="btn" onclick="setAccountSubTab('signin')">Open sign-in</button>
-          </div>
-          <div class="reset-status" id="auth-sync-readiness-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4483,9 +4467,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-28 13:15 ET · OS v2_4 Phase 8A auth readiness';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8A auth readiness';
-var APP_CACHE_TOKEN='mmos-20260528-1315-v24-phase8a-auth-readiness';
+var APP_BUILD_STAMP='2026-05-28 12:59 ET · OS v2_4 Phase 7H pointer write closeout';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7H pointer write closeout';
+var APP_CACHE_TOKEN='mmos-20260528-1259-v24-phase7h-pointer-write-closeout';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6121,151 +6105,6 @@ async function refreshCloudProfileReadinessV23(){
     }
     return null;
   }
-}
-
-function getAuthSyncReadinessSnapshotV24(){
-  var cloud=typeof getCloudProfileReadinessSnapshotV23==='function'?getCloudProfileReadinessSnapshotV23():{};
-  var cloudStatus=typeof getCloudProfileReadinessStatusV23==='function'?getCloudProfileReadinessStatusV23(cloud):{state:'warn',text:'Cloud profile readiness unavailable.'};
-  var loginAnywhereActive=false;
-  return {
-    cloud:cloud,
-    cloudStatus:cloudStatus,
-    localSignIn:!!cloud.localSignIn,
-    profileReady:!!cloud.profileReady,
-    trusted:!!cloud.trusted,
-    backupReady:!!cloud.backupReady,
-    foundationReady:!!cloud.foundationReady,
-    loginAnywhereActive:loginAnywhereActive,
-    ready:!!(cloud.localSignIn&&cloud.profileReady&&cloud.trusted&&cloud.backupReady&&!loginAnywhereActive)
-  };
-}
-
-function getAuthSyncReadinessStatusV24(snapshot){
-  snapshot=snapshot||getAuthSyncReadinessSnapshotV24();
-  if(snapshot.loginAnywhereActive)return {
-    state:'review',
-    label:'Review',
-    text:'Login-anywhere appears active. Phase 8A must stay readiness-only.'
-  };
-  if(!snapshot.localSignIn)return {
-    state:'warn',
-    label:'Local',
-    text:'Local sign-in must exist before this browser can be considered for auth sync planning.'
-  };
-  if(!snapshot.profileReady)return {
-    state:'warn',
-    label:'Index',
-    text:'Profile index is not loaded yet. Load registry before auth sync planning.'
-  };
-  if(!snapshot.trusted)return {
-    state:'warn',
-    label:'Trust',
-    text:'This device must be trusted before it can become an auth sync source.'
-  };
-  if(!snapshot.backupReady)return {
-    state:'warn',
-    label:'Backup',
-    text:'Latest Drive backup must be visible before future auth sync work.'
-  };
-  return {
-    state:'ready',
-    label:'Ready',
-    text:'Phase 8A auth readiness is clean. Login-anywhere remains blocked.'
-  };
-}
-
-function renderAuthSyncReadinessV24(snapshot){
-  snapshot=snapshot||getAuthSyncReadinessSnapshotV24();
-  var status=getAuthSyncReadinessStatusV24(snapshot);
-  var scope=document.getElementById('auth-sync-scope');
-  var scopeBadge=document.getElementById('auth-sync-scope-badge');
-  var local=document.getElementById('auth-sync-local');
-  var localBadge=document.getElementById('auth-sync-local-badge');
-  var trusted=document.getElementById('auth-sync-trusted');
-  var trustedBadge=document.getElementById('auth-sync-trusted-badge');
-  var foundation=document.getElementById('auth-sync-foundation');
-  var foundationBadge=document.getElementById('auth-sync-foundation-badge');
-  var next=document.getElementById('auth-sync-next');
-  var nextBadge=document.getElementById('auth-sync-next-badge');
-  var cloud=snapshot.cloud||{};
-  if(scope)scope.textContent='Phase 8A is read-only readiness. No login-anywhere, worker auth, automation activation, or secret export.';
-  if(scopeBadge){
-    scopeBadge.textContent='Read-only';
-    scopeBadge.className=setupDoctorBadgeClassV23('ready');
-  }
-  if(local)local.textContent=snapshot.localSignIn
-    ? 'Local sign-in exists on this browser only.'
-    : 'No local sign-in is saved on this browser.';
-  if(localBadge){
-    localBadge.textContent=snapshot.localSignIn?'Local':'Setup';
-    localBadge.className=setupDoctorBadgeClassV23(snapshot.localSignIn?'ready':'warn');
-  }
-  if(trusted)trusted.textContent=cloud.current
-    ? 'This device is '+(cloud.trust||'Local')+' · '+(cloud.current['Device Label']||'unlabeled')+'.'
-    : 'Load registry to match this browser to the Device Registry.';
-  if(trustedBadge){
-    trustedBadge.textContent=cloud.trust||'Trust';
-    trustedBadge.className=setupDoctorBadgeClassV23(snapshot.trusted?'ready':cloud.current?'warn':'off');
-  }
-  if(foundation)foundation.textContent=[
-    snapshot.profileReady?'Profile index loaded':'Profile index not loaded',
-    snapshot.backupReady?'Drive backup visible':'Drive backup not checked'
-  ].join(' · ')+'.';
-  if(foundationBadge){
-    foundationBadge.textContent=snapshot.foundationReady?'Ready':(snapshot.profileReady?'Backup':'Index');
-    foundationBadge.className=setupDoctorBadgeClassV23(snapshot.foundationReady?'ready':'warn');
-  }
-  if(next)next.textContent=status.state==='ready'
-    ? 'Next auth build can be planned, but backend account auth and login-anywhere are still blocked.'
-    : status.text;
-  if(nextBadge){
-    nextBadge.textContent=status.label;
-    nextBadge.className=setupDoctorBadgeClassV23(status.state);
-  }
-  return {snapshot:snapshot,status:status};
-}
-
-async function refreshAuthSyncReadinessV24(){
-  var status=document.getElementById('auth-sync-readiness-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking local sign-in, trusted device, profile index, Drive backup, and auth boundary...';
-  }
-  try{
-    if(typeof loadDeviceRegistryReadPanelV23==='function')await loadDeviceRegistryReadPanelV23();
-    if(typeof refreshBackupArchiveStatusV22==='function')await refreshBackupArchiveStatusV22();
-    if(typeof renderCloudProfileReadinessV23==='function')renderCloudProfileReadinessV23();
-    var rendered=renderAuthSyncReadinessV24();
-    if(status){
-      status.className='reset-status '+(rendered.status.state==='ready'?'ok':'warn');
-      status.textContent=rendered.status.text;
-    }
-    return rendered;
-  }catch(err){
-    renderAuthSyncReadinessV24();
-    if(status){
-      status.className='reset-status err';
-      status.textContent=(err&&err.message)||'Auth sync readiness check failed. Load registry and run Setup Doctor again.';
-    }
-    return {snapshot:getAuthSyncReadinessSnapshotV24(),status:{state:'review',label:'Review',text:'Auth sync readiness check failed.'}};
-  }
-}
-
-function runAuthSyncReadinessSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('auth-sync-scope')
-    && document.getElementById('auth-sync-next')
-    && typeof getAuthSyncReadinessSnapshotV24==='function'
-    && typeof renderAuthSyncReadinessV24==='function'
-    && typeof refreshAuthSyncReadinessV24==='function'
-  );
-  var snapshot=hasUi?getAuthSyncReadinessSnapshotV24():null;
-  var clean=!!(hasUi&&snapshot&&snapshot.loginAnywhereActive===false);
-  return {
-    passed:clean,
-    meta:clean?'Phase 8A auth readiness is installed · login-anywhere remains blocked.':'Phase 8A auth readiness needs review.',
-    failures:clean?[]:['Phase 8A auth readiness']
-  };
 }
 
 function getSetupPointerRowsV23(){
@@ -9434,7 +9273,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -9451,7 +9290,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 7F Endpoint Review',typeof runPhase7FEndpointReviewSelfCheckV24==='function'?runPhase7FEndpointReviewSelfCheckV24():{passed:false,meta:'Missing Phase 7F endpoint review check'});}catch(e){add('Phase 7F Endpoint Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 7G Pointer Write Gate',typeof runPhase7GPointerWriteSelfCheckV24==='function'?runPhase7GPointerWriteSelfCheckV24():{passed:false,meta:'Missing Phase 7G pointer write gate'});}catch(e){add('Phase 7G Pointer Write Gate',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 7H Closeout',typeof runPhase7HPointerWriteCloseoutSelfCheckV24==='function'?runPhase7HPointerWriteCloseoutSelfCheckV24():{passed:false,meta:'Missing Phase 7H closeout check'});}catch(e){add('Phase 7H Closeout',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8A Auth Readiness',typeof runAuthSyncReadinessSelfCheckV24==='function'?runAuthSyncReadinessSelfCheckV24():{passed:false,meta:'Missing Phase 8A auth readiness check'});}catch(e){add('Phase 8A Auth Readiness',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
