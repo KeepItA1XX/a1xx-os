@@ -3003,20 +3003,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="cloud-registry-status"></div>
         </div>
         <div id="dev-modules-flags-mount"></div>
-        <div class="settings-section dev-section-summary">
-          <div class="settings-section-title">Safe Write Paths</div>
-          <div class="settings-list">
-            <div class="settings-row is-primary"><div><div class="settings-row-name">Phase 7A readiness</div><div class="settings-row-meta" id="safe-write-readiness-summary">Planned only. No pointer write endpoint is active yet.</div></div><span class="settings-badge off" id="safe-write-readiness-badge">Planned</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Write boundary</div><div class="settings-row-meta" id="safe-write-boundary">Future writes require A1XX approval, B3 confirmation, backup-first, and archive-only rules.</div></div><span class="settings-badge warn" id="safe-write-boundary-badge">Gated</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Pointer target</div><div class="settings-row-meta" id="safe-write-pointer-target">First future write path should be Drive File Index pointer creation only.</div></div><span class="settings-badge off" id="safe-write-pointer-badge">Future</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Approval state</div><div class="settings-row-meta" id="safe-write-approval">Implementation stays blocked until A1XX explicitly approves Phase 7 safe write paths.</div></div><span class="settings-badge warn" id="safe-write-approval-badge">Blocked</span></div>
-          </div>
-          <div class="settings-actions">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Checking safe write readiness',function(){return checkSafeWritePathReadinessV24();},this,'Safe write readiness checked.')">Check write readiness</button>
-            <button class="btn" onclick="setDeveloperSectionV23('storage')">Open backups</button>
-          </div>
-          <div class="reset-status" id="safe-write-readiness-status"></div>
-        </div>
       </div>
       <div class="dev-section-pane" id="dev-section-events">
         <div class="settings-section dev-section-summary">
@@ -4384,9 +4370,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-28 10:10 ET · OS v2_4 Phase 7A safe write readiness';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7A safe write readiness';
-var APP_CACHE_TOKEN='mmos-20260528-1010-v24-phase7a-safe-write-readiness';
+var APP_BUILD_STAMP='2026-05-28 10:06 ET · OS v2_4 cloud registry QA gate retry';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 cloud registry QA gate retry';
+var APP_CACHE_TOKEN='mmos-20260528-1006-v24-cloud-registry-qa-gate-retry';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6853,93 +6839,6 @@ async function runCloudRegistryQAGateSelfCheckV24(){
   }
 }
 
-function getSafeWritePathReadinessV24(){
-  var registryGate=typeof getCloudRegistryQAGateStatusV24==='function'?getCloudRegistryQAGateStatusV24():null;
-  var backup=window.__lastBackupArchiveStatusV22||null;
-  var latest=backup&&backup.latest?backup.latest:null;
-  var activeWriteEndpoint=false;
-  var checks=[
-    {key:'registry',ok:!!(registryGate&&registryGate.passed),label:'Cloud registry gate',text:registryGate&&registryGate.passed?'Registry summary and compact index rows are readable.':'Run cloud registry summary and index rows before enabling any write path.'},
-    {key:'backup',ok:!!(latest&&latest.backupId&&latest.driveFileId),label:'Backup anchor',text:latest&&latest.backupId?'Latest backup visible: '+latest.backupId+'.':'Save or verify a fresh Drive backup before any future write path.'},
-    {key:'endpoint',ok:!activeWriteEndpoint,label:'Write endpoint',text:'No pointer write endpoint is active in this build.'},
-    {key:'approval',ok:true,label:'Approval gate',text:'Phase 7 writes remain blocked until explicit A1XX approval and B3 confirmation are installed.'}
-  ];
-  var failed=checks.filter(function(item){return !item.ok;});
-  return {
-    passed:failed.length===0,
-    state:failed.length?'warn':'ready',
-    label:failed.length?'Review':'Ready',
-    checks:checks,
-    failed:failed,
-    registryGate:registryGate,
-    latest:latest,
-    activeWriteEndpoint:activeWriteEndpoint,
-    summary:failed.length
-      ? 'Phase 7A readiness needs '+failed.map(function(item){return item.label;}).slice(0,2).join(', ')+'.'
-      : 'Phase 7A readiness is clean. Future writes are still blocked until approved.'
-  };
-}
-
-function renderSafeWritePathReadinessV24(snapshot){
-  snapshot=snapshot||getSafeWritePathReadinessV24();
-  var summary=document.getElementById('safe-write-readiness-summary');
-  var summaryBadge=document.getElementById('safe-write-readiness-badge');
-  var boundary=document.getElementById('safe-write-boundary');
-  var boundaryBadge=document.getElementById('safe-write-boundary-badge');
-  var pointer=document.getElementById('safe-write-pointer-target');
-  var pointerBadge=document.getElementById('safe-write-pointer-badge');
-  var approval=document.getElementById('safe-write-approval');
-  var approvalBadge=document.getElementById('safe-write-approval-badge');
-  if(summary)summary.textContent=snapshot.summary;
-  if(summaryBadge){
-    summaryBadge.textContent=snapshot.label;
-    summaryBadge.className=setupDoctorBadgeClassV23(snapshot.state);
-  }
-  if(boundary)boundary.textContent='Future writes require A1XX approval, B3 confirmation, backup-first, readback verification, and archive-only recovery.';
-  if(boundaryBadge){
-    boundaryBadge.textContent=snapshot.activeWriteEndpoint?'Review':'Gated';
-    boundaryBadge.className=setupDoctorBadgeClassV23(snapshot.activeWriteEndpoint?'warn':'ready');
-  }
-  if(pointer)pointer.textContent='First allowed future write path: create or update a single Drive File Index pointer record after manual confirmation.';
-  if(pointerBadge){
-    pointerBadge.textContent='Pointer';
-    pointerBadge.className=setupDoctorBadgeClassV23('off');
-  }
-  if(approval)approval.textContent='No pointer writes can run from this build. Phase 7B must add the endpoint and confirmation gate after approval.';
-  if(approvalBadge){
-    approvalBadge.textContent='Blocked';
-    approvalBadge.className=setupDoctorBadgeClassV23('warn');
-  }
-  return snapshot;
-}
-
-async function checkSafeWritePathReadinessV24(){
-  var status=document.getElementById('safe-write-readiness-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking registry gate, backup anchor, and write boundary...';
-  }
-  if(typeof runCloudRegistryQAGateSelfCheckV24==='function')await runCloudRegistryQAGateSelfCheckV24();
-  if(typeof refreshBackupArchiveStatusV22==='function')await refreshBackupArchiveStatusV22();
-  var snapshot=renderSafeWritePathReadinessV24();
-  if(status){
-    status.className='reset-status '+(snapshot.passed?'ok':'warn');
-    status.textContent=snapshot.passed
-      ? 'Safe write readiness is clean. Writes remain blocked until explicit Phase 7 approval.'
-      : snapshot.summary;
-  }
-  return snapshot;
-}
-
-function runSafeWritePathReadinessSelfCheckV24(){
-  var snapshot=renderSafeWritePathReadinessV24();
-  return {
-    passed:snapshot.passed&&snapshot.activeWriteEndpoint===false,
-    meta:snapshot.passed?'Future write path is gated · no active write endpoint.':snapshot.summary,
-    failures:snapshot.failed.map(function(item){return item.label;})
-  };
-}
-
 function resetDeviceRegistryRegisterGateV23(button){
   window.__deviceRegistryRegisterArmedUntilV23=0;
   if(button){
@@ -8179,7 +8078,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -8188,7 +8087,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Storage Health',typeof runStorageHealthSelfCheckV22==='function'?runStorageHealthSelfCheckV22():{passed:false,meta:'Missing storage self-check'});}catch(e){add('Storage Health',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Backup Archive',typeof runBackupArchiveSelfCheckV22==='function'?await runBackupArchiveSelfCheckV22():{passed:false,meta:'Missing backup archive check'});}catch(e){add('Backup Archive',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Cloud Registry Gate',typeof runCloudRegistryQAGateSelfCheckV24==='function'?await runCloudRegistryQAGateSelfCheckV24():{passed:false,meta:'Missing cloud registry QA gate check'});}catch(e){add('Cloud Registry Gate',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Safe Write Readiness',typeof runSafeWritePathReadinessSelfCheckV24==='function'?runSafeWritePathReadinessSelfCheckV24():{passed:false,meta:'Missing safe write readiness check'});}catch(e){add('Safe Write Readiness',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -8843,7 +8741,6 @@ function renderDeveloperModeV23(){
   if(devDirective&&directiveSource)devDirective.textContent=directiveSource.textContent||devDirective.textContent;
   if(devFoundation&&foundationSource)devFoundation.textContent=foundationSource.textContent||devFoundation.textContent;
   if(typeof renderCloudRegistrySummaryV24==='function')renderCloudRegistrySummaryV24(getCloudRegistrySummaryStateV24());
-  if(typeof renderSafeWritePathReadinessV24==='function')renderSafeWritePathReadinessV24();
   return enabled;
 }
 
