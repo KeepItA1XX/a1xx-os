@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 20:12 ET · OS v2_4 risk blocker language';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + risk blocker language';
-var APP_CACHE_TOKEN='mmos-20260527-2012-v24-risk-blocker-language';
+var APP_BUILD_STAMP='2026-05-27 20:10 ET · OS v2_4 confidence trust language';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + confidence trust language';
+var APP_CACHE_TOKEN='mmos-20260527-2010-v24-confidence-trust-language';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26275,7 +26275,6 @@ function getMissionBrainLanguageProfileV24(question,ctx,route,brainState){
     termClarityAsk:/\b(what do you mean by|what does .+ mean|define|explain .+ mean|what is a .+|what is an .+|what is .+ in this app|what is .+ in mission command|what does logged result mean|what does signal mean|what does checkpoint mean|what does lane mean|what does proof mean|what does clean status mean|what does dpc mean|what is dpc|what is bridge pulse|what is endpoint probe|what is drift watch|what is self-hardening)\b/.test(q),
     reportBackAsk:/\b(what do you need from me|what should i tell you|what should i report back|how should i report back|how do i report this|how do i log this|what should i log|what do i say after i do it|what should i say after i do it|what should i come back with|how should i update you|what result should i give you|how do i close the loop|how should i close the loop)\b/.test(q),
     confidenceTrustAsk:/\b(are you sure|how sure are you|how confident|confidence read|can i trust this|is this safe to trust|should i trust this|is this reliable|is this current enough|is this accurate|how accurate|what can i trust|what should i not trust|do we need to sync first|should i sync first|is the data fresh enough|is the data current)\b/.test(q),
-    riskBlockerAsk:/\b(what could go wrong|what can go wrong|what is the risk|what's the risk|whats the risk|risk read|what should i watch|what should i watch out for|what is the blocker|what's the blocker|whats the blocker|what is blocking me|what is blocking this|what could stop this|what can stop this|what might stop this|what is the weak point|what is the catch|what should i be careful about|what should i protect against)\b/.test(q),
     broken:/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(q),
     styleCorrection:/\b(that answer is too much|too much|make it shorter|more direct|say it normal|say that normal|plain english|make it plain|less robotic|more natural|answer normal|that is not what i meant|not what i meant)\b/.test(q),
     misunderstanding:/\b(you misunderstood|you are misunderstanding|you misunderstood me|wrong read|wrong lane|not that|nah not that|no not that|that is not what i meant|that's not what i meant|not what i meant)\b/.test(q),
@@ -26297,7 +26296,7 @@ function missionBrainFoundationShouldOwnPromptV24(question){
   var profile=getMissionBrainLanguageProfileV24(question||'',{},'',null);
   if(!profile||!profile.q)return false;
   if(profile.responseFeelAsk)return true;
-  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.nextEventAsk||profile.relativeTimeAsk||profile.energyLoadAsk||profile.decisionTradeoffAsk||profile.environmentAsk||profile.sequencePlanningAsk||profile.goalOutcomeAsk||profile.termClarityAsk||profile.reportBackAsk||profile.confidenceTrustAsk||profile.riskBlockerAsk||profile.limitMinutes>0||profile.why)return true;
+  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.nextEventAsk||profile.relativeTimeAsk||profile.energyLoadAsk||profile.decisionTradeoffAsk||profile.environmentAsk||profile.sequencePlanningAsk||profile.goalOutcomeAsk||profile.termClarityAsk||profile.reportBackAsk||profile.confidenceTrustAsk||profile.limitMinutes>0||profile.why)return true;
   if(profile.misunderstanding||profile.plainLanguage||profile.meaningAsk||profile.acknowledgementAsk)return true;
   if(profile.styleCorrection&&profile.direct)return true;
   if(profile.broken&&/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(profile.q))return true;
@@ -26324,7 +26323,6 @@ function getMissionBrainLanguageIntentV24(profile){
   if(profile.termClarityAsk)return 'term_clarity';
   if(profile.reportBackAsk)return 'report_back';
   if(profile.confidenceTrustAsk)return 'confidence_trust';
-  if(profile.riskBlockerAsk)return 'risk_blocker';
   if(profile.limitMinutes>0)return 'time_fit';
   if(profile.why)return 'why_move';
   if(profile.broken)return 'system_read';
@@ -26700,20 +26698,6 @@ function getMissionBrainConfidenceTrustAnswerV24(profile,ctx,route,brainState){
   return 'Confidence read:<br><br>Good enough for one safe next move.<br><br>Not final enough for locked numbers unless you run sync first.<br><br>Trust the recommendation, then log the result so the next read gets stronger.';
 }
 
-function getMissionBrainRiskBlockerAnswerV24(profile,ctx,route,brainState){
-  if(!profile||!profile.riskBlockerAsk)return '';
-  var q=profile.q||'';
-  ctx=ctx||{};
-  var move=brainState&&brainState.nextBestMove?brainState.nextBestMove:'one measurable move';
-  if(/\b(blocker|blocking|blocked|stop this|weak point)\b/.test(q)){
-    return 'Blocker read:<br><br>The real blocker is anything that prevents the next visible result.<br><br>Most likely: unclear owner, no logged outcome, stale source data, or opening too many lanes.<br><br>Clear it by doing one small checkpoint: '+escapeHtml(move)+'.';
-  }
-  if(/\b(watch|careful|protect)\b/.test(q)){
-    return 'Watch item:<br><br>Do not let this turn into dashboard checking or broad planning.<br><br>Protect the next move: one lane, one checkpoint, one logged result.';
-  }
-  return 'Risk read:<br><br>The risk is not choosing wrong. The risk is staying unmeasured.<br><br>Avoid: exact-count decisions without sync, new lanes before a result, and work that creates no signal.<br><br>Best protection: do '+escapeHtml(move)+' and log what happened.';
-}
-
 function getMissionBrainBlockLabelV24(name){
   name=String(name||'').trim();
   if(!name)return 'This window';
@@ -26750,8 +26734,6 @@ function getMissionBrainFoundationResponseV24(ctx,question,route,brainState,turn
   if(reportBackAnswer)return reportBackAnswer;
   var confidenceTrustAnswer=getMissionBrainConfidenceTrustAnswerV24(profile,ctx,route,brainState);
   if(confidenceTrustAnswer)return confidenceTrustAnswer;
-  var riskBlockerAnswer=getMissionBrainRiskBlockerAnswerV24(profile,ctx,route,brainState);
-  if(riskBlockerAnswer)return riskBlockerAnswer;
   var environmentAnswer=getMissionBrainEnvironmentAnswerV24(profile,ctx,route,brainState);
   if(environmentAnswer)return environmentAnswer;
   var energyLoadAnswer=getMissionBrainEnergyLoadAnswerV24(profile,ctx,route,brainState);
@@ -26788,7 +26770,7 @@ function applyMissionBrainResponseFeelStandardV24(html,profile,opts){
   opts=opts||{};
   if(!text||opts.responseFeelStandard===false)return text;
   var q=profile&&profile.q||'';
-  var shouldTighten=!!(profile&&(profile.direct||profile.plainLanguage||profile.acknowledgementAsk||profile.meaningAsk||profile.misunderstanding||profile.timeAsk||profile.limitMinutes>0||profile.goalOutcomeAsk||profile.termClarityAsk||profile.reportBackAsk||profile.confidenceTrustAsk||profile.riskBlockerAsk||profile.why||profile.broken||profile.responseFeelAsk));
+  var shouldTighten=!!(profile&&(profile.direct||profile.plainLanguage||profile.acknowledgementAsk||profile.meaningAsk||profile.misunderstanding||profile.timeAsk||profile.limitMinutes>0||profile.goalOutcomeAsk||profile.termClarityAsk||profile.reportBackAsk||profile.confidenceTrustAsk||profile.why||profile.broken||profile.responseFeelAsk));
   if(!shouldTighten)return text;
   text=text
     .replace(/^(Here is the move|Keep it calm|Use one question|Take the next visible step)\.<br><br>/i,'')
@@ -32049,10 +32031,7 @@ function runMissionCommandSelfCheck(){
 		    {q:'how should i close the loop',route:['now','calendar'],mustAny:['close the loop','reply with','blocker']},
 		    {q:'are you sure',route:['now','calendar'],mustAny:['confidence read','safe next move','sync first']},
 		    {q:'can i trust this',route:['sync','now'],mustAny:['confidence read','locked numbers','log the result']},
-		    {q:'should i sync first',route:['sync','now'],mustAny:['sync read','exact counts','source freshness']},
-		    {q:'what could go wrong',route:['now','calendar'],mustAny:['risk read','staying unmeasured','best protection']},
-		    {q:'what is the blocker',route:['now','calendar'],mustAny:['blocker read','visible result','small checkpoint']},
-		    {q:'what should i watch out for',route:['now','calendar'],mustAny:['watch item','one lane','logged result']}
+		    {q:'should i sync first',route:['sync','now'],mustAny:['sync read','exact counts','source freshness']}
 		  ];
   checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
