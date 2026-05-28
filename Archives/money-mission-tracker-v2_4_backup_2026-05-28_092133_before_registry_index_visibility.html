@@ -2988,15 +2988,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <div class="settings-row"><div><div class="settings-row-name">No read yet</div><div class="settings-row-meta">Use Load cloud registry to pull the read-only summary from Apps Script.</div></div><span class="settings-badge off">Idle</span></div>
             </div>
           </details>
-          <details class="diagnostics-detail" style="margin-top:8px">
-            <summary><span>Index visibility</span><span id="cloud-registry-index-badge">Indexes</span></summary>
-            <div class="settings-list" id="cloud-registry-index-list">
-              <div class="settings-row"><div><div class="settings-row-name">No index rows loaded</div><div class="settings-row-meta">Use Load index rows to preview compact registry records. This is read-only.</div></div><span class="settings-badge off">Idle</span></div>
-            </div>
-          </details>
           <div class="settings-actions">
             <button class="btn primary" onclick="withGlobalProcessingActionV23('Loading cloud registry',function(){return loadCloudRegistrySummaryV24();},this,'Cloud registry loaded.')">Load cloud registry</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Loading index rows',function(){return loadCloudRegistryIndexRowsV24();},this,'Index rows loaded.')">Load index rows</button>
             <button class="btn" onclick="setDeveloperSectionV23('setup')">Open devices</button>
           </div>
           <div class="reset-status" id="cloud-registry-status"></div>
@@ -4369,9 +4362,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-28 09:25 ET · OS v2_4 registry index visibility';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 cloud registry index visibility';
-var APP_CACHE_TOKEN='mmos-20260528-0925-v24-registry-index-visibility';
+var APP_BUILD_STAMP='2026-05-28 09:10 ET · OS v2_4 cloud registry QA';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 cloud registry visibility + QA';
+var APP_CACHE_TOKEN='mmos-20260528-0910-v24-cloud-registry-qa';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6457,19 +6450,6 @@ function getCloudRegistrySummaryStateV24(){
   return window.__cloudRegistrySummaryV24||null;
 }
 
-function getCloudRegistryIndexStateV24(){
-  return window.__cloudRegistryIndexRowsV24||null;
-}
-
-function getCloudRegistryIndexTargetsV24(){
-  return [
-    {key:'driveFileIndex',label:'Drive File Index'},
-    {key:'sourceTrustRegistry',label:'Source Trust Registry'},
-    {key:'dataSchemaRegistry',label:'Data Schema Registry'},
-    {key:'agentOutputLog',label:'Agent Output Log'}
-  ];
-}
-
 function getCloudRegistryReviewCountsV24(data){
   var registries=data&&data.registries?data.registries:{};
   var keys=Object.keys(registries);
@@ -6502,24 +6482,6 @@ function getCloudRegistryReviewCountsV24(data){
   return out;
 }
 
-function getCloudRegistryIndexCountsV24(state){
-  state=state||getCloudRegistryIndexStateV24();
-  var out={registryCount:0,rowCount:0,reviewCount:0,errorCount:0};
-  var registries=state&&state.registries?state.registries:{};
-  Object.keys(registries).forEach(function(key){
-    var item=registries[key]||{};
-    out.registryCount++;
-    out.rowCount+=Number(item.rowCount)||0;
-    if(item.status!=='ok')out.errorCount++;
-    (item.rows||[]).forEach(function(row){
-      var status=String(row.status||'');
-      var fields=row.fields||{};
-      if(/review|blocked|needs/i.test(status)||/review|blocked|needs/i.test(String(fields['Approval State']||'')))out.reviewCount++;
-    });
-  });
-  return out;
-}
-
 function getCloudRegistryCountsSummaryV24(reg){
   var counts=reg&&reg.counts?reg.counts:{};
   var parts=[];
@@ -6534,34 +6496,6 @@ function getCloudRegistryCountsSummaryV24(reg){
   addBucket('test',counts.testStatus);
   addBucket('type',counts.objectType||counts.sourceType||counts.pointerType);
   return parts.length?parts.join(' · '):'No status buckets yet.';
-}
-
-function renderCloudRegistryIndexRowsV24(state){
-  state=state||getCloudRegistryIndexStateV24();
-  var badge=document.getElementById('cloud-registry-index-badge');
-  var list=document.getElementById('cloud-registry-index-list');
-  if(!state){
-    if(badge){badge.textContent='Indexes';badge.className='settings-badge off';}
-    return null;
-  }
-  var counts=getCloudRegistryIndexCountsV24(state);
-  if(badge){
-    badge.textContent=counts.errorCount?'Review':counts.rowCount+' row(s)';
-    badge.className=setupDoctorBadgeClassV23(counts.errorCount?'warn':'ready');
-  }
-  if(list){
-    var registries=state.registries||{};
-    list.innerHTML=Object.keys(registries).map(function(key){
-      var item=registries[key]||{};
-      var rows=Array.isArray(item.rows)?item.rows:[];
-      var topRows=rows.slice(0,4).map(function(row){
-        var meta=[row.status||'',row.type||'',row.summary||''].filter(Boolean).join(' · ');
-        return '<div class="settings-row"><div><div class="settings-row-name">'+escapeHtml(row.title||'Untitled')+'</div><div class="settings-row-meta">'+escapeHtml(meta||'No compact metadata yet.')+'</div></div><span class="'+setupDoctorBadgeClassV23(row.status&&/review|blocked|needs/i.test(row.status)?'warn':'ready')+'">'+escapeHtml(row.status||'Read')+'</span></div>';
-      }).join('');
-      return '<div class="settings-row is-primary"><div><div class="settings-row-name">'+escapeHtml(item.label||key)+'</div><div class="settings-row-meta">'+(item.status==='ok'?escapeHtml((item.rowCount||0)+' compact row(s) loaded.'):escapeHtml(item.error||'Registry read needs review.'))+'</div></div><span class="'+setupDoctorBadgeClassV23(item.status==='ok'?'ready':'warn')+'">'+escapeHtml(item.status==='ok'?'Read':'Review')+'</span></div>'+topRows;
-    }).join('');
-  }
-  return counts;
 }
 
 function renderCloudRegistrySummaryV24(data){
@@ -6635,7 +6569,6 @@ function renderCloudRegistrySummaryV24(data){
     status.className='reset-status '+(clean?'ok':'warn');
     status.textContent=clean?'Cloud registry summary loaded. Read-only mode verified.':'Cloud registry loaded with review items. No writes were made.';
   }
-  renderCloudRegistryIndexRowsV24();
   return counts;
 }
 
@@ -6660,53 +6593,6 @@ async function loadCloudRegistrySummaryV24(){
     }
     throw err;
   }
-}
-
-async function loadCloudRegistryIndexRowsV24(){
-  var status=document.getElementById('cloud-registry-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Reading compact registry index rows...';
-  }
-  var targets=getCloudRegistryIndexTargetsV24();
-  var results=await Promise.allSettled(targets.map(function(target){
-    return getAppsScriptJson('os_registry_records',{registry:target.key,limit:8},{
-      timeoutMs:BRIDGE_TIMEOUT_NOTION_V22,
-      tries:1
-    });
-  }));
-  var state={checkedAt:new Date().toISOString(),registries:{}};
-  targets.forEach(function(target,index){
-    var result=results[index];
-    if(result.status==='fulfilled'&&result.value&&result.value.ok){
-      state.registries[target.key]={
-        key:target.key,
-        label:target.label,
-        status:'ok',
-        rowCount:result.value.rowCount||0,
-        hasMore:result.value.hasMore===true,
-        rows:result.value.rows||[]
-      };
-    }else{
-      state.registries[target.key]={
-        key:target.key,
-        label:target.label,
-        status:'review',
-        rowCount:0,
-        rows:[],
-        error:result.status==='rejected'?(result.reason&&result.reason.message?result.reason.message:String(result.reason)):(result.value&&result.value.error?result.value.error:'Registry read failed.')
-      };
-    }
-  });
-  window.__cloudRegistryIndexRowsV24=state;
-  var counts=renderCloudRegistryIndexRowsV24(state);
-  if(status){
-    status.className='reset-status '+(counts&&counts.errorCount?'warn':'ok');
-    status.textContent=counts&&counts.errorCount
-      ? 'Index rows loaded with '+counts.errorCount+' registry read issue(s). No writes were made.'
-      : 'Index rows loaded. '+(counts?counts.rowCount:0)+' compact row(s) visible. Read-only mode.';
-  }
-  return state;
 }
 
 async function loadDeveloperRegistrySurfacesV24(){

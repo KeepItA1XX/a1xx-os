@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260528-0925-v24-registry-index-visibility';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260528-0630-v24-language-time-foundation-closeout';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -286,8 +286,6 @@ function doGet(e) {
     if (e.parameter.action === 'setup_pointers')       return getOsSetupPointersV19(e);
     if (e.parameter.action === 'os_registry_summary')  return getOsRegistrySummaryV19(e);
     if (e.parameter.action === 'get_os_registry_summary_v1') return getOsRegistrySummaryV19(e);
-    if (e.parameter.action === 'os_registry_records')  return getOsRegistryRecordsV19(e);
-    if (e.parameter.action === 'get_os_registry_records_v1') return getOsRegistryRecordsV19(e);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
     if (e.parameter.action === 'mission_events')      return getMissionCommandEventsV18(e);
@@ -1415,15 +1413,6 @@ function getOsRegistrySummaryConfigsV19() {
   ];
 }
 
-function findOsRegistrySummaryConfigV19(key) {
-  var configs = getOsRegistrySummaryConfigsV19();
-  var wanted = cellTextV19(key || '', 120);
-  for (var i = 0; i < configs.length; i++) {
-    if (configs[i].key === wanted) return configs[i];
-  }
-  return null;
-}
-
 function getOsRegistrySummaryV19(e) {
   var checkedAt = new Date().toISOString();
   var warnings = [];
@@ -1480,50 +1469,6 @@ function getOsRegistrySummaryV19(e) {
       'overwrite_protected_setup',
       'store_large_payload_in_sheets'
     ]
-  });
-}
-
-function getOsRegistryRecordsV19(e) {
-  var registryKey = cellTextV19(e && e.parameter ? e.parameter.registry : '', 120);
-  var config = findOsRegistrySummaryConfigV19(registryKey);
-  if (!config) {
-    return jsonResponseV19({
-      status: 'error',
-      ok: false,
-      mode: 'read_only',
-      error: 'Unknown or unsupported registry key.',
-      allowedRegistries: getOsRegistrySummaryConfigsV19().map(function(item) { return item.key; })
-    });
-  }
-
-  var limit = Math.max(1, Math.min(50, Number(e && e.parameter && e.parameter.limit) || 12));
-  var read = readNotionRegistryRecordsV19(config.databaseId, limit);
-  return jsonResponseV19({
-    status: read.ok ? 'ok' : 'review',
-    ok: read.ok === true,
-    mode: 'read_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: new Date().toISOString(),
-    registry: {
-      key: config.key,
-      label: config.label,
-      role: config.role,
-      databaseId: config.databaseId,
-      dataSourceId: config.dataSourceId,
-      url: config.url
-    },
-    limit: limit,
-    rows: read.rows || [],
-    rowCount: read.rows ? read.rows.length : 0,
-    hasMore: read.hasMore === true,
-    errorCode: read.ok ? '' : (read.code || ''),
-    error: read.ok ? '' : cellTextV19(read.error || '', 500),
-    safety: {
-      notion: 'Read-only registry row query. No Notion writes.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, or deletes.',
-      secrets: 'No secrets or protected local setup values returned.'
-    }
   });
 }
 
@@ -1591,106 +1536,6 @@ function readNotionRegistrySummaryV19(databaseId, maxPages) {
   } catch (err) {
     return { ok: false, code: 'exception', error: err.toString() };
   }
-}
-
-function readNotionRegistryRecordsV19(databaseId, limit) {
-  try {
-    var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
-    if (!secret) return { ok: false, code: 'missing_secret', error: 'NOTION_SECRET not set.' };
-    var result = notionQuery(databaseId, { page_size: limit });
-    if (result.code >= 400) return { ok: false, code: result.code, error: cellTextV19(result.text || '', 500) };
-    var parsed = JSON.parse(result.text || '{}');
-    var rows = (parsed.results || []).map(function(page) {
-      return compactNotionRegistryPageV19(page);
-    });
-    return { ok: true, rows: rows, hasMore: parsed.has_more === true };
-  } catch (err) {
-    return { ok: false, code: 'exception', error: err.toString() };
-  }
-}
-
-function compactNotionRegistryPageV19(page) {
-  page = page || {};
-  var props = page.properties || {};
-  var fields = {};
-  [
-    'Status',
-    'Object Type',
-    'Source Type',
-    'Pointer Type',
-    'Approval State',
-    'Test Status',
-    'Promotion Status',
-    'Context Weight',
-    'Confidence',
-    'Archive State',
-    'Last Verified',
-    'Approval Needed',
-    'Owner'
-  ].forEach(function(name) {
-    if (props[name]) fields[name] = readNotionAnyPropertyV19(props[name]);
-  });
-  return {
-    id: page.id || '',
-    title: readNotionRegistryTitleV19(props) || 'Untitled registry item',
-    url: page.url || '',
-    status: fields.Status || '',
-    type: fields['Object Type'] || fields['Source Type'] || fields['Pointer Type'] || '',
-    summary: readNotionRegistrySummaryTextV19(props),
-    fields: fields,
-    createdTime: page.created_time || '',
-    lastEditedAt: page.last_edited_time || ''
-  };
-}
-
-function readNotionRegistryTitleV19(props) {
-  props = props || {};
-  for (var key in props) {
-    if (props.hasOwnProperty(key) && props[key] && props[key].type === 'title') {
-      return readNotionTitle(props[key]);
-    }
-  }
-  return '';
-}
-
-function readNotionRegistrySummaryTextV19(props) {
-  props = props || {};
-  var candidates = [
-    'Summary',
-    'Description',
-    'Recommendation',
-    'Action Required',
-    'Trust Language',
-    'Purpose',
-    'Notes'
-  ];
-  for (var i = 0; i < candidates.length; i++) {
-    var value = readNotionAnyPropertyV19(props[candidates[i]]);
-    if (value) return cellTextV19(value, 500);
-  }
-  return '';
-}
-
-function readNotionAnyPropertyV19(prop) {
-  if (!prop) return '';
-  if (prop.status && prop.status.name) return prop.status.name;
-  if (prop.select && prop.select.name) return prop.select.name;
-  if (prop.multi_select && prop.multi_select.length) {
-    return prop.multi_select.map(function(item) { return item.name || ''; }).filter(Boolean).join(', ');
-  }
-  if (prop.title && prop.title.length) return readNotionTitle(prop);
-  if (prop.rich_text && prop.rich_text.length) return readNotionText(prop);
-  if (prop.checkbox === true) return 'true';
-  if (prop.checkbox === false) return 'false';
-  if (prop.date && prop.date.start) return prop.date.start;
-  if (typeof prop.number === 'number') return String(prop.number);
-  if (prop.url) return prop.url;
-  if (prop.email) return prop.email;
-  if (prop.phone_number) return prop.phone_number;
-  if (prop.relation && prop.relation.length) return prop.relation.length + ' relation(s)';
-  if (prop.people && prop.people.length) return prop.people.map(function(item) { return item.name || ''; }).filter(Boolean).join(', ');
-  if (prop.files && prop.files.length) return prop.files.length + ' file(s)';
-  return '';
 }
 
 function readNotionStatusNameV19(prop) {
