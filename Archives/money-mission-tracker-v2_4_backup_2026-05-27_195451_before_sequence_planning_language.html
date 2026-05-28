@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 19:58 ET · OS v2_4 goal outcome language';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + goal outcome language';
-var APP_CACHE_TOKEN='mmos-20260527-1958-v24-goal-outcome-language';
+var APP_BUILD_STAMP='2026-05-27 19:50 ET · OS v2_4 environment context language';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + environment context language';
+var APP_CACHE_TOKEN='mmos-20260527-1950-v24-environment-context-language';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26270,8 +26270,6 @@ function getMissionBrainLanguageProfileV24(question,ctx,route,brainState){
     energyLoadAsk:/\b(i am tired|i'm tired|im tired|i am drained|i'm drained|im drained|low energy|no energy|burned out|burnt out|exhausted|dragging|foggy|overwhelmed|too much|scattered|all over the place|can only do something light|something light|light move|easy move|low lift|smallest move|minimum move|minimum viable move)\b/.test(q),
     decisionTradeoffAsk:/\b(should i .+ or .+|should i .+ instead of .+|which one should i do|which should i do first|what should i do first|what should i prioritize|what is the priority|what can wait|what should wait|what should i not do|what should i avoid|what should i skip|is this worth doing now|worth doing right now|should i do this now|should i send this now|should i post this now)\b/.test(q),
     environmentAsk:/\b(i am in the car|i'm in the car|im in the car|i am driving|i'm driving|im driving|on my phone|i am on my phone|i'm on my phone|im on my phone|on desktop|i am on desktop|at the studio|i am at the studio|at home|i am at home|i am outside|i'm outside|im outside|between things|i am between things|i'm between things|im between things|about to leave|i am about to leave|i just got back|cannot do deep work|can't do deep work|cant do deep work|can only do quick stuff|what can i do from here|what can i do on my phone)\b/.test(q),
-    sequencePlanningAsk:/\b(what is the order|what's the order|whats the order|what order should i do|what order do i do|what is the sequence|what's the sequence|give me a 3 step plan|give me a three step plan|3-step plan|three-step plan|break this into steps|break it into steps|break this down|break it down|how should i attack this|make this simple|map this out|phase one|what is phase one|what should happen next|what happens next|step by step|step-by-step)\b/.test(q),
-    goalOutcomeAsk:/\b(what is the goal|what's the goal|whats the goal|what is the point|what's the point|whats the point|what are we trying to accomplish|what am i trying to accomplish|what are we aiming for|what am i aiming for|what outcome matters|what result matters|what should this accomplish|what does success look like|what is the win|what's the win|whats the win|win condition|end goal|objective)\b/.test(q),
     broken:/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(q),
     styleCorrection:/\b(that answer is too much|too much|make it shorter|more direct|say it normal|say that normal|plain english|make it plain|less robotic|more natural|answer normal|that is not what i meant|not what i meant)\b/.test(q),
     misunderstanding:/\b(you misunderstood|you are misunderstanding|you misunderstood me|wrong read|wrong lane|not that|nah not that|no not that|that is not what i meant|that's not what i meant|not what i meant)\b/.test(q),
@@ -26293,7 +26291,7 @@ function missionBrainFoundationShouldOwnPromptV24(question){
   var profile=getMissionBrainLanguageProfileV24(question||'',{},'',null);
   if(!profile||!profile.q)return false;
   if(profile.responseFeelAsk)return true;
-  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.nextEventAsk||profile.relativeTimeAsk||profile.energyLoadAsk||profile.decisionTradeoffAsk||profile.environmentAsk||profile.sequencePlanningAsk||profile.goalOutcomeAsk||profile.limitMinutes>0||profile.why)return true;
+  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.nextEventAsk||profile.relativeTimeAsk||profile.energyLoadAsk||profile.decisionTradeoffAsk||profile.environmentAsk||profile.limitMinutes>0||profile.why)return true;
   if(profile.misunderstanding||profile.plainLanguage||profile.meaningAsk||profile.acknowledgementAsk)return true;
   if(profile.styleCorrection&&profile.direct)return true;
   if(profile.broken&&/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(profile.q))return true;
@@ -26315,8 +26313,6 @@ function getMissionBrainLanguageIntentV24(profile){
   if(profile.energyLoadAsk)return 'energy_load';
   if(profile.decisionTradeoffAsk)return 'decision_tradeoff';
   if(profile.environmentAsk)return 'environment_context';
-  if(profile.sequencePlanningAsk)return 'sequence_planning';
-  if(profile.goalOutcomeAsk)return 'goal_outcome';
   if(profile.limitMinutes>0)return 'time_fit';
   if(profile.why)return 'why_move';
   if(profile.broken)return 'system_read';
@@ -26597,39 +26593,6 @@ function getMissionBrainEnvironmentAnswerV24(profile,ctx,route,brainState){
   return '';
 }
 
-function getMissionBrainSequencePlanningAnswerV24(profile,ctx,route,brainState){
-  if(!profile||!profile.sequencePlanningAsk)return '';
-  var q=profile.q||'';
-  ctx=ctx||{};
-  var move=brainState&&brainState.nextBestMove?brainState.nextBestMove:'one measurable move';
-  var gap=parseFloat(ctx.gap)||0;
-  if(/\b(phase one|what is phase one)\b/.test(q)){
-    return 'Phase one:<br><br>Get one real signal first.<br><br>1. Pick the lane closest to money or proof.<br>2. Do the smallest visible checkpoint.<br>3. Log the result before expanding the plan.';
-  }
-  if(/\b(3 step|three step|3-step|three-step|step by step|step-by-step)\b/.test(q)){
-    return 'Three-step plan:<br><br>1. Start with '+escapeHtml(move)+'.<br>2. Capture the result: reply, booked, paid, posted, shipped, or clean status.<br>3. Use that result to choose the next lane.';
-  }
-  if(/\b(order|sequence|what should happen next|what happens next)\b/.test(q)){
-    return 'Order read:<br><br>1. Money or proof first.<br>2. Delivery/status second.<br>3. Cleanup last.<br><br>'+escapeHtml(gap>0?'Because the weekly gap is open, cash-facing work wins the first slot.':'If money pressure is covered, use proof and delivery to choose the first slot.');
-  }
-  return 'Simple plan:<br><br>1. Pick one lane.<br>2. Finish one visible checkpoint.<br>3. Log the result.<br><br>Start with '+escapeHtml(move)+'.';
-}
-
-function getMissionBrainGoalOutcomeAnswerV24(profile,ctx,route,brainState){
-  if(!profile||!profile.goalOutcomeAsk)return '';
-  var q=profile.q||'';
-  ctx=ctx||{};
-  var move=brainState&&brainState.nextBestMove?brainState.nextBestMove:'one measurable move';
-  var gap=parseFloat(ctx.gap)||0;
-  if(/\b(what does success look like|what is the win|what's the win|whats the win|win condition)\b/.test(q)){
-    return 'Win condition:<br><br>One visible result, not more motion.<br><br>Count it if it creates a reply, booked call, payment step, posted proof, shipped asset, or clean status.<br><br>For this block: finish '+escapeHtml(move)+' and capture what happened.';
-  }
-  if(/\b(outcome|result)\b/.test(q)){
-    return 'Outcome read:<br><br>Measure the result, not the activity.<br><br>The useful outcomes are: reply, booked, paid, posted, shipped, or clean status.<br><br>If none of those happen, log no reply or wrong lane and choose the next move.';
-  }
-  return 'Goal read:<br><br>The goal is not to do more work.<br><br>The goal is one useful signal: money, proof, delivery, or a clean logged result.<br><br>'+escapeHtml(gap>0?'Because the weekly gap is open, money signal matters most.':'If money pressure is covered, proof or delivery can be the signal.')+' Start with '+escapeHtml(move)+'.';
-}
-
 function getMissionBrainBlockLabelV24(name){
   name=String(name||'').trim();
   if(!name)return 'This window';
@@ -26658,16 +26621,12 @@ function getMissionBrainFoundationResponseV24(ctx,question,route,brainState,turn
   if(timeContextAnswer)return timeContextAnswer;
   var relativeTimeAnswer=getMissionBrainRelativeTimeAnswerV24(profile,ctx,route);
   if(relativeTimeAnswer)return relativeTimeAnswer;
-  var goalOutcomeAnswer=getMissionBrainGoalOutcomeAnswerV24(profile,ctx,route,brainState);
-  if(goalOutcomeAnswer)return goalOutcomeAnswer;
   var environmentAnswer=getMissionBrainEnvironmentAnswerV24(profile,ctx,route,brainState);
   if(environmentAnswer)return environmentAnswer;
   var energyLoadAnswer=getMissionBrainEnergyLoadAnswerV24(profile,ctx,route,brainState);
   if(energyLoadAnswer)return energyLoadAnswer;
   var decisionTradeoffAnswer=getMissionBrainDecisionTradeoffAnswerV24(profile,ctx,route,brainState);
   if(decisionTradeoffAnswer)return decisionTradeoffAnswer;
-  var sequencePlanningAnswer=getMissionBrainSequencePlanningAnswerV24(profile,ctx,route,brainState);
-  if(sequencePlanningAnswer)return sequencePlanningAnswer;
   if(profile.styleCorrection&&profile.direct&&!/\bwhy\b/.test(profile.q)){
     return 'Got it. Shorter and more direct from here.<br><br>Ask it again, and I will answer with the move first.';
   }
@@ -26696,7 +26655,7 @@ function applyMissionBrainResponseFeelStandardV24(html,profile,opts){
   opts=opts||{};
   if(!text||opts.responseFeelStandard===false)return text;
   var q=profile&&profile.q||'';
-  var shouldTighten=!!(profile&&(profile.direct||profile.plainLanguage||profile.acknowledgementAsk||profile.meaningAsk||profile.misunderstanding||profile.timeAsk||profile.limitMinutes>0||profile.goalOutcomeAsk||profile.why||profile.broken||profile.responseFeelAsk));
+  var shouldTighten=!!(profile&&(profile.direct||profile.plainLanguage||profile.acknowledgementAsk||profile.meaningAsk||profile.misunderstanding||profile.timeAsk||profile.limitMinutes>0||profile.why||profile.broken||profile.responseFeelAsk));
   if(!shouldTighten)return text;
   text=text
     .replace(/^(Here is the move|Keep it calm|Use one question|Take the next visible step)\.<br><br>/i,'')
@@ -31942,13 +31901,7 @@ function runMissionCommandSelfCheck(){
 		    {q:'is this worth doing now',route:['now','calendar'],mustAny:['worth-it read','visible result','wait']},
 		    {q:'i am on my phone what can i do',route:['now','calendar'],mustAny:['phone-mode read','thumb-sized','dpc log']},
 		    {q:'i am in the car what should i do',route:['now','calendar'],mustAny:['car read','do not type','parked']},
-		    {q:'i am between things what can i do',route:['now','calendar'],mustAny:['transition read','quick checkpoint','next block']},
-		    {q:'give me a 3 step plan',route:['now','calendar'],mustAny:['three-step plan','capture the result','next lane']},
-		    {q:'what order should i do this in',route:['now','calendar'],mustAny:['order read','money or proof','cleanup last']},
-		    {q:'make this simple',route:['now','calendar'],mustAny:['simple plan','one lane','log the result']},
-		    {q:'what is the goal right now',route:['now','calendar'],mustAny:['goal read','useful signal','start with']},
-		    {q:'what outcome matters here',route:['now','calendar'],mustAny:['outcome read','measure the result','reply']},
-		    {q:'what does success look like',route:['now','calendar'],mustAny:['win condition','visible result','capture what happened']}
+		    {q:'i am between things what can i do',route:['now','calendar'],mustAny:['transition read','quick checkpoint','next block']}
 		  ];
   checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
