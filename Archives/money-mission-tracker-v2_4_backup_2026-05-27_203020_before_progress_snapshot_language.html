@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 20:30 ET · OS v2_4 progress snapshot language';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + progress snapshot language';
-var APP_CACHE_TOKEN='mmos-20260527-2030-v24-progress-snapshot-language';
+var APP_BUILD_STAMP='2026-05-27 20:26 ET · OS v2_4 focus reset language';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + focus reset language';
+var APP_CACHE_TOKEN='mmos-20260527-2026-v24-focus-reset-language';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26279,7 +26279,6 @@ function getMissionBrainLanguageProfileV24(question,ctx,route,brainState){
     alternativePlanAsk:/\b(give me another option|another option|different option|not that move|not that one|what else can i do|what else should i do|what is plan b|what's plan b|whats plan b|plan b|backup plan|backup move|fallback move|what if that does not work|what if that doesn't work|if that does not work|if that doesn't work|what is the easier version|easier version|smaller version|simpler version|give me a smaller move|give me an easier move)\b/.test(q),
     decisionLockAsk:/\b(lock it in|confirm the move|confirm the plan|confirm it|so what am i doing|what am i doing exactly|what do i do now exactly|what is the final answer|what's the final answer|whats the final answer|final answer|what is the final move|what's the final move|whats the final move|final move|repeat the move|say the move again|make the call|call it|is that the move|is this the move|are we doing that|should i do that)\b/.test(q),
     focusResetAsk:/\b(keep me focused|help me focus|focus me|pull me back|recenter me|reset me|reset the room|i am overthinking|i'm overthinking|im overthinking|overthinking this|overthinking it|i keep checking|keep checking|stop me from overthinking|don't let me overthink|dont let me overthink|i am distracted|i'm distracted|im distracted|off track|i am off track|i'm off track|im off track|i am spinning|i'm spinning|im spinning|spinning right now|can't focus|cant focus|cannot focus|decision fatigue|too many options|too many choices|too many lanes)\b/.test(q),
-    progressSnapshotAsk:/\b(catch me up|quick recap|recap this|recap where we are|bring me up to speed|where did we leave off|where did we leave it|what are we still on|what are we still working on|what is still open|what's still open|whats still open|what is active right now|what's active right now|whats active right now|what is the current context|what's the current context|whats the current context|what did we just do|what did we just update|what did we just change|what changed in this chat|what changed in this build|what changed in this pass|what is next from here|what's next from here|whats next from here)\b/.test(q),
     broken:/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(q),
     styleCorrection:/\b(that answer is too much|too much|make it shorter|more direct|say it normal|say that normal|plain english|make it plain|less robotic|more natural|answer normal|that is not what i meant|not what i meant)\b/.test(q),
     misunderstanding:/\b(you misunderstood|you are misunderstanding|you misunderstood me|wrong read|wrong lane|not that|nah not that|no not that|that is not what i meant|that's not what i meant|not what i meant)\b/.test(q),
@@ -26301,7 +26300,7 @@ function missionBrainFoundationShouldOwnPromptV24(question){
   var profile=getMissionBrainLanguageProfileV24(question||'',{},'',null);
   if(!profile||!profile.q)return false;
   if(profile.responseFeelAsk)return true;
-  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.nextEventAsk||profile.relativeTimeAsk||profile.energyLoadAsk||profile.decisionTradeoffAsk||profile.environmentAsk||profile.sequencePlanningAsk||profile.goalOutcomeAsk||profile.termClarityAsk||profile.reportBackAsk||profile.confidenceTrustAsk||profile.riskBlockerAsk||profile.alternativePlanAsk||profile.decisionLockAsk||profile.focusResetAsk||profile.progressSnapshotAsk||profile.limitMinutes>0||profile.why)return true;
+  if(profile.fresh||profile.timeAsk||profile.timeContextAsk||profile.nextEventAsk||profile.relativeTimeAsk||profile.energyLoadAsk||profile.decisionTradeoffAsk||profile.environmentAsk||profile.sequencePlanningAsk||profile.goalOutcomeAsk||profile.termClarityAsk||profile.reportBackAsk||profile.confidenceTrustAsk||profile.riskBlockerAsk||profile.alternativePlanAsk||profile.decisionLockAsk||profile.focusResetAsk||profile.limitMinutes>0||profile.why)return true;
   if(profile.misunderstanding||profile.plainLanguage||profile.meaningAsk||profile.acknowledgementAsk)return true;
   if(profile.styleCorrection&&profile.direct)return true;
   if(profile.broken&&/\b(what is broken|what's broken|whats broken|broken right now|system broken|what should i check)\b/.test(profile.q))return true;
@@ -26332,7 +26331,6 @@ function getMissionBrainLanguageIntentV24(profile){
   if(profile.alternativePlanAsk)return 'alternative_plan';
   if(profile.decisionLockAsk)return 'decision_lock';
   if(profile.focusResetAsk)return 'focus_reset';
-  if(profile.progressSnapshotAsk)return 'progress_snapshot';
   if(profile.limitMinutes>0)return 'time_fit';
   if(profile.why)return 'why_move';
   if(profile.broken)return 'system_read';
@@ -26764,23 +26762,6 @@ function getMissionBrainFocusResetAnswerV24(profile,ctx,route,brainState){
   return 'Focus reset:<br><br>One lane. One visible result.<br><br>Do '+escapeHtml(move)+'.<br><br>Then report back with what happened.';
 }
 
-function getMissionBrainProgressSnapshotAnswerV24(profile,ctx,route,brainState){
-  if(!profile||!profile.progressSnapshotAsk)return '';
-  var q=profile.q||'';
-  var move=brainState&&brainState.nextBestMove?brainState.nextBestMove:'one measurable move';
-  var lane=getMissionBrainPlainLaneLabelV24(route);
-  if(/\b(what did we just do|what did we just update|what did we just change|what changed in this chat|what changed in this build|what changed in this pass)\b/.test(q)){
-    return 'Progress snapshot:<br><br>We just tightened the current Mission Command language layer.<br><br>The point is cleaner understanding, shorter answers, and one useful next action.<br><br>Next: test the new prompt, then save a backup if it feels right.';
-  }
-  if(/\b(what is still open|what's still open|whats still open|what are we still on|what are we still working on|what is active right now|what's active right now|whats active right now)\b/.test(q)){
-    return 'Open-loop read:<br><br>The active lane is '+escapeHtml(lane)+'.<br><br>The open loop is simple: finish one visible result, then log what happened.<br><br>Current move: '+escapeHtml(move)+'.';
-  }
-  if(/\b(what is next from here|what's next from here|whats next from here|where did we leave off|where did we leave it)\b/.test(q)){
-    return 'Next-from-here read:<br><br>We left off at one current move, not a full new plan.<br><br>Do '+escapeHtml(move)+'.<br><br>Then report back with the result.';
-  }
-  return 'Quick recap:<br><br>You are in the '+escapeHtml(lane)+' lane.<br><br>The useful read is the next visible result, not the whole dashboard.<br><br>Move: '+escapeHtml(move)+'.';
-}
-
 function getMissionBrainBlockLabelV24(name){
   name=String(name||'').trim();
   if(!name)return 'This window';
@@ -26825,8 +26806,6 @@ function getMissionBrainFoundationResponseV24(ctx,question,route,brainState,turn
   if(decisionLockAnswer)return decisionLockAnswer;
   var focusResetAnswer=getMissionBrainFocusResetAnswerV24(profile,ctx,route,brainState);
   if(focusResetAnswer)return focusResetAnswer;
-  var progressSnapshotAnswer=getMissionBrainProgressSnapshotAnswerV24(profile,ctx,route,brainState);
-  if(progressSnapshotAnswer)return progressSnapshotAnswer;
   var environmentAnswer=getMissionBrainEnvironmentAnswerV24(profile,ctx,route,brainState);
   if(environmentAnswer)return environmentAnswer;
   var energyLoadAnswer=getMissionBrainEnergyLoadAnswerV24(profile,ctx,route,brainState);
@@ -26863,7 +26842,7 @@ function applyMissionBrainResponseFeelStandardV24(html,profile,opts){
   opts=opts||{};
   if(!text||opts.responseFeelStandard===false)return text;
   var q=profile&&profile.q||'';
-  var shouldTighten=!!(profile&&(profile.direct||profile.plainLanguage||profile.acknowledgementAsk||profile.meaningAsk||profile.misunderstanding||profile.timeAsk||profile.limitMinutes>0||profile.goalOutcomeAsk||profile.termClarityAsk||profile.reportBackAsk||profile.confidenceTrustAsk||profile.riskBlockerAsk||profile.alternativePlanAsk||profile.decisionLockAsk||profile.focusResetAsk||profile.progressSnapshotAsk||profile.why||profile.broken||profile.responseFeelAsk));
+  var shouldTighten=!!(profile&&(profile.direct||profile.plainLanguage||profile.acknowledgementAsk||profile.meaningAsk||profile.misunderstanding||profile.timeAsk||profile.limitMinutes>0||profile.goalOutcomeAsk||profile.termClarityAsk||profile.reportBackAsk||profile.confidenceTrustAsk||profile.riskBlockerAsk||profile.alternativePlanAsk||profile.decisionLockAsk||profile.focusResetAsk||profile.why||profile.broken||profile.responseFeelAsk));
   if(!shouldTighten)return text;
   text=text
     .replace(/^(Here is the move|Keep it calm|Use one question|Take the next visible step)\.<br><br>/i,'')
@@ -32126,21 +32105,18 @@ function runMissionCommandSelfCheck(){
 		    {q:'can i trust this',route:['sync','now'],mustAny:['confidence read','locked numbers','log the result']},
 		    {q:'should i sync first',route:['sync','now'],mustAny:['sync read','exact counts','source freshness']},
 		    {q:'what could go wrong',route:['now','calendar'],mustAny:['risk read','staying unmeasured','best protection']},
-		    {q:'what is the blocker',route:['now','calendar'],mustAny:['blocker read','visible result','small checkpoint']},
-		    {q:'what should i watch out for',route:['now','calendar'],mustAny:['watch item','one lane','logged result']},
-		    {q:'give me another option',route:['now','calendar'],mustAny:['another option','best alternate','log what happens']},
-		    {q:'what is plan b',route:['now','calendar'],mustAny:['plan b','backup signal','call-prep checkpoint']},
-		    {q:'give me a smaller move',route:['now','calendar'],mustAny:['smaller version','lightest move','report back']},
-		    {q:'lock it in',route:['now','calendar'],mustAny:['locked','move','result is logged']},
-		    {q:'what do i do now exactly',route:['now','calendar'],mustAny:['do this','log what happened']},
-		    {q:'is that the move',route:['now','calendar'],mustAny:['that is the move','visible result','report back']},
-		    {q:'i am overthinking this',route:['now','calendar','diagnostic'],mustAny:['focus reset','one lane','log the result']},
-		    {q:'keep me focused',route:['now','calendar','diagnostic'],mustAny:['focus reset','one lane','visible result']},
-		    {q:'too many options what do i do',route:['now','calendar','diagnostic'],mustAny:['focus reset','choices','start with']},
-		    {q:'catch me up',route:['now','calendar','sync'],mustAny:['quick recap','visible result','move']},
-		    {q:'what did we just update',route:['now','calendar','sync'],mustAny:['progress snapshot','language layer','test the new prompt']},
-		    {q:'what is still open',route:['now','calendar','sync'],mustAny:['open-loop read','open loop','current move']}
-		  ];
+			    {q:'what is the blocker',route:['now','calendar'],mustAny:['blocker read','visible result','small checkpoint']},
+			    {q:'what should i watch out for',route:['now','calendar'],mustAny:['watch item','one lane','logged result']},
+			    {q:'give me another option',route:['now','calendar'],mustAny:['another option','best alternate','log what happens']},
+			    {q:'what is plan b',route:['now','calendar'],mustAny:['plan b','backup signal','call-prep checkpoint']},
+			    {q:'give me a smaller move',route:['now','calendar'],mustAny:['smaller version','lightest move','report back']},
+			    {q:'lock it in',route:['now','calendar'],mustAny:['locked','move','result is logged']},
+			    {q:'what do i do now exactly',route:['now','calendar'],mustAny:['do this','log what happened']},
+			    {q:'is that the move',route:['now','calendar'],mustAny:['that is the move','visible result','report back']},
+			    {q:'i am overthinking this',route:['now','calendar','diagnostic'],mustAny:['focus reset','one lane','log the result']},
+			    {q:'keep me focused',route:['now','calendar','diagnostic'],mustAny:['focus reset','one lane','visible result']},
+			    {q:'too many options what do i do',route:['now','calendar','diagnostic'],mustAny:['focus reset','choices','start with']}
+			  ];
   checks=checks.concat(MISSION_SKILL_REGRESSION_TESTS||[]);
   var ctx=window.__missionCommandContext||getMissionCommandContext(window.__contentPieces||[],window.__calEvents||[]);
   var failures=[];
