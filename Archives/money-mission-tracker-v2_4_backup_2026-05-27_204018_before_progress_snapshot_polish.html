@@ -4334,9 +4334,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-27 20:40 ET · OS v2_4 progress snapshot polish';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + progress snapshot polish';
-var APP_CACHE_TOKEN='mmos-20260527-2040-v24-progress-snapshot-polish';
+var APP_BUILD_STAMP='2026-05-27 20:30 ET · OS v2_4 progress snapshot language';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 response-feel standard + progress snapshot language';
+var APP_CACHE_TOKEN='mmos-20260527-2030-v24-progress-snapshot-language';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -26745,7 +26745,7 @@ function getMissionBrainDecisionLockAnswerV24(profile,ctx,route,brainState){
   if(/\b(repeat|say the move again|what am i doing exactly|what do i do now exactly)\b/.test(q)){
     return 'Do this:<br><br>'+escapeHtml(move)+'.<br><br>Then log what happened.';
   }
-  return 'Locked.<br><br>Do this now.<br><br>'+escapeHtml(move)+'.<br><br>Do one pass. Do not open another lane until the result is logged.';
+  return 'Locked.<br><br>Move: '+escapeHtml(move)+'.<br><br>Do one pass. Do not open another lane until the result is logged.';
 }
 
 function getMissionBrainFocusResetAnswerV24(profile,ctx,route,brainState){
@@ -26759,7 +26759,7 @@ function getMissionBrainFocusResetAnswerV24(profile,ctx,route,brainState){
     return 'Focus reset:<br><br>Cut the choices to two: money signal or clean status.<br><br>Pick the fastest one. Start with '+escapeHtml(move)+'.';
   }
   if(/\b(distracted|off track|spinning|can't focus|cant focus|cannot focus|pull me back|recenter|reset me|focus me)\b/.test(q)){
-    return 'Focus reset:<br><br>Come back to one lane.<br><br>Do this now.<br><br>'+escapeHtml(move)+'.<br><br>Finish one visible result, then report back.';
+    return 'Focus reset:<br><br>Come back to one lane.<br><br>Move: '+escapeHtml(move)+'.<br><br>Finish one visible result, then report back.';
   }
   return 'Focus reset:<br><br>One lane. One visible result.<br><br>Do '+escapeHtml(move)+'.<br><br>Then report back with what happened.';
 }
@@ -26769,7 +26769,6 @@ function getMissionBrainProgressSnapshotAnswerV24(profile,ctx,route,brainState){
   var q=profile.q||'';
   var move=brainState&&brainState.nextBestMove?brainState.nextBestMove:'one measurable move';
   var lane=getMissionBrainPlainLaneLabelV24(route);
-  if(route==='memory'||route==='sync'||route==='')lane='next-move';
   if(/\b(what did we just do|what did we just update|what did we just change|what changed in this chat|what changed in this build|what changed in this pass)\b/.test(q)){
     return 'Progress snapshot:<br><br>We just tightened the current Mission Command language layer.<br><br>The point is cleaner understanding, shorter answers, and one useful next action.<br><br>Next: test the new prompt, then save a backup if it feels right.';
   }
@@ -26779,7 +26778,7 @@ function getMissionBrainProgressSnapshotAnswerV24(profile,ctx,route,brainState){
   if(/\b(what is next from here|what's next from here|whats next from here|where did we leave off|where did we leave it)\b/.test(q)){
     return 'Next-from-here read:<br><br>We left off at one current move, not a full new plan.<br><br>Do '+escapeHtml(move)+'.<br><br>Then report back with the result.';
   }
-  return 'Quick recap:<br><br>You are in the '+escapeHtml(lane)+' lane.<br><br>The useful read is the next visible result, not the whole dashboard.<br><br>Do this now.<br><br>'+escapeHtml(move)+'.';
+  return 'Quick recap:<br><br>You are in the '+escapeHtml(lane)+' lane.<br><br>The useful read is the next visible result, not the whole dashboard.<br><br>Move: '+escapeHtml(move)+'.';
 }
 
 function getMissionBrainBlockLabelV24(name){
@@ -30612,12 +30611,6 @@ function buildMissionBubblePacket(route,conv,ctx,question,answer,followUp,links,
   }
   if(typeof isMissionDataTrustPromptV12==='function'&&isMissionDataTrustPromptV12(question||'')){
     return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false,presence:false})),b2:'',b3:''};
-  }
-  if(typeof getMissionBrainLanguageProfileV24==='function'){
-    var foundationProfile=getMissionBrainLanguageProfileV24(question||'',ctx||{},route,brainState||{});
-    if(foundationProfile&&(foundationProfile.decisionLockAsk||foundationProfile.focusResetAsk||foundationProfile.progressSnapshotAsk)){
-      return {b1:withWorker(applyMissionPresenceLayer(answer,route,question||'',{closer:false,presence:false})),b2:'',b3:''};
-    }
   }
   if(typeof missionIsCalendarEventPrepAskV21==='function'&&missionIsCalendarEventPrepAskV21(question||'')){
     route='calendar';
