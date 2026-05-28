@@ -3007,7 +3007,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="settings-section-title">Safe Write Paths</div>
           <div class="settings-list">
             <div class="settings-row is-primary"><div><div class="settings-row-name">Phase 7A readiness</div><div class="settings-row-meta" id="safe-write-readiness-summary">Planned only. No pointer write endpoint is active yet.</div></div><span class="settings-badge off" id="safe-write-readiness-badge">Planned</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Write boundary</div><div class="settings-row-meta" id="safe-write-boundary">Phase 7G writes require B3 confirmation, backup-first, and archive-only rules.</div></div><span class="settings-badge warn" id="safe-write-boundary-badge">Gated</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Write boundary</div><div class="settings-row-meta" id="safe-write-boundary">Future writes require A1XX approval, B3 confirmation, backup-first, and archive-only rules.</div></div><span class="settings-badge warn" id="safe-write-boundary-badge">Gated</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Pointer target</div><div class="settings-row-meta" id="safe-write-pointer-target">First future write path should be Drive File Index pointer creation only.</div></div><span class="settings-badge off" id="safe-write-pointer-badge">Future</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Approval state</div><div class="settings-row-meta" id="safe-write-approval">Implementation stays blocked until A1XX explicitly approves Phase 7 safe write paths.</div></div><span class="settings-badge warn" id="safe-write-approval-badge">Blocked</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Backend skeleton</div><div class="settings-row-meta" id="safe-write-skeleton-summary">Check the Phase 7B skeleton after Apps Script is deployed. It must return blocked and preview-only.</div></div><span class="settings-badge off" id="safe-write-skeleton-badge">Skeleton</span></div>
@@ -3015,7 +3015,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Phase 7D preview</div><div class="settings-row-meta" id="safe-write-phase7d-summary">Build one pointer payload preview. This only checks fields and returns blocked/preview-only.</div></div><span class="settings-badge off" id="safe-write-phase7d-row-badge">Preview</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Phase 7E B3</div><div class="settings-row-meta" id="safe-write-phase7e-summary">Arm a visible B3 confirmation after preview. No live write button is installed.</div></div><span class="settings-badge off" id="safe-write-phase7e-row-badge">B3</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Phase 7F endpoint</div><div class="settings-row-meta" id="safe-write-phase7f-summary">Review the future write endpoint contract before installing it.</div></div><span class="settings-badge off" id="safe-write-phase7f-row-badge">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Phase 7G write</div><div class="settings-row-meta" id="safe-write-phase7g-summary">One Drive File Index pointer write is installed behind B3 and readback.</div></div><span class="settings-badge off" id="safe-write-phase7g-row-badge">Gated</span></div>
           </div>
           <div class="settings-actions">
             <button class="btn primary" onclick="withGlobalProcessingActionV23('Checking safe write readiness',function(){return checkSafeWritePathReadinessV24();},this,'Safe write readiness checked.')">Check write readiness</button>
@@ -3025,8 +3024,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <button class="btn" onclick="withGlobalProcessingActionV23('Previewing pointer',function(){return previewPhase7DPointerPayloadV24();},this,'Pointer preview ready.')">Preview pointer</button>
             <button class="btn" onclick="armPhase7EB3ConfirmationV24()">Arm B3 confirm</button>
             <button class="btn" onclick="buildPhase7FEndpointReviewV24()">Build Phase 7F review</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Confirming one pointer',function(){return confirmPhase7GPointerWriteV24();},this,'Pointer write checked.')">Confirm one pointer</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Verifying pointer',function(){return verifyPhase7GPointerReadbackV24();},this,'Pointer readback checked.')">Verify pointer</button>
             <button class="btn" onclick="setDeveloperSectionV23('storage')">Open backups</button>
           </div>
           <details class="diagnostics-detail" style="margin-top:8px">
@@ -3081,20 +3078,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-actions">
               <button class="btn primary" onclick="buildPhase7FEndpointReviewV24()">Build review</button>
               <button class="btn" onclick="copyPhase7FEndpointReviewV24()">Copy review</button>
-            </div>
-          </details>
-          <details class="diagnostics-detail" style="margin-top:8px">
-            <summary><span>Phase 7G pointer write</span><span id="safe-write-phase7g-badge">Gated</span></summary>
-            <div class="settings-list">
-              <div class="settings-row"><div><div class="settings-row-name">Write gate</div><div class="settings-row-meta" id="safe-write-phase7g-gate-summary">Preview, arm B3, verify backup, then confirm one pointer.</div></div><span class="settings-badge warn" id="safe-write-phase7g-gate-badge">Gated</span></div>
-              <div class="settings-row"><div><div class="settings-row-name">Readback</div><div class="settings-row-meta" id="safe-write-phase7g-readback-summary">No pointer has been written from this build yet.</div></div><span class="settings-badge off" id="safe-write-phase7g-readback-badge">Idle</span></div>
-            </div>
-            <label for="safe-write-phase7g-output">Write receipt and readback</label>
-            <textarea id="safe-write-phase7g-output" rows="10" readonly placeholder="Confirm one pointer only after a clean preview, armed B3, and fresh backup."></textarea>
-            <div class="settings-actions">
-              <button class="btn primary" onclick="withGlobalProcessingActionV23('Confirming one pointer',function(){return confirmPhase7GPointerWriteV24();},this,'Pointer write checked.')">Confirm one pointer</button>
-              <button class="btn" onclick="withGlobalProcessingActionV23('Verifying pointer',function(){return verifyPhase7GPointerReadbackV24();},this,'Pointer readback checked.')">Verify pointer</button>
-              <button class="btn" onclick="clearPhase7GPointerWriteStateV24()">Clear receipt</button>
             </div>
           </details>
           <div class="reset-status" id="safe-write-readiness-status"></div>
@@ -4466,9 +4449,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-28 12:26 ET · OS v2_4 Phase 7G pointer write endpoint';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7G pointer write endpoint';
-var APP_CACHE_TOKEN='mmos-20260528-1226-v24-phase7g-pointer-write-endpoint';
+var APP_BUILD_STAMP='2026-05-28 11:29 ET · OS v2_4 Phase 7F endpoint review';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7F endpoint review';
+var APP_CACHE_TOKEN='mmos-20260528-1129-v24-phase7f-endpoint-review';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6941,12 +6924,12 @@ function getSafeWritePathReadinessV24(registryGateOverride){
   );
   var backup=window.__lastBackupArchiveStatusV22||null;
   var latest=backup&&backup.latest?backup.latest:null;
-  var activeWriteEndpoint=true;
+  var activeWriteEndpoint=false;
   var checks=[
     {key:'registry',ok:!!(registryGate&&registryGate.passed),label:'Cloud registry gate',text:registryGate&&registryGate.passed?'Registry summary and compact index rows are readable.':'Run cloud registry summary and index rows before enabling any write path.'},
     {key:'backup',ok:!!(latest&&latest.backupId&&latest.driveFileId),label:'Backup anchor',text:latest&&latest.backupId?'Latest backup visible: '+latest.backupId+'.':'Save or verify a fresh Drive backup before any future write path.'},
-    {key:'endpoint',ok:activeWriteEndpoint,label:'Write endpoint',text:'One pointer write endpoint is installed behind B3 confirmation and readback.'},
-    {key:'approval',ok:true,label:'Approval gate',text:'Phase 7G can write one Drive File Index pointer only after preview, B3, and backup gates pass.'}
+    {key:'endpoint',ok:!activeWriteEndpoint,label:'Write endpoint',text:'No pointer write endpoint is active in this build.'},
+    {key:'approval',ok:true,label:'Approval gate',text:'Phase 7 writes remain blocked until explicit A1XX approval and B3 confirmation are installed.'}
   ];
   var failed=checks.filter(function(item){return !item.ok;});
   return {
@@ -6960,7 +6943,7 @@ function getSafeWritePathReadinessV24(registryGateOverride){
     activeWriteEndpoint:activeWriteEndpoint,
     summary:failed.length
       ? 'Phase 7A readiness needs '+failed.map(function(item){return item.label;}).slice(0,2).join(', ')+'.'
-      : 'Phase 7A readiness is clean. Phase 7G endpoint is active but gated.'
+      : 'Phase 7A readiness is clean. Future writes are still blocked until approved.'
   };
 }
 
@@ -6984,33 +6967,30 @@ function renderSafeWritePathReadinessV24(snapshot){
   var phase7eBadge=document.getElementById('safe-write-phase7e-row-badge');
   var phase7f=document.getElementById('safe-write-phase7f-summary');
   var phase7fBadge=document.getElementById('safe-write-phase7f-row-badge');
-  var phase7g=document.getElementById('safe-write-phase7g-summary');
-  var phase7gBadge=document.getElementById('safe-write-phase7g-row-badge');
   var skeletonState=window.__phase7BPointerWriteSkeletonV24||null;
   var phase7cState=window.__phase7CPointerWriteFlowPlanV24||null;
   var phase7dState=window.__phase7DPointerPreviewV24||null;
   var phase7eState=window.__phase7EB3ConfirmationV24||null;
   var phase7fState=window.__phase7FEndpointReviewV24||null;
-  var phase7gState=window.__phase7GPointerWriteV24||null;
   if(summary)summary.textContent=snapshot.summary;
   if(summaryBadge){
     summaryBadge.textContent=snapshot.label;
     summaryBadge.className=setupDoctorBadgeClassV23(snapshot.state);
   }
-  if(boundary)boundary.textContent='Phase 7G writes require B3 confirmation, backup-first, readback verification, and archive-only recovery.';
+  if(boundary)boundary.textContent='Future writes require A1XX approval, B3 confirmation, backup-first, readback verification, and archive-only recovery.';
   if(boundaryBadge){
-    boundaryBadge.textContent='Gated';
-    boundaryBadge.className=setupDoctorBadgeClassV23('ready');
+    boundaryBadge.textContent=snapshot.activeWriteEndpoint?'Review':'Gated';
+    boundaryBadge.className=setupDoctorBadgeClassV23(snapshot.activeWriteEndpoint?'warn':'ready');
   }
   if(pointer)pointer.textContent='First allowed future write path: create or update a single Drive File Index pointer record after manual confirmation.';
   if(pointerBadge){
     pointerBadge.textContent='Pointer';
     pointerBadge.className=setupDoctorBadgeClassV23('off');
   }
-  if(approval)approval.textContent='Phase 7G can run one pointer write only after preview, B3, backup, and readback gates.';
+  if(approval)approval.textContent='No pointer writes can run from this build. Phase 7B must add the endpoint and confirmation gate after approval.';
   if(approvalBadge){
-    approvalBadge.textContent='Gated';
-    approvalBadge.className=setupDoctorBadgeClassV23('ready');
+    approvalBadge.textContent='Blocked';
+    approvalBadge.className=setupDoctorBadgeClassV23('warn');
   }
   if(skeleton){
     skeleton.textContent=skeletonState
@@ -7041,7 +7021,7 @@ function renderSafeWritePathReadinessV24(snapshot){
   }
   if(phase7e){
     phase7e.textContent=phase7eState
-      ? 'B3 confirmation is armed for the previewed pointer. One pointer write remains gated.'
+      ? 'B3 confirmation is armed for the previewed pointer. Writes remain blocked.'
       : 'Arm a visible B3 confirmation after preview. No live write button is installed.';
   }
   if(phase7eBadge){
@@ -7056,15 +7036,6 @@ function renderSafeWritePathReadinessV24(snapshot){
   if(phase7fBadge){
     phase7fBadge.textContent=phase7fState?'Ready':'Review';
     phase7fBadge.className=setupDoctorBadgeClassV23(phase7fState?'ready':'off');
-  }
-  if(phase7g){
-    phase7g.textContent=phase7gState
-      ? (phase7gState.passed?'One pointer write read back cleanly.':'Phase 7G write needs review.')
-      : 'One Drive File Index pointer write is installed behind B3 and readback.';
-  }
-  if(phase7gBadge){
-    phase7gBadge.textContent=phase7gState?(phase7gState.passed?'Verified':'Review'):'Gated';
-    phase7gBadge.className=setupDoctorBadgeClassV23(phase7gState?(phase7gState.passed?'ready':'warn'):'off');
   }
   return snapshot;
 }
@@ -7083,7 +7054,7 @@ async function checkSafeWritePathReadinessV24(){
   if(status){
     status.className='reset-status '+(snapshot.passed?'ok':'warn');
     status.textContent=snapshot.passed
-      ? 'Safe write readiness is clean. Phase 7G can write one pointer only after B3.'
+      ? 'Safe write readiness is clean. Writes remain blocked until explicit Phase 7 approval.'
       : snapshot.summary;
   }
   return snapshot;
@@ -7092,8 +7063,8 @@ async function checkSafeWritePathReadinessV24(){
 function runSafeWritePathReadinessSelfCheckV24(){
   var snapshot=renderSafeWritePathReadinessV24();
   return {
-    passed:snapshot.passed&&snapshot.activeWriteEndpoint===true,
-    meta:snapshot.passed?'One pointer write endpoint is gated behind B3 · no bulk path.':snapshot.summary,
+    passed:snapshot.passed&&snapshot.activeWriteEndpoint===false,
+    meta:snapshot.passed?'Future write path is gated · no active write endpoint.':snapshot.summary,
     failures:snapshot.failed.map(function(item){return item.label;})
   };
 }
@@ -7438,7 +7409,7 @@ function formatPhase7DPointerPreviewResultV24(result,payload){
     result&&result.message?result.message:'Preview not checked yet.',
     '',
     'Next gate',
-    'Phase 7D only previews. Phase 7G controls the separate B3-confirmed write.'
+    'No write button is installed in Phase 7D. B3 confirmation and live write stay blocked.'
   ].join('\n');
 }
 
@@ -7513,7 +7484,7 @@ function runPhase7DPointerPreviewSelfCheckV24(){
   var clean=!!payload&&!missing.length&&String(payload.summary||'').indexOf('No Notion, Sheet, or Drive write')>=0;
   return {
     passed:clean,
-    meta:clean?'Phase 7D preview payload is available · write remains gated in Phase 7G.':'Phase 7D preview payload needs review.',
+    meta:clean?'Phase 7D preview payload is available · no write button installed.':'Phase 7D preview payload needs review.',
     failures:clean?[]:['Phase 7D pointer preview']
   };
 }
@@ -7528,7 +7499,7 @@ function formatPhase7EB3ConfirmationRecordV24(state){
     'Confirmation state',
     '- Armed: '+(state?'true':'false'),
     '- Armed at: '+(state&&state.armedAt?state.armedAt:'not armed'),
-    '- Write endpoint active: true',
+    '- Write endpoint active: false',
     '- Write executed: false',
     '',
     'Confirmed preview',
@@ -7542,7 +7513,7 @@ function formatPhase7EB3ConfirmationRecordV24(state){
     '- Archive state: '+(preview.archiveState||''),
     '',
     'Boundary',
-    'B3 is armed locally. Phase 7G can write one pointer only after backup and readback gates pass.'
+    'B3 is armed locally only. This build has no live write button and no active Notion write endpoint.'
   ].join('\n');
 }
 
@@ -7553,7 +7524,7 @@ function renderPhase7EB3ConfirmationV24(){
   var panelBadge=document.getElementById('safe-write-phase7e-badge');
   var output=document.getElementById('safe-write-b3-output');
   if(summary)summary.textContent=state
-    ? 'B3 is armed for the current preview. Confirm one pointer stays gated by backup and readback.'
+    ? 'B3 is armed for the current preview. This build still cannot write.'
     : 'Preview one pointer first. B3 can be armed after the preview is clean.';
   [badge,panelBadge].forEach(function(el){
     if(!el)return;
@@ -7580,15 +7551,15 @@ function armPhase7EB3ConfirmationV24(){
     armedAt:new Date().toISOString(),
     buildToken:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
     preview:previewState.result.preview,
-    writeEndpointActive:true,
+    writeEndpointActive:false,
     writeExecuted:false
   };
   renderPhase7EB3ConfirmationV24();
   if(status){
     status.className='reset-status ok';
-    status.textContent='B3 confirmation armed. One pointer write is now gated by backup and readback.';
+    status.textContent='B3 confirmation armed. Writes remain blocked.';
   }
-  return {passed:true,meta:'B3 confirmation armed · one pointer write remains gated.',failures:[]};
+  return {passed:true,meta:'B3 confirmation armed · no write button installed.',failures:[]};
 }
 
 function clearPhase7EB3ConfirmationV24(){
@@ -7611,7 +7582,7 @@ function runPhase7EB3ConfirmationSelfCheckV24(){
   );
   return {
     passed:hasUi,
-    meta:hasUi?'Phase 7E B3 UI is present · write remains gated.':'Phase 7E B3 UI is missing.',
+    meta:hasUi?'Phase 7E B3 UI is present · no write button installed.':'Phase 7E B3 UI is missing.',
     failures:hasUi?[]:['Phase 7E B3 confirmation']
   };
 }
@@ -7622,11 +7593,11 @@ function getPhase7FEndpointReviewTextV24(){
     'Build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),
     '',
     'Purpose',
-    '- Preserve the reviewed Apps Script endpoint contract now installed in Phase 7G.',
-    '- Keep the write path limited to B3-confirmed one-pointer actions.',
-    '- The first live write remains one Drive File Index pointer only.',
+    '- Review the exact future Apps Script endpoint before installing it.',
+    '- Keep this build review-only. No live write endpoint is active.',
+    '- The first future write remains one Drive File Index pointer only.',
     '',
-    'Active endpoint name',
+    'Future endpoint name',
     '- POST type: drive_file_index_pointer_write_confirmed',
     '- Target registry: Drive File Index only.',
     '- Mode: confirmed_single_pointer_write.',
@@ -7658,7 +7629,7 @@ function getPhase7FEndpointReviewTextV24(){
     '- archiveState',
     '- lastVerified',
     '',
-    'Server behavior after approval',
+    'Server behavior after future approval',
     '- Reject unsafe fields and secret-like values.',
     '- Reject missing required fields.',
     '- Create or update one Notion Drive File Index row.',
@@ -7695,8 +7666,8 @@ function getPhase7FEndpointReviewTextV24(){
     '- If readback fails after write, return review and ask A1XX before any repair.',
     '',
     'Phase 7F decision gate',
-    '- A1XX approved Phase 7G before the live write endpoint was installed.',
-    '- Phase 7G installs the endpoint and keeps the frontend write button behind B3.',
+    '- A1XX must explicitly approve Phase 7G before the live write endpoint is installed.',
+    '- Phase 7G should install the endpoint and keep the frontend write button behind B3.',
     '- Phase 7F itself does not write anything.'
   ].join('\\n');
 }
@@ -7719,7 +7690,7 @@ function buildPhase7FEndpointReviewV24(){
   renderSafeWritePathReadinessV24();
   if(status){
     status.className='reset-status ok';
-    status.textContent='Phase 7F endpoint review built. Phase 7G endpoint controls the gated write.';
+    status.textContent='Phase 7F endpoint review built. Live write endpoint is still blocked.';
   }
   return note?note.value:'';
 }
@@ -7745,249 +7716,12 @@ async function copyPhase7FEndpointReviewV24(){
 function runPhase7FEndpointReviewSelfCheckV24(){
   var text=typeof getPhase7FEndpointReviewTextV24==='function'?getPhase7FEndpointReviewTextV24():'';
   var clean=text.indexOf('drive_file_index_pointer_write_confirmed')>=0
-    && text.indexOf('A1XX approved Phase 7G')>=0
+    && text.indexOf('A1XX must explicitly approve Phase 7G')>=0
     && text.indexOf('Phase 7F itself does not write anything')>=0;
   return {
     passed:clean,
     meta:clean?'Phase 7F endpoint contract is mapped · live write remains blocked.':'Phase 7F endpoint review needs attention.',
     failures:clean?[]:['Phase 7F endpoint review']
-  };
-}
-
-function getPhase7GCurrentPointerPreviewV24(){
-  var state=window.__phase7DPointerPreviewV24||null;
-  return state&&state.result&&state.result.preview?state.result.preview:null;
-}
-
-function isPhase7GPreviewOnlyPointerV24(preview){
-  preview=preview||{};
-  return /^preview[_-]?only$/i.test(String(preview.driveFileId||''))
-    || /preview-only/i.test(String(preview.driveUrl||''));
-}
-
-function phase7GPreviewMatchesB3V24(preview,b3){
-  if(!preview||!b3||!b3.preview)return false;
-  var keys=['title','objectType','driveFileId','driveUrl','folderPath','source','status','archiveState','lastVerified'];
-  return keys.every(function(key){return String(preview[key]||'')===String(b3.preview[key]||'');});
-}
-
-function getPhase7GReadbackParamsV24(preview){
-  preview=preview||getPhase7GCurrentPointerPreviewV24()||getPhase7DPointerPreviewDefaultV24();
-  return {
-    title:preview.title||'',
-    objectType:preview.objectType||'',
-    driveFileId:preview.driveFileId||'',
-    driveUrl:preview.driveUrl||'',
-    folderPath:preview.folderPath||'',
-    source:preview.source||'',
-    summary:preview.summary||'',
-    status:preview.status||'',
-    archiveState:preview.archiveState||'',
-    lastVerified:preview.lastVerified||''
-  };
-}
-
-function formatPhase7GPointerWriteReceiptV24(result,readback,preview){
-  result=result||{};
-  readback=readback||{};
-  preview=preview||{};
-  var rb=readback.readback||result.readback||{};
-  return [
-    'Phase 7G pointer write',
-    'Build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),
-    '',
-    'Write result',
-    '- Status: '+(result.status||'unknown'),
-    '- Mode: '+(result.mode||'pending'),
-    '- Write executed: '+(result.writeExecuted===true?'true':'false'),
-    '- Action: '+(result.writeAction||''),
-    '- Readback verified: '+((result.readbackVerified===true||rb.verified===true)?'true':'false'),
-    '',
-    'Pointer',
-    '- Title: '+(preview.title||rb.title||''),
-    '- Object type: '+(preview.objectType||rb.type||''),
-    '- Drive file ID: '+(preview.driveFileId||rb.driveFileId||''),
-    '- Drive URL: '+(preview.driveUrl||rb.driveUrl||''),
-    '- Folder path: '+(preview.folderPath||rb.folderPath||''),
-    '',
-    'Readback',
-    '- Page ID: '+(rb.id||result.pageId||''),
-    '- Page URL: '+(rb.url||result.pageUrl||''),
-    '- Status: '+(rb.status||''),
-    '- Archive state: '+(rb.archiveState||''),
-    '- Last verified: '+(rb.lastVerified||''),
-    '',
-    'Backup gate',
-    '- Backup: '+(result.backup&&result.backup.backupId?result.backup.backupId:'checked before write'),
-    '- Sheet row: '+(result.backup&&result.backup.matchedRow?result.backup.matchedRow:''),
-    '',
-    'Result',
-    result.message||((rb&&rb.verified)?'One pointer is verified.':'Readback needs review.')
-  ].join('\n');
-}
-
-function renderPhase7GPointerWriteStateV24(){
-  var state=window.__phase7GPointerWriteV24||null;
-  var gateSummary=document.getElementById('safe-write-phase7g-gate-summary');
-  var gateBadge=document.getElementById('safe-write-phase7g-gate-badge');
-  var readbackSummary=document.getElementById('safe-write-phase7g-readback-summary');
-  var readbackBadge=document.getElementById('safe-write-phase7g-readback-badge');
-  var panelBadge=document.getElementById('safe-write-phase7g-badge');
-  var output=document.getElementById('safe-write-phase7g-output');
-  var passed=!!(state&&state.passed);
-  if(gateSummary)gateSummary.textContent=state
-    ? (passed?'B3, backup, write, and readback completed for one pointer.':'Phase 7G needs review before another write.')
-    : 'Preview, arm B3, verify backup, then confirm one pointer.';
-  [gateBadge,panelBadge].forEach(function(el){
-    if(!el)return;
-    el.textContent=state?(passed?'Verified':'Review'):'Gated';
-    el.className=setupDoctorBadgeClassV23(state?(passed?'ready':'warn'):'warn');
-  });
-  if(readbackSummary)readbackSummary.textContent=state
-    ? (state.meta||'Pointer write checked.')
-    : 'No pointer has been written from this build yet.';
-  if(readbackBadge){
-    readbackBadge.textContent=state?(passed?'Verified':'Review'):'Idle';
-    readbackBadge.className=setupDoctorBadgeClassV23(state?(passed?'ready':'warn'):'off');
-  }
-  if(output)output.value=state&&state.receipt?state.receipt:'';
-  renderSafeWritePathReadinessV24();
-  return state;
-}
-
-async function verifyPhase7GPointerReadbackV24(previewOverride){
-  var status=document.getElementById('safe-write-readiness-status');
-  var preview=previewOverride||getPhase7GCurrentPointerPreviewV24();
-  if(!preview){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Preview pointer first, then verify readback.';
-    }
-    return {passed:false,meta:'Missing pointer preview.',failures:['Phase 7G readback']};
-  }
-  var result=await getAppsScriptJson('drive_file_index_pointer_readback',getPhase7GReadbackParamsV24(preview),{timeoutMs:16000,tries:1});
-  var passed=!!(result&&result.ok===true&&result.readback&&result.readback.verified===true);
-  var receipt=formatPhase7GPointerWriteReceiptV24(window.__phase7GPointerWriteV24&&window.__phase7GPointerWriteV24.result||{},result,preview);
-  window.__phase7GPointerWriteV24={
-    passed:passed,
-    meta:passed?'Pointer readback verified.':'Pointer readback needs review.',
-    result:window.__phase7GPointerWriteV24&&window.__phase7GPointerWriteV24.result||{},
-    readback:result,
-    preview:preview,
-    receipt:receipt
-  };
-  renderPhase7GPointerWriteStateV24();
-  if(status){
-    status.className='reset-status '+(passed?'ok':'warn');
-    status.textContent=passed?'Pointer readback verified.':'Pointer readback needs review.';
-  }
-  return {passed:passed,meta:window.__phase7GPointerWriteV24.meta,failures:passed?[]:['Phase 7G readback']};
-}
-
-async function confirmPhase7GPointerWriteV24(){
-  var status=document.getElementById('safe-write-readiness-status');
-  var appUrl=localStorage.getItem(SHEETS_KEY);
-  if(!appUrl)throw new Error('Missing Apps Script URL.');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking Phase 7G gates...';
-  }
-  var readiness=await checkSafeWritePathReadinessV24();
-  if(!readiness||!readiness.passed){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Run cloud registry, index rows, and backup before confirming one pointer.';
-    }
-    return {passed:false,meta:'Safe write readiness needs review.',failures:['Phase 7G readiness']};
-  }
-  var previewState=window.__phase7DPointerPreviewV24||null;
-  var preview=getPhase7GCurrentPointerPreviewV24();
-  var b3=window.__phase7EB3ConfirmationV24||null;
-  if(!previewState||previewState.passed!==true||!preview){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Preview pointer first.';
-    }
-    return {passed:false,meta:'Preview pointer first.',failures:['Phase 7G preview']};
-  }
-  if(isPhase7GPreviewOnlyPointerV24(preview)){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Replace preview-only Drive fields with a real Drive file or folder before writing.';
-    }
-    return {passed:false,meta:'Preview-only pointer cannot be written.',failures:['Phase 7G real Drive pointer']};
-  }
-  if(!phase7GPreviewMatchesB3V24(preview,b3)){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Arm B3 again for the exact current preview.';
-    }
-    return {passed:false,meta:'B3 does not match current preview.',failures:['Phase 7G B3']};
-  }
-  var latest=readiness.latest||{};
-  var payload={
-    type:'drive_file_index_pointer_write_confirmed',
-    pointer:preview,
-    approvalState:'approved',
-    b3Confirmed:true,
-    b3ArmedAt:b3.armedAt,
-    backupVerified:true,
-    latestBackupId:latest.backupId||'',
-    writeScope:'one_pointer_only',
-    targetRegistry:'driveFileIndex',
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    confirmationText:'B3 CONFIRM ONE POINTER'
-  };
-  if(status){
-    status.className='reset-status';
-    status.textContent='Sending one confirmed pointer write...';
-  }
-  await postToAppsScript(appUrl,payload);
-  await waitMs(2600);
-  var readback=await getAppsScriptJson('drive_file_index_pointer_readback',getPhase7GReadbackParamsV24(preview),{timeoutMs:18000,tries:2});
-  var passed=!!(readback&&readback.ok===true&&readback.readback&&readback.readback.verified===true);
-  var result={
-    status:passed?'ok':'review',
-    mode:'confirmed_single_pointer_write',
-    writeExecuted:passed,
-    writeAction:'create_or_update',
-    readbackVerified:passed,
-    backup:{backupId:latest.backupId||'',matchedRow:latest.matchedRow||''},
-    readback:readback&&readback.readback,
-    message:passed?'One Drive File Index pointer was written and read back cleanly.':'Write sent, but readback needs review. Do not retry without checking the registry.'
-  };
-  var receipt=formatPhase7GPointerWriteReceiptV24(result,readback,preview);
-  window.__phase7GPointerWriteV24={passed:passed,meta:result.message,result:result,readback:readback,preview:preview,receipt:receipt};
-  renderPhase7GPointerWriteStateV24();
-  if(status){
-    status.className='reset-status '+(passed?'ok':'warn');
-    status.textContent=result.message;
-  }
-  return {passed:passed,meta:result.message,failures:passed?[]:['Phase 7G pointer write']};
-}
-
-function clearPhase7GPointerWriteStateV24(){
-  var status=document.getElementById('safe-write-readiness-status');
-  window.__phase7GPointerWriteV24=null;
-  renderPhase7GPointerWriteStateV24();
-  if(status){
-    status.className='reset-status';
-    status.textContent='Phase 7G receipt cleared.';
-  }
-  return {passed:true,meta:'Phase 7G receipt cleared.',failures:[]};
-}
-
-function runPhase7GPointerWriteSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('safe-write-phase7g-output')
-    && document.getElementById('safe-write-phase7g-gate-summary')
-    && typeof confirmPhase7GPointerWriteV24==='function'
-    && typeof verifyPhase7GPointerReadbackV24==='function'
-  );
-  return {
-    passed:hasUi,
-    meta:hasUi?'Phase 7G one-pointer write UI is installed behind B3 and readback.':'Phase 7G pointer write UI is missing.',
-    failures:hasUi?[]:['Phase 7G pointer write']
   };
 }
 
@@ -9230,7 +8964,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -9245,7 +8979,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 7D Preview',typeof runPhase7DPointerPreviewSelfCheckV24==='function'?runPhase7DPointerPreviewSelfCheckV24():{passed:false,meta:'Missing Phase 7D preview check'});}catch(e){add('Phase 7D Preview',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 7E B3',typeof runPhase7EB3ConfirmationSelfCheckV24==='function'?runPhase7EB3ConfirmationSelfCheckV24():{passed:false,meta:'Missing Phase 7E B3 check'});}catch(e){add('Phase 7E B3',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 7F Endpoint Review',typeof runPhase7FEndpointReviewSelfCheckV24==='function'?runPhase7FEndpointReviewSelfCheckV24():{passed:false,meta:'Missing Phase 7F endpoint review check'});}catch(e){add('Phase 7F Endpoint Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 7G Pointer Write Gate',typeof runPhase7GPointerWriteSelfCheckV24==='function'?runPhase7GPointerWriteSelfCheckV24():{passed:false,meta:'Missing Phase 7G pointer write gate'});}catch(e){add('Phase 7G Pointer Write Gate',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
