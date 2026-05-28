@@ -2739,7 +2739,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-list diagnostics-detail-list">
               <div class="settings-row"><div><div class="settings-row-name">Setup + bridge</div><div class="settings-row-meta" id="settings-v23-closeout-setup">Run closeout check to verify Setup Doctor.</div></div><span class="settings-badge off" id="settings-v23-closeout-setup-badge">Setup</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Cloud registry</div><div class="settings-row-meta" id="settings-v23-closeout-registry">Run closeout check to verify trusted device and setup pointers.</div></div><span class="settings-badge off" id="settings-v23-closeout-registry-badge">Registry</span></div>
-              <div class="settings-row"><div><div class="settings-row-name">Workspace registries</div><div class="settings-row-meta" id="settings-v23-closeout-workspace">Run closeout check to verify read-only Notion registry summary.</div></div><span class="settings-badge off" id="settings-v23-closeout-workspace-badge">Cloud</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Backup + restore</div><div class="settings-row-meta" id="settings-v23-closeout-backup">Run closeout check to verify Drive backup and restore gate.</div></div><span class="settings-badge off" id="settings-v23-closeout-backup-badge">Backup</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Live QA</div><div class="settings-row-meta" id="settings-v23-closeout-liveqa">Run closeout check to include Live QA.</div></div><span class="settings-badge off" id="settings-v23-closeout-liveqa-badge">QA</span></div>
               <div class="settings-row"><div><div class="settings-row-name">Next phase gate</div><div class="settings-row-meta" id="settings-v23-closeout-next">Closeout has not run yet.</div></div><span class="settings-badge off" id="settings-v23-closeout-next-badge">Next</span></div>
@@ -4362,9 +4361,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-28 09:10 ET · OS v2_4 cloud registry QA';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 cloud registry visibility + QA';
-var APP_CACHE_TOKEN='mmos-20260528-0910-v24-cloud-registry-qa';
+var APP_BUILD_STAMP='2026-05-28 09:05 ET · OS v2_4 cloud registry summary';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 cloud registry visibility';
+var APP_CACHE_TOKEN='mmos-20260528-0905-v24-cloud-registry-summary';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6608,21 +6607,6 @@ async function loadDeveloperRegistrySurfacesV24(){
   };
 }
 
-async function runCloudRegistrySummarySelfCheckV24(){
-  try{
-    var data=await loadCloudRegistrySummaryV24();
-    var counts=getCloudRegistryReviewCountsV24(data);
-    if(!data||data.ok!==true)return {passed:false,meta:'Cloud registry endpoint did not return ok.'};
-    if(data.mode!=='read_only')return {passed:false,meta:'Cloud registry endpoint is not reporting read-only mode.'};
-    if((data.warnings||[]).length)return {passed:false,meta:'Registry warnings: '+data.warnings.slice(0,2).join(' | ')};
-    if((Number(data.registryCount)||0)<12)return {passed:false,meta:'Expected 12 registry containers, got '+(data.registryCount||0)+'.'};
-    if((Number(data.readableCount)||0)!==(Number(data.registryCount)||0))return {passed:false,meta:'Only '+(data.readableCount||0)+' of '+(data.registryCount||0)+' registries are readable.'};
-    return {passed:true,meta:counts.readableCount+' registry container(s) readable · '+counts.recordCount+' record(s) · read-only.'};
-  }catch(e){
-    return {passed:false,meta:e&&e.message?e.message:String(e)};
-  }
-}
-
 function resetDeviceRegistryRegisterGateV23(button){
   window.__deviceRegistryRegisterArmedUntilV23=0;
   if(button){
@@ -7862,7 +7846,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -7870,7 +7854,6 @@ async function runHealthLiveQACheckV22(){
   }
   try{add('Storage Health',typeof runStorageHealthSelfCheckV22==='function'?runStorageHealthSelfCheckV22():{passed:false,meta:'Missing storage self-check'});}catch(e){add('Storage Health',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Backup Archive',typeof runBackupArchiveSelfCheckV22==='function'?await runBackupArchiveSelfCheckV22():{passed:false,meta:'Missing backup archive check'});}catch(e){add('Backup Archive',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Cloud Registry Summary',typeof runCloudRegistrySummarySelfCheckV24==='function'?await runCloudRegistrySummarySelfCheckV24():{passed:false,meta:'Missing cloud registry summary check'});}catch(e){add('Cloud Registry Summary',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -7900,8 +7883,6 @@ function getV23FoundationCloseoutSnapshot(liveQaResult){
   var pointerSummary=typeof getSetupPointerSummaryV23==='function'?getSetupPointerSummaryV23():null;
   var cloudReadiness=typeof getCloudProfileReadinessStatusV23==='function'?getCloudProfileReadinessStatusV23(getCloudProfileReadinessSnapshotV23()):null;
   var trustedRestore=typeof getTrustedRestoreReadinessStatusV23==='function'?getTrustedRestoreReadinessStatusV23(getTrustedRestoreReadinessSnapshotV23()):null;
-  var workspaceRegistry=typeof getCloudRegistrySummaryStateV24==='function'?getCloudRegistrySummaryStateV24():null;
-  var workspaceCounts=workspaceRegistry&&typeof getCloudRegistryReviewCountsV24==='function'?getCloudRegistryReviewCountsV24(workspaceRegistry):null;
   var storage=typeof getStorageHealthSnapshotV22==='function'?getStorageHealthSnapshotV22():null;
   var backup=window.__lastBackupArchiveStatusV22||null;
   var latest=backup&&backup.latest?backup.latest:null;
@@ -7915,7 +7896,6 @@ function getV23FoundationCloseoutSnapshot(liveQaResult){
   var backupOk=!!(latest&&latest.backupId&&latest.driveFileId);
   var restoreOk=trustedRestore&&trustedRestore.state==='ready';
   var cloudOk=cloudReadiness&&cloudReadiness.state==='ready';
-  var workspaceOk=!!(workspaceRegistry&&workspaceRegistry.mode==='read_only'&&workspaceRegistry.status==='ok'&&(workspaceRegistry.warnings||[]).length===0&&Number(workspaceRegistry.readableCount)===Number(workspaceRegistry.registryCount)&&Number(workspaceRegistry.registryCount)>=12);
   var liveQaOk=!!(liveQa&&liveQa.passed);
   var liveQaText=liveQa
     ? (liveQaOk?'Passed. '+liveQa.rows.length+' Live QA row(s) checked.':'Review. '+(liveQa.summary||getHealthLiveQAFailureSummaryV22(liveQa.rows)))
@@ -7923,7 +7903,6 @@ function getV23FoundationCloseoutSnapshot(liveQaResult){
   var checks=[
     {key:'setup',label:'Setup + bridge',ok:!!setupOk,state:setupStatus.state||'warn',text:setupStatus.summary||'Setup Doctor not checked yet.'},
     {key:'registry',label:'Cloud registry',ok:!!registryOk,state:registryOk?'ready':'warn',text:registryOk?'Trusted device and 6 setup pointers are readable.':'Load registry and confirm trusted device plus 6 setup pointers.'},
-    {key:'workspace',label:'Workspace registries',ok:!!workspaceOk,state:workspaceOk?'ready':'warn',text:workspaceOk?'Read-only registry summary is clean · '+workspaceCounts.recordCount+' record(s) across '+workspaceCounts.registryCount+' registry container(s).':'Load cloud registry summary and confirm 12 readable registries with no warnings.'},
     {key:'pointers',label:'Setup pointers',ok:!!pointerOk,state:pointerOk?'ready':'warn',text:pointerOk?'Safe pointer index is complete.':'Setup pointer index is not complete yet.'},
     {key:'backup',label:'Backup + restore',ok:!!(backupOk&&restoreOk&&storageOk),state:(backupOk&&restoreOk&&storageOk)?'ready':'warn',text:backupOk&&restoreOk?'Drive backup and restore gate are ready.':'Verify Drive backup and trusted restore readiness.'},
     {key:'cloud',label:'Cloud profile',ok:!!cloudOk,state:cloudOk?'ready':'warn',text:cloudOk?'Cloud profile foundation is ready; login-anywhere remains future auth work.':'Cloud profile readiness needs review.'},
@@ -7934,8 +7913,6 @@ function getV23FoundationCloseoutSnapshot(liveQaResult){
     setupStatus:setupStatus,
     registryRead:registryRead,
     pointerSummary:pointerSummary,
-    workspaceRegistry:workspaceRegistry,
-    workspaceCounts:workspaceCounts,
     cloudReadiness:cloudReadiness,
     trustedRestore:trustedRestore,
     storage:storage,
@@ -7975,8 +7952,6 @@ function renderV23FoundationCloseoutSummary(snapshot){
   setV23CloseoutRowV23('setup',setup.state==='clean',setup.summary||'Run Setup Doctor.',setup.label||'Setup',setup.state||'warn');
   var registryOk=snapshot.checks.filter(function(item){return item.key==='registry';})[0];
   setV23CloseoutRowV23('registry',registryOk.ok,registryOk.text,registryOk.ok?'Clean':'Review',registryOk.state);
-  var workspaceOk=snapshot.checks.filter(function(item){return item.key==='workspace';})[0];
-  setV23CloseoutRowV23('workspace',workspaceOk.ok,workspaceOk.text,workspaceOk.ok?'Clean':'Review',workspaceOk.state);
   var backupCheck=snapshot.checks.filter(function(item){return item.key==='backup';})[0];
   var backupText=backupCheck.text;
   if(snapshot.latest&&snapshot.latest.backupId)backupText+=' Latest '+snapshot.latest.backupId+' · Sheet row '+(snapshot.latest.matchedRow||'?')+'.';
