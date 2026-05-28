@@ -3012,14 +3012,12 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <div class="settings-row"><div><div class="settings-row-name">Approval state</div><div class="settings-row-meta" id="safe-write-approval">Implementation stays blocked until A1XX explicitly approves Phase 7 safe write paths.</div></div><span class="settings-badge warn" id="safe-write-approval-badge">Blocked</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Backend skeleton</div><div class="settings-row-meta" id="safe-write-skeleton-summary">Check the Phase 7B skeleton after Apps Script is deployed. It must return blocked and preview-only.</div></div><span class="settings-badge off" id="safe-write-skeleton-badge">Skeleton</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Phase 7C flow</div><div class="settings-row-meta" id="safe-write-phase7c-summary">Map preview, B3 confirmation, one pointer write, readback, and rollback before any live write is approved.</div></div><span class="settings-badge off" id="safe-write-phase7c-row-badge">Plan</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Phase 7D preview</div><div class="settings-row-meta" id="safe-write-phase7d-summary">Build one pointer payload preview. This only checks fields and returns blocked/preview-only.</div></div><span class="settings-badge off" id="safe-write-phase7d-row-badge">Preview</span></div>
           </div>
           <div class="settings-actions">
             <button class="btn primary" onclick="withGlobalProcessingActionV23('Checking safe write readiness',function(){return checkSafeWritePathReadinessV24();},this,'Safe write readiness checked.')">Check write readiness</button>
             <button class="btn" onclick="withGlobalProcessingActionV23('Checking pointer skeleton',function(){return checkPhase7BPointerWriteSkeletonV24();},this,'Pointer skeleton checked.')">Check skeleton</button>
             <button class="btn" onclick="buildPhase7BPointerWritePlanV24()">Build Phase 7B plan</button>
             <button class="btn" onclick="buildPhase7CPointerWriteFlowPlanV24()">Build Phase 7C flow</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Previewing pointer',function(){return previewPhase7DPointerPayloadV24();},this,'Pointer preview ready.')">Preview pointer</button>
             <button class="btn" onclick="setDeveloperSectionV23('storage')">Open backups</button>
           </div>
           <details class="diagnostics-detail" style="margin-top:8px">
@@ -3034,25 +3032,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <textarea id="safe-write-phase7c-plan" rows="10" readonly placeholder="Build the Phase 7C flow before activating any pointer write."></textarea>
             <div class="settings-actions">
               <button class="btn" onclick="copyPhase7CPointerWriteFlowPlanV24()">Copy flow</button>
-            </div>
-          </details>
-          <details class="diagnostics-detail" style="margin-top:8px">
-            <summary><span>Phase 7D pointer preview</span><span id="safe-write-phase7d-badge">Preview</span></summary>
-            <div class="form-grid">
-              <div><label for="safe-write-preview-title">Title</label><input id="safe-write-preview-title" value="Phase 7D preview - Money Mission OS root"></div>
-              <div><label for="safe-write-preview-object-type">Object type</label><input id="safe-write-preview-object-type" value="folder_pointer"></div>
-              <div><label for="safe-write-preview-drive-id">Drive file ID</label><input id="safe-write-preview-drive-id" value="preview_only"></div>
-              <div><label for="safe-write-preview-drive-url">Drive URL</label><input id="safe-write-preview-drive-url" value="https://drive.google.com/drive/folders/preview-only"></div>
-              <div><label for="safe-write-preview-folder">Folder path</label><input id="safe-write-preview-folder" value="Money Mission OS"></div>
-              <div><label for="safe-write-preview-source">Source</label><input id="safe-write-preview-source" value="Developer Mode pointer preview"></div>
-            </div>
-            <label for="safe-write-preview-summary">Summary</label>
-            <textarea id="safe-write-preview-summary" rows="3">Preview-only pointer payload. No Notion, Sheet, or Drive write should execute.</textarea>
-            <label for="safe-write-preview-output">Preview result</label>
-            <textarea id="safe-write-preview-output" rows="8" readonly placeholder="Click Preview pointer to see the exact allowlisted payload returned by the blocked backend skeleton."></textarea>
-            <div class="settings-actions">
-              <button class="btn primary" onclick="withGlobalProcessingActionV23('Previewing pointer',function(){return previewPhase7DPointerPayloadV24();},this,'Pointer preview ready.')">Preview pointer</button>
-              <button class="btn" onclick="copyPhase7DPointerPreviewV24()">Copy preview</button>
             </div>
           </details>
           <div class="reset-status" id="safe-write-readiness-status"></div>
@@ -4424,9 +4403,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-28 11:02 ET · OS v2_4 Phase 7D pointer preview';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7D pointer preview';
-var APP_CACHE_TOKEN='mmos-20260528-1102-v24-phase7d-pointer-preview';
+var APP_BUILD_STAMP='2026-05-28 10:53 ET · OS v2_4 Phase 7C pointer write flow plan';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7C pointer write flow plan';
+var APP_CACHE_TOKEN='mmos-20260528-1053-v24-phase7c-pointer-write-flow-plan';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6936,11 +6915,8 @@ function renderSafeWritePathReadinessV24(snapshot){
   var skeletonBadge=document.getElementById('safe-write-skeleton-badge');
   var phase7c=document.getElementById('safe-write-phase7c-summary');
   var phase7cBadge=document.getElementById('safe-write-phase7c-row-badge');
-  var phase7d=document.getElementById('safe-write-phase7d-summary');
-  var phase7dBadge=document.getElementById('safe-write-phase7d-row-badge');
   var skeletonState=window.__phase7BPointerWriteSkeletonV24||null;
   var phase7cState=window.__phase7CPointerWriteFlowPlanV24||null;
-  var phase7dState=window.__phase7DPointerPreviewV24||null;
   if(summary)summary.textContent=snapshot.summary;
   if(summaryBadge){
     summaryBadge.textContent=snapshot.label;
@@ -6978,15 +6954,6 @@ function renderSafeWritePathReadinessV24(snapshot){
   if(phase7cBadge){
     phase7cBadge.textContent=phase7cState?'Ready':'Plan';
     phase7cBadge.className=setupDoctorBadgeClassV23(phase7cState?'ready':'off');
-  }
-  if(phase7d){
-    phase7d.textContent=phase7dState
-      ? (phase7dState.passed?'Pointer preview is clean. Backend returned blocked/preview-only.':phase7dState.meta)
-      : 'Build one pointer payload preview. This only checks fields and returns blocked/preview-only.';
-  }
-  if(phase7dBadge){
-    phase7dBadge.textContent=phase7dState?(phase7dState.passed?'Ready':'Review'):'Preview';
-    phase7dBadge.className=setupDoctorBadgeClassV23(phase7dState?(phase7dState.passed?'ready':'warn'):'off');
   }
   return snapshot;
 }
@@ -7287,156 +7254,6 @@ function runPhase7CPointerWriteFlowPlanSelfCheckV24(){
     passed:!!hasPlan,
     meta:hasPlan?'Phase 7C write flow is mapped · writes remain blocked.':'Phase 7C flow plan missing or incomplete.',
     failures:hasPlan?[]:['Phase 7C pointer write flow']
-  };
-}
-
-function getPhase7DPointerPreviewDefaultV24(){
-  return {
-    title:'Phase 7D preview - Money Mission OS root',
-    objectType:'folder_pointer',
-    driveFileId:'preview_only',
-    driveUrl:'https://drive.google.com/drive/folders/preview-only',
-    folderPath:'Money Mission OS',
-    source:'Developer Mode pointer preview',
-    summary:'Preview-only pointer payload. No Notion, Sheet, or Drive write should execute.',
-    status:'Verified',
-    archiveState:'Active',
-    confidence:'High',
-    lastVerified:new Date().toISOString().slice(0,10)
-  };
-}
-
-function getPhase7DPointerPreviewPayloadV24(){
-  var fallback=getPhase7DPointerPreviewDefaultV24();
-  function val(id,backup){
-    var el=document.getElementById(id);
-    return el&&typeof el.value==='string'?el.value.trim():backup;
-  }
-  return {
-    title:val('safe-write-preview-title',fallback.title),
-    objectType:val('safe-write-preview-object-type',fallback.objectType),
-    driveFileId:val('safe-write-preview-drive-id',fallback.driveFileId),
-    driveUrl:val('safe-write-preview-drive-url',fallback.driveUrl),
-    folderPath:val('safe-write-preview-folder',fallback.folderPath),
-    source:val('safe-write-preview-source',fallback.source),
-    summary:val('safe-write-preview-summary',fallback.summary),
-    status:fallback.status,
-    archiveState:fallback.archiveState,
-    confidence:fallback.confidence,
-    lastVerified:fallback.lastVerified
-  };
-}
-
-function formatPhase7DPointerPreviewResultV24(result,payload){
-  var preview=result&&result.preview?result.preview:{};
-  var gates=result&&result.gates?result.gates:{};
-  var missing=result&&result.missingFields?result.missingFields:[];
-  var unsafe=result&&result.unsafeFields?result.unsafeFields:[];
-  return [
-    'Phase 7D pointer preview',
-    'Build: '+(result&&result.build?result.build:(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
-    '',
-    'Write status',
-    '- Mode: '+(result&&result.mode?result.mode:'not checked'),
-    '- Write endpoint active: '+(gates.writeEndpointActive===false?'false':'review'),
-    '- Write executed: '+(gates.writeExecuted===false?'false':'review'),
-    '- Missing fields: '+(missing.length?missing.join(', '):'none'),
-    '- Unsafe fields: '+(unsafe.length?unsafe.join(', '):'none'),
-    '',
-    'Preview fields',
-    '- Title: '+(preview.title||payload.title||''),
-    '- Object type: '+(preview.objectType||payload.objectType||''),
-    '- Drive file ID: '+(preview.driveFileId||payload.driveFileId||''),
-    '- Drive URL: '+(preview.driveUrl||payload.driveUrl||''),
-    '- Folder path: '+(preview.folderPath||payload.folderPath||''),
-    '- Source: '+(preview.source||payload.source||''),
-    '- Summary: '+(preview.summary||payload.summary||''),
-    '- Status: '+(preview.status||payload.status||''),
-    '- Archive state: '+(preview.archiveState||payload.archiveState||''),
-    '- Confidence: '+(preview.confidence||payload.confidence||''),
-    '- Last verified: '+(preview.lastVerified||payload.lastVerified||''),
-    '',
-    'Result',
-    result&&result.message?result.message:'Preview not checked yet.',
-    '',
-    'Next gate',
-    'No write button is installed in Phase 7D. B3 confirmation and live write stay blocked.'
-  ].join('\n');
-}
-
-async function previewPhase7DPointerPayloadV24(){
-  var output=document.getElementById('safe-write-preview-output');
-  var status=document.getElementById('safe-write-readiness-status');
-  var badge=document.getElementById('safe-write-phase7d-badge');
-  var rowBadge=document.getElementById('safe-write-phase7d-row-badge');
-  var payload=getPhase7DPointerPreviewPayloadV24();
-  if(status){
-    status.className='reset-status';
-    status.textContent='Building pointer preview...';
-  }
-  try{
-    var result=await getAppsScriptJson('drive_file_index_pointer_write_skeleton',payload,{timeoutMs:12000,tries:1});
-    var gates=result&&result.gates?result.gates:{};
-    var missing=result&&result.missingFields?result.missingFields:[];
-    var unsafe=result&&result.unsafeFields?result.unsafeFields:[];
-    var passed=!!(result&&result.ok===true&&result.mode==='skeleton_only'&&gates.writeEndpointActive===false&&gates.writeExecuted===false&&!missing.length&&!unsafe.length);
-    var meta=passed?'Pointer preview is clean. No write executed.':'Pointer preview needs review before any future confirmation.';
-    window.__phase7DPointerPreviewV24={passed:passed,meta:meta,result:result,payload:payload};
-    if(output)output.value=formatPhase7DPointerPreviewResultV24(result,payload);
-    if(badge){
-      badge.textContent=passed?'Ready':'Review';
-      badge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-    }
-    if(rowBadge){
-      rowBadge.textContent=passed?'Ready':'Review';
-      rowBadge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-    }
-    renderSafeWritePathReadinessV24();
-    if(status){
-      status.className='reset-status '+(passed?'ok':'warn');
-      status.textContent=meta;
-    }
-    return {passed:passed,meta:meta,failures:passed?[]:['Phase 7D pointer preview']};
-  }catch(e){
-    var message=e&&e.message?e.message:String(e);
-    window.__phase7DPointerPreviewV24={passed:false,meta:message,result:null,payload:payload};
-    if(output)output.value=formatPhase7DPointerPreviewResultV24(null,payload);
-    renderSafeWritePathReadinessV24();
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Pointer preview needs review: '+message;
-    }
-    return {passed:false,meta:message,failures:['Phase 7D pointer preview']};
-  }
-}
-
-async function copyPhase7DPointerPreviewV24(){
-  var output=document.getElementById('safe-write-preview-output');
-  var status=document.getElementById('safe-write-readiness-status');
-  if(!output||!output.value)await previewPhase7DPointerPayloadV24();
-  try{
-    await navigator.clipboard.writeText(output.value);
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Phase 7D preview copied.';
-    }
-  }catch(e){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by the browser. Select the Phase 7D preview manually.';
-    }
-  }
-}
-
-function runPhase7DPointerPreviewSelfCheckV24(){
-  var payload=typeof getPhase7DPointerPreviewDefaultV24==='function'?getPhase7DPointerPreviewDefaultV24():null;
-  var required=['title','objectType','driveFileId','driveUrl','folderPath','source','summary','status','archiveState','confidence','lastVerified'];
-  var missing=required.filter(function(key){return !payload||!payload[key];});
-  var clean=!!payload&&!missing.length&&String(payload.summary||'').indexOf('No Notion, Sheet, or Drive write')>=0;
-  return {
-    passed:clean,
-    meta:clean?'Phase 7D preview payload is available · no write button installed.':'Phase 7D preview payload needs review.',
-    failures:clean?[]:['Phase 7D pointer preview']
   };
 }
 
@@ -8679,7 +8496,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -8691,7 +8508,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Safe Write Readiness',typeof runSafeWritePathReadinessSelfCheckV24==='function'?runSafeWritePathReadinessSelfCheckV24():{passed:false,meta:'Missing safe write readiness check'});}catch(e){add('Safe Write Readiness',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 7B Skeleton',typeof checkPhase7BPointerWriteSkeletonV24==='function'?await checkPhase7BPointerWriteSkeletonV24():{passed:false,meta:'Missing Phase 7B skeleton check'});}catch(e){add('Phase 7B Skeleton',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 7C Flow',typeof runPhase7CPointerWriteFlowPlanSelfCheckV24==='function'?runPhase7CPointerWriteFlowPlanSelfCheckV24():{passed:false,meta:'Missing Phase 7C flow plan check'});}catch(e){add('Phase 7C Flow',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 7D Preview',typeof runPhase7DPointerPreviewSelfCheckV24==='function'?runPhase7DPointerPreviewSelfCheckV24():{passed:false,meta:'Missing Phase 7D preview check'});}catch(e){add('Phase 7D Preview',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
