@@ -3013,16 +3013,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="settings-actions">
             <button class="btn primary" onclick="withGlobalProcessingActionV23('Checking safe write readiness',function(){return checkSafeWritePathReadinessV24();},this,'Safe write readiness checked.')">Check write readiness</button>
-            <button class="btn" onclick="buildPhase7BPointerWritePlanV24()">Build Phase 7B plan</button>
             <button class="btn" onclick="setDeveloperSectionV23('storage')">Open backups</button>
           </div>
-          <details class="diagnostics-detail" style="margin-top:8px">
-            <summary><span>Phase 7B pointer write plan</span><span id="safe-write-phase7b-badge">Plan</span></summary>
-            <textarea id="safe-write-phase7b-plan" rows="10" readonly placeholder="Build the Phase 7B plan before adding any write endpoint."></textarea>
-            <div class="settings-actions">
-              <button class="btn" onclick="copyPhase7BPointerWritePlanV24()">Copy plan</button>
-            </div>
-          </details>
           <div class="reset-status" id="safe-write-readiness-status"></div>
         </div>
       </div>
@@ -4392,9 +4384,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-28 10:20 ET · OS v2_4 Phase 7B pointer write plan';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7B pointer write plan';
-var APP_CACHE_TOKEN='mmos-20260528-1020-v24-phase7b-pointer-write-plan';
+var APP_BUILD_STAMP='2026-05-28 10:17 ET · OS v2_4 Phase 7A readiness status fix';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 7A readiness status fix';
+var APP_CACHE_TOKEN='mmos-20260528-1017-v24-phase7a-readiness-status-fix';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6950,89 +6942,6 @@ function runSafeWritePathReadinessSelfCheckV24(){
     meta:snapshot.passed?'Future write path is gated · no active write endpoint.':snapshot.summary,
     failures:snapshot.failed.map(function(item){return item.label;})
   };
-}
-
-function getPhase7BPointerWritePlanTextV24(){
-  return [
-    'Money Mission OS Phase 7B pointer write plan',
-    'Build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),
-    '',
-    'Purpose',
-    '- Add the first safe write path: one manually confirmed Drive File Index pointer record.',
-    '- Keep Drive as the file body source and Notion as the metadata/meaning layer.',
-    '- Do not activate workers, automations, bulk writes, deletes, moves, renames, or external sends.',
-    '',
-    'Allowed first write',
-    '- Target: Drive File Index only.',
-    '- Object type: folder_pointer or file_pointer.',
-    '- Scope: one record per confirmed action.',
-    '- Payload: title, object type, Drive file ID, Drive URL, folder path, source, summary, status, archive state, confidence, last verified.',
-    '',
-    'Required gates before any write',
-    '1. A1XX explicitly approves Phase 7B implementation.',
-    '2. Fresh Drive backup is verified.',
-    '3. Cloud Registry Gate is passed.',
-    '4. Safe Write Readiness is passed.',
-    '5. User clicks a B3 confirmation inside the app.',
-    '6. Apps Script writes one pointer record only.',
-    '7. App reads the pointer back and shows verification.',
-    '',
-    'Blocked in Phase 7B',
-    '- No writes to memory bodies.',
-    '- No Sheet payload writes.',
-    '- No token or secret storage.',
-    '- No worker-triggered writes.',
-    '- No automation activation.',
-    '- No delete, move, rename, share, mass edit, or publish action.',
-    '',
-    'Implementation order',
-    '1. Add backend write endpoint with allowlisted pointer fields only.',
-    '2. Add frontend preview payload builder.',
-    '3. Add two-click B3 confirmation.',
-    '4. Add readback verification.',
-    '5. Add Live QA row for pointer write gate.',
-    '6. Test with one approved Drive File Index pointer.',
-    '',
-    'Success criteria',
-    '- One pointer can be created or updated only after manual confirmation.',
-    '- Readback proves the pointer exists.',
-    '- The app never stores secrets or large payloads.',
-    '- Existing backups, registry reads, restore gates, and Live QA stay clean.'
-  ].join('\\n');
-}
-
-function buildPhase7BPointerWritePlanV24(){
-  var note=document.getElementById('safe-write-phase7b-plan');
-  var badge=document.getElementById('safe-write-phase7b-badge');
-  var status=document.getElementById('safe-write-readiness-status');
-  if(note)note.value=getPhase7BPointerWritePlanTextV24();
-  if(badge){
-    badge.textContent='Ready';
-    badge.className=setupDoctorBadgeClassV23('ready');
-  }
-  if(status){
-    status.className='reset-status ok';
-    status.textContent='Phase 7B plan built. No write endpoint is active.';
-  }
-  return note?note.value:'';
-}
-
-async function copyPhase7BPointerWritePlanV24(){
-  var note=document.getElementById('safe-write-phase7b-plan');
-  var status=document.getElementById('safe-write-readiness-status');
-  if(!note||!note.value)buildPhase7BPointerWritePlanV24();
-  try{
-    await navigator.clipboard.writeText(note.value);
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Phase 7B plan copied.';
-    }
-  }catch(e){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by the browser. Select the Phase 7B plan manually.';
-    }
-  }
 }
 
 function resetDeviceRegistryRegisterGateV23(button){
