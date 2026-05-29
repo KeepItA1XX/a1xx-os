@@ -2501,32 +2501,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="master-config-preflight-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Master Config Page Review</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8H scope</div><div class="settings-row-meta" id="master-config-page-review-scope">Review exact page ID and sharing readiness only. No master config read.</div></div><span class="settings-badge warn" id="master-config-page-review-scope-badge">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Page locator</div><div class="settings-row-meta" id="master-config-page-review-locator">Use preview_only or paste the exact private Notion page URL/ID for shape review.</div></div><span class="settings-badge off" id="master-config-page-review-locator-badge">Locator</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Share readiness</div><div class="settings-row-meta" id="master-config-page-review-share">Integration sharing must be confirmed on the exact page before any future read.</div></div><span class="settings-badge off" id="master-config-page-review-share-badge">Share</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="master-config-page-review-blocked">No config read, write, login-anywhere, auth sync, token export, secret export, restore, workers, or automations.</div></div><span class="settings-badge warn" id="master-config-page-review-blocked-badge">Blocked</span></div>
-          </div>
-          <div class="settings-field" style="margin-top:10px">
-            <label for="master-config-page-review-locator-input">Master config page URL or ID for review</label>
-            <input id="master-config-page-review-locator-input" type="text" autocomplete="off" placeholder="preview_only" value="preview_only">
-          </div>
-          <div class="settings-field" style="margin-top:10px">
-            <label><input id="master-config-page-review-approval" type="checkbox" checked> A1XX approval captured for this page review</label>
-            <label><input id="master-config-page-review-shared" type="checkbox"> Notion integration shared to the exact page</label>
-            <label><input id="master-config-page-review-exact" type="checkbox"> Exact page share confirmed</label>
-          </div>
-          <label for="master-config-page-review-output">Master config page review</label>
-          <textarea id="master-config-page-review-output" rows="13" readonly placeholder="Click Run page review. This checks ID shape and sharing gates only."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Running master config page review',function(){return runMasterConfigPageReviewV24();},this,'Master config page review checked.')">Run page review</button>
-            <button class="btn" onclick="copyMasterConfigPageReviewPreviewV24()">Copy page review</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Running master config preflight',function(){return runMasterConfigReadPreflightV24();},this,'Master config preflight checked.')">Run preflight</button>
-          </div>
-          <div class="reset-status" id="master-config-page-review-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4619,9 +4593,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-29 11:03 ET · OS v2_4 Phase 8H master config page review';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8H master config page review';
-var APP_CACHE_TOKEN='mmos-20260529-1103-v24-phase8h-master-config-page-review';
+var APP_BUILD_STAMP='2026-05-29 10:46 ET · OS v2_4 Phase 8G master config read preflight';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8G master config read preflight';
+var APP_CACHE_TOKEN='mmos-20260529-1046-v24-phase8g-master-config-read-preflight';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -7650,213 +7624,6 @@ function runMasterConfigReadPreflightSelfCheckV24(){
     passed:clean,
     meta:clean?'Phase 8G master config read preflight UI is installed · backend check runs after deploy.':'Phase 8G master config read preflight UI needs review.',
     failures:clean?[]:['Phase 8G master config read preflight UI']
-  };
-}
-
-function getMasterConfigPageReviewPayloadV24(){
-  var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
-  var locator=document.getElementById('master-config-page-review-locator-input');
-  var approval=document.getElementById('master-config-page-review-approval');
-  var shared=document.getElementById('master-config-page-review-shared');
-  var exact=document.getElementById('master-config-page-review-exact');
-  return {
-    masterConfigPageLocator:locator&&locator.value?locator.value.trim():'preview_only',
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    trustedSourceConfirmed:!!readiness.trusted,
-    backupVisible:!!readiness.backupReady,
-    a1xxApprovalCaptured:approval?!!approval.checked:true,
-    integrationSharedConfirmed:shared?!!shared.checked:false,
-    exactPageSharedConfirmed:exact?!!exact.checked:false,
-    readOnlyMode:true
-  };
-}
-
-function formatMasterConfigPageReviewPreviewV24(result){
-  result=result||{};
-  var missing=result.missingReviewItems||[];
-  var allowed=result.allowedLocatorInputs||[];
-  var required=result.requiredBeforeFutureRead||[];
-  var blocked=result.blockedActions||[];
-  return [
-    'Phase 8H master config page review',
-    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
-    '',
-    'Review mode',
-    '- Status: '+(result.status||'unknown'),
-    '- Mode: '+(result.mode||'unknown'),
-    '- Page review executed: '+(result.pageReviewExecuted?'true':'false'),
-    '- Read endpoint active: '+(result.readEndpointActive?'true':'false'),
-    '- Read executed: '+(result.readExecuted?'true':'false'),
-    '- Config read executed: '+(result.configReadExecuted?'true':'false'),
-    '- Write executed: '+(result.writeExecuted?'true':'false'),
-    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(result.secretExport?'true':'false'),
-    '- Token export: '+(result.tokenExport?'true':'false'),
-    '',
-    'Page locator',
-    '- Locator preview: '+(result.rawLocatorPreview||'preview_only'),
-    '- Requested page ID: '+(result.requestedPageId||'preview_only'),
-    '- Page ID supplied: '+(result.pageIdSupplied?'true':'false'),
-    '- Page ID shape ok: '+(result.pageIdShapeOk?'true':'false'),
-    '- Page ID format: '+(result.pageIdFormat||'preview_only'),
-    '- Locator type: '+(result.locatorType||'preview_only'),
-    '',
-    'Share readiness',
-    '- A1XX approval captured: '+(result.a1xxApprovalCaptured?'true':'false'),
-    '- Integration shared: '+(result.integrationSharedConfirmed?'true':'false'),
-    '- Exact page shared: '+(result.exactPageSharedConfirmed?'true':'false'),
-    '- Trusted source confirmed: '+(result.trustedSourceConfirmed?'true':'false'),
-    '- Backup visible: '+(result.backupVisible?'true':'false'),
-    '',
-    'Missing review items',
-    missing.length?('- '+missing.join('\n- ')):'- none',
-    '',
-    'Allowed locator inputs',
-    allowed.length?('- '+allowed.join('\n- ')):'- none returned',
-    '',
-    'Required before any future read',
-    required.length?('- '+required.join('\n- ')):'- none returned',
-    '',
-    'Blocked actions',
-    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
-    '',
-    'Result',
-    result.message||'Master config page review checked. No master config read executed.'
-  ].join('\n');
-}
-
-function renderMasterConfigPageReviewStateV24(state){
-  state=state||window.__masterConfigPageReviewV24||null;
-  var locator=document.getElementById('master-config-page-review-locator');
-  var locatorBadge=document.getElementById('master-config-page-review-locator-badge');
-  var share=document.getElementById('master-config-page-review-share');
-  var shareBadge=document.getElementById('master-config-page-review-share-badge');
-  var blocked=document.getElementById('master-config-page-review-blocked');
-  var blockedBadge=document.getElementById('master-config-page-review-blocked-badge');
-  var output=document.getElementById('master-config-page-review-output');
-  var result=state&&state.result?state.result:null;
-  var ready=!!(state&&state.ready);
-  var missing=result&&result.missingReviewItems?result.missingReviewItems:[];
-  if(locator)locator.textContent=result
-    ? ((result.requestedPageId||'preview_only')+' · '+(result.pageIdShapeOk?'shape ok':result.pageIdSupplied?'shape review':'preview only'))
-    : 'Use preview_only or paste the exact private Notion page URL/ID for shape review.';
-  if(locatorBadge){
-    locatorBadge.textContent=result?(result.pageIdShapeOk?'ID OK':result.pageIdSupplied?'Review':'Preview'):'Locator';
-    locatorBadge.className=setupDoctorBadgeClassV23(result&&result.pageIdShapeOk?'ready':result?'warn':'off');
-  }
-  if(share)share.textContent=result
-    ? (missing.length?missing.length+' share/readiness item(s) still open. No read can run.':'Page review gates preview clean. No read ran.')
-    : 'Integration sharing must be confirmed on the exact page before any future read.';
-  if(shareBadge){
-    shareBadge.textContent=result?(missing.length?'Gated':'Ready'):'Share';
-    shareBadge.className=setupDoctorBadgeClassV23(result?(missing.length?'warn':'ready'):'off');
-  }
-  if(blocked)blocked.textContent=result
-    ? 'Config read, write, login-anywhere, auth sync, tokens, secrets, restore, workers, and automations remain blocked.'
-    : 'No config read, write, login-anywhere, auth sync, token export, secret export, restore, workers, or automations.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23(ready?'ready':'warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return state;
-}
-
-async function runMasterConfigPageReviewV24(){
-  var status=document.getElementById('master-config-page-review-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Running review-only master config page check...';
-  }
-  if(typeof refreshAuthSyncReadinessV24==='function')await refreshAuthSyncReadinessV24();
-  var payload=getMasterConfigPageReviewPayloadV24();
-  var result=await getAppsScriptJson('master_config_page_review',payload,{timeoutMs:12000,tries:1});
-  var blocked=result&&result.blockedActions?result.blockedActions:[];
-  var unsafe=result&&result.unsafeFields?result.unsafeFields:[];
-  var clean=!!(
-    result
-    && result.mode==='page_review_only'
-    && result.pageReviewExecuted===true
-    && result.readEndpointActive===false
-    && result.readExecuted===false
-    && result.configReadExecuted===false
-    && result.writeExecuted===false
-    && result.writesEnabled===false
-    && result.loginAnywhereActive===false
-    && result.secretExport===false
-    && result.tokenExport===false
-    && unsafe.length===0
-    && blocked.indexOf('live master config read')>=0
-    && blocked.indexOf('secret export')>=0
-  );
-  var previewText=formatMasterConfigPageReviewPreviewV24(result);
-  window.__masterConfigPageReviewV24={
-    checkedAt:new Date().toISOString(),
-    ready:clean,
-    result:result,
-    previewText:previewText
-  };
-  renderMasterConfigPageReviewStateV24(window.__masterConfigPageReviewV24);
-  if(status){
-    status.className='reset-status '+(clean?'ok':'warn');
-    status.textContent=clean
-      ? 'Master config page review is review-only and blocked. No config read ran.'
-      : 'Master config page review needs review.';
-  }
-  return {
-    passed:clean,
-    meta:clean?'Phase 8H master config page review is review-only · no config read executed.':'Phase 8H master config page review needs review.',
-    failures:clean?[]:['Phase 8H master config page review']
-  };
-}
-
-async function copyMasterConfigPageReviewPreviewV24(){
-  var state=window.__masterConfigPageReviewV24||null;
-  var status=document.getElementById('master-config-page-review-status');
-  if(!state){
-    var check=await runMasterConfigPageReviewV24();
-    state=window.__masterConfigPageReviewV24||{previewText:check&&check.meta?check.meta:''};
-  }
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Master config page review copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('master-config-page-review-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the page review text manually.';
-    }
-  }
-}
-
-function runMasterConfigPageReviewSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('master-config-page-review-output')
-    && document.getElementById('master-config-page-review-blocked')
-    && typeof getMasterConfigPageReviewPayloadV24==='function'
-    && typeof runMasterConfigPageReviewV24==='function'
-  );
-  var payload=hasUi?getMasterConfigPageReviewPayloadV24():null;
-  var clean=!!(
-    hasUi
-    && payload
-    && payload.readOnlyMode===true
-    && !payload.notionToken
-    && !payload.webhookToken
-    && !payload.hmacSecret
-  );
-  return {
-    passed:clean,
-    meta:clean?'Phase 8H master config page review UI is installed · backend check runs after deploy.':'Phase 8H master config page review UI needs review.',
-    failures:clean?[]:['Phase 8H master config page review UI']
   };
 }
 
@@ -11026,7 +10793,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -11050,7 +10817,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8E New-Device Rehearsal',typeof runNewDeviceSetupRehearsalSelfCheckV24==='function'?runNewDeviceSetupRehearsalSelfCheckV24():{passed:false,meta:'Missing Phase 8E new-device rehearsal check'});}catch(e){add('Phase 8E New-Device Rehearsal',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8F Master Config Skeleton',typeof checkMasterConfigReadSkeletonV24==='function'?await checkMasterConfigReadSkeletonV24():{passed:false,meta:'Missing Phase 8F master config skeleton check'});}catch(e){add('Phase 8F Master Config Skeleton',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8G Master Config Preflight',typeof runMasterConfigReadPreflightV24==='function'?await runMasterConfigReadPreflightV24():{passed:false,meta:'Missing Phase 8G master config preflight check'});}catch(e){add('Phase 8G Master Config Preflight',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8H Master Config Page Review',typeof runMasterConfigPageReviewV24==='function'?await runMasterConfigPageReviewV24():{passed:false,meta:'Missing Phase 8H master config page review'});}catch(e){add('Phase 8H Master Config Page Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
