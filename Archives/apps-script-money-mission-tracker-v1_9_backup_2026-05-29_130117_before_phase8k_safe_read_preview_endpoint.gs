@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1301-v24-phase8k-safe-read-preview-endpoint';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1154-v24-phase8j-contract-review-false-positive-fix';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -300,7 +300,6 @@ function doGet(e) {
     if (e.parameter.action === 'master_config_page_review') return getMasterConfigPageReviewV19(e.parameter);
     if (e.parameter.action === 'master_config_locator_review') return getMasterConfigLocatorReviewV19(e.parameter);
     if (e.parameter.action === 'master_config_endpoint_contract_review') return getMasterConfigEndpointContractReviewV19(e.parameter);
-    if (e.parameter.action === 'master_config_safe_read_preview') return getMasterConfigSafeReadPreviewV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -2057,125 +2056,6 @@ function getMasterConfigEndpointContractReviewV19(input) {
       recovery: 'No restore execution.'
     },
     message: 'Master config endpoint contract review is review-only. No master config read executed.'
-  });
-}
-
-function getMasterConfigSafeReadPreviewV19(input) {
-  var checkedAt = new Date().toISOString();
-  var payload = input || {};
-  var safeScanPayload = Object.assign({}, payload);
-  delete safeScanPayload.secretScanPassed;
-  delete safeScanPayload.readOnlyEndpointReviewPassed;
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19(safeScanPayload);
-  var locator = normalizeMasterConfigPageLocatorV19(
-    payload.masterConfigPageLocator || payload.masterConfigPageUrl || payload.masterConfigPageId || payload.pageId || ''
-  );
-  var approvalCaptured = normalizeBooleanV19(payload.a1xxApprovalCaptured);
-  var integrationShared = normalizeBooleanV19(payload.integrationSharedConfirmed);
-  var exactPageShared = normalizeBooleanV19(payload.exactPageSharedConfirmed);
-  var trustedSource = normalizeBooleanV19(payload.trustedSourceConfirmed);
-  var backupVisible = normalizeBooleanV19(payload.backupVisible);
-  var secretScanPassed = normalizeBooleanV19(payload.secretScanPassed);
-  var readOnlyEndpointReviewPassed = normalizeBooleanV19(payload.readOnlyEndpointReviewPassed);
-  var locatorIsReal = locator.normalized !== 'preview_only';
-  var locatorShapeOk = locator.format === 'notion_page_id_shape_ok';
-  var missingPreviewItems = [];
-  if (!approvalCaptured) missingPreviewItems.push('A1XX approval not captured for safe read preview');
-  if (locatorIsReal && !locatorShapeOk) missingPreviewItems.push('Master config page locator shape needs review');
-  if (!trustedSource) missingPreviewItems.push('Trusted source device not confirmed');
-  if (!backupVisible) missingPreviewItems.push('Backup visibility not confirmed');
-  if (!secretScanPassed) missingPreviewItems.push('Secret scan gate not passed for preview endpoint');
-  if (!readOnlyEndpointReviewPassed) missingPreviewItems.push('Read-only endpoint review gate not passed');
-  if (locatorIsReal && !integrationShared) missingPreviewItems.push('Notion integration sharing not confirmed');
-  if (locatorIsReal && !exactPageShared) missingPreviewItems.push('Exact page share not confirmed');
-  if (unsafe.length) missingPreviewItems.push('Unsafe token/secret-like input detected');
-  return jsonResponseV19({
-    status: unsafe.length ? 'review' : 'safe_read_preview_ready',
-    ok: true,
-    mode: 'safe_read_preview_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    target: 'private_notion_master_config_page',
-    previewEndpointActive: true,
-    futureLiveReadEndpointActive: false,
-    safeReadPreviewExecuted: true,
-    readExecuted: false,
-    configReadExecuted: false,
-    notionReadExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    rawLocatorPreview: locator.preview,
-    requestedPageId: locator.normalized,
-    locatorIsReal: locatorIsReal,
-    locatorShapeOk: locatorShapeOk,
-    locatorType: locator.locatorType,
-    pageIdFormat: locator.format,
-    a1xxApprovalCaptured: approvalCaptured,
-    integrationSharedConfirmed: integrationShared,
-    exactPageSharedConfirmed: exactPageShared,
-    trustedSourceConfirmed: trustedSource,
-    backupVisible: backupVisible,
-    secretScanPassed: secretScanPassed,
-    readOnlyEndpointReviewPassed: readOnlyEndpointReviewPassed,
-    unsafeFields: unsafe,
-    missingPreviewItems: missingPreviewItems,
-    previewPackage: {
-      profileId: 'a1xx-primary',
-      displayName: 'A1XX',
-      safeSetupPointerKeys: [
-        'apps_script_web_app_url',
-        'clean_workbook_id',
-        'backup_folder_id',
-        'mc_master_config_page_id',
-        'team_chat_database_id',
-        'intelligence_hq_page_id'
-      ],
-      driveRootPointer: 'preview_only',
-      registrySummaryPointers: 'preview_only',
-      latestBackupMarker: cellTextV19(payload.latestBackupMarker || 'visible_from_client_backup_gate', 120),
-      sourceBuild: cellTextV19(payload.sourceBuild || OS_REGISTRY_SUMMARY_BUILD_V19, 180),
-      lastVerified: checkedAt.slice(0, 10),
-      readOnlyMode: true,
-      readReceipt: 'preview_only_no_notion_read'
-    },
-    allowedResponseFields: [
-      'profileId',
-      'displayName',
-      'safeSetupPointerKeys',
-      'driveRootPointer',
-      'registrySummaryPointers',
-      'latestBackupMarker',
-      'sourceBuild',
-      'lastVerified',
-      'readOnlyMode',
-      'readReceipt'
-    ],
-    nextAllowedStepAfterPreview: 'real_master_config_read_gate_review',
-    blockedActions: [
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution'
-    ],
-    safety: {
-      notion: 'No Notion read, create, update, archive, or delete executed.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, restores, or deletes.',
-      auth: 'No login-anywhere, auth sync, token export, or secret export.',
-      recovery: 'No restore execution.'
-    },
-    message: 'Master config safe read preview endpoint returned preview data only. No master config read executed.'
   });
 }
 
