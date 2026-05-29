@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1434-v24-phase8n-master-config-package-normalization';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1414-v24-phase8m-first-real-master-config-read';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -303,7 +303,6 @@ function doGet(e) {
     if (e.parameter.action === 'master_config_safe_read_preview') return getMasterConfigSafeReadPreviewV19(e.parameter);
     if (e.parameter.action === 'master_config_real_read_gate_review') return getMasterConfigRealReadGateReviewV19(e.parameter);
     if (e.parameter.action === 'master_config_first_real_read') return getMasterConfigFirstRealReadV19(e.parameter);
-    if (e.parameter.action === 'master_config_safe_package_normalize') return getMasterConfigSafePackageNormalizeV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -2566,137 +2565,6 @@ function getMasterConfigFirstRealReadV19(input) {
   base.readReceipt = safeReadPackage.readReceipt;
   base.message = 'First real master config read completed. Safe section returned only; no write executed.';
   return jsonResponseV19(base);
-}
-
-function parseMasterConfigJsonParamV19(value, fallback) {
-  if (!value) return fallback || {};
-  if (typeof value === 'object') return value;
-  try { return JSON.parse(String(value)); } catch (err) { return fallback || {}; }
-}
-
-function getMasterConfigSafePackageNormalizeV19(input) {
-  var checkedAt = new Date().toISOString();
-  var payload = input || {};
-  var safeReadPackage = parseMasterConfigJsonParamV19(payload.safeReadPackageJson || payload.safeReadPackage, {});
-  var readReceipt = parseMasterConfigJsonParamV19(payload.readReceiptJson || payload.readReceipt, safeReadPackage.readReceipt || {});
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19(safeReadPackage);
-  var profileId = cellTextV19(safeReadPackage.profileId || '', 120);
-  var displayName = cellTextV19(safeReadPackage.displayName || '', 120);
-  var pointerKeys = Array.isArray(safeReadPackage.safeSetupPointerKeys)
-    ? safeReadPackage.safeSetupPointerKeys.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; })
-    : splitMasterConfigListV19(safeReadPackage.safeSetupPointerKeys || '');
-  var pointerMap = safeReadPackage.registrySummaryPointers || {};
-  var allowedPointers = [
-    'apps_script_web_app_url',
-    'clean_workbook_id',
-    'backup_folder_id',
-    'mc_master_config_page_id',
-    'team_chat_database_id',
-    'intelligence_hq_page_id'
-  ];
-  var requiredPointers = [
-    'apps_script_web_app_url',
-    'mc_master_config_page_id',
-    'team_chat_database_id',
-    'intelligence_hq_page_id'
-  ];
-  var optionalPointers = [
-    'clean_workbook_id',
-    'backup_folder_id'
-  ];
-  var unknownPointerKeys = pointerKeys.filter(function(key) { return allowedPointers.indexOf(key) < 0; });
-  var normalizedPointers = allowedPointers.map(function(key) {
-    var value = cellTextV19(pointerMap[key] || '', key === 'apps_script_web_app_url' ? 500 : 180);
-    var required = requiredPointers.indexOf(key) >= 0;
-    var optional = optionalPointers.indexOf(key) >= 0;
-    return {
-      key: key,
-      value: value,
-      required: required,
-      optional: optional,
-      status: value ? 'Ready' : (required ? 'Missing Required' : 'Optional Gap')
-    };
-  });
-  var missingRequiredPointers = normalizedPointers.filter(function(row) {
-    return row.required && !row.value;
-  }).map(function(row) { return row.key; });
-  var optionalPointerGaps = normalizedPointers.filter(function(row) {
-    return row.optional && !row.value;
-  }).map(function(row) { return row.key; });
-  var missingFields = [];
-  if (!profileId) missingFields.push('profileId missing');
-  if (!displayName) missingFields.push('displayName missing');
-  if (!pointerKeys.length) missingFields.push('safeSetupPointerKeys missing');
-  if (safeReadPackage.readOnlyMode !== true) missingFields.push('readOnlyMode must be true');
-  if (!readReceipt || readReceipt.safeSectionOnly !== true) missingFields.push('safe section read receipt missing');
-  if (unsafe.length) missingFields.push('Unsafe token/secret-like package field detected');
-  var packageReady = !missingFields.length && !missingRequiredPointers.length && !unknownPointerKeys.length;
-  return jsonResponseV19({
-    status: packageReady ? (optionalPointerGaps.length ? 'normalized_with_optional_gaps' : 'normalized_ready') : 'review',
-    ok: true,
-    mode: 'safe_package_normalization_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    normalizeExecuted: true,
-    readExecuted: false,
-    configReadExecuted: false,
-    notionReadExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    packageReady: packageReady,
-    setupAutomationReady: packageReady && optionalPointerGaps.length === 0,
-    profileId: profileId,
-    displayName: displayName,
-    sourceBuild: cellTextV19(safeReadPackage.sourceBuild || payload.sourceBuild || '', 180),
-    latestBackupMarker: cellTextV19(safeReadPackage.latestBackupMarker || payload.latestBackupMarker || '', 160),
-    lastVerified: cellTextV19(safeReadPackage.lastVerified || checkedAt.slice(0, 10), 40),
-    readReceipt: {
-      receiptType: cellTextV19(readReceipt.receiptType || '', 120),
-      pageId: cellTextV19(readReceipt.pageId || '', 160),
-      readOnly: readReceipt.readOnly === true,
-      safeSectionOnly: readReceipt.safeSectionOnly === true,
-      readAt: cellTextV19(readReceipt.readAt || '', 80)
-    },
-    normalizedPointers: normalizedPointers,
-    requiredPointers: requiredPointers,
-    optionalPointers: optionalPointers,
-    missingRequiredPointers: missingRequiredPointers,
-    optionalPointerGaps: optionalPointerGaps,
-    unknownPointerKeys: unknownPointerKeys,
-    missingFields: missingFields,
-    unsafeFields: unsafe,
-    nextAllowedStepAfterNormalization: packageReady
-      ? (optionalPointerGaps.length ? 'safe_pointer_gap_review' : 'second_device_bootstrap_preview_plan')
-      : 'repair_safe_master_config_package',
-    blockedActions: [
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution'
-    ],
-    safety: {
-      notion: 'No Notion read, create, update, archive, or delete executed.',
-      scope: 'Normalize only the already-returned safe read package.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, restores, or deletes.',
-      auth: 'No login-anywhere, auth sync, token export, or secret export.',
-      recovery: 'No restore execution.'
-    },
-    message: packageReady
-      ? 'Master config safe package normalized. No read or write executed.'
-      : 'Master config safe package normalization needs review. No read or write executed.'
-  });
 }
 
 function sanitizeDriveFileIndexPointerPreviewV19(input) {
