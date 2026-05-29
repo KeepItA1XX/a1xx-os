@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1122-v24-phase8i-master-config-locator-review';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1103-v24-phase8h-master-config-page-review';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -298,7 +298,6 @@ function doGet(e) {
     if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV19(e.parameter);
     if (e.parameter.action === 'master_config_read_preflight') return getMasterConfigReadPreflightV19(e.parameter);
     if (e.parameter.action === 'master_config_page_review') return getMasterConfigPageReviewV19(e.parameter);
-    if (e.parameter.action === 'master_config_locator_review') return getMasterConfigLocatorReviewV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -1842,92 +1841,6 @@ function normalizeMasterConfigPageLocatorV19(value) {
     locatorType: /^https?:\/\//i.test(raw) ? 'url_review_needed' : 'id_review_needed',
     preview: cellTextV19(raw, 160)
   };
-}
-
-function getMasterConfigLocatorReviewV19(input) {
-  var checkedAt = new Date().toISOString();
-  var payload = input || {};
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19(payload);
-  var locator = normalizeMasterConfigPageLocatorV19(
-    payload.masterConfigPageLocator || payload.masterConfigPageUrl || payload.masterConfigPageId || payload.pageId || ''
-  );
-  var approvalCaptured = normalizeBooleanV19(payload.a1xxApprovalCaptured);
-  var userConfirmsRealLocator = normalizeBooleanV19(payload.userConfirmsRealLocator);
-  var integrationShared = normalizeBooleanV19(payload.integrationSharedConfirmed);
-  var exactPageShared = normalizeBooleanV19(payload.exactPageSharedConfirmed);
-  var trustedSource = normalizeBooleanV19(payload.trustedSourceConfirmed);
-  var backupVisible = normalizeBooleanV19(payload.backupVisible);
-  var locatorIsReal = locator.normalized !== 'preview_only';
-  var locatorShapeOk = locator.format === 'notion_page_id_shape_ok';
-  var missingReviewItems = [];
-  if (!approvalCaptured) missingReviewItems.push('A1XX approval not captured for real locator review');
-  if (!locatorIsReal) missingReviewItems.push('Real master config page locator not supplied');
-  if (locatorIsReal && !locatorShapeOk) missingReviewItems.push('Real master config page locator shape needs review');
-  if (locatorIsReal && !userConfirmsRealLocator) missingReviewItems.push('A1XX has not confirmed this is the real private master config page');
-  if (!integrationShared) missingReviewItems.push('Notion integration sharing not confirmed');
-  if (!exactPageShared) missingReviewItems.push('Exact page share not confirmed');
-  if (!trustedSource) missingReviewItems.push('Trusted source device not confirmed');
-  if (!backupVisible) missingReviewItems.push('Backup visibility not confirmed');
-  if (unsafe.length) missingReviewItems.push('Unsafe token/secret-like input detected');
-  return jsonResponseV19({
-    status: unsafe.length ? 'review' : 'locator_review_ready',
-    ok: true,
-    mode: 'locator_review_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    target: 'private_notion_master_config_page',
-    rawLocatorPreview: locator.preview,
-    requestedPageId: locator.normalized,
-    locatorIsReal: locatorIsReal,
-    locatorShapeOk: locatorShapeOk,
-    locatorType: locator.locatorType,
-    pageIdFormat: locator.format,
-    userConfirmsRealLocator: userConfirmsRealLocator,
-    a1xxApprovalCaptured: approvalCaptured,
-    integrationSharedConfirmed: integrationShared,
-    exactPageSharedConfirmed: exactPageShared,
-    trustedSourceConfirmed: trustedSource,
-    backupVisible: backupVisible,
-    locatorReviewExecuted: true,
-    readEndpointActive: false,
-    readExecuted: false,
-    configReadExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    unsafeFields: unsafe,
-    missingReviewItems: missingReviewItems,
-    allowedLocatorInputs: [
-      'Notion page URL',
-      '32-character Notion page ID',
-      'hyphenated Notion page ID'
-    ],
-    nextAllowedStepAfterCleanReview: 'read_endpoint_contract_review_only',
-    blockedActions: [
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution'
-    ],
-    safety: {
-      notion: 'No Notion read, create, update, archive, or delete executed.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, restores, or deletes.',
-      auth: 'No login-anywhere, auth sync, token export, or secret export.',
-      recovery: 'No restore execution.'
-    },
-    message: 'Master config locator review is review-only. No master config read executed.'
-  });
 }
 
 function sanitizeDriveFileIndexPointerPreviewV19(input) {

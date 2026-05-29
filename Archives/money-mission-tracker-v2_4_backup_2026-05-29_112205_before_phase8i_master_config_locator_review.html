@@ -2527,33 +2527,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="master-config-page-review-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Master Config Locator Review</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8I scope</div><div class="settings-row-meta" id="master-config-locator-review-scope">Review the real page locator shape only. No master config read.</div></div><span class="settings-badge warn" id="master-config-locator-review-scope-badge">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Real locator</div><div class="settings-row-meta" id="master-config-locator-review-locator">Paste the private Notion master config page URL or ID when ready.</div></div><span class="settings-badge off" id="master-config-locator-review-locator-badge">Locator</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Readiness gates</div><div class="settings-row-meta" id="master-config-locator-review-gates">Real locator, A1XX confirmation, exact page share, trusted device, and backup remain required.</div></div><span class="settings-badge off" id="master-config-locator-review-gates-badge">Gates</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="master-config-locator-review-blocked">No config read, write, login-anywhere, auth sync, token export, secret export, restore, workers, or automations.</div></div><span class="settings-badge warn" id="master-config-locator-review-blocked-badge">Blocked</span></div>
-          </div>
-          <div class="settings-field" style="margin-top:10px">
-            <label for="master-config-locator-review-input">Real master config page URL or ID</label>
-            <input id="master-config-locator-review-input" type="text" autocomplete="off" placeholder="Paste real private Notion page URL or ID">
-          </div>
-          <div class="settings-field" style="margin-top:10px">
-            <label><input id="master-config-locator-review-approval" type="checkbox" checked> A1XX approval captured for locator review</label>
-            <label><input id="master-config-locator-review-real" type="checkbox"> I confirm this is the real private master config page</label>
-            <label><input id="master-config-locator-review-shared" type="checkbox"> Notion integration shared to the exact page</label>
-            <label><input id="master-config-locator-review-exact" type="checkbox"> Exact page share confirmed</label>
-          </div>
-          <label for="master-config-locator-review-output">Master config locator review</label>
-          <textarea id="master-config-locator-review-output" rows="13" readonly placeholder="Click Run locator review. This checks locator shape only and does not read Notion."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Running master config locator review',function(){return runMasterConfigLocatorReviewV24();},this,'Master config locator review checked.')">Run locator review</button>
-            <button class="btn" onclick="copyMasterConfigLocatorReviewPreviewV24()">Copy locator review</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Running master config page review',function(){return runMasterConfigPageReviewV24();},this,'Master config page review checked.')">Run page review</button>
-          </div>
-          <div class="reset-status" id="master-config-locator-review-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4646,9 +4619,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-29 11:22 ET · OS v2_4 Phase 8I master config locator review';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8I master config locator review';
-var APP_CACHE_TOKEN='mmos-20260529-1122-v24-phase8i-master-config-locator-review';
+var APP_BUILD_STAMP='2026-05-29 11:03 ET · OS v2_4 Phase 8H master config page review';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8H master config page review';
+var APP_CACHE_TOKEN='mmos-20260529-1103-v24-phase8h-master-config-page-review';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -7887,215 +7860,6 @@ function runMasterConfigPageReviewSelfCheckV24(){
   };
 }
 
-function getMasterConfigLocatorReviewPayloadV24(){
-  var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
-  var locator=document.getElementById('master-config-locator-review-input');
-  var approval=document.getElementById('master-config-locator-review-approval');
-  var real=document.getElementById('master-config-locator-review-real');
-  var shared=document.getElementById('master-config-locator-review-shared');
-  var exact=document.getElementById('master-config-locator-review-exact');
-  return {
-    masterConfigPageLocator:locator&&locator.value?locator.value.trim():'preview_only',
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    trustedSourceConfirmed:!!readiness.trusted,
-    backupVisible:!!readiness.backupReady,
-    a1xxApprovalCaptured:approval?!!approval.checked:true,
-    userConfirmsRealLocator:real?!!real.checked:false,
-    integrationSharedConfirmed:shared?!!shared.checked:false,
-    exactPageSharedConfirmed:exact?!!exact.checked:false,
-    readOnlyMode:true
-  };
-}
-
-function formatMasterConfigLocatorReviewPreviewV24(result){
-  result=result||{};
-  var missing=result.missingReviewItems||[];
-  var allowed=result.allowedLocatorInputs||[];
-  var blocked=result.blockedActions||[];
-  return [
-    'Phase 8I master config locator review',
-    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
-    '',
-    'Review mode',
-    '- Status: '+(result.status||'unknown'),
-    '- Mode: '+(result.mode||'unknown'),
-    '- Locator review executed: '+(result.locatorReviewExecuted?'true':'false'),
-    '- Read endpoint active: '+(result.readEndpointActive?'true':'false'),
-    '- Read executed: '+(result.readExecuted?'true':'false'),
-    '- Config read executed: '+(result.configReadExecuted?'true':'false'),
-    '- Write executed: '+(result.writeExecuted?'true':'false'),
-    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(result.secretExport?'true':'false'),
-    '- Token export: '+(result.tokenExport?'true':'false'),
-    '',
-    'Locator',
-    '- Locator preview: '+(result.rawLocatorPreview||'preview_only'),
-    '- Requested page ID: '+(result.requestedPageId||'preview_only'),
-    '- Locator is real: '+(result.locatorIsReal?'true':'false'),
-    '- Locator shape ok: '+(result.locatorShapeOk?'true':'false'),
-    '- Locator type: '+(result.locatorType||'preview_only'),
-    '- Page ID format: '+(result.pageIdFormat||'preview_only'),
-    '',
-    'Readiness gates',
-    '- A1XX approval captured: '+(result.a1xxApprovalCaptured?'true':'false'),
-    '- User confirms real locator: '+(result.userConfirmsRealLocator?'true':'false'),
-    '- Integration shared: '+(result.integrationSharedConfirmed?'true':'false'),
-    '- Exact page shared: '+(result.exactPageSharedConfirmed?'true':'false'),
-    '- Trusted source confirmed: '+(result.trustedSourceConfirmed?'true':'false'),
-    '- Backup visible: '+(result.backupVisible?'true':'false'),
-    '',
-    'Missing review items',
-    missing.length?('- '+missing.join('\n- ')):'- none',
-    '',
-    'Allowed locator inputs',
-    allowed.length?('- '+allowed.join('\n- ')):'- none returned',
-    '',
-    'Next allowed step after clean review',
-    '- '+(result.nextAllowedStepAfterCleanReview||'read_endpoint_contract_review_only'),
-    '',
-    'Blocked actions',
-    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
-    '',
-    'Result',
-    result.message||'Master config locator review checked. No master config read executed.'
-  ].join('\n');
-}
-
-function renderMasterConfigLocatorReviewStateV24(state){
-  state=state||window.__masterConfigLocatorReviewV24||null;
-  var locator=document.getElementById('master-config-locator-review-locator');
-  var locatorBadge=document.getElementById('master-config-locator-review-locator-badge');
-  var gates=document.getElementById('master-config-locator-review-gates');
-  var gatesBadge=document.getElementById('master-config-locator-review-gates-badge');
-  var blocked=document.getElementById('master-config-locator-review-blocked');
-  var blockedBadge=document.getElementById('master-config-locator-review-blocked-badge');
-  var output=document.getElementById('master-config-locator-review-output');
-  var result=state&&state.result?state.result:null;
-  var ready=!!(state&&state.ready);
-  var missing=result&&result.missingReviewItems?result.missingReviewItems:[];
-  if(locator)locator.textContent=result
-    ? ((result.requestedPageId||'preview_only')+' · '+(result.locatorShapeOk?'shape ok':result.locatorIsReal?'shape review':'real locator needed'))
-    : 'Paste the private Notion master config page URL or ID when ready.';
-  if(locatorBadge){
-    locatorBadge.textContent=result?(result.locatorShapeOk?'ID OK':result.locatorIsReal?'Review':'Needed'):'Locator';
-    locatorBadge.className=setupDoctorBadgeClassV23(result&&result.locatorShapeOk?'ready':result?'warn':'off');
-  }
-  if(gates)gates.textContent=result
-    ? (missing.length?missing.length+' locator/readiness item(s) still open. No read can run.':'Real locator review gates preview clean. No read ran.')
-    : 'Real locator, A1XX confirmation, exact page share, trusted device, and backup remain required.';
-  if(gatesBadge){
-    gatesBadge.textContent=result?(missing.length?'Gated':'Ready'):'Gates';
-    gatesBadge.className=setupDoctorBadgeClassV23(result?(missing.length?'warn':'ready'):'off');
-  }
-  if(blocked)blocked.textContent=result
-    ? 'Config read, write, login-anywhere, auth sync, tokens, secrets, restore, workers, and automations remain blocked.'
-    : 'No config read, write, login-anywhere, auth sync, token export, secret export, restore, workers, or automations.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23(ready?'ready':'warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return state;
-}
-
-async function runMasterConfigLocatorReviewV24(){
-  var status=document.getElementById('master-config-locator-review-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Running review-only master config locator check...';
-  }
-  if(typeof refreshAuthSyncReadinessV24==='function')await refreshAuthSyncReadinessV24();
-  var payload=getMasterConfigLocatorReviewPayloadV24();
-  var result=await getAppsScriptJson('master_config_locator_review',payload,{timeoutMs:12000,tries:1});
-  var blocked=result&&result.blockedActions?result.blockedActions:[];
-  var unsafe=result&&result.unsafeFields?result.unsafeFields:[];
-  var clean=!!(
-    result
-    && result.mode==='locator_review_only'
-    && result.locatorReviewExecuted===true
-    && result.readEndpointActive===false
-    && result.readExecuted===false
-    && result.configReadExecuted===false
-    && result.writeExecuted===false
-    && result.writesEnabled===false
-    && result.loginAnywhereActive===false
-    && result.secretExport===false
-    && result.tokenExport===false
-    && unsafe.length===0
-    && blocked.indexOf('live master config read')>=0
-    && blocked.indexOf('secret export')>=0
-  );
-  var previewText=formatMasterConfigLocatorReviewPreviewV24(result);
-  window.__masterConfigLocatorReviewV24={
-    checkedAt:new Date().toISOString(),
-    ready:clean,
-    result:result,
-    previewText:previewText
-  };
-  renderMasterConfigLocatorReviewStateV24(window.__masterConfigLocatorReviewV24);
-  if(status){
-    status.className='reset-status '+(clean?'ok':'warn');
-    status.textContent=clean
-      ? 'Master config locator review is review-only and blocked. No config read ran.'
-      : 'Master config locator review needs review.';
-  }
-  return {
-    passed:clean,
-    meta:clean?'Phase 8I master config locator review is review-only · no config read executed.':'Phase 8I master config locator review needs review.',
-    failures:clean?[]:['Phase 8I master config locator review']
-  };
-}
-
-async function copyMasterConfigLocatorReviewPreviewV24(){
-  var state=window.__masterConfigLocatorReviewV24||null;
-  var status=document.getElementById('master-config-locator-review-status');
-  if(!state){
-    var check=await runMasterConfigLocatorReviewV24();
-    state=window.__masterConfigLocatorReviewV24||{previewText:check&&check.meta?check.meta:''};
-  }
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Master config locator review copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('master-config-locator-review-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the locator review text manually.';
-    }
-  }
-}
-
-function runMasterConfigLocatorReviewSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('master-config-locator-review-output')
-    && document.getElementById('master-config-locator-review-blocked')
-    && typeof getMasterConfigLocatorReviewPayloadV24==='function'
-    && typeof runMasterConfigLocatorReviewV24==='function'
-  );
-  var payload=hasUi?getMasterConfigLocatorReviewPayloadV24():null;
-  var clean=!!(
-    hasUi
-    && payload
-    && payload.readOnlyMode===true
-    && !payload.notionToken
-    && !payload.webhookToken
-    && !payload.hmacSecret
-  );
-  return {
-    passed:clean,
-    meta:clean?'Phase 8I master config locator review UI is installed · backend check runs after deploy.':'Phase 8I master config locator review UI needs review.',
-    failures:clean?[]:['Phase 8I master config locator review UI']
-  };
-}
-
 function getSetupPointerRowsV23(){
   var health=window.__lastSetupDoctorHealthV23&&window.__lastSetupDoctorHealthV23.health?window.__lastSetupDoctorHealthV23.health:{};
   var backup=window.__lastBackupArchiveStatusV22||{};
@@ -11262,7 +11026,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -11287,7 +11051,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8F Master Config Skeleton',typeof checkMasterConfigReadSkeletonV24==='function'?await checkMasterConfigReadSkeletonV24():{passed:false,meta:'Missing Phase 8F master config skeleton check'});}catch(e){add('Phase 8F Master Config Skeleton',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8G Master Config Preflight',typeof runMasterConfigReadPreflightV24==='function'?await runMasterConfigReadPreflightV24():{passed:false,meta:'Missing Phase 8G master config preflight check'});}catch(e){add('Phase 8G Master Config Preflight',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8H Master Config Page Review',typeof runMasterConfigPageReviewV24==='function'?await runMasterConfigPageReviewV24():{passed:false,meta:'Missing Phase 8H master config page review'});}catch(e){add('Phase 8H Master Config Page Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8I Master Config Locator Review',typeof runMasterConfigLocatorReviewV24==='function'?await runMasterConfigLocatorReviewV24():{passed:false,meta:'Missing Phase 8I master config locator review'});}catch(e){add('Phase 8I Master Config Locator Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
