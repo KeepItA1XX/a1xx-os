@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1512-v24-phase8o-gap-review-timeout-fix';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1453-v24-phase8o-safe-pointer-gap-review';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -2704,43 +2704,19 @@ function getMasterConfigSafePointerGapReviewV19(input) {
   var checkedAt = new Date().toISOString();
   var payload = input || {};
   var normalized = parseMasterConfigJsonParamV19(payload.normalizedPackageJson || payload.normalizedPackage, {});
-  var optionalGapsRaw = parseMasterConfigJsonParamV19(payload.optionalPointerGapsJson, null);
-  var missingRequiredRaw = parseMasterConfigJsonParamV19(payload.missingRequiredPointersJson, null);
-  var missingFieldsRaw = parseMasterConfigJsonParamV19(payload.missingFieldsJson, null);
-  var unsafeRaw = parseMasterConfigJsonParamV19(payload.unsafeFieldsJson, null);
-  var optionalGaps = Array.isArray(optionalGapsRaw)
-    ? optionalGapsRaw.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; })
-    : (Array.isArray(normalized.optionalPointerGaps)
-      ? normalized.optionalPointerGaps.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; })
-      : splitMasterConfigListV19(normalized.optionalPointerGaps || ''));
-  var missingRequired = Array.isArray(missingRequiredRaw)
-    ? missingRequiredRaw.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; })
-    : (Array.isArray(normalized.missingRequiredPointers)
-      ? normalized.missingRequiredPointers.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; })
-      : splitMasterConfigListV19(normalized.missingRequiredPointers || ''));
-  var missingFields = Array.isArray(missingFieldsRaw)
-    ? missingFieldsRaw.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; })
-    : (Array.isArray(normalized.missingFields)
-      ? normalized.missingFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; })
-      : splitMasterConfigListV19(normalized.missingFields || ''));
-  var unsafe = Array.isArray(unsafeRaw)
-    ? unsafeRaw.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; })
-    : (Array.isArray(normalized.unsafeFields)
-      ? normalized.unsafeFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; })
-      : []);
-  var compactUnsafe = detectUnsafeMasterConfigReadSkeletonInputV19({
-    sourceBuild: payload.sourceBuild || '',
-    optionalPointerGaps: optionalGaps,
-    missingRequiredPointers: missingRequired,
-    missingFields: missingFields,
-    unsafeFields: unsafe
-  });
-  unsafe = unsafe.concat(compactUnsafe).filter(function(item, index, arr) { return item && arr.indexOf(item) === index; });
+  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19(normalized);
+  var optionalGaps = Array.isArray(normalized.optionalPointerGaps)
+    ? normalized.optionalPointerGaps.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; })
+    : splitMasterConfigListV19(normalized.optionalPointerGaps || '');
+  var missingRequired = Array.isArray(normalized.missingRequiredPointers)
+    ? normalized.missingRequiredPointers.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; })
+    : splitMasterConfigListV19(normalized.missingRequiredPointers || '');
+  var missingFields = Array.isArray(normalized.missingFields)
+    ? normalized.missingFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; })
+    : splitMasterConfigListV19(normalized.missingFields || '');
   var knownOptional = ['clean_workbook_id', 'backup_folder_id'];
   var unknownOptionalGaps = optionalGaps.filter(function(key) { return knownOptional.indexOf(key) < 0; });
-  var packageReady = Object.prototype.hasOwnProperty.call(payload, 'packageReady')
-    ? normalizeBooleanV19(payload.packageReady)
-    : normalizeBooleanV19(normalized.packageReady);
+  var packageReady = normalizeBooleanV19(normalized.packageReady);
   var requiredClean = packageReady && missingRequired.length === 0 && missingFields.length === 0 && unsafe.length === 0;
   var gapReviewItems = optionalGaps.map(function(key) {
     var label = key === 'clean_workbook_id'
