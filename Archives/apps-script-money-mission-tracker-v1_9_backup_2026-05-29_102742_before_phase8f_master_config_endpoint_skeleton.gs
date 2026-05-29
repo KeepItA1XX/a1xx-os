@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1027-v24-phase8f-master-config-endpoint-skeleton';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1013-v24-phase8e-new-device-rehearsal';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -295,7 +295,6 @@ function doGet(e) {
     if (e.parameter.action === 'os_registry_records')  return getOsRegistryRecordsV19(e);
     if (e.parameter.action === 'get_os_registry_records_v1') return getOsRegistryRecordsV19(e);
     if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV19(e.parameter);
-    if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -1487,123 +1486,6 @@ function getDriveFileIndexPointerWriteSkeletonV19(input) {
       'worker_triggered_write'
     ]
   });
-}
-
-function getMasterConfigReadSkeletonV19(input) {
-  var checkedAt = new Date().toISOString();
-  var payload = input || {};
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19(payload);
-  var requestedPageId = cellTextV19(
-    payload.masterConfigPageId || payload.pageId || payload.configPageId || 'preview_only',
-    180
-  );
-  var allowedFields = [
-    'profileId',
-    'displayName',
-    'safeSetupPointerKeys',
-    'driveRootPointer',
-    'registrySummaryPointers',
-    'latestBackupMarker',
-    'sourceBuild',
-    'lastVerified',
-    'readOnlyMode'
-  ];
-  var safeSetupPointerKeys = [
-    'apps_script_web_app_url',
-    'clean_workbook_id',
-    'backup_folder_id',
-    'mc_master_config_page_id',
-    'team_chat_database_id',
-    'intelligence_hq_page_id'
-  ];
-  return jsonResponseV19({
-    status: unsafe.length ? 'review' : 'blocked',
-    ok: true,
-    mode: 'skeleton_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    target: 'private_notion_master_config_page',
-    requestedPageId: requestedPageId,
-    readEndpointActive: false,
-    readExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    allowedFields: allowedFields,
-    safeSetupPointerKeys: safeSetupPointerKeys,
-    unsafeFields: unsafe,
-    requiredGates: [
-      'A1XX approval',
-      'exact master config page ID supplied manually',
-      'Notion integration shared to that exact page',
-      'trusted source device confirmed',
-      'backup visible before preview',
-      'read-only endpoint review before activation',
-      'secret scan before any future read'
-    ],
-    protectedFields: [
-      'notionToken',
-      'googleOAuthToken',
-      'webhookToken',
-      'todoistToken',
-      'hmacSecret',
-      'password',
-      'pin',
-      'workerCredential',
-      'automationSecret'
-    ],
-    blockedActions: [
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution'
-    ],
-    safety: {
-      notion: 'No Notion read, create, update, archive, or delete executed.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, restores, or deletes.',
-      auth: 'No login-anywhere, auth sync, token export, or secret export.',
-      workers: 'Workers and automations cannot call an active auth path from this skeleton.'
-    },
-    message: unsafe.length
-      ? 'Master config read skeleton input needs review. No master config read executed.'
-      : 'Master config read skeleton is installed but blocked. No master config read executed.'
-  });
-}
-
-function detectUnsafeMasterConfigReadSkeletonInputV19(input) {
-  var unsafe = [];
-  var deny = /(token|secret|password|credential|oauth|bearer|api[_ -]?key|webhook|hmac|pin|private[_ -]?key)/i;
-  function scan(value, path) {
-    if (unsafe.length >= 12) return;
-    if (deny.test(String(path || ''))) {
-      unsafe.push(cellTextV19(path, 120));
-      return;
-    }
-    if (value === null || value === undefined) return;
-    if (typeof value === 'object') {
-      if (Array.isArray(value)) {
-        for (var i = 0; i < value.length; i++) scan(value[i], path + '[' + i + ']');
-      } else {
-        var keys = Object.keys(value);
-        for (var j = 0; j < keys.length; j++) scan(value[keys[j]], path ? path + '.' + keys[j] : keys[j]);
-      }
-      return;
-    }
-    if (deny.test(String(value || ''))) unsafe.push(cellTextV19(path || 'value', 120));
-  }
-  scan(input || {}, '');
-  return unsafe.filter(function(item, index, arr) { return item && arr.indexOf(item) === index; });
 }
 
 function sanitizeDriveFileIndexPointerPreviewV19(input) {

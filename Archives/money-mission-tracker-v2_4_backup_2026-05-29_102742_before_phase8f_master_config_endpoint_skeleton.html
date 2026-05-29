@@ -2459,23 +2459,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="new-device-rehearsal-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Master Config Endpoint Skeleton</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8F scope</div><div class="settings-row-meta" id="master-config-skeleton-scope">Install blocked endpoint skeleton only. No live master config read.</div></div><span class="settings-badge warn" id="master-config-skeleton-scope-badge">Skeleton</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Backend skeleton</div><div class="settings-row-meta" id="master-config-skeleton-backend">Check after Apps Script deploy.</div></div><span class="settings-badge off" id="master-config-skeleton-backend-badge">Check</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Read boundary</div><div class="settings-row-meta" id="master-config-skeleton-boundary">Endpoint must return skeleton_only, readEndpointActive false, and readExecuted false.</div></div><span class="settings-badge off" id="master-config-skeleton-boundary-badge">Boundary</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="master-config-skeleton-blocked">No config read, write, login-anywhere, auth sync, token export, or secret export.</div></div><span class="settings-badge warn" id="master-config-skeleton-blocked-badge">Blocked</span></div>
-          </div>
-          <label for="master-config-skeleton-output">Master config endpoint skeleton</label>
-          <textarea id="master-config-skeleton-output" rows="12" readonly placeholder="Click Check endpoint skeleton after Apps Script deploy."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Checking master config skeleton',function(){return checkMasterConfigReadSkeletonV24();},this,'Master config skeleton checked.')">Check endpoint skeleton</button>
-            <button class="btn" onclick="copyMasterConfigReadSkeletonPreviewV24()">Copy skeleton</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Building new-device rehearsal',function(){return buildNewDeviceSetupRehearsalPreviewV24();},this,'New-device rehearsal ready.')">Build rehearsal</button>
-          </div>
-          <div class="reset-status" id="master-config-skeleton-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4568,9 +4551,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-29 10:27 ET · OS v2_4 Phase 8F master config endpoint skeleton';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8F master config endpoint skeleton';
-var APP_CACHE_TOKEN='mmos-20260529-1027-v24-phase8f-master-config-endpoint-skeleton';
+var APP_BUILD_STAMP='2026-05-29 10:13 ET · OS v2_4 Phase 8E new-device rehearsal';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8E new-device rehearsal';
+var APP_CACHE_TOKEN='mmos-20260529-1013-v24-phase8e-new-device-rehearsal';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -7212,190 +7195,6 @@ function runNewDeviceSetupRehearsalSelfCheckV24(){
     passed:clean,
     meta:clean?'Phase 8E new-device rehearsal is preview-only · no registration or restore enabled.':'Phase 8E new-device rehearsal needs review.',
     failures:clean?[]:['Phase 8E new-device rehearsal']
-  };
-}
-
-function getMasterConfigReadSkeletonSampleV24(){
-  return {
-    masterConfigPageId:'preview_only',
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    requestedBy:'A1XX Mac Mini',
-    readOnlyMode:true
-  };
-}
-
-function formatMasterConfigReadSkeletonPreviewV24(result){
-  result=result||{};
-  var allowed=result.allowedFields||[];
-  var setupKeys=result.safeSetupPointerKeys||[];
-  var gates=result.requiredGates||[];
-  var protectedFields=result.protectedFields||[];
-  var blocked=result.blockedActions||[];
-  return [
-    'Phase 8F master config endpoint skeleton',
-    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
-    '',
-    'Skeleton mode',
-    '- Status: '+(result.status||'unknown'),
-    '- Mode: '+(result.mode||'unknown'),
-    '- Read endpoint active: '+(result.readEndpointActive?'true':'false'),
-    '- Read executed: '+(result.readExecuted?'true':'false'),
-    '- Write executed: '+(result.writeExecuted?'true':'false'),
-    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(result.secretExport?'true':'false'),
-    '- Token export: '+(result.tokenExport?'true':'false'),
-    '',
-    'Target',
-    '- Target: '+(result.target||'private_notion_master_config_page'),
-    '- Requested page ID: '+(result.requestedPageId||'preview_only'),
-    '',
-    'Allowed fields',
-    allowed.length?('- '+allowed.join('\n- ')):'- none returned',
-    '',
-    'Safe setup pointer keys',
-    setupKeys.length?('- '+setupKeys.join('\n- ')):'- none returned',
-    '',
-    'Required gates',
-    gates.length?('- '+gates.join('\n- ')):'- none returned',
-    '',
-    'Protected fields',
-    protectedFields.length?('- '+protectedFields.join('\n- ')):'- none returned',
-    '',
-    'Blocked actions',
-    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
-    '',
-    'Result',
-    result.message||'Master config read skeleton checked. No master config read executed.'
-  ].join('\n');
-}
-
-function renderMasterConfigReadSkeletonStateV24(state){
-  state=state||window.__masterConfigReadSkeletonV24||null;
-  var backend=document.getElementById('master-config-skeleton-backend');
-  var backendBadge=document.getElementById('master-config-skeleton-backend-badge');
-  var boundary=document.getElementById('master-config-skeleton-boundary');
-  var boundaryBadge=document.getElementById('master-config-skeleton-boundary-badge');
-  var blocked=document.getElementById('master-config-skeleton-blocked');
-  var blockedBadge=document.getElementById('master-config-skeleton-blocked-badge');
-  var output=document.getElementById('master-config-skeleton-output');
-  var ready=!!(state&&state.ready);
-  var result=state&&state.result?state.result:null;
-  if(backend)backend.textContent=result
-    ? ('Backend returned '+(result.mode||'unknown')+' · read executed '+(result.readExecuted?'true':'false'))
-    : 'Check after Apps Script deploy.';
-  if(backendBadge){
-    backendBadge.textContent=state?(ready?'Ready':'Review'):'Check';
-    backendBadge.className=setupDoctorBadgeClassV23(state?(ready?'ready':'warn'):'off');
-  }
-  if(boundary)boundary.textContent=result
-    ? 'Read endpoint inactive, read not executed, write not executed.'
-    : 'Endpoint must return skeleton_only, readEndpointActive false, and readExecuted false.';
-  if(boundaryBadge){
-    boundaryBadge.textContent=state?'Blocked':'Boundary';
-    boundaryBadge.className=setupDoctorBadgeClassV23(state?(ready?'ready':'warn'):'off');
-  }
-  if(blocked)blocked.textContent=result
-    ? 'Config read, write, login-anywhere, auth sync, token export, secret export, workers, automations, and restore remain blocked.'
-    : 'No config read, write, login-anywhere, auth sync, token export, or secret export.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23('warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return state;
-}
-
-async function checkMasterConfigReadSkeletonV24(){
-  var status=document.getElementById('master-config-skeleton-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking blocked master config endpoint skeleton...';
-  }
-  var sample=getMasterConfigReadSkeletonSampleV24();
-  var result=await getAppsScriptJson('master_config_read_skeleton',sample,{timeoutMs:12000,tries:1});
-  var blocked=result&&result.blockedActions?result.blockedActions:[];
-  var clean=!!(
-    result
-    && result.mode==='skeleton_only'
-    && result.readEndpointActive===false
-    && result.readExecuted===false
-    && result.writeExecuted===false
-    && result.writesEnabled===false
-    && result.loginAnywhereActive===false
-    && result.secretExport===false
-    && result.tokenExport===false
-    && blocked.indexOf('live master config read')>=0
-    && blocked.indexOf('secret export')>=0
-  );
-  var previewText=formatMasterConfigReadSkeletonPreviewV24(result);
-  window.__masterConfigReadSkeletonV24={
-    checkedAt:new Date().toISOString(),
-    ready:clean,
-    result:result,
-    previewText:previewText
-  };
-  renderMasterConfigReadSkeletonStateV24(window.__masterConfigReadSkeletonV24);
-  if(status){
-    status.className='reset-status '+(clean?'ok':'warn');
-    status.textContent=clean
-      ? 'Master config endpoint skeleton is blocked correctly. No config read ran.'
-      : 'Master config endpoint skeleton needs review.';
-  }
-  return {
-    passed:clean,
-    meta:clean?'Phase 8F master config endpoint skeleton is blocked · no config read executed.':'Phase 8F master config endpoint skeleton needs review.',
-    failures:clean?[]:['Phase 8F master config endpoint skeleton']
-  };
-}
-
-async function copyMasterConfigReadSkeletonPreviewV24(){
-  var state=window.__masterConfigReadSkeletonV24||null;
-  var status=document.getElementById('master-config-skeleton-status');
-  if(!state){
-    var check=await checkMasterConfigReadSkeletonV24();
-    state=window.__masterConfigReadSkeletonV24||{previewText:check&&check.meta?check.meta:''};
-  }
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Master config skeleton copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('master-config-skeleton-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the skeleton text manually.';
-    }
-  }
-}
-
-function runMasterConfigReadSkeletonSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('master-config-skeleton-output')
-    && document.getElementById('master-config-skeleton-blocked')
-    && typeof getMasterConfigReadSkeletonSampleV24==='function'
-    && typeof checkMasterConfigReadSkeletonV24==='function'
-  );
-  var sample=hasUi?getMasterConfigReadSkeletonSampleV24():null;
-  var clean=!!(
-    hasUi
-    && sample
-    && sample.masterConfigPageId==='preview_only'
-    && sample.readOnlyMode===true
-    && !sample.notionToken
-    && !sample.webhookToken
-    && !sample.hmacSecret
-  );
-  return {
-    passed:clean,
-    meta:clean?'Phase 8F master config endpoint skeleton UI is installed · backend check runs after deploy.':'Phase 8F master config endpoint skeleton UI needs review.',
-    failures:clean?[]:['Phase 8F master config endpoint skeleton UI']
   };
 }
 
@@ -10565,7 +10364,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -10587,7 +10386,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8C Auth Target Review',typeof runAuthSnapshotTargetReviewSelfCheckV24==='function'?runAuthSnapshotTargetReviewSelfCheckV24():{passed:false,meta:'Missing Phase 8C auth target review check'});}catch(e){add('Phase 8C Auth Target Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8D Master Config Read Plan',typeof runMasterConfigReadPlanSelfCheckV24==='function'?runMasterConfigReadPlanSelfCheckV24():{passed:false,meta:'Missing Phase 8D master config read plan check'});}catch(e){add('Phase 8D Master Config Read Plan',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8E New-Device Rehearsal',typeof runNewDeviceSetupRehearsalSelfCheckV24==='function'?runNewDeviceSetupRehearsalSelfCheckV24():{passed:false,meta:'Missing Phase 8E new-device rehearsal check'});}catch(e){add('Phase 8E New-Device Rehearsal',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8F Master Config Skeleton',typeof checkMasterConfigReadSkeletonV24==='function'?await checkMasterConfigReadSkeletonV24():{passed:false,meta:'Missing Phase 8F master config skeleton check'});}catch(e){add('Phase 8F Master Config Skeleton',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
