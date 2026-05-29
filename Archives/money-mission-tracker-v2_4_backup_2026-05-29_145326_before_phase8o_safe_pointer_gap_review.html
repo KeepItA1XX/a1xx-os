@@ -2688,23 +2688,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="master-config-package-normalize-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Safe Pointer Gap Review</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8O scope</div><div class="settings-row-meta" id="master-config-gap-review-scope">Review optional setup pointer gaps only. No Notion read or write.</div></div><span class="settings-badge warn" id="master-config-gap-review-scope-badge">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Gap review</div><div class="settings-row-meta" id="master-config-gap-review-state">Run after Phase 8N package normalization.</div></div><span class="settings-badge off" id="master-config-gap-review-state-badge">Gaps</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Setup automation gate</div><div class="settings-row-meta" id="master-config-gap-review-automation">Second-device setup automation remains blocked until gaps are filled or waived.</div></div><span class="settings-badge warn" id="master-config-gap-review-automation-badge">Blocked</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="master-config-gap-review-blocked">No live read, write, login-anywhere, auth sync, token export, secret export, restore, workers, or automations.</div></div><span class="settings-badge warn" id="master-config-gap-review-blocked-badge">Blocked</span></div>
-          </div>
-          <label for="master-config-gap-review-output">Safe pointer gap review</label>
-          <textarea id="master-config-gap-review-output" rows="13" readonly placeholder="Click Run gap review after Phase 8N package normalization is clean."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Reviewing safe pointer gaps',function(){return runMasterConfigSafePointerGapReviewV24();},this,'Safe pointer gap review checked.')">Run gap review</button>
-            <button class="btn" onclick="copyMasterConfigSafePointerGapReviewV24()">Copy gap review</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Normalizing master config package',function(){return runMasterConfigPackageNormalizeV24();},this,'Master config package normalized.')">Normalize package</button>
-          </div>
-          <div class="reset-status" id="master-config-gap-review-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4797,9 +4780,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-29 14:53 ET · OS v2_4 Phase 8O safe pointer gap review';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8O safe pointer gap review';
-var APP_CACHE_TOKEN='mmos-20260529-1453-v24-phase8o-safe-pointer-gap-review';
+var APP_BUILD_STAMP='2026-05-29 14:34 ET · OS v2_4 Phase 8N master config package normalization';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8N master config package normalization';
+var APP_CACHE_TOKEN='mmos-20260529-1434-v24-phase8n-master-config-package-normalization';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -9474,248 +9457,6 @@ function runMasterConfigPackageNormalizeQACheckV24(){
   };
 }
 
-function getMasterConfigSafePointerGapReviewPayloadV24(){
-  var state=window.__masterConfigPackageNormalizeV24||null;
-  var result=state&&state.result?state.result:{};
-  return {
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    normalizedPackageJson:JSON.stringify(result||{}),
-    reviewOnly:true,
-    readExecuted:false,
-    writeExecuted:false
-  };
-}
-
-function formatMasterConfigSafePointerGapReviewV24(result){
-  result=result||{};
-  var optionalGaps=result.optionalPointerGaps||[];
-  var unknownGaps=result.unknownOptionalGaps||[];
-  var missingRequired=result.missingRequiredPointers||[];
-  var missing=result.missingFields||[];
-  var unsafe=result.unsafeFields||[];
-  var reviewItems=result.gapReviewItems||[];
-  var requiredBefore=result.requiredBeforeSetupAutomation||[];
-  var blocked=result.blockedActions||[];
-  var itemLines=reviewItems.length?reviewItems.map(function(item){
-    return '- '+(item.key||'')+' · '+(item.status||'')+' · '+(item.recommendedAction||'');
-  }).join('\n'):'- none';
-  return [
-    'Phase 8O safe pointer gap review',
-    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
-    '',
-    'Review mode',
-    '- Status: '+(result.status||'unknown'),
-    '- Mode: '+(result.mode||'unknown'),
-    '- Review executed: '+(result.reviewExecuted?'true':'false'),
-    '- Package ready: '+(result.packageReady?'true':'false'),
-    '- Required pointers ready: '+(result.requiredPointersReady?'true':'false'),
-    '- Optional gaps reviewed: '+(result.optionalGapsReviewed?'true':'false'),
-    '- Setup automation ready: '+(result.setupAutomationReady?'true':'false'),
-    '- Read executed: '+(result.readExecuted?'true':'false'),
-    '- Config read executed: '+(result.configReadExecuted?'true':'false'),
-    '- Notion read executed: '+(result.notionReadExecuted?'true':'false'),
-    '- Write executed: '+(result.writeExecuted?'true':'false'),
-    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(result.secretExport?'true':'false'),
-    '- Token export: '+(result.tokenExport?'true':'false'),
-    '',
-    'Optional pointer gaps',
-    optionalGaps.length?('- '+optionalGaps.join('\n- ')):'- none',
-    '',
-    'Gap review items',
-    itemLines,
-    '',
-    'Unknown optional gaps',
-    unknownGaps.length?('- '+unknownGaps.join('\n- ')):'- none',
-    '',
-    'Missing required pointers',
-    missingRequired.length?('- '+missingRequired.join('\n- ')):'- none',
-    '',
-    'Missing fields',
-    missing.length?('- '+missing.join('\n- ')):'- none',
-    '',
-    'Unsafe fields',
-    unsafe.length?('- '+unsafe.join('\n- ')):'- none',
-    '',
-    'Recommended decision',
-    '- '+(result.recommendedDecision||''),
-    '',
-    'Required before setup automation',
-    requiredBefore.length?('- '+requiredBefore.join('\n- ')):'- none returned',
-    '',
-    'Next allowed step',
-    '- '+(result.nextAllowedStepAfterGapReview||''),
-    '',
-    'Blocked actions',
-    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
-    '',
-    'Result',
-    result.message||'Safe pointer gap review checked.'
-  ].join('\n');
-}
-
-function renderMasterConfigSafePointerGapReviewStateV24(state){
-  state=state||window.__masterConfigSafePointerGapReviewV24||null;
-  var review=document.getElementById('master-config-gap-review-state');
-  var reviewBadge=document.getElementById('master-config-gap-review-state-badge');
-  var automation=document.getElementById('master-config-gap-review-automation');
-  var automationBadge=document.getElementById('master-config-gap-review-automation-badge');
-  var blocked=document.getElementById('master-config-gap-review-blocked');
-  var blockedBadge=document.getElementById('master-config-gap-review-blocked-badge');
-  var output=document.getElementById('master-config-gap-review-output');
-  var result=state&&state.result?state.result:null;
-  var passed=!!(state&&state.passed);
-  var optionalGaps=result&&result.optionalPointerGaps?result.optionalPointerGaps:[];
-  if(review)review.textContent=result
-    ? (passed?(optionalGaps.length+' optional pointer gap(s) reviewed: '+(optionalGaps.join(', ')||'none')):'Safe pointer gap review needs review.')
-    : 'Run after Phase 8N package normalization.';
-  if(reviewBadge){
-    reviewBadge.textContent=result?(passed?'Reviewed':'Review'):'Gaps';
-    reviewBadge.className=setupDoctorBadgeClassV23(result?(passed?'ready':'warn'):'off');
-  }
-  if(automation)automation.textContent=result
-    ? (result.setupAutomationReady?'Setup automation can be planned after A1XX approves the next phase.':'Setup automation remains blocked until optional gaps are filled or explicitly waived.')
-    : 'Second-device setup automation remains blocked until gaps are filled or waived.';
-  if(automationBadge){
-    automationBadge.textContent=result&&result.setupAutomationReady?'Plan':'Blocked';
-    automationBadge.className=setupDoctorBadgeClassV23(result&&result.setupAutomationReady?'ready':'warn');
-  }
-  if(blocked)blocked.textContent=result
-    ? 'No live read, write, login-anywhere, auth sync, token export, secret export, restore, workers, automations, or bootstrap execution ran.'
-    : 'No live read, write, login-anywhere, auth sync, token export, secret export, restore, workers, or automations.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return result;
-}
-
-async function runMasterConfigSafePointerGapReviewV24(){
-  var status=document.getElementById('master-config-gap-review-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Reviewing safe pointer gaps...';
-  }
-  var normalized=window.__masterConfigPackageNormalizeV24||null;
-  if(!normalized||normalized.passed!==true){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Run Master Config Package Normalization first. Phase 8O needs the Phase 8N receipt.';
-    }
-    return {
-      passed:false,
-      meta:'Run Master Config Package Normalization before reviewing safe pointer gaps.',
-      failures:['Phase 8N master config package normalization receipt']
-    };
-  }
-  var payload=getMasterConfigSafePointerGapReviewPayloadV24();
-  var result=await getAppsScriptJson('master_config_safe_pointer_gap_review',payload,{timeoutMs:12000,tries:1});
-  var blocked=(result&&result.blockedActions)||[];
-  var missingFields=(result&&result.missingFields)||[];
-  var missingRequired=(result&&result.missingRequiredPointers)||[];
-  var unsafe=(result&&result.unsafeFields)||[];
-  var unknownGaps=(result&&result.unknownOptionalGaps)||[];
-  var clean=!!(
-    result
-    && result.mode==='safe_pointer_gap_review_only'
-    && result.reviewExecuted===true
-    && result.packageReady===true
-    && result.requiredPointersReady===true
-    && result.optionalGapsReviewed===true
-    && result.readExecuted===false
-    && result.configReadExecuted===false
-    && result.notionReadExecuted===false
-    && result.writeExecuted===false
-    && result.writesEnabled===false
-    && result.loginAnywhereActive===false
-    && result.secretExport===false
-    && result.tokenExport===false
-    && missingFields.length===0
-    && missingRequired.length===0
-    && unsafe.length===0
-    && unknownGaps.length===0
-    && blocked.indexOf('live master config read')>=0
-    && blocked.indexOf('second-device bootstrap execution')>=0
-  );
-  var previewText=formatMasterConfigSafePointerGapReviewV24(result);
-  window.__masterConfigSafePointerGapReviewV24={
-    checkedAt:new Date().toISOString(),
-    passed:clean,
-    result:result,
-    previewText:previewText
-  };
-  renderMasterConfigSafePointerGapReviewStateV24(window.__masterConfigSafePointerGapReviewV24);
-  if(status){
-    status.className='reset-status '+(clean?'ok':'warn');
-    status.textContent=clean
-      ? 'Safe pointer gap review completed. Setup automation remains blocked until gaps are filled or waived.'
-      : 'Safe pointer gap review needs review.';
-  }
-  return {
-    passed:clean,
-    meta:clean?'Phase 8O safe pointer gap review completed · optional gaps reviewed · no read or write executed.':'Phase 8O safe pointer gap review needs review.',
-    failures:clean?[]:['Phase 8O safe pointer gap review']
-  };
-}
-
-async function copyMasterConfigSafePointerGapReviewV24(){
-  var state=window.__masterConfigSafePointerGapReviewV24||null;
-  var status=document.getElementById('master-config-gap-review-status');
-  if(!state){
-    var check=await runMasterConfigSafePointerGapReviewV24();
-    state=window.__masterConfigSafePointerGapReviewV24||{previewText:check&&check.meta?check.meta:''};
-  }
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Safe pointer gap review copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('master-config-gap-review-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the safe pointer gap review text manually.';
-    }
-  }
-}
-
-function runMasterConfigSafePointerGapReviewSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('master-config-gap-review-output')
-    && document.getElementById('master-config-gap-review-blocked')
-    && typeof getMasterConfigSafePointerGapReviewPayloadV24==='function'
-    && typeof runMasterConfigSafePointerGapReviewV24==='function'
-  );
-  return {
-    passed:hasUi,
-    meta:hasUi?'Phase 8O safe pointer gap review UI is installed · manual review required before Live QA.':'Phase 8O safe pointer gap review UI needs review.',
-    failures:hasUi?[]:['Phase 8O safe pointer gap review UI']
-  };
-}
-
-function runMasterConfigSafePointerGapReviewQACheckV24(){
-  var state=window.__masterConfigSafePointerGapReviewV24||null;
-  if(state&&state.passed===true){
-    return {
-      passed:true,
-      meta:'Phase 8O safe pointer gap review is present · setup automation remains blocked until gaps are filled or waived.',
-      failures:[]
-    };
-  }
-  return {
-    passed:false,
-    meta:'Run Safe Pointer Gap Review before Live QA so the Phase 8O review receipt is available.',
-    failures:['Phase 8O safe pointer gap review receipt']
-  };
-}
-
 function getSetupPointerRowsV23(){
   var health=window.__lastSetupDoctorHealthV23&&window.__lastSetupDoctorHealthV23.health?window.__lastSetupDoctorHealthV23.health:{};
   var backup=window.__lastBackupArchiveStatusV22||{};
@@ -12882,7 +12623,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -12913,7 +12654,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8L Master Config Real Read Gate Review',typeof runMasterConfigRealReadGateReviewV24==='function'?await runMasterConfigRealReadGateReviewV24():{passed:false,meta:'Missing Phase 8L master config real read gate review'});}catch(e){add('Phase 8L Master Config Real Read Gate Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8M First Real Master Config Read',typeof runMasterConfigFirstRealReadQACheckV24==='function'?runMasterConfigFirstRealReadQACheckV24():{passed:false,meta:'Missing Phase 8M first real read receipt check'});}catch(e){add('Phase 8M First Real Master Config Read',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8N Master Config Package Normalization',typeof runMasterConfigPackageNormalizeQACheckV24==='function'?runMasterConfigPackageNormalizeQACheckV24():{passed:false,meta:'Missing Phase 8N master config package normalization check'});}catch(e){add('Phase 8N Master Config Package Normalization',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8O Safe Pointer Gap Review',typeof runMasterConfigSafePointerGapReviewQACheckV24==='function'?runMasterConfigSafePointerGapReviewQACheckV24():{passed:false,meta:'Missing Phase 8O safe pointer gap review check'});}catch(e){add('Phase 8O Safe Pointer Gap Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}

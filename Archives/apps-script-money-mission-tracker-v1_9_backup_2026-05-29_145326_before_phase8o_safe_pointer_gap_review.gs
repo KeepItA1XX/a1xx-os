@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1453-v24-phase8o-safe-pointer-gap-review';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1434-v24-phase8n-master-config-package-normalization';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -304,7 +304,6 @@ function doGet(e) {
     if (e.parameter.action === 'master_config_real_read_gate_review') return getMasterConfigRealReadGateReviewV19(e.parameter);
     if (e.parameter.action === 'master_config_first_real_read') return getMasterConfigFirstRealReadV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_package_normalize') return getMasterConfigSafePackageNormalizeV19(e.parameter);
-    if (e.parameter.action === 'master_config_safe_pointer_gap_review') return getMasterConfigSafePointerGapReviewV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -2697,103 +2696,6 @@ function getMasterConfigSafePackageNormalizeV19(input) {
     message: packageReady
       ? 'Master config safe package normalized. No read or write executed.'
       : 'Master config safe package normalization needs review. No read or write executed.'
-  });
-}
-
-function getMasterConfigSafePointerGapReviewV19(input) {
-  var checkedAt = new Date().toISOString();
-  var payload = input || {};
-  var normalized = parseMasterConfigJsonParamV19(payload.normalizedPackageJson || payload.normalizedPackage, {});
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19(normalized);
-  var optionalGaps = Array.isArray(normalized.optionalPointerGaps)
-    ? normalized.optionalPointerGaps.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; })
-    : splitMasterConfigListV19(normalized.optionalPointerGaps || '');
-  var missingRequired = Array.isArray(normalized.missingRequiredPointers)
-    ? normalized.missingRequiredPointers.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; })
-    : splitMasterConfigListV19(normalized.missingRequiredPointers || '');
-  var missingFields = Array.isArray(normalized.missingFields)
-    ? normalized.missingFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; })
-    : splitMasterConfigListV19(normalized.missingFields || '');
-  var knownOptional = ['clean_workbook_id', 'backup_folder_id'];
-  var unknownOptionalGaps = optionalGaps.filter(function(key) { return knownOptional.indexOf(key) < 0; });
-  var packageReady = normalizeBooleanV19(normalized.packageReady);
-  var requiredClean = packageReady && missingRequired.length === 0 && missingFields.length === 0 && unsafe.length === 0;
-  var gapReviewItems = optionalGaps.map(function(key) {
-    var label = key === 'clean_workbook_id'
-      ? 'Clean Workbook ID'
-      : (key === 'backup_folder_id' ? 'Backup Folder ID' : key);
-    var source = key === 'clean_workbook_id'
-      ? 'Apps Script spreadsheet target or Setup Doctor health'
-      : (key === 'backup_folder_id' ? 'Drive backup archive folder anchor' : 'Manual source review required');
-    return {
-      key: key,
-      label: label,
-      status: 'Optional Gap',
-      recommendedAction: 'Fill in MC Master Config before second-device setup automation, or explicitly waive for manual setup.',
-      safeSource: source
-    };
-  });
-  var reviewReady = requiredClean && unknownOptionalGaps.length === 0;
-  return jsonResponseV19({
-    status: reviewReady ? (optionalGaps.length ? 'gap_review_ready_with_optional_gaps' : 'gap_review_ready_no_gaps') : 'review',
-    ok: true,
-    mode: 'safe_pointer_gap_review_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    reviewExecuted: true,
-    readExecuted: false,
-    configReadExecuted: false,
-    notionReadExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    packageReady: packageReady,
-    requiredPointersReady: requiredClean,
-    setupAutomationReady: reviewReady && optionalGaps.length === 0,
-    optionalGapsReviewed: reviewReady,
-    optionalPointerGaps: optionalGaps,
-    unknownOptionalGaps: unknownOptionalGaps,
-    missingRequiredPointers: missingRequired,
-    missingFields: missingFields,
-    unsafeFields: unsafe,
-    gapReviewItems: gapReviewItems,
-    recommendedDecision: optionalGaps.length
-      ? 'fill_optional_pointers_before_bootstrap_preview'
-      : 'continue_to_second_device_bootstrap_preview_plan',
-    requiredBeforeSetupAutomation: optionalGaps.length
-      ? ['Fill clean_workbook_id and backup_folder_id in MC Master Config, or capture explicit A1XX waiver for manual setup.']
-      : ['No optional pointer gaps remain. Continue only after A1XX approves the next phase.'],
-    nextAllowedStepAfterGapReview: reviewReady
-      ? (optionalGaps.length ? 'safe_pointer_gap_fill_plan' : 'second_device_bootstrap_preview_plan')
-      : 'repair_safe_pointer_gap_review',
-    blockedActions: [
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution',
-      'second-device bootstrap execution'
-    ],
-    safety: {
-      notion: 'No Notion read, create, update, archive, or delete executed.',
-      scope: 'Review only the normalized safe pointer gaps from Phase 8N.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, restores, or deletes.',
-      auth: 'No login-anywhere, auth sync, token export, or secret export.',
-      recovery: 'No restore or bootstrap execution.'
-    },
-    message: reviewReady
-      ? 'Safe pointer gap review completed. Optional gaps remain visible; no read or write executed.'
-      : 'Safe pointer gap review needs review. No read or write executed.'
   });
 }
 
