@@ -2408,23 +2408,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="auth-source-snapshot-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Auth Snapshot Target Review</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8C scope</div><div class="settings-row-meta" id="auth-target-scope">Review the future target contract only. No auth sync write or login-anywhere.</div></div><span class="settings-badge warn" id="auth-target-scope-badge">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Allowed target</div><div class="settings-row-meta" id="auth-target-allowed">Build after the source snapshot preview is ready.</div></div><span class="settings-badge off" id="auth-target-allowed-badge">Target</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Required gates</div><div class="settings-row-meta" id="auth-target-gates">A1XX approval, trusted source, backup anchor, and future readback stay required.</div></div><span class="settings-badge off" id="auth-target-gates-badge">Gates</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked targets</div><div class="settings-row-meta" id="auth-target-blocked">No token export, secret export, bulk sync, worker auth, or automation activation.</div></div><span class="settings-badge warn" id="auth-target-blocked-badge">Blocked</span></div>
-          </div>
-          <label for="auth-target-review-output">Target review contract</label>
-          <textarea id="auth-target-review-output" rows="10" readonly placeholder="Click Build target review after Auth Source Snapshot is ready."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Building target review',function(){return buildAuthSnapshotTargetReviewPreviewV24();},this,'Target review ready.')">Build target review</button>
-            <button class="btn" onclick="copyAuthSnapshotTargetReviewPreviewV24()">Copy target review</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Building auth snapshot',function(){return buildAuthSourceSnapshotPreviewV24();},this,'Auth snapshot ready.')">Build auth snapshot</button>
-          </div>
-          <div class="reset-status" id="auth-target-review-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4517,9 +4500,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-29 09:29 ET · OS v2_4 Phase 8C auth target review';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8C auth target review';
-var APP_CACHE_TOKEN='mmos-20260529-0929-v24-phase8c-auth-target-review';
+var APP_BUILD_STAMP='2026-05-28 13:32 ET · OS v2_4 Phase 8B auth source snapshot';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8B auth source snapshot';
+var APP_CACHE_TOKEN='mmos-20260528-1332-v24-phase8b-auth-source-snapshot';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6465,216 +6448,6 @@ function runAuthSourceSnapshotSelfCheckV24(){
     passed:clean,
     meta:clean?'Phase 8B auth source snapshot is preview-only · no sync write enabled.':'Phase 8B auth source snapshot needs review.',
     failures:clean?[]:['Phase 8B auth source snapshot']
-  };
-}
-
-function buildAuthSnapshotTargetReviewV24(){
-  var sourceState=window.__authSourceSnapshotV24||null;
-  var sourceSnapshot=sourceState&&sourceState.snapshot?sourceState.snapshot:buildAuthSourceSnapshotV24();
-  var sourceReady=!!(
-    sourceSnapshot
-    && sourceSnapshot.mode==='preview_only'
-    && sourceSnapshot.localSignIn
-    && sourceSnapshot.profileReady
-    && sourceSnapshot.trusted
-    && sourceSnapshot.backupReady
-    && sourceSnapshot.writesEnabled===false
-    && sourceSnapshot.secretExport===false
-  );
-  return {
-    mode:'review_contract_only',
-    sourceReady:sourceReady,
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    sourceProfileId:sourceSnapshot.profileId||'a1xx-primary',
-    sourceDeviceLabel:sourceSnapshot.deviceLabel||'unlabeled',
-    sourceDeviceTrusted:!!sourceSnapshot.trusted,
-    latestBackupId:sourceSnapshot.latestBackupId||'',
-    allowedTarget:'new_device_setup_preview',
-    allowedUse:'Prepare a future new-device setup preview from safe metadata only.',
-    requiredGates:[
-      'A1XX approval',
-      'trusted source device',
-      'backup-first',
-      'B3 confirmation before any future write',
-      'readback verification after any future write',
-      'archive-only recovery'
-    ],
-    allowedFields:[
-      'profileId',
-      'displayName',
-      'deviceLabel',
-      'trustedStatus',
-      'latestBackupId',
-      'sourceBuild',
-      'checkedAt'
-    ],
-    blockedTargets:[
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'bulk config sync',
-      'worker auth',
-      'automation activation',
-      'restore execution'
-    ],
-    writesEnabled:false,
-    loginAnywhereActive:false,
-    secretExport:false,
-    tokenExport:false,
-    checkedAt:new Date().toISOString()
-  };
-}
-
-function formatAuthSnapshotTargetReviewPreviewV24(review){
-  review=review||buildAuthSnapshotTargetReviewV24();
-  return [
-    'Phase 8C auth snapshot target review',
-    'Build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),
-    '',
-    'Review mode',
-    '- Mode: '+review.mode,
-    '- Writes enabled: '+(review.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(review.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(review.secretExport?'true':'false'),
-    '- Token export: '+(review.tokenExport?'true':'false'),
-    '',
-    'Source readiness',
-    '- Source ready: '+(review.sourceReady?'true':'false'),
-    '- Profile ID: '+review.sourceProfileId,
-    '- Source device: '+review.sourceDeviceLabel,
-    '- Trusted source: '+(review.sourceDeviceTrusted?'true':'false'),
-    '- Latest backup: '+(review.latestBackupId||'not checked'),
-    '',
-    'Allowed target',
-    '- Target: '+review.allowedTarget,
-    '- Use: '+review.allowedUse,
-    '',
-    'Allowed fields',
-    '- '+review.allowedFields.join('\n- '),
-    '',
-    'Required gates',
-    '- '+review.requiredGates.join('\n- '),
-    '',
-    'Blocked targets',
-    '- '+review.blockedTargets.join('\n- '),
-    '',
-    'Result',
-    review.sourceReady
-      ? 'Target contract is ready for review. No auth sync, login-anywhere, or write ran.'
-      : 'Target contract needs a clean source snapshot before future planning.'
-  ].join('\n');
-}
-
-function renderAuthSnapshotTargetReviewStateV24(state){
-  state=state||window.__authTargetReviewV24||null;
-  var allowed=document.getElementById('auth-target-allowed');
-  var allowedBadge=document.getElementById('auth-target-allowed-badge');
-  var gates=document.getElementById('auth-target-gates');
-  var gatesBadge=document.getElementById('auth-target-gates-badge');
-  var blocked=document.getElementById('auth-target-blocked');
-  var blockedBadge=document.getElementById('auth-target-blocked-badge');
-  var output=document.getElementById('auth-target-review-output');
-  var ready=!!(state&&state.ready);
-  if(allowed)allowed.textContent=state
-    ? (state.review.allowedTarget+' · '+(ready?'source ready':'source review'))
-    : 'Build after the source snapshot preview is ready.';
-  if(allowedBadge){
-    allowedBadge.textContent=state?(ready?'Ready':'Review'):'Target';
-    allowedBadge.className=setupDoctorBadgeClassV23(state?(ready?'ready':'warn'):'off');
-  }
-  if(gates)gates.textContent=state
-    ? 'Future target requires A1XX approval, backup-first, B3, readback, and archive-only recovery.'
-    : 'A1XX approval, trusted source, backup anchor, and future readback stay required.';
-  if(gatesBadge){
-    gatesBadge.textContent=state?'Gated':'Gates';
-    gatesBadge.className=setupDoctorBadgeClassV23(state?'ready':'off');
-  }
-  if(blocked)blocked.textContent=state
-    ? 'Login-anywhere, sync writes, token export, secret export, workers, and automations remain blocked.'
-    : 'No token export, secret export, bulk sync, worker auth, or automation activation.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23('warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return state;
-}
-
-async function buildAuthSnapshotTargetReviewPreviewV24(){
-  var status=document.getElementById('auth-target-review-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking source snapshot before building target review...';
-  }
-  var sourceState=window.__authSourceSnapshotV24||null;
-  if(!sourceState&&typeof buildAuthSourceSnapshotPreviewV24==='function')sourceState=await buildAuthSourceSnapshotPreviewV24();
-  var review=buildAuthSnapshotTargetReviewV24();
-  var ready=!!(review.sourceReady&&review.mode==='review_contract_only'&&!review.writesEnabled&&!review.loginAnywhereActive&&!review.secretExport&&!review.tokenExport);
-  var previewText=formatAuthSnapshotTargetReviewPreviewV24(review);
-  window.__authTargetReviewV24={
-    builtAt:new Date().toISOString(),
-    ready:ready,
-    review:review,
-    previewText:previewText
-  };
-  renderAuthSnapshotTargetReviewStateV24(window.__authTargetReviewV24);
-  if(status){
-    status.className='reset-status '+(ready?'ok':'warn');
-    status.textContent=ready
-      ? 'Auth target review is ready. No auth sync or write ran.'
-      : 'Auth target review needs a clean source snapshot first.';
-  }
-  return window.__authTargetReviewV24;
-}
-
-async function copyAuthSnapshotTargetReviewPreviewV24(){
-  var state=window.__authTargetReviewV24||null;
-  var status=document.getElementById('auth-target-review-status');
-  if(!state)state=await buildAuthSnapshotTargetReviewPreviewV24();
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Auth target review copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('auth-target-review-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the target review text manually.';
-    }
-  }
-}
-
-function runAuthSnapshotTargetReviewSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('auth-target-review-output')
-    && document.getElementById('auth-target-blocked')
-    && typeof buildAuthSnapshotTargetReviewV24==='function'
-    && typeof buildAuthSnapshotTargetReviewPreviewV24==='function'
-  );
-  var review=hasUi?buildAuthSnapshotTargetReviewV24():null;
-  var blocked=review&&review.blockedTargets?review.blockedTargets:[];
-  var clean=!!(
-    hasUi
-    && review
-    && review.mode==='review_contract_only'
-    && review.writesEnabled===false
-    && review.loginAnywhereActive===false
-    && review.secretExport===false
-    && review.tokenExport===false
-    && blocked.indexOf('login-anywhere activation')>=0
-    && blocked.indexOf('auth sync write')>=0
-  );
-  return {
-    passed:clean,
-    meta:clean?'Phase 8C auth target review is preview-only · no auth sync write enabled.':'Phase 8C auth target review needs review.',
-    failures:clean?[]:['Phase 8C auth target review']
   };
 }
 
@@ -9844,7 +9617,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -9863,7 +9636,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 7H Closeout',typeof runPhase7HPointerWriteCloseoutSelfCheckV24==='function'?runPhase7HPointerWriteCloseoutSelfCheckV24():{passed:false,meta:'Missing Phase 7H closeout check'});}catch(e){add('Phase 7H Closeout',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8A Auth Readiness',typeof runAuthSyncReadinessSelfCheckV24==='function'?runAuthSyncReadinessSelfCheckV24():{passed:false,meta:'Missing Phase 8A auth readiness check'});}catch(e){add('Phase 8A Auth Readiness',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8B Auth Source Snapshot',typeof runAuthSourceSnapshotSelfCheckV24==='function'?runAuthSourceSnapshotSelfCheckV24():{passed:false,meta:'Missing Phase 8B auth source snapshot check'});}catch(e){add('Phase 8B Auth Source Snapshot',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8C Auth Target Review',typeof runAuthSnapshotTargetReviewSelfCheckV24==='function'?runAuthSnapshotTargetReviewSelfCheckV24():{passed:false,meta:'Missing Phase 8C auth target review check'});}catch(e){add('Phase 8C Auth Target Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
