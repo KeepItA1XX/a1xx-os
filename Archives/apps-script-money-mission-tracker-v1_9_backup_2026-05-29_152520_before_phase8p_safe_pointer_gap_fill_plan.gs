@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1525-v24-phase8p-safe-pointer-gap-fill-plan';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1512-v24-phase8o-gap-review-timeout-fix';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -305,7 +305,6 @@ function doGet(e) {
     if (e.parameter.action === 'master_config_first_real_read') return getMasterConfigFirstRealReadV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_package_normalize') return getMasterConfigSafePackageNormalizeV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_pointer_gap_review') return getMasterConfigSafePointerGapReviewV19(e.parameter);
-    if (e.parameter.action === 'master_config_safe_pointer_gap_fill_plan') return getMasterConfigSafePointerGapFillPlanV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -2819,140 +2818,6 @@ function getMasterConfigSafePointerGapReviewV19(input) {
     message: reviewReady
       ? 'Safe pointer gap review completed. Optional gaps remain visible; no read or write executed.'
       : 'Safe pointer gap review needs review. No read or write executed.'
-  });
-}
-
-function getMasterConfigSafePointerGapFillPlanV19(input) {
-  var checkedAt = new Date().toISOString();
-  var payload = input || {};
-  var optionalGaps = parseMasterConfigJsonParamV19(payload.optionalPointerGapsJson, []);
-  var unknownGaps = parseMasterConfigJsonParamV19(payload.unknownOptionalGapsJson, []);
-  var missingRequired = parseMasterConfigJsonParamV19(payload.missingRequiredPointersJson, []);
-  var missingFields = parseMasterConfigJsonParamV19(payload.missingFieldsJson, []);
-  var unsafeFields = parseMasterConfigJsonParamV19(payload.unsafeFieldsJson, []);
-  var candidates = parseMasterConfigJsonParamV19(payload.candidatesJson, []);
-  optionalGaps = Array.isArray(optionalGaps) ? optionalGaps.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  unknownGaps = Array.isArray(unknownGaps) ? unknownGaps.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  missingRequired = Array.isArray(missingRequired) ? missingRequired.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  missingFields = Array.isArray(missingFields) ? missingFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; }) : [];
-  unsafeFields = Array.isArray(unsafeFields) ? unsafeFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; }) : [];
-  candidates = Array.isArray(candidates) ? candidates : [];
-  var candidateByKey = {};
-  candidates.forEach(function(item) {
-    var key = cellTextV19(item && item.key || '', 120);
-    if (!key) return;
-    candidateByKey[key] = {
-      key: key,
-      label: cellTextV19(item.label || key, 180),
-      value: cellTextV19(item.value || '', key === 'apps_script_web_app_url' ? 500 : 180),
-      source: cellTextV19(item.source || '', 180),
-      status: cellTextV19(item.status || '', 80)
-    };
-  });
-  var compactUnsafe = detectUnsafeMasterConfigReadSkeletonInputV19({
-    sourceBuild: payload.sourceBuild || '',
-    optionalPointerGaps: optionalGaps,
-    unknownOptionalGaps: unknownGaps,
-    missingRequiredPointers: missingRequired,
-    missingFields: missingFields,
-    unsafeFields: unsafeFields,
-    candidates: candidates.map(function(item) {
-      return { key: item.key || '', source: item.source || '', status: item.status || '' };
-    })
-  });
-  unsafeFields = unsafeFields.concat(compactUnsafe).filter(function(item, index, arr) { return item && arr.indexOf(item) === index; });
-  var packageReady = normalizeBooleanV19(payload.packageReady);
-  var gapReviewReady = normalizeBooleanV19(payload.gapReviewReady);
-  var requiredPointersReady = normalizeBooleanV19(payload.requiredPointersReady);
-  var fillPlanItems = optionalGaps.map(function(key) {
-    var candidate = candidateByKey[key] || { key: key, label: key, value: '', source: '', status: '' };
-    return {
-      key: key,
-      label: candidate.label || key,
-      candidateValue: candidate.value,
-      candidateSource: candidate.source || 'safe setup pointer index or local setup source',
-      candidateStatus: candidate.value ? 'Candidate Ready' : 'Source Needed',
-      fillTarget: 'MC Master Config safe read section',
-      writeMode: 'future_write_gated',
-      requiredGate: 'A1XX approval, backup-first, preview, B3 confirmation, write, readback verification'
-    };
-  });
-  var missingCandidates = fillPlanItems.filter(function(item) { return !item.candidateValue; }).map(function(item) { return item.key; });
-  var planReady = packageReady && gapReviewReady && requiredPointersReady
-    && optionalGaps.length > 0
-    && missingCandidates.length === 0
-    && unknownGaps.length === 0
-    && missingRequired.length === 0
-    && missingFields.length === 0
-    && unsafeFields.length === 0;
-  return jsonResponseV19({
-    status: planReady ? 'fill_plan_ready_with_candidates' : 'fill_plan_needs_review',
-    ok: true,
-    mode: 'safe_pointer_gap_fill_plan_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    planExecuted: true,
-    readExecuted: false,
-    configReadExecuted: false,
-    notionReadExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    bootstrapExecutionEnabled: false,
-    packageReady: packageReady,
-    gapReviewReady: gapReviewReady,
-    requiredPointersReady: requiredPointersReady,
-    setupAutomationReady: false,
-    optionalPointerGaps: optionalGaps,
-    fillPlanItems: fillPlanItems,
-    missingCandidateValues: missingCandidates,
-    unknownOptionalGaps: unknownGaps,
-    missingRequiredPointers: missingRequired,
-    missingFields: missingFields,
-    unsafeFields: unsafeFields,
-    recommendedDecision: planReady
-      ? 'preview_two_safe_pointer_fills_before_write'
-      : 'repair_pointer_candidate_sources_before_fill_preview',
-    requiredBeforeAnyFutureFill: [
-      'A1XX approval for filling clean_workbook_id and backup_folder_id',
-      'backup verified before preview',
-      'preview exact two pointer values',
-      'B3 confirmation before any write',
-      'write only those two safe fields',
-      'readback verification after write',
-      'archive-only recovery if readback fails'
-    ],
-    nextAllowedStepAfterFillPlan: planReady
-      ? 'safe_pointer_gap_fill_preview'
-      : 'safe_pointer_gap_candidate_repair',
-    blockedActions: [
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution',
-      'second-device bootstrap execution'
-    ],
-    safety: {
-      notion: 'No Notion read, create, update, archive, or delete executed.',
-      scope: 'Plan only the future fill for the two safe optional pointer fields.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, restores, or deletes.',
-      auth: 'No login-anywhere, auth sync, token export, or secret export.',
-      recovery: 'No restore or bootstrap execution.'
-    },
-    message: planReady
-      ? 'Safe pointer gap fill plan is ready. No read or write executed.'
-      : 'Safe pointer gap fill plan needs review. No read or write executed.'
   });
 }
 
