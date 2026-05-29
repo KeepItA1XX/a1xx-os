@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1154-v24-phase8j-contract-review-false-positive-fix';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1142-v24-phase8j-master-config-endpoint-contract-review';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -1934,18 +1934,13 @@ function getMasterConfigLocatorReviewV19(input) {
 function getMasterConfigEndpointContractReviewV19(input) {
   var checkedAt = new Date().toISOString();
   var payload = input || {};
-  var safeScanPayload = Object.assign({}, payload);
-  delete safeScanPayload.secretScanGateIncluded;
-  delete safeScanPayload.protectedValueScanGateIncluded;
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19(safeScanPayload);
+  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19(payload);
   var locator = normalizeMasterConfigPageLocatorV19(
     payload.masterConfigPageLocator || payload.masterConfigPageUrl || payload.masterConfigPageId || payload.pageId || ''
   );
   var approvalCaptured = normalizeBooleanV19(payload.a1xxApprovalCaptured);
   var noLiveReadConfirmed = normalizeBooleanV19(payload.noLiveReadConfirmed);
-  var secretScanGateIncluded = Object.prototype.hasOwnProperty.call(payload, 'protectedValueScanGateIncluded')
-    ? normalizeBooleanV19(payload.protectedValueScanGateIncluded)
-    : normalizeBooleanV19(payload.secretScanGateIncluded);
+  var secretScanGateIncluded = normalizeBooleanV19(payload.secretScanGateIncluded);
   var readOnlyEndpointReviewIncluded = normalizeBooleanV19(payload.readOnlyEndpointReviewIncluded);
   var trustedSource = normalizeBooleanV19(payload.trustedSourceConfirmed);
   var backupVisible = normalizeBooleanV19(payload.backupVisible);
