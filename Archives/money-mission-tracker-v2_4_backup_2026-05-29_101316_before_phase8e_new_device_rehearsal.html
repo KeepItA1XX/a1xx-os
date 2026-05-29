@@ -2442,23 +2442,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="auth-config-read-plan-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">New-Device Setup Rehearsal</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8E scope</div><div class="settings-row-meta" id="new-device-scope">Rehearse setup only. No device registration, restore, config read, or login-anywhere.</div></div><span class="settings-badge warn" id="new-device-scope-badge">Rehearsal</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Source package</div><div class="settings-row-meta" id="new-device-source">Build after the master config read plan is ready.</div></div><span class="settings-badge off" id="new-device-source-badge">Source</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Setup steps</div><div class="settings-row-meta" id="new-device-steps">Preview the exact manual steps a second trusted device would need.</div></div><span class="settings-badge off" id="new-device-steps-badge">Steps</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="new-device-blocked">No automatic trust, restore, token movement, login-anywhere, or sync write.</div></div><span class="settings-badge warn" id="new-device-blocked-badge">Blocked</span></div>
-          </div>
-          <label for="new-device-rehearsal-output">New-device rehearsal</label>
-          <textarea id="new-device-rehearsal-output" rows="12" readonly placeholder="Click Build rehearsal after Master Config Read Plan is ready."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Building new-device rehearsal',function(){return buildNewDeviceSetupRehearsalPreviewV24();},this,'New-device rehearsal ready.')">Build rehearsal</button>
-            <button class="btn" onclick="copyNewDeviceSetupRehearsalPreviewV24()">Copy rehearsal</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Building config read plan',function(){return buildMasterConfigReadPlanPreviewV24();},this,'Config read plan ready.')">Build config plan</button>
-          </div>
-          <div class="reset-status" id="new-device-rehearsal-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4551,9 +4534,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-29 10:13 ET · OS v2_4 Phase 8E new-device rehearsal';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8E new-device rehearsal';
-var APP_CACHE_TOKEN='mmos-20260529-1013-v24-phase8e-new-device-rehearsal';
+var APP_BUILD_STAMP='2026-05-29 09:51 ET · OS v2_4 Phase 8D master config read plan';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8D master config read plan';
+var APP_CACHE_TOKEN='mmos-20260529-0951-v24-phase8d-master-config-read-plan';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6951,250 +6934,6 @@ function runMasterConfigReadPlanSelfCheckV24(){
     passed:clean,
     meta:clean?'Phase 8D master config read plan is preview-only · no config read enabled.':'Phase 8D master config read plan needs review.',
     failures:clean?[]:['Phase 8D master config read plan']
-  };
-}
-
-function buildNewDeviceSetupRehearsalV24(){
-  var configState=window.__masterConfigReadPlanV24||null;
-  var configPlan=configState&&configState.plan?configState.plan:buildMasterConfigReadPlanV24();
-  var configReady=!!(
-    configPlan
-    && configPlan.mode==='read_plan_only'
-    && configPlan.targetReady
-    && configPlan.configReadEndpointActive===false
-    && configPlan.configReadExecuted===false
-    && configPlan.writesEnabled===false
-    && configPlan.loginAnywhereActive===false
-    && configPlan.secretExport===false
-    && configPlan.tokenExport===false
-  );
-  var device=typeof getDeviceProfileV23==='function'?getDeviceProfileV23():{};
-  var setupKeys=configPlan.safeSetupPointerKeys||[];
-  return {
-    mode:'rehearsal_only',
-    configPlanReady:configReady,
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    sourceDeviceLabel:device.label||'A1XX Mac Mini',
-    rehearsalTarget:'second_trusted_device_preview',
-    targetDeviceStatus:'not_registered_from_this_flow',
-    setupPackage:[
-      'profileId',
-      'displayName',
-      'safeSetupPointerKeys',
-      'latestBackupMarker',
-      'sourceBuild',
-      'readOnlyMode'
-    ],
-    setupPointerKeys:setupKeys,
-    manualSteps:[
-      'Open the app on the second device.',
-      'Confirm the app loads before entering any setup values.',
-      'Open Devices.',
-      'Use local sign-in on that browser only.',
-      'Load registry and confirm the device appears as pending or unknown.',
-      'Do not trust the device automatically.',
-      'Confirm A1XX approves the device before future trusted-device work.',
-      'Preview safe setup pointers only.',
-      'Run Live QA on the second device before any future restore or sync.',
-      'Save backup after the second-device rehearsal is reviewed.'
-    ],
-    requiredApprovals:[
-      'A1XX approval before trusting a new device',
-      'A1XX approval before any master config read endpoint',
-      'A1XX approval before any restore',
-      'A1XX approval before any login-anywhere behavior'
-    ],
-    blockedActions:[
-      'automatic device trust',
-      'device registry write',
-      'live master config read',
-      'master config write',
-      'restore execution',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation'
-    ],
-    deviceRegistrationEnabled:false,
-    restoreEnabled:false,
-    configReadEndpointActive:false,
-    writesEnabled:false,
-    loginAnywhereActive:false,
-    secretExport:false,
-    tokenExport:false,
-    checkedAt:new Date().toISOString()
-  };
-}
-
-function formatNewDeviceSetupRehearsalPreviewV24(rehearsal){
-  rehearsal=rehearsal||buildNewDeviceSetupRehearsalV24();
-  return [
-    'Phase 8E new-device setup rehearsal',
-    'Build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),
-    '',
-    'Rehearsal mode',
-    '- Mode: '+rehearsal.mode,
-    '- Device registration enabled: '+(rehearsal.deviceRegistrationEnabled?'true':'false'),
-    '- Restore enabled: '+(rehearsal.restoreEnabled?'true':'false'),
-    '- Config read endpoint active: '+(rehearsal.configReadEndpointActive?'true':'false'),
-    '- Writes enabled: '+(rehearsal.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(rehearsal.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(rehearsal.secretExport?'true':'false'),
-    '- Token export: '+(rehearsal.tokenExport?'true':'false'),
-    '',
-    'Source and target',
-    '- Config plan ready: '+(rehearsal.configPlanReady?'true':'false'),
-    '- Source device: '+rehearsal.sourceDeviceLabel,
-    '- Rehearsal target: '+rehearsal.rehearsalTarget,
-    '- Target device status: '+rehearsal.targetDeviceStatus,
-    '',
-    'Setup package',
-    '- '+rehearsal.setupPackage.join('\n- '),
-    '',
-    'Safe setup pointer keys',
-    rehearsal.setupPointerKeys.length?('- '+rehearsal.setupPointerKeys.join('\n- ')):'- none loaded yet',
-    '',
-    'Manual rehearsal steps',
-    '- '+rehearsal.manualSteps.join('\n- '),
-    '',
-    'Required approvals',
-    '- '+rehearsal.requiredApprovals.join('\n- '),
-    '',
-    'Blocked actions',
-    '- '+rehearsal.blockedActions.join('\n- '),
-    '',
-    'Result',
-    rehearsal.configPlanReady
-      ? 'New-device setup rehearsal is ready for review. No device registration, restore, config read, login-anywhere, or write ran.'
-      : 'New-device setup rehearsal needs a clean master config read plan first.'
-  ].join('\n');
-}
-
-function renderNewDeviceSetupRehearsalStateV24(state){
-  state=state||window.__newDeviceRehearsalV24||null;
-  var source=document.getElementById('new-device-source');
-  var sourceBadge=document.getElementById('new-device-source-badge');
-  var steps=document.getElementById('new-device-steps');
-  var stepsBadge=document.getElementById('new-device-steps-badge');
-  var blocked=document.getElementById('new-device-blocked');
-  var blockedBadge=document.getElementById('new-device-blocked-badge');
-  var output=document.getElementById('new-device-rehearsal-output');
-  var ready=!!(state&&state.ready);
-  if(source)source.textContent=state
-    ? (state.rehearsal.sourceDeviceLabel+' → '+state.rehearsal.rehearsalTarget+' · '+(ready?'ready':'review'))
-    : 'Build after the master config read plan is ready.';
-  if(sourceBadge){
-    sourceBadge.textContent=state?(ready?'Ready':'Review'):'Source';
-    sourceBadge.className=setupDoctorBadgeClassV23(state?(ready?'ready':'warn'):'off');
-  }
-  if(steps)steps.textContent=state
-    ? ('Manual rehearsal built. '+state.rehearsal.manualSteps.length+' step(s), no device write.')
-    : 'Preview the exact manual steps a second trusted device would need.';
-  if(stepsBadge){
-    stepsBadge.textContent=state?'Preview':'Steps';
-    stepsBadge.className=setupDoctorBadgeClassV23(state?'ready':'off');
-  }
-  if(blocked)blocked.textContent=state
-    ? 'Automatic trust, registry writes, restore, config read, login-anywhere, sync, tokens, secrets, workers, and automations remain blocked.'
-    : 'No automatic trust, restore, token movement, login-anywhere, or sync write.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23('warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return state;
-}
-
-async function buildNewDeviceSetupRehearsalPreviewV24(){
-  var status=document.getElementById('new-device-rehearsal-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking master config read plan before building new-device rehearsal...';
-  }
-  var configState=window.__masterConfigReadPlanV24||null;
-  if(!configState&&typeof buildMasterConfigReadPlanPreviewV24==='function')configState=await buildMasterConfigReadPlanPreviewV24();
-  var rehearsal=buildNewDeviceSetupRehearsalV24();
-  var ready=!!(
-    rehearsal.configPlanReady
-    && rehearsal.mode==='rehearsal_only'
-    && rehearsal.deviceRegistrationEnabled===false
-    && rehearsal.restoreEnabled===false
-    && rehearsal.configReadEndpointActive===false
-    && rehearsal.writesEnabled===false
-    && rehearsal.loginAnywhereActive===false
-    && rehearsal.secretExport===false
-    && rehearsal.tokenExport===false
-  );
-  var previewText=formatNewDeviceSetupRehearsalPreviewV24(rehearsal);
-  window.__newDeviceRehearsalV24={
-    builtAt:new Date().toISOString(),
-    ready:ready,
-    rehearsal:rehearsal,
-    previewText:previewText
-  };
-  renderNewDeviceSetupRehearsalStateV24(window.__newDeviceRehearsalV24);
-  if(status){
-    status.className='reset-status '+(ready?'ok':'warn');
-    status.textContent=ready
-      ? 'New-device setup rehearsal is ready. No device registration, restore, or write ran.'
-      : 'New-device setup rehearsal needs a clean master config read plan first.';
-  }
-  return window.__newDeviceRehearsalV24;
-}
-
-async function copyNewDeviceSetupRehearsalPreviewV24(){
-  var state=window.__newDeviceRehearsalV24||null;
-  var status=document.getElementById('new-device-rehearsal-status');
-  if(!state)state=await buildNewDeviceSetupRehearsalPreviewV24();
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='New-device rehearsal copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('new-device-rehearsal-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the rehearsal text manually.';
-    }
-  }
-}
-
-function runNewDeviceSetupRehearsalSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('new-device-rehearsal-output')
-    && document.getElementById('new-device-blocked')
-    && typeof buildNewDeviceSetupRehearsalV24==='function'
-    && typeof buildNewDeviceSetupRehearsalPreviewV24==='function'
-  );
-  var rehearsal=hasUi?buildNewDeviceSetupRehearsalV24():null;
-  var blocked=rehearsal&&rehearsal.blockedActions?rehearsal.blockedActions:[];
-  var clean=!!(
-    hasUi
-    && rehearsal
-    && rehearsal.mode==='rehearsal_only'
-    && rehearsal.deviceRegistrationEnabled===false
-    && rehearsal.restoreEnabled===false
-    && rehearsal.configReadEndpointActive===false
-    && rehearsal.writesEnabled===false
-    && rehearsal.loginAnywhereActive===false
-    && rehearsal.secretExport===false
-    && rehearsal.tokenExport===false
-    && blocked.indexOf('automatic device trust')>=0
-    && blocked.indexOf('restore execution')>=0
-    && blocked.indexOf('auth sync write')>=0
-  );
-  return {
-    passed:clean,
-    meta:clean?'Phase 8E new-device rehearsal is preview-only · no registration or restore enabled.':'Phase 8E new-device rehearsal needs review.',
-    failures:clean?[]:['Phase 8E new-device rehearsal']
   };
 }
 
@@ -10364,7 +10103,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -10385,7 +10124,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8B Auth Source Snapshot',typeof runAuthSourceSnapshotSelfCheckV24==='function'?runAuthSourceSnapshotSelfCheckV24():{passed:false,meta:'Missing Phase 8B auth source snapshot check'});}catch(e){add('Phase 8B Auth Source Snapshot',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8C Auth Target Review',typeof runAuthSnapshotTargetReviewSelfCheckV24==='function'?runAuthSnapshotTargetReviewSelfCheckV24():{passed:false,meta:'Missing Phase 8C auth target review check'});}catch(e){add('Phase 8C Auth Target Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8D Master Config Read Plan',typeof runMasterConfigReadPlanSelfCheckV24==='function'?runMasterConfigReadPlanSelfCheckV24():{passed:false,meta:'Missing Phase 8D master config read plan check'});}catch(e){add('Phase 8D Master Config Read Plan',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8E New-Device Rehearsal',typeof runNewDeviceSetupRehearsalSelfCheckV24==='function'?runNewDeviceSetupRehearsalSelfCheckV24():{passed:false,meta:'Missing Phase 8E new-device rehearsal check'});}catch(e){add('Phase 8E New-Device Rehearsal',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
