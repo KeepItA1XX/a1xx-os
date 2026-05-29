@@ -2640,37 +2640,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="master-config-real-read-gate-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Master Config First Real Read</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8M scope</div><div class="settings-row-meta" id="master-config-first-real-read-scope">Execute one read-only Notion page read after explicit A1XX approval.</div></div><span class="settings-badge warn" id="master-config-first-real-read-scope-badge">Read</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Read endpoint</div><div class="settings-row-meta" id="master-config-first-real-read-endpoint">First real read waits for manual confirmation and backend gates.</div></div><span class="settings-badge off" id="master-config-first-real-read-endpoint-badge">Gate</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Read receipt</div><div class="settings-row-meta" id="master-config-first-real-read-receipt">No real read receipt yet.</div></div><span class="settings-badge off" id="master-config-first-real-read-receipt-badge">Receipt</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="master-config-first-real-read-blocked">No config write, login-anywhere, auth sync, token export, secret export, restore, workers, or automations.</div></div><span class="settings-badge warn" id="master-config-first-real-read-blocked-badge">Blocked</span></div>
-          </div>
-          <div class="settings-field" style="margin-top:10px">
-            <label for="master-config-first-real-read-input">Master config locator for first real read</label>
-            <input id="master-config-first-real-read-input" type="text" autocomplete="off" placeholder="Notion page URL or page ID" value="https://www.notion.so/MC-Master-Config-36b6115281da80deaa91ff7456260b92">
-          </div>
-          <div class="settings-field" style="margin-top:10px">
-            <label><input id="master-config-first-real-read-approval" type="checkbox" checked> A1XX approval captured for Phase 8M</label>
-            <label><input id="master-config-first-real-read-first-approval" type="checkbox"> A1XX first real read approval captured</label>
-            <label><input id="master-config-first-real-read-real" type="checkbox" checked> I confirm this is the real private master config page</label>
-            <label><input id="master-config-first-real-read-shared" type="checkbox" checked> Notion integration shared to exact page</label>
-            <label><input id="master-config-first-real-read-exact" type="checkbox" checked> Exact page share confirmed</label>
-            <label><input id="master-config-first-real-read-secret-scan" type="checkbox" checked> Protected/secret scan gate passed</label>
-            <label><input id="master-config-first-real-read-readonly" type="checkbox" checked> Read-only endpoint review passed</label>
-            <label><input id="master-config-first-real-read-preview-verified" type="checkbox" checked> Safe read preview endpoint verified</label>
-          </div>
-          <label for="master-config-first-real-read-output">Master config first real read</label>
-          <textarea id="master-config-first-real-read-output" rows="13" readonly placeholder="Click Run first real read. This reads one Notion page, returns safe fields only, and does not write."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Running first real master config read',function(){return runMasterConfigFirstRealReadV24();},this,'Master config first real read checked.')">Run first real read</button>
-            <button class="btn" onclick="copyMasterConfigFirstRealReadV24()">Copy read receipt</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Running real read gate review',function(){return runMasterConfigRealReadGateReviewV24();},this,'Master config real read gate reviewed.')">Run gate review</button>
-          </div>
-          <div class="reset-status" id="master-config-first-real-read-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4763,9 +4732,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-29 14:14 ET · OS v2_4 Phase 8M first real master config read';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8M first real master config read';
-var APP_CACHE_TOKEN='mmos-20260529-1414-v24-phase8m-first-real-master-config-read';
+var APP_BUILD_STAMP='2026-05-29 13:26 ET · OS v2_4 Phase 8L real read gate review';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8L real read gate review';
+var APP_CACHE_TOKEN='mmos-20260529-1326-v24-phase8l-real-read-gate-review';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8905,285 +8874,6 @@ function runMasterConfigRealReadGateReviewSelfCheckV24(){
   };
 }
 
-function getMasterConfigFirstRealReadPayloadV24(){
-  var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
-  var locator=document.getElementById('master-config-first-real-read-input');
-  var approval=document.getElementById('master-config-first-real-read-approval');
-  var firstApproval=document.getElementById('master-config-first-real-read-first-approval');
-  var real=document.getElementById('master-config-first-real-read-real');
-  var shared=document.getElementById('master-config-first-real-read-shared');
-  var exact=document.getElementById('master-config-first-real-read-exact');
-  var secretScan=document.getElementById('master-config-first-real-read-secret-scan');
-  var readOnly=document.getElementById('master-config-first-real-read-readonly');
-  var previewVerified=document.getElementById('master-config-first-real-read-preview-verified');
-  var backup=window.__lastBackupArchiveStatusV22||{};
-  var latest=backup.latest||{};
-  return {
-    masterConfigPageLocator:locator&&locator.value?locator.value.trim():'',
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    latestBackupMarker:latest.backupId||backup.latestBackupId||backup.backupId||'',
-    trustedSourceConfirmed:!!readiness.trusted,
-    backupVisible:!!readiness.backupReady,
-    a1xxApprovalCaptured:approval?!!approval.checked:true,
-    firstReadApprovalCaptured:firstApproval?!!firstApproval.checked:false,
-    userConfirmsRealLocator:real?!!real.checked:false,
-    integrationSharedConfirmed:shared?!!shared.checked:false,
-    exactPageSharedConfirmed:exact?!!exact.checked:false,
-    protectedValueScanPassed:secretScan?!!secretScan.checked:true,
-    readOnlyEndpointReviewPassed:readOnly?!!readOnly.checked:true,
-    safeReadPreviewVerified:previewVerified?!!previewVerified.checked:true,
-    readOnlyMode:true
-  };
-}
-
-function formatMasterConfigFirstRealReadV24(result){
-  result=result||{};
-  var pkg=result.safeReadPackage||{};
-  var receipt=result.readReceipt||pkg.readReceipt||{};
-  var pointers=pkg.registrySummaryPointers||{};
-  var pointerKeys=pkg.safeSetupPointerKeys||[];
-  var gateFailures=result.gateFailures||[];
-  var missing=result.missingFields||[];
-  var blocked=result.blockedActions||[];
-  return [
-    'Phase 8M first real master config read',
-    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
-    '',
-    'Read mode',
-    '- Status: '+(result.status||'unknown'),
-    '- Mode: '+(result.mode||'unknown'),
-    '- First real read endpoint active: '+(result.firstRealReadEndpointActive?'true':'false'),
-    '- Read executed: '+(result.readExecuted?'true':'false'),
-    '- Config read executed: '+(result.configReadExecuted?'true':'false'),
-    '- Notion read executed: '+(result.notionReadExecuted?'true':'false'),
-    '- Write executed: '+(result.writeExecuted?'true':'false'),
-    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(result.secretExport?'true':'false'),
-    '- Token export: '+(result.tokenExport?'true':'false'),
-    '',
-    'Locator',
-    '- Locator preview: '+(result.rawLocatorPreview||''),
-    '- Requested page ID: '+(result.requestedPageId||''),
-    '- Locator is real: '+(result.locatorIsReal?'true':'false'),
-    '- Locator shape ok: '+(result.locatorShapeOk?'true':'false'),
-    '- Locator type: '+(result.locatorType||''),
-    '',
-    'Gate checks',
-    '- A1XX approval captured: '+(result.a1xxApprovalCaptured?'true':'false'),
-    '- A1XX first real read approval captured: '+(result.firstReadApprovalCaptured?'true':'false'),
-    '- A1XX confirms real locator: '+(result.userConfirmsRealLocator?'true':'false'),
-    '- Notion integration shared: '+(result.integrationSharedConfirmed?'true':'false'),
-    '- Exact page shared: '+(result.exactPageSharedConfirmed?'true':'false'),
-    '- Trusted source confirmed: '+(result.trustedSourceConfirmed?'true':'false'),
-    '- Backup visible: '+(result.backupVisible?'true':'false'),
-    '- Protected/secret scan passed: '+(result.secretScanPassed?'true':'false'),
-    '- Read-only endpoint review passed: '+(result.readOnlyEndpointReviewPassed?'true':'false'),
-    '- Safe read preview endpoint verified: '+(result.safeReadPreviewVerified?'true':'false'),
-    '',
-    'Gate failures',
-    gateFailures.length?('- '+gateFailures.join('\n- ')):'- none',
-    '',
-    'Safe section',
-    '- Found: '+(result.safeSectionFound?'true':'false'),
-    '- Block count read: '+(result.blockCount||0),
-    '- Missing fields: '+(missing.length?missing.join(', '):'none'),
-    '- Package unsafe fields: '+((result.packageUnsafeFields||[]).length?(result.packageUnsafeFields||[]).join(', '):'none'),
-    '',
-    'Safe read package',
-    '- Profile ID: '+(pkg.profileId||''),
-    '- Display name: '+(pkg.displayName||''),
-    '- Latest backup marker: '+(pkg.latestBackupMarker||''),
-    '- Source build: '+(pkg.sourceBuild||''),
-    '- Last verified: '+(pkg.lastVerified||''),
-    '- Read-only mode: '+(pkg.readOnlyMode?'true':'false'),
-    '',
-    'Safe setup pointer keys',
-    pointerKeys.length?('- '+pointerKeys.join('\n- ')):'- none returned',
-    '',
-    'Registry summary pointers',
-    '- apps_script_web_app_url: '+(pointers.apps_script_web_app_url||''),
-    '- clean_workbook_id: '+(pointers.clean_workbook_id||''),
-    '- backup_folder_id: '+(pointers.backup_folder_id||''),
-    '- mc_master_config_page_id: '+(pointers.mc_master_config_page_id||''),
-    '- team_chat_database_id: '+(pointers.team_chat_database_id||''),
-    '- intelligence_hq_page_id: '+(pointers.intelligence_hq_page_id||''),
-    '',
-    'Read receipt',
-    '- Receipt type: '+(receipt.receiptType||''),
-    '- Page ID: '+(receipt.pageId||''),
-    '- Read only: '+(receipt.readOnly?'true':'false'),
-    '- Safe section only: '+(receipt.safeSectionOnly?'true':'false'),
-    '- Fields returned: '+(receipt.fieldsReturned||0),
-    '- Read at: '+(receipt.readAt||''),
-    '',
-    'Blocked actions',
-    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
-    '',
-    'Result',
-    result.message||'First real master config read checked.'
-  ].join('\n');
-}
-
-function renderMasterConfigFirstRealReadStateV24(state){
-  state=state||window.__masterConfigFirstRealReadV24||null;
-  var endpoint=document.getElementById('master-config-first-real-read-endpoint');
-  var endpointBadge=document.getElementById('master-config-first-real-read-endpoint-badge');
-  var receipt=document.getElementById('master-config-first-real-read-receipt');
-  var receiptBadge=document.getElementById('master-config-first-real-read-receipt-badge');
-  var blocked=document.getElementById('master-config-first-real-read-blocked');
-  var blockedBadge=document.getElementById('master-config-first-real-read-blocked-badge');
-  var output=document.getElementById('master-config-first-real-read-output');
-  var result=state&&state.result?state.result:null;
-  var passed=!!(state&&state.passed);
-  if(endpoint)endpoint.textContent=result
-    ? (passed?'One read-only Notion page read completed.':'First real read returned review or blocked.')
-    : 'First real read waits for manual confirmation and backend gates.';
-  if(endpointBadge){
-    endpointBadge.textContent=result?(passed?'Read':'Review'):'Gate';
-    endpointBadge.className=setupDoctorBadgeClassV23(result?(passed?'ready':'warn'):'off');
-  }
-  if(receipt)receipt.textContent=result
-    ? (passed?'Read receipt returned. Safe section only.':'No clean read receipt yet.')
-    : 'No real read receipt yet.';
-  if(receiptBadge){
-    receiptBadge.textContent=result?(passed?'Receipt':'Review'):'Receipt';
-    receiptBadge.className=setupDoctorBadgeClassV23(result?(passed?'ready':'warn'):'off');
-  }
-  if(blocked)blocked.textContent=result
-    ? 'Writes, login-anywhere, auth sync, tokens, secrets, restore, workers, and automations remain blocked.'
-    : 'No config write, login-anywhere, auth sync, token export, secret export, restore, workers, or automations.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return result;
-}
-
-async function runMasterConfigFirstRealReadV24(){
-  var status=document.getElementById('master-config-first-real-read-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Running first real master config read...';
-  }
-  if(typeof refreshAuthSyncReadinessV24==='function')await refreshAuthSyncReadinessV24();
-  var payload=getMasterConfigFirstRealReadPayloadV24();
-  var result=await getAppsScriptJson('master_config_first_real_read',payload,{timeoutMs:18000,tries:1});
-  var unsafe=(result&&result.unsafeFields)||[];
-  var packageUnsafe=(result&&result.packageUnsafeFields)||[];
-  var gateFailures=(result&&result.gateFailures)||[];
-  var missing=(result&&result.missingFields)||[];
-  var blocked=(result&&result.blockedActions)||[];
-  var clean=!!(
-    result
-    && result.mode==='first_real_master_config_read_read_only'
-    && result.firstRealReadEndpointActive===true
-    && result.readExecuted===true
-    && result.configReadExecuted===true
-    && result.notionReadExecuted===true
-    && result.writeExecuted===false
-    && result.writesEnabled===false
-    && result.loginAnywhereActive===false
-    && result.secretExport===false
-    && result.tokenExport===false
-    && result.safeSectionFound===true
-    && result.safeReadPackage
-    && result.safeReadPackage.readOnlyMode===true
-    && unsafe.length===0
-    && packageUnsafe.length===0
-    && gateFailures.length===0
-    && missing.length===0
-    && blocked.indexOf('master config write')>=0
-    && blocked.indexOf('secret export')>=0
-  );
-  var previewText=formatMasterConfigFirstRealReadV24(result);
-  window.__masterConfigFirstRealReadV24={
-    checkedAt:new Date().toISOString(),
-    passed:clean,
-    result:result,
-    previewText:previewText
-  };
-  renderMasterConfigFirstRealReadStateV24(window.__masterConfigFirstRealReadV24);
-  if(status){
-    status.className='reset-status '+(clean?'ok':'warn');
-    status.textContent=clean
-      ? 'First real master config read completed. Safe section only; no write ran.'
-      : 'First real master config read needs review.';
-  }
-  return {
-    passed:clean,
-    meta:clean?'Phase 8M first real master config read completed · safe section only · no write executed.':'Phase 8M first real master config read needs review.',
-    failures:clean?[]:['Phase 8M first real master config read']
-  };
-}
-
-async function copyMasterConfigFirstRealReadV24(){
-  var state=window.__masterConfigFirstRealReadV24||null;
-  var status=document.getElementById('master-config-first-real-read-status');
-  if(!state){
-    var check=await runMasterConfigFirstRealReadV24();
-    state=window.__masterConfigFirstRealReadV24||{previewText:check&&check.meta?check.meta:''};
-  }
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Master config first real read receipt copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('master-config-first-real-read-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the first real read text manually.';
-    }
-  }
-}
-
-function runMasterConfigFirstRealReadSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('master-config-first-real-read-output')
-    && document.getElementById('master-config-first-real-read-blocked')
-    && typeof getMasterConfigFirstRealReadPayloadV24==='function'
-    && typeof runMasterConfigFirstRealReadV24==='function'
-  );
-  var payload=hasUi?getMasterConfigFirstRealReadPayloadV24():null;
-  var clean=!!(
-    hasUi
-    && payload
-    && payload.readOnlyMode===true
-    && payload.masterConfigPageLocator
-    && !payload.notionToken
-    && !payload.webhookToken
-    && !payload.hmacSecret
-  );
-  return {
-    passed:clean,
-    meta:clean?'Phase 8M first real read UI is installed · manual read required before Live QA receipt check.':'Phase 8M first real read UI needs review.',
-    failures:clean?[]:['Phase 8M first real read UI']
-  };
-}
-
-function runMasterConfigFirstRealReadQACheckV24(){
-  var state=window.__masterConfigFirstRealReadV24||null;
-  if(state&&state.passed===true){
-    return {
-      passed:true,
-      meta:'Phase 8M first real master config read receipt is present · safe section only · no write executed.',
-      failures:[]
-    };
-  }
-  return {
-    passed:false,
-    meta:'Run Master Config First Real Read before Live QA so the read receipt is available.',
-    failures:['Phase 8M first real master config read receipt']
-  };
-}
-
 function getSetupPointerRowsV23(){
   var health=window.__lastSetupDoctorHealthV23&&window.__lastSetupDoctorHealthV23.health?window.__lastSetupDoctorHealthV23.health:{};
   var backup=window.__lastBackupArchiveStatusV22||{};
@@ -12350,7 +12040,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -12379,7 +12069,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8J Master Config Endpoint Contract Review',typeof runMasterConfigEndpointContractReviewV24==='function'?await runMasterConfigEndpointContractReviewV24():{passed:false,meta:'Missing Phase 8J master config endpoint contract review'});}catch(e){add('Phase 8J Master Config Endpoint Contract Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8K Master Config Safe Read Preview',typeof runMasterConfigSafeReadPreviewV24==='function'?await runMasterConfigSafeReadPreviewV24():{passed:false,meta:'Missing Phase 8K master config safe read preview'});}catch(e){add('Phase 8K Master Config Safe Read Preview',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8L Master Config Real Read Gate Review',typeof runMasterConfigRealReadGateReviewV24==='function'?await runMasterConfigRealReadGateReviewV24():{passed:false,meta:'Missing Phase 8L master config real read gate review'});}catch(e){add('Phase 8L Master Config Real Read Gate Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8M First Real Master Config Read',typeof runMasterConfigFirstRealReadQACheckV24==='function'?runMasterConfigFirstRealReadQACheckV24():{passed:false,meta:'Missing Phase 8M first real read receipt check'});}catch(e){add('Phase 8M First Real Master Config Read',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
