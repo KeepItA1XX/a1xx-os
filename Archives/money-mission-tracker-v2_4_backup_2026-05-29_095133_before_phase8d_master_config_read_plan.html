@@ -2425,23 +2425,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="auth-target-review-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Master Config Read Plan</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8D scope</div><div class="settings-row-meta" id="auth-config-scope">Plan the safe master config read only. No config read, auth sync write, or login-anywhere.</div></div><span class="settings-badge warn" id="auth-config-scope-badge">Plan</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Config source</div><div class="settings-row-meta" id="auth-config-source">Future source stays a private Notion master config page after A1XX approval.</div></div><span class="settings-badge off" id="auth-config-source-badge">Source</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Safe field map</div><div class="settings-row-meta" id="auth-config-fields">Allowed fields are metadata, setup pointer keys, backup anchor, and build token only.</div></div><span class="settings-badge off" id="auth-config-fields-badge">Fields</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Protected values</div><div class="settings-row-meta" id="auth-config-protected">No Notion token, Google token, webhook token, HMAC secret, password, or worker credential.</div></div><span class="settings-badge warn" id="auth-config-protected-badge">Protected</span></div>
-          </div>
-          <label for="auth-config-read-plan-output">Master config read plan</label>
-          <textarea id="auth-config-read-plan-output" rows="11" readonly placeholder="Click Build config plan after Auth Snapshot Target Review is ready."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Building config read plan',function(){return buildMasterConfigReadPlanPreviewV24();},this,'Config read plan ready.')">Build config plan</button>
-            <button class="btn" onclick="copyMasterConfigReadPlanPreviewV24()">Copy config plan</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Building target review',function(){return buildAuthSnapshotTargetReviewPreviewV24();},this,'Target review ready.')">Build target review</button>
-          </div>
-          <div class="reset-status" id="auth-config-read-plan-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4534,9 +4517,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-29 09:51 ET · OS v2_4 Phase 8D master config read plan';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8D master config read plan';
-var APP_CACHE_TOKEN='mmos-20260529-0951-v24-phase8d-master-config-read-plan';
+var APP_BUILD_STAMP='2026-05-29 09:29 ET · OS v2_4 Phase 8C auth target review';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8C auth target review';
+var APP_CACHE_TOKEN='mmos-20260529-0929-v24-phase8c-auth-target-review';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -6692,248 +6675,6 @@ function runAuthSnapshotTargetReviewSelfCheckV24(){
     passed:clean,
     meta:clean?'Phase 8C auth target review is preview-only · no auth sync write enabled.':'Phase 8C auth target review needs review.',
     failures:clean?[]:['Phase 8C auth target review']
-  };
-}
-
-function buildMasterConfigReadPlanV24(){
-  var targetState=window.__authTargetReviewV24||null;
-  var targetReview=targetState&&targetState.review?targetState.review:buildAuthSnapshotTargetReviewV24();
-  var targetReady=!!(
-    targetReview
-    && targetReview.mode==='review_contract_only'
-    && targetReview.sourceReady
-    && targetReview.writesEnabled===false
-    && targetReview.loginAnywhereActive===false
-    && targetReview.secretExport===false
-    && targetReview.tokenExport===false
-  );
-  var setupRows=typeof getSetupPointerRowsV23==='function'?getSetupPointerRowsV23():[];
-  var setupKeys=setupRows
-    .map(function(row){return row&&row.pointerKey?row.pointerKey:'';})
-    .filter(Boolean);
-  return {
-    mode:'read_plan_only',
-    targetReady:targetReady,
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    configSource:'private_notion_master_config_page',
-    configReadEndpointActive:false,
-    configReadExecuted:false,
-    allowedUse:'Future read of safe setup metadata from a private master config page after A1XX approval.',
-    allowedFields:[
-      'profileId',
-      'displayName',
-      'safeSetupPointerKeys',
-      'driveRootPointer',
-      'registrySummaryPointers',
-      'latestBackupMarker',
-      'sourceBuild',
-      'lastVerified',
-      'readOnlyMode'
-    ],
-    safeSetupPointerKeys:setupKeys,
-    requiredBeforeRead:[
-      'A1XX approval',
-      'master config page ID supplied manually',
-      'Notion integration shared to that exact page',
-      'trusted device confirmed',
-      'backup visible before preview',
-      'read-only endpoint review before activation'
-    ],
-    protectedFields:[
-      'notionToken',
-      'googleOAuthToken',
-      'webhookToken',
-      'todoistToken',
-      'hmacSecret',
-      'password',
-      'pin',
-      'workerCredential',
-      'automationSecret'
-    ],
-    blockedActions:[
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution'
-    ],
-    writesEnabled:false,
-    loginAnywhereActive:false,
-    secretExport:false,
-    tokenExport:false,
-    checkedAt:new Date().toISOString()
-  };
-}
-
-function formatMasterConfigReadPlanPreviewV24(plan){
-  plan=plan||buildMasterConfigReadPlanV24();
-  return [
-    'Phase 8D master config read plan',
-    'Build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),
-    '',
-    'Plan mode',
-    '- Mode: '+plan.mode,
-    '- Config read endpoint active: '+(plan.configReadEndpointActive?'true':'false'),
-    '- Config read executed: '+(plan.configReadExecuted?'true':'false'),
-    '- Writes enabled: '+(plan.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(plan.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(plan.secretExport?'true':'false'),
-    '- Token export: '+(plan.tokenExport?'true':'false'),
-    '',
-    'Source and target',
-    '- Target ready: '+(plan.targetReady?'true':'false'),
-    '- Config source: '+plan.configSource,
-    '- Use: '+plan.allowedUse,
-    '',
-    'Allowed fields',
-    '- '+plan.allowedFields.join('\n- '),
-    '',
-    'Safe setup pointer keys',
-    plan.safeSetupPointerKeys.length?('- '+plan.safeSetupPointerKeys.join('\n- ')):'- none loaded yet',
-    '',
-    'Required before any future read',
-    '- '+plan.requiredBeforeRead.join('\n- '),
-    '',
-    'Protected fields',
-    '- '+plan.protectedFields.join('\n- '),
-    '',
-    'Blocked actions',
-    '- '+plan.blockedActions.join('\n- '),
-    '',
-    'Result',
-    plan.targetReady
-      ? 'Master config read plan is ready for review. No config read, auth sync, login-anywhere, or write ran.'
-      : 'Master config read plan needs a clean target review before future planning.'
-  ].join('\n');
-}
-
-function renderMasterConfigReadPlanStateV24(state){
-  state=state||window.__masterConfigReadPlanV24||null;
-  var source=document.getElementById('auth-config-source');
-  var sourceBadge=document.getElementById('auth-config-source-badge');
-  var fields=document.getElementById('auth-config-fields');
-  var fieldsBadge=document.getElementById('auth-config-fields-badge');
-  var protectedEl=document.getElementById('auth-config-protected');
-  var protectedBadge=document.getElementById('auth-config-protected-badge');
-  var output=document.getElementById('auth-config-read-plan-output');
-  var ready=!!(state&&state.ready);
-  if(source)source.textContent=state
-    ? (state.plan.configSource+' · '+(ready?'ready for review':'target review needed'))
-    : 'Future source stays a private Notion master config page after A1XX approval.';
-  if(sourceBadge){
-    sourceBadge.textContent=state?(ready?'Ready':'Review'):'Source';
-    sourceBadge.className=setupDoctorBadgeClassV23(state?(ready?'ready':'warn'):'off');
-  }
-  if(fields)fields.textContent=state
-    ? ('Safe field map built. '+state.plan.allowedFields.length+' allowed field(s), '+state.plan.safeSetupPointerKeys.length+' pointer key(s).')
-    : 'Allowed fields are metadata, setup pointer keys, backup anchor, and build token only.';
-  if(fieldsBadge){
-    fieldsBadge.textContent=state?'Mapped':'Fields';
-    fieldsBadge.className=setupDoctorBadgeClassV23(state?'ready':'off');
-  }
-  if(protectedEl)protectedEl.textContent=state
-    ? 'Protected tokens, secrets, PINs, passwords, workers, automations, and restore execution remain blocked.'
-    : 'No Notion token, Google token, webhook token, HMAC secret, password, or worker credential.';
-  if(protectedBadge){
-    protectedBadge.textContent='Protected';
-    protectedBadge.className=setupDoctorBadgeClassV23('warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return state;
-}
-
-async function buildMasterConfigReadPlanPreviewV24(){
-  var status=document.getElementById('auth-config-read-plan-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Checking target review before building master config read plan...';
-  }
-  var targetState=window.__authTargetReviewV24||null;
-  if(!targetState&&typeof buildAuthSnapshotTargetReviewPreviewV24==='function')targetState=await buildAuthSnapshotTargetReviewPreviewV24();
-  var plan=buildMasterConfigReadPlanV24();
-  var ready=!!(
-    plan.targetReady
-    && plan.mode==='read_plan_only'
-    && plan.configReadEndpointActive===false
-    && plan.configReadExecuted===false
-    && plan.writesEnabled===false
-    && plan.loginAnywhereActive===false
-    && plan.secretExport===false
-    && plan.tokenExport===false
-  );
-  var previewText=formatMasterConfigReadPlanPreviewV24(plan);
-  window.__masterConfigReadPlanV24={
-    builtAt:new Date().toISOString(),
-    ready:ready,
-    plan:plan,
-    previewText:previewText
-  };
-  renderMasterConfigReadPlanStateV24(window.__masterConfigReadPlanV24);
-  if(status){
-    status.className='reset-status '+(ready?'ok':'warn');
-    status.textContent=ready
-      ? 'Master config read plan is ready. No config read or write ran.'
-      : 'Master config read plan needs a clean target review first.';
-  }
-  return window.__masterConfigReadPlanV24;
-}
-
-async function copyMasterConfigReadPlanPreviewV24(){
-  var state=window.__masterConfigReadPlanV24||null;
-  var status=document.getElementById('auth-config-read-plan-status');
-  if(!state)state=await buildMasterConfigReadPlanPreviewV24();
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Master config read plan copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('auth-config-read-plan-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the config plan text manually.';
-    }
-  }
-}
-
-function runMasterConfigReadPlanSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('auth-config-read-plan-output')
-    && document.getElementById('auth-config-protected')
-    && typeof buildMasterConfigReadPlanV24==='function'
-    && typeof buildMasterConfigReadPlanPreviewV24==='function'
-  );
-  var plan=hasUi?buildMasterConfigReadPlanV24():null;
-  var protectedFields=plan&&plan.protectedFields?plan.protectedFields:[];
-  var blocked=plan&&plan.blockedActions?plan.blockedActions:[];
-  var clean=!!(
-    hasUi
-    && plan
-    && plan.mode==='read_plan_only'
-    && plan.configReadEndpointActive===false
-    && plan.configReadExecuted===false
-    && plan.writesEnabled===false
-    && plan.loginAnywhereActive===false
-    && plan.secretExport===false
-    && plan.tokenExport===false
-    && protectedFields.indexOf('notionToken')>=0
-    && protectedFields.indexOf('webhookToken')>=0
-    && blocked.indexOf('live master config read')>=0
-    && blocked.indexOf('auth sync write')>=0
-  );
-  return {
-    passed:clean,
-    meta:clean?'Phase 8D master config read plan is preview-only · no config read enabled.':'Phase 8D master config read plan needs review.',
-    failures:clean?[]:['Phase 8D master config read plan']
   };
 }
 
@@ -10103,7 +9844,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -10123,7 +9864,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8A Auth Readiness',typeof runAuthSyncReadinessSelfCheckV24==='function'?runAuthSyncReadinessSelfCheckV24():{passed:false,meta:'Missing Phase 8A auth readiness check'});}catch(e){add('Phase 8A Auth Readiness',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8B Auth Source Snapshot',typeof runAuthSourceSnapshotSelfCheckV24==='function'?runAuthSourceSnapshotSelfCheckV24():{passed:false,meta:'Missing Phase 8B auth source snapshot check'});}catch(e){add('Phase 8B Auth Source Snapshot',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8C Auth Target Review',typeof runAuthSnapshotTargetReviewSelfCheckV24==='function'?runAuthSnapshotTargetReviewSelfCheckV24():{passed:false,meta:'Missing Phase 8C auth target review check'});}catch(e){add('Phase 8C Auth Target Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8D Master Config Read Plan',typeof runMasterConfigReadPlanSelfCheckV24==='function'?runMasterConfigReadPlanSelfCheckV24():{passed:false,meta:'Missing Phase 8D master config read plan check'});}catch(e){add('Phase 8D Master Config Read Plan',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
