@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1046-v24-phase8g-master-config-read-preflight';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1027-v24-phase8f-master-config-endpoint-skeleton';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -296,7 +296,6 @@ function doGet(e) {
     if (e.parameter.action === 'get_os_registry_records_v1') return getOsRegistryRecordsV19(e);
     if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV19(e.parameter);
     if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV19(e.parameter);
-    if (e.parameter.action === 'master_config_read_preflight') return getMasterConfigReadPreflightV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -1605,120 +1604,6 @@ function detectUnsafeMasterConfigReadSkeletonInputV19(input) {
   }
   scan(input || {}, '');
   return unsafe.filter(function(item, index, arr) { return item && arr.indexOf(item) === index; });
-}
-
-function getMasterConfigReadPreflightV19(input) {
-  var checkedAt = new Date().toISOString();
-  var payload = input || {};
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19(payload);
-  var pageId = normalizeMasterConfigPageIdPreflightV19(
-    payload.masterConfigPageId || payload.pageId || payload.configPageId || ''
-  );
-  var trustedSource = normalizeBooleanV19(payload.trustedSourceConfirmed);
-  var backupVisible = normalizeBooleanV19(payload.backupVisible);
-  var integrationShared = normalizeBooleanV19(payload.integrationSharedConfirmed);
-  var approvalCaptured = normalizeBooleanV19(payload.a1xxApprovalCaptured);
-  var pageIdSupplied = !!pageId.normalized && pageId.normalized !== 'preview_only';
-  var missingGates = [];
-  if (!approvalCaptured) missingGates.push('A1XX approval not captured in this preflight');
-  if (!pageIdSupplied) missingGates.push('Exact master config page ID not supplied');
-  if (!integrationShared) missingGates.push('Notion integration sharing not confirmed');
-  if (!trustedSource) missingGates.push('Trusted source device not confirmed');
-  if (!backupVisible) missingGates.push('Backup visibility not confirmed');
-  if (unsafe.length) missingGates.push('Unsafe token/secret-like input detected');
-  return jsonResponseV19({
-    status: unsafe.length ? 'review' : 'preflight_ready',
-    ok: true,
-    mode: 'preflight_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    target: 'private_notion_master_config_page',
-    requestedPageId: pageId.normalized || 'preview_only',
-    pageIdSupplied: pageIdSupplied,
-    pageIdFormat: pageId.format,
-    integrationSharedConfirmed: integrationShared,
-    trustedSourceConfirmed: trustedSource,
-    backupVisible: backupVisible,
-    a1xxApprovalCaptured: approvalCaptured,
-    preflightExecuted: true,
-    readEndpointActive: false,
-    readExecuted: false,
-    configReadExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    unsafeFields: unsafe,
-    missingGates: missingGates,
-    allowedPreviewFields: [
-      'profileId',
-      'displayName',
-      'safeSetupPointerKeys',
-      'driveRootPointer',
-      'registrySummaryPointers',
-      'latestBackupMarker',
-      'sourceBuild',
-      'lastVerified',
-      'readOnlyMode'
-    ],
-    blockedFields: [
-      'notionToken',
-      'googleOAuthToken',
-      'webhookToken',
-      'todoistToken',
-      'hmacSecret',
-      'password',
-      'pin',
-      'workerCredential',
-      'automationSecret'
-    ],
-    requiredBeforeFutureRead: [
-      'A1XX approval',
-      'exact master config page ID supplied manually',
-      'Notion integration shared to that exact page',
-      'trusted source device confirmed',
-      'backup visible before preview',
-      'secret scan passed',
-      'read-only endpoint review passed'
-    ],
-    blockedActions: [
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution'
-    ],
-    safety: {
-      notion: 'No Notion read, create, update, archive, or delete executed.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, restores, or deletes.',
-      auth: 'No login-anywhere, auth sync, token export, or secret export.',
-      recovery: 'No restore execution.'
-    },
-    message: 'Master config read preflight is preview-only. No master config read executed.'
-  });
-}
-
-function normalizeMasterConfigPageIdPreflightV19(value) {
-  var raw = cellTextV19(value || 'preview_only', 180);
-  if (!raw || raw === 'preview_only') return { normalized: 'preview_only', format: 'preview_only' };
-  var compact = raw.replace(/-/g, '').trim();
-  if (/^[0-9a-fA-F]{32}$/.test(compact)) return { normalized: compact, format: 'notion_page_id_shape_ok' };
-  return { normalized: raw, format: 'review_needed' };
-}
-
-function normalizeBooleanV19(value) {
-  if (value === true) return true;
-  var text = cellTextV19(value || '', 40).toLowerCase();
-  return text === 'true' || text === 'yes' || text === '1' || text === 'checked';
 }
 
 function sanitizeDriveFileIndexPointerPreviewV19(input) {
