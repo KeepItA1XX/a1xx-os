@@ -2859,23 +2859,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="second-device-bootstrap-dry-run-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Second-Device Restore Boundary Review</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8Y scope</div><div class="settings-row-meta" id="second-device-restore-boundary-scope">Review restore boundaries only. No restore, worker auth, automation, or bootstrap execution.</div></div><span class="settings-badge warn" id="second-device-restore-boundary-scope-badge">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Dry-run receipt</div><div class="settings-row-meta" id="second-device-restore-boundary-package">Run after Phase 8X dry-run preview is ready.</div></div><span class="settings-badge off" id="second-device-restore-boundary-package-badge">Receipt</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Boundary review</div><div class="settings-row-meta" id="second-device-restore-boundary-review">Restore boundary review has not run yet.</div></div><span class="settings-badge off" id="second-device-restore-boundary-review-badge">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="second-device-restore-boundary-blocked">No login-anywhere, restore execution, workers, automations, or bootstrap execution.</div></div><span class="settings-badge warn" id="second-device-restore-boundary-blocked-badge">Blocked</span></div>
-          </div>
-          <label for="second-device-restore-boundary-output">Second-device restore boundary review</label>
-          <textarea id="second-device-restore-boundary-output" rows="13" readonly placeholder="Click Review restore boundary after Phase 8X dry-run preview is ready."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Reviewing second-device restore boundary',function(){return runSecondDeviceRestoreBoundaryReviewV24();},this,'Second-device restore boundary checked.')">Review restore boundary</button>
-            <button class="btn" onclick="copySecondDeviceRestoreBoundaryReviewV24()">Copy boundary review</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Running second-device bootstrap dry-run preview',function(){return runSecondDeviceBootstrapDryRunPreviewV24();},this,'Second-device dry-run preview checked.')">Run dry-run preview</button>
-          </div>
-          <div class="reset-status" id="second-device-restore-boundary-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4970,7 +4953,7 @@ var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
 var APP_BUILD_STAMP='2026-05-30 10:28 ET · OS v2_4 Phase 8N Live QA receipt supersede';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8N Live QA receipt supersede';
-var APP_CACHE_TOKEN='mmos-20260530-1054-v24-phase8y-second-device-restore-boundary-review';
+var APP_CACHE_TOKEN='mmos-20260530-1041-v24-phase8x-second-device-bootstrap-dry-run-preview';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -12484,279 +12467,6 @@ function runSecondDeviceBootstrapDryRunPreviewQACheckV24(){
   };
 }
 
-function getSecondDeviceRestoreBoundaryReviewPayloadV24(){
-  var dryRun=window.__secondDeviceBootstrapDryRunPreviewV24||null;
-  var dryRunResult=dryRun&&dryRun.result?dryRun.result:{};
-  var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
-  var backup=window.__lastBackupArchiveStatusV22||{};
-  var latest=backup.latest||{};
-  return {
-    masterConfigPageLocator:getMasterConfigPageLocatorForExactWriteV24(),
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    latestBackupMarker:latest.backupId||backup.latestBackupId||backup.backupId||dryRunResult.latestBackupMarker||'',
-    trustedSourceConfirmed:!!readiness.trusted,
-    backupVisible:!!readiness.backupReady,
-    a1xxBoundaryReviewApprovalCaptured:true,
-    phase8xDryRunReady:!!(dryRun&&dryRun.passed&&dryRunResult.status==='second_device_bootstrap_dry_run_preview_ready'),
-    dryRunReceiptJson:JSON.stringify(dryRunResult||{}),
-    targetDeviceLabel:'second device',
-    boundaryReviewOnly:true,
-    previewOnly:true,
-    readOnlyMode:true,
-    writeExecuted:false,
-    restoreEnabled:false,
-    restoreExecutionEnabled:false,
-    bootstrapExecutionEnabled:false
-  };
-}
-
-function formatSecondDeviceRestoreBoundaryReviewV24(result){
-  result=result||{};
-  var rows=result.pointerRows||[];
-  var boundary=result.boundaryItems||[];
-  var missingRequired=result.missingRequiredPointers||[];
-  var optionalGaps=result.optionalPointerGaps||[];
-  var missingGate=result.missingGateItems||[];
-  var unsafe=result.unsafeFields||[];
-  var blocked=result.blockedActions||[];
-  var pointerLines=rows.length?rows.map(function(row){
-    return '- '+(row.key||'')+': '+(row.status||'')+(row.value?' · '+row.value:'');
-  }).join('\n'):'- none returned';
-  var boundaryLines=boundary.length?boundary.map(function(item){
-    return '- '+(item.key||'')+': '+(item.status||'')+' · '+(item.mode||'')+' · '+(item.label||'')+(item.pointerKey?' · '+item.pointerKey:'');
-  }).join('\n'):'- none returned';
-  return [
-    'Phase 8Y second-device restore boundary review',
-    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
-    '',
-    'Boundary review mode',
-    '- Status: '+(result.status||'unknown'),
-    '- Mode: '+(result.mode||'unknown'),
-    '- Boundary review executed: '+(result.boundaryReviewExecuted?'true':'false'),
-    '- Boundary review ready: '+(result.boundaryReviewReady?'true':'false'),
-    '- Read executed: '+(result.readExecuted?'true':'false'),
-    '- Config read executed: '+(result.configReadExecuted?'true':'false'),
-    '- Notion read executed: '+(result.notionReadExecuted?'true':'false'),
-    '- Write executed: '+(result.writeExecuted?'true':'false'),
-    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(result.secretExport?'true':'false'),
-    '- Token export: '+(result.tokenExport?'true':'false'),
-    '- Restore enabled: '+(result.restoreEnabled?'true':'false'),
-    '- Restore execution enabled: '+(result.restoreExecutionEnabled?'true':'false'),
-    '- Worker auth enabled: '+(result.workerAuthEnabled?'true':'false'),
-    '- Automation activation enabled: '+(result.automationActivationEnabled?'true':'false'),
-    '- Bootstrap execution enabled: '+(result.bootstrapExecutionEnabled?'true':'false'),
-    '',
-    'Gate state',
-    '- Setup automation preview ready: '+(result.setupAutomationPreviewReady?'true':'false'),
-    '- Setup automation ready: '+(result.setupAutomationReady?'true':'false'),
-    '- Phase 8X dry-run ready: '+(result.phase8xDryRunReady?'true':'false'),
-    '- Safe pointer package ready: '+(result.safePointerPackageReady?'true':'false'),
-    '- Optional gaps resolved: '+(result.optionalGapsResolved?'true':'false'),
-    '- Requested page ID: '+(result.requestedPageId||''),
-    '- Locator shape ok: '+(result.locatorShapeOk?'true':'false'),
-    '- Latest backup marker: '+(result.latestBackupMarker||''),
-    '- Target device label: '+(result.targetDeviceLabel||''),
-    '- Safe section found: '+(result.safeSectionFound?'true':'false'),
-    '- Block count read: '+(result.blockCountRead||0),
-    '',
-    'Safe pointers',
-    pointerLines,
-    '',
-    'Boundary review items',
-    boundaryLines,
-    '',
-    'Missing required pointers',
-    missingRequired.length?('- '+missingRequired.join('\n- ')):'- none',
-    '',
-    'Optional pointer gaps',
-    optionalGaps.length?('- '+optionalGaps.join('\n- ')):'- none',
-    '',
-    'Missing gate items',
-    missingGate.length?('- '+missingGate.join('\n- ')):'- none',
-    '',
-    'Unsafe fields',
-    unsafe.length?('- '+unsafe.join('\n- ')):'- none',
-    '',
-    'Next allowed step',
-    '- '+(result.nextAllowedStepAfterBoundaryReview||''),
-    '',
-    'Blocked actions',
-    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
-    '',
-    'Result',
-    result.message||'Second-device restore boundary review checked.'
-  ].join('\n');
-}
-
-function renderSecondDeviceRestoreBoundaryReviewStateV24(state){
-  state=state||window.__secondDeviceRestoreBoundaryReviewV24||null;
-  var pkg=document.getElementById('second-device-restore-boundary-package');
-  var pkgBadge=document.getElementById('second-device-restore-boundary-package-badge');
-  var review=document.getElementById('second-device-restore-boundary-review');
-  var reviewBadge=document.getElementById('second-device-restore-boundary-review-badge');
-  var blocked=document.getElementById('second-device-restore-boundary-blocked');
-  var blockedBadge=document.getElementById('second-device-restore-boundary-blocked-badge');
-  var output=document.getElementById('second-device-restore-boundary-output');
-  var result=state&&state.result?state.result:null;
-  var passed=!!(state&&state.passed);
-  if(pkg)pkg.textContent=result
-    ? (passed?'Safe package and Phase 8X dry-run receipt are ready for boundary review.':'Safe package or Phase 8X dry-run receipt needs review.')
-    : 'Run after Phase 8X dry-run preview is ready.';
-  if(pkgBadge){
-    pkgBadge.textContent=result?(passed?'Ready':'Review'):'Receipt';
-    pkgBadge.className=setupDoctorBadgeClassV23(result?(passed?'ready':'warn'):'off');
-  }
-  if(review)review.textContent=result
-    ? (passed?'Second-device restore boundary review is ready. Restore execution remains blocked.':'Restore boundary review needs attention before moving on.')
-    : 'Restore boundary review has not run yet.';
-  if(reviewBadge){
-    reviewBadge.textContent=passed?'Ready':'Review';
-    reviewBadge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-  }
-  if(blocked)blocked.textContent=result
-    ? 'Login-anywhere, restore execution, worker auth, automations, and bootstrap execution stayed blocked.'
-    : 'No login-anywhere, restore execution, workers, automations, or bootstrap execution.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return result;
-}
-
-async function runSecondDeviceRestoreBoundaryReviewV24(){
-  var status=document.getElementById('second-device-restore-boundary-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Reviewing second-device restore boundary...';
-  }
-  var dryRun=window.__secondDeviceBootstrapDryRunPreviewV24||null;
-  if(!dryRun||dryRun.passed!==true){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Run Second-Device Bootstrap Dry-Run Preview first. Phase 8Y needs the Phase 8X receipt.';
-    }
-    return {
-      passed:false,
-      meta:'Run Second-Device Bootstrap Dry-Run Preview before Phase 8Y.',
-      failures:['Phase 8X second-device bootstrap dry-run preview receipt']
-    };
-  }
-  if(typeof refreshAuthSyncReadinessV24==='function')await refreshAuthSyncReadinessV24();
-  var payload=getSecondDeviceRestoreBoundaryReviewPayloadV24();
-  var result=await getAppsScriptJson('second_device_restore_boundary_review',payload,{timeoutMs:16000,tries:1});
-  var missingRequired=(result&&result.missingRequiredPointers)||[];
-  var optionalGaps=(result&&result.optionalPointerGaps)||[];
-  var missingGate=(result&&result.missingGateItems)||[];
-  var unsafe=(result&&result.unsafeFields)||[];
-  var clean=!!(
-    result
-    && result.mode==='second_device_restore_boundary_review_only'
-    && result.status==='second_device_restore_boundary_review_ready'
-    && result.boundaryReviewExecuted===true
-    && result.boundaryReviewReady===true
-    && result.readExecuted===true
-    && result.configReadExecuted===true
-    && result.notionReadExecuted===true
-    && result.writeExecuted===false
-    && result.writesEnabled===false
-    && result.loginAnywhereActive===false
-    && result.secretExport===false
-    && result.tokenExport===false
-    && result.restoreEnabled===false
-    && result.restoreExecutionEnabled===false
-    && result.workerAuthEnabled===false
-    && result.automationActivationEnabled===false
-    && result.bootstrapExecutionEnabled===false
-    && result.setupAutomationPreviewReady===true
-    && result.setupAutomationReady===false
-    && result.phase8xDryRunReady===true
-    && result.safePointerPackageReady===true
-    && result.optionalGapsResolved===true
-    && missingRequired.length===0
-    && optionalGaps.length===0
-    && missingGate.length===0
-    && unsafe.length===0
-  );
-  var previewText=formatSecondDeviceRestoreBoundaryReviewV24(result);
-  window.__secondDeviceRestoreBoundaryReviewV24={
-    checkedAt:new Date().toISOString(),
-    passed:clean,
-    result:result,
-    previewText:previewText
-  };
-  renderSecondDeviceRestoreBoundaryReviewStateV24(window.__secondDeviceRestoreBoundaryReviewV24);
-  if(status){
-    status.className='reset-status '+(clean?'ok':'warn');
-    status.textContent=clean
-      ? 'Second-device restore boundary review is ready. Restore execution stayed blocked.'
-      : 'Second-device restore boundary review needs review.';
-  }
-  return {
-    passed:clean,
-    meta:clean?'Phase 8Y second-device restore boundary review is ready · restore execution blocked.':'Phase 8Y second-device restore boundary review needs review.',
-    failures:clean?[]:['Phase 8Y second-device restore boundary review']
-  };
-}
-
-async function copySecondDeviceRestoreBoundaryReviewV24(){
-  var state=window.__secondDeviceRestoreBoundaryReviewV24||null;
-  var status=document.getElementById('second-device-restore-boundary-status');
-  if(!state){
-    var check=await runSecondDeviceRestoreBoundaryReviewV24();
-    state=window.__secondDeviceRestoreBoundaryReviewV24||{previewText:check&&check.meta?check.meta:''};
-  }
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Second-device restore boundary review copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('second-device-restore-boundary-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the restore boundary review text manually.';
-    }
-  }
-}
-
-function runSecondDeviceRestoreBoundaryReviewSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('second-device-restore-boundary-output')
-    && document.getElementById('second-device-restore-boundary-blocked')
-    && typeof getSecondDeviceRestoreBoundaryReviewPayloadV24==='function'
-    && typeof runSecondDeviceRestoreBoundaryReviewV24==='function'
-  );
-  return {
-    passed:hasUi,
-    meta:hasUi?'Phase 8Y second-device restore boundary review UI is installed · restore execution remains blocked.':'Phase 8Y second-device restore boundary review UI needs review.',
-    failures:hasUi?[]:['Phase 8Y second-device restore boundary review UI']
-  };
-}
-
-function runSecondDeviceRestoreBoundaryReviewQACheckV24(){
-  var state=window.__secondDeviceRestoreBoundaryReviewV24||null;
-  if(state&&state.passed===true){
-    return {
-      passed:true,
-      meta:'Phase 8Y second-device restore boundary review is present · restore execution remains blocked.',
-      failures:[]
-    };
-  }
-  return {
-    passed:false,
-    meta:'Run Second-Device Restore Boundary Review before Live QA so the Phase 8Y receipt is available.',
-    failures:['Phase 8Y second-device restore boundary review receipt']
-  };
-}
-
 function getSetupPointerRowsV23(){
   var health=window.__lastSetupDoctorHealthV23&&window.__lastSetupDoctorHealthV23.health?window.__lastSetupDoctorHealthV23.health:{};
   var backup=window.__lastBackupArchiveStatusV22||{};
@@ -15923,7 +15633,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -15964,7 +15674,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8V Master Config Post-Write Readback Closeout',typeof runMasterConfigPostWriteReadbackCloseoutQACheckV24==='function'?runMasterConfigPostWriteReadbackCloseoutQACheckV24():{passed:false,meta:'Missing Phase 8V post-write readback closeout check'});}catch(e){add('Phase 8V Master Config Post-Write Readback Closeout',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8W Second-Device Bootstrap Preview Plan',typeof runSecondDeviceBootstrapPreviewPlanQACheckV24==='function'?runSecondDeviceBootstrapPreviewPlanQACheckV24():{passed:false,meta:'Missing Phase 8W second-device bootstrap preview plan check'});}catch(e){add('Phase 8W Second-Device Bootstrap Preview Plan',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8X Second-Device Bootstrap Dry-Run Preview',typeof runSecondDeviceBootstrapDryRunPreviewQACheckV24==='function'?runSecondDeviceBootstrapDryRunPreviewQACheckV24():{passed:false,meta:'Missing Phase 8X second-device bootstrap dry-run preview check'});}catch(e){add('Phase 8X Second-Device Bootstrap Dry-Run Preview',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8Y Second-Device Restore Boundary Review',typeof runSecondDeviceRestoreBoundaryReviewQACheckV24==='function'?runSecondDeviceRestoreBoundaryReviewQACheckV24():{passed:false,meta:'Missing Phase 8Y second-device restore boundary review check'});}catch(e){add('Phase 8Y Second-Device Restore Boundary Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
