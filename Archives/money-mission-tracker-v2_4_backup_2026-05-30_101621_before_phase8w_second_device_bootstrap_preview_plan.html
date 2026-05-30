@@ -2825,23 +2825,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="master-config-closeout-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Second-Device Bootstrap Preview Plan</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8W scope</div><div class="settings-row-meta" id="second-device-bootstrap-preview-scope">Plan second-device bootstrap only. No restore, worker auth, automation, or bootstrap execution.</div></div><span class="settings-badge warn" id="second-device-bootstrap-preview-scope-badge">Preview</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Safe package</div><div class="settings-row-meta" id="second-device-bootstrap-preview-package">Run after Phase 8V closeout is clean.</div></div><span class="settings-badge off" id="second-device-bootstrap-preview-package-badge">Package</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Preview plan</div><div class="settings-row-meta" id="second-device-bootstrap-preview-plan">Bootstrap preview has not been built yet.</div></div><span class="settings-badge off" id="second-device-bootstrap-preview-plan-badge">Plan</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="second-device-bootstrap-preview-blocked">No login-anywhere, restore execution, workers, automations, or bootstrap execution.</div></div><span class="settings-badge warn" id="second-device-bootstrap-preview-blocked-badge">Blocked</span></div>
-          </div>
-          <label for="second-device-bootstrap-preview-output">Second-device bootstrap preview plan</label>
-          <textarea id="second-device-bootstrap-preview-output" rows="13" readonly placeholder="Click Build preview plan after Phase 8V closeout is clean."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Building second-device bootstrap preview plan',function(){return runSecondDeviceBootstrapPreviewPlanV24();},this,'Second-device bootstrap preview checked.')">Build preview plan</button>
-            <button class="btn" onclick="copySecondDeviceBootstrapPreviewPlanV24()">Copy preview plan</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Running master config post-write closeout',function(){return runMasterConfigPostWriteReadbackCloseoutV24();},this,'Master config closeout checked.')">Run closeout</button>
-          </div>
-          <div class="reset-status" id="second-device-bootstrap-preview-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -4934,9 +4917,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-30 10:17 ET · OS v2_4 Phase 8W second-device bootstrap preview plan';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8W second-device bootstrap preview plan';
-var APP_CACHE_TOKEN='mmos-20260530-1017-v24-phase8w-second-device-bootstrap-preview-plan';
+var APP_BUILD_STAMP='2026-05-30 10:06 ET · OS v2_4 Phase 8V Live QA receipt supersede';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8V Live QA receipt supersede';
+var APP_CACHE_TOKEN='mmos-20260530-1006-v24-phase8v-liveqa-receipt-supersede';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -11886,276 +11869,6 @@ function runMasterConfigPostWriteReadbackCloseoutQACheckV24(){
   };
 }
 
-function getSecondDeviceBootstrapPreviewPlanPayloadV24(){
-  var closeout=window.__masterConfigPostWriteReadbackCloseoutV24||null;
-  var closeoutResult=closeout&&closeout.result?closeout.result:{};
-  var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
-  var backup=window.__lastBackupArchiveStatusV22||{};
-  var latest=backup.latest||{};
-  return {
-    masterConfigPageLocator:getMasterConfigPageLocatorForExactWriteV24(),
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    latestBackupMarker:latest.backupId||backup.latestBackupId||backup.backupId||closeoutResult.latestBackupMarker||'',
-    trustedSourceConfirmed:!!readiness.trusted,
-    backupVisible:!!readiness.backupReady,
-    a1xxPreviewApprovalCaptured:true,
-    phase8vCloseoutReady:!!(closeout&&closeout.passed&&closeoutResult.status==='post_write_readback_closeout_ready'),
-    closeoutReceiptJson:JSON.stringify(closeoutResult||{}),
-    targetDeviceLabel:'second device',
-    previewOnly:true,
-    readOnlyMode:true,
-    writeExecuted:false,
-    bootstrapExecutionEnabled:false
-  };
-}
-
-function formatSecondDeviceBootstrapPreviewPlanV24(result){
-  result=result||{};
-  var rows=result.pointerRows||[];
-  var plan=result.previewPlanItems||[];
-  var missingRequired=result.missingRequiredPointers||[];
-  var optionalGaps=result.optionalPointerGaps||[];
-  var missingGate=result.missingGateItems||[];
-  var unsafe=result.unsafeFields||[];
-  var blocked=result.blockedActions||[];
-  var pointerLines=rows.length?rows.map(function(row){
-    return '- '+(row.key||'')+': '+(row.status||'')+(row.value?' · '+row.value:'');
-  }).join('\n'):'- none returned';
-  var planLines=plan.length?plan.map(function(item){
-    return '- '+(item.key||'')+': '+(item.status||'')+' · '+(item.mode||'')+' · '+(item.label||'')+(item.pointerKey?' · '+item.pointerKey:'');
-  }).join('\n'):'- none returned';
-  return [
-    'Phase 8W second-device bootstrap preview plan',
-    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
-    '',
-    'Preview mode',
-    '- Status: '+(result.status||'unknown'),
-    '- Mode: '+(result.mode||'unknown'),
-    '- Preview plan executed: '+(result.previewPlanExecuted?'true':'false'),
-    '- Preview plan ready: '+(result.previewPlanReady?'true':'false'),
-    '- Read executed: '+(result.readExecuted?'true':'false'),
-    '- Config read executed: '+(result.configReadExecuted?'true':'false'),
-    '- Notion read executed: '+(result.notionReadExecuted?'true':'false'),
-    '- Write executed: '+(result.writeExecuted?'true':'false'),
-    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(result.secretExport?'true':'false'),
-    '- Token export: '+(result.tokenExport?'true':'false'),
-    '- Restore enabled: '+(result.restoreEnabled?'true':'false'),
-    '- Restore execution enabled: '+(result.restoreExecutionEnabled?'true':'false'),
-    '- Worker auth enabled: '+(result.workerAuthEnabled?'true':'false'),
-    '- Automation activation enabled: '+(result.automationActivationEnabled?'true':'false'),
-    '- Bootstrap execution enabled: '+(result.bootstrapExecutionEnabled?'true':'false'),
-    '',
-    'Gate state',
-    '- Setup automation preview ready: '+(result.setupAutomationPreviewReady?'true':'false'),
-    '- Setup automation ready: '+(result.setupAutomationReady?'true':'false'),
-    '- Phase 8V closeout ready: '+(result.phase8vCloseoutReady?'true':'false'),
-    '- Safe pointer package ready: '+(result.safePointerPackageReady?'true':'false'),
-    '- Optional gaps resolved: '+(result.optionalGapsResolved?'true':'false'),
-    '- Requested page ID: '+(result.requestedPageId||''),
-    '- Locator shape ok: '+(result.locatorShapeOk?'true':'false'),
-    '- Latest backup marker: '+(result.latestBackupMarker||''),
-    '- Target device label: '+(result.targetDeviceLabel||''),
-    '- Safe section found: '+(result.safeSectionFound?'true':'false'),
-    '- Block count read: '+(result.blockCountRead||0),
-    '',
-    'Safe pointers',
-    pointerLines,
-    '',
-    'Preview plan items',
-    planLines,
-    '',
-    'Missing required pointers',
-    missingRequired.length?('- '+missingRequired.join('\n- ')):'- none',
-    '',
-    'Optional pointer gaps',
-    optionalGaps.length?('- '+optionalGaps.join('\n- ')):'- none',
-    '',
-    'Missing gate items',
-    missingGate.length?('- '+missingGate.join('\n- ')):'- none',
-    '',
-    'Unsafe fields',
-    unsafe.length?('- '+unsafe.join('\n- ')):'- none',
-    '',
-    'Next allowed step',
-    '- '+(result.nextAllowedStepAfterPreviewPlan||''),
-    '',
-    'Blocked actions',
-    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
-    '',
-    'Result',
-    result.message||'Second-device bootstrap preview plan checked.'
-  ].join('\n');
-}
-
-function renderSecondDeviceBootstrapPreviewPlanStateV24(state){
-  state=state||window.__secondDeviceBootstrapPreviewPlanV24||null;
-  var pkg=document.getElementById('second-device-bootstrap-preview-package');
-  var pkgBadge=document.getElementById('second-device-bootstrap-preview-package-badge');
-  var plan=document.getElementById('second-device-bootstrap-preview-plan');
-  var planBadge=document.getElementById('second-device-bootstrap-preview-plan-badge');
-  var blocked=document.getElementById('second-device-bootstrap-preview-blocked');
-  var blockedBadge=document.getElementById('second-device-bootstrap-preview-blocked-badge');
-  var output=document.getElementById('second-device-bootstrap-preview-output');
-  var result=state&&state.result?state.result:null;
-  var passed=!!(state&&state.passed);
-  if(pkg)pkg.textContent=result
-    ? (passed?'Safe package and Phase 8V closeout are ready for preview planning.':'Safe package or Phase 8V closeout needs review.')
-    : 'Run after Phase 8V closeout is clean.';
-  if(pkgBadge){
-    pkgBadge.textContent=result?(passed?'Ready':'Review'):'Package';
-    pkgBadge.className=setupDoctorBadgeClassV23(result?(passed?'ready':'warn'):'off');
-  }
-  if(plan)plan.textContent=result
-    ? (passed?'Second-device bootstrap preview plan is ready. Execution remains blocked.':'Preview plan needs review before moving on.')
-    : 'Bootstrap preview has not been built yet.';
-  if(planBadge){
-    planBadge.textContent=passed?'Ready':'Plan';
-    planBadge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-  }
-  if(blocked)blocked.textContent=result
-    ? 'Login-anywhere, restore execution, worker auth, automations, and bootstrap execution stayed blocked.'
-    : 'No login-anywhere, restore execution, workers, automations, or bootstrap execution.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return result;
-}
-
-async function runSecondDeviceBootstrapPreviewPlanV24(){
-  var status=document.getElementById('second-device-bootstrap-preview-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Building second-device bootstrap preview plan...';
-  }
-  var closeout=window.__masterConfigPostWriteReadbackCloseoutV24||null;
-  if(!closeout||closeout.passed!==true){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Run Master Config Post-Write Readback Closeout first. Phase 8W needs the Phase 8V receipt.';
-    }
-    return {
-      passed:false,
-      meta:'Run Master Config Post-Write Readback Closeout before Phase 8W.',
-      failures:['Phase 8V post-write readback closeout receipt']
-    };
-  }
-  if(typeof refreshAuthSyncReadinessV24==='function')await refreshAuthSyncReadinessV24();
-  var payload=getSecondDeviceBootstrapPreviewPlanPayloadV24();
-  var result=await getAppsScriptJson('second_device_bootstrap_preview_plan',payload,{timeoutMs:16000,tries:1});
-  var missingRequired=(result&&result.missingRequiredPointers)||[];
-  var optionalGaps=(result&&result.optionalPointerGaps)||[];
-  var missingGate=(result&&result.missingGateItems)||[];
-  var unsafe=(result&&result.unsafeFields)||[];
-  var clean=!!(
-    result
-    && result.mode==='second_device_bootstrap_preview_plan_only'
-    && result.status==='second_device_bootstrap_preview_plan_ready'
-    && result.previewPlanExecuted===true
-    && result.previewPlanReady===true
-    && result.readExecuted===true
-    && result.configReadExecuted===true
-    && result.notionReadExecuted===true
-    && result.writeExecuted===false
-    && result.writesEnabled===false
-    && result.loginAnywhereActive===false
-    && result.secretExport===false
-    && result.tokenExport===false
-    && result.restoreEnabled===false
-    && result.restoreExecutionEnabled===false
-    && result.workerAuthEnabled===false
-    && result.automationActivationEnabled===false
-    && result.bootstrapExecutionEnabled===false
-    && result.setupAutomationPreviewReady===true
-    && result.setupAutomationReady===false
-    && result.phase8vCloseoutReady===true
-    && result.safePointerPackageReady===true
-    && result.optionalGapsResolved===true
-    && missingRequired.length===0
-    && optionalGaps.length===0
-    && missingGate.length===0
-    && unsafe.length===0
-  );
-  var previewText=formatSecondDeviceBootstrapPreviewPlanV24(result);
-  window.__secondDeviceBootstrapPreviewPlanV24={
-    checkedAt:new Date().toISOString(),
-    passed:clean,
-    result:result,
-    previewText:previewText
-  };
-  renderSecondDeviceBootstrapPreviewPlanStateV24(window.__secondDeviceBootstrapPreviewPlanV24);
-  if(status){
-    status.className='reset-status '+(clean?'ok':'warn');
-    status.textContent=clean
-      ? 'Second-device bootstrap preview plan is ready. No execution ran.'
-      : 'Second-device bootstrap preview plan needs review.';
-  }
-  return {
-    passed:clean,
-    meta:clean?'Phase 8W second-device bootstrap preview plan is ready · execution blocked.':'Phase 8W second-device bootstrap preview plan needs review.',
-    failures:clean?[]:['Phase 8W second-device bootstrap preview plan']
-  };
-}
-
-async function copySecondDeviceBootstrapPreviewPlanV24(){
-  var state=window.__secondDeviceBootstrapPreviewPlanV24||null;
-  var status=document.getElementById('second-device-bootstrap-preview-status');
-  if(!state){
-    var check=await runSecondDeviceBootstrapPreviewPlanV24();
-    state=window.__secondDeviceBootstrapPreviewPlanV24||{previewText:check&&check.meta?check.meta:''};
-  }
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Second-device bootstrap preview copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('second-device-bootstrap-preview-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the second-device bootstrap preview text manually.';
-    }
-  }
-}
-
-function runSecondDeviceBootstrapPreviewPlanSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('second-device-bootstrap-preview-output')
-    && document.getElementById('second-device-bootstrap-preview-blocked')
-    && typeof getSecondDeviceBootstrapPreviewPlanPayloadV24==='function'
-    && typeof runSecondDeviceBootstrapPreviewPlanV24==='function'
-  );
-  return {
-    passed:hasUi,
-    meta:hasUi?'Phase 8W second-device bootstrap preview UI is installed · execution remains blocked.':'Phase 8W second-device bootstrap preview UI needs review.',
-    failures:hasUi?[]:['Phase 8W second-device bootstrap preview UI']
-  };
-}
-
-function runSecondDeviceBootstrapPreviewPlanQACheckV24(){
-  var state=window.__secondDeviceBootstrapPreviewPlanV24||null;
-  if(state&&state.passed===true){
-    return {
-      passed:true,
-      meta:'Phase 8W second-device bootstrap preview plan is present · execution remains blocked.',
-      failures:[]
-    };
-  }
-  return {
-    passed:false,
-    meta:'Run Second-Device Bootstrap Preview Plan before Live QA so the Phase 8W receipt is available.',
-    failures:['Phase 8W second-device bootstrap preview plan receipt']
-  };
-}
-
 function getSetupPointerRowsV23(){
   var health=window.__lastSetupDoctorHealthV23&&window.__lastSetupDoctorHealthV23.health?window.__lastSetupDoctorHealthV23.health:{};
   var backup=window.__lastBackupArchiveStatusV22||{};
@@ -15322,7 +15035,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -15361,7 +15074,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8T Safe Pointer Gap Exact Write Preflight',typeof runMasterConfigSafePointerGapExactWritePreflightQACheckV24==='function'?runMasterConfigSafePointerGapExactWritePreflightQACheckV24():{passed:false,meta:'Missing Phase 8T exact write preflight check'});}catch(e){add('Phase 8T Safe Pointer Gap Exact Write Preflight',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8U Safe Pointer Gap Exact Write',typeof runMasterConfigSafePointerGapExactWriteQACheckV24==='function'?runMasterConfigSafePointerGapExactWriteQACheckV24():{passed:false,meta:'Missing Phase 8U exact write check'});}catch(e){add('Phase 8U Safe Pointer Gap Exact Write',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8V Master Config Post-Write Readback Closeout',typeof runMasterConfigPostWriteReadbackCloseoutQACheckV24==='function'?runMasterConfigPostWriteReadbackCloseoutQACheckV24():{passed:false,meta:'Missing Phase 8V post-write readback closeout check'});}catch(e){add('Phase 8V Master Config Post-Write Readback Closeout',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8W Second-Device Bootstrap Preview Plan',typeof runSecondDeviceBootstrapPreviewPlanQACheckV24==='function'?runSecondDeviceBootstrapPreviewPlanQACheckV24():{passed:false,meta:'Missing Phase 8W second-device bootstrap preview plan check'});}catch(e){add('Phase 8W Second-Device Bootstrap Preview Plan',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}

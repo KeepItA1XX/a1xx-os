@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260530-1017-v24-phase8w-second-device-bootstrap-preview-plan';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260530-1006-v24-phase8v-liveqa-receipt-supersede';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -312,7 +312,6 @@ function doGet(e) {
     if (e.parameter.action === 'master_config_safe_pointer_gap_exact_two_write_preflight') return getMasterConfigSafePointerGapExactTwoWritePreflightV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_pointer_gap_exact_two_write') return writeMasterConfigSafePointerGapExactTwoV19(e.parameter);
     if (e.parameter.action === 'master_config_post_write_readback_closeout') return getMasterConfigPostWriteReadbackCloseoutV19(e.parameter);
-    if (e.parameter.action === 'second_device_bootstrap_preview_plan') return getSecondDeviceBootstrapPreviewPlanV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -4005,174 +4004,6 @@ function getMasterConfigPostWriteReadbackCloseoutV19(input) {
     message: closeoutReady
       ? 'Post-write readback closeout is clean. Setup automation is ready for preview only.'
       : 'Post-write readback closeout needs review. No write executed.'
-  });
-}
-
-function getSecondDeviceBootstrapPreviewPlanV19(input) {
-  var payload = input || {};
-  var checkedAt = new Date().toISOString();
-  var locator = normalizeMasterConfigPageLocatorV19(
-    payload.masterConfigPageLocator || payload.masterConfigPageUrl || payload.masterConfigPageId || payload.pageId || ''
-  );
-  var closeoutReceipt = parseMasterConfigJsonParamV19(payload.closeoutReceiptJson, {});
-  var latestBackup = getLatestDriveBackupStatusSnapshotV19().latest || {};
-  var expectedRequired = [
-    'apps_script_web_app_url',
-    'mc_master_config_page_id',
-    'team_chat_database_id',
-    'intelligence_hq_page_id'
-  ];
-  var expectedOptional = [
-    'clean_workbook_id',
-    'backup_folder_id'
-  ];
-  var allExpected = expectedRequired.concat(expectedOptional);
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19({
-    sourceBuild: payload.sourceBuild || '',
-    targetDeviceLabel: payload.targetDeviceLabel || '',
-    closeoutStatus: closeoutReceipt.status || '',
-    expectedKeys: allExpected
-  });
-  var missingGateItems = [];
-  if (!normalizeBooleanV19(payload.a1xxPreviewApprovalCaptured)) missingGateItems.push('A1XX bootstrap preview approval');
-  if (!normalizeBooleanV19(payload.backupVisible)) missingGateItems.push('backupVisible');
-  if (!normalizeBooleanV19(payload.trustedSourceConfirmed)) missingGateItems.push('trustedSourceConfirmed');
-  if (locator.normalized === 'preview_only' || locator.format !== 'notion_page_id_shape_ok') missingGateItems.push('real master config page locator');
-  var pageRead = { ok: false, text: '', blockCount: 0, rawError: '' };
-  var section = { found: false, config: {}, lines: [] };
-  if (locator.normalized !== 'preview_only' && locator.format === 'notion_page_id_shape_ok') {
-    pageRead = fetchNotionPagePlainTextV19(locator.normalized);
-    section = pageRead.ok ? extractMasterConfigSafeReadSectionV19(pageRead.text) : section;
-  }
-  var pointerRows = allExpected.map(function(key) {
-    var value = cellTextV19(section.config[key] || '', key === 'apps_script_web_app_url' ? 500 : 220);
-    return {
-      key: key,
-      value: value,
-      required: expectedRequired.indexOf(key) >= 0,
-      status: value ? 'Ready' : 'Missing'
-    };
-  });
-  var missingRequired = pointerRows.filter(function(row) { return row.required && !row.value; }).map(function(row) { return row.key; });
-  var optionalGaps = pointerRows.filter(function(row) { return !row.required && !row.value; }).map(function(row) { return row.key; });
-  var safePointerPackageReady = !!(section.found && missingRequired.length === 0 && optionalGaps.length === 0);
-  var phase8vCloseoutReady = !!(
-    normalizeBooleanV19(payload.phase8vCloseoutReady) ||
-    (
-      closeoutReceipt &&
-      closeoutReceipt.status === 'post_write_readback_closeout_ready' &&
-      closeoutReceipt.safePointerPackageReady === true &&
-      closeoutReceipt.optionalGapsResolved === true &&
-      closeoutReceipt.packageReadbackVerified === true &&
-      closeoutReceipt.setupAutomationPreviewReady === true &&
-      closeoutReceipt.setupAutomationReady === false
-    )
-  );
-  if (!phase8vCloseoutReady) missingGateItems.push('Phase 8V post-write readback closeout');
-  var planItems = [
-    {
-      key: 'confirm_second_device_identity',
-      label: 'Confirm second device identity and trust request',
-      mode: 'manual_preview_only',
-      status: 'Preview Only'
-    },
-    {
-      key: 'load_safe_pointer_package',
-      label: 'Use safe setup pointers from MC Master Config',
-      mode: 'read_only',
-      status: safePointerPackageReady ? 'Ready' : 'Blocked'
-    },
-    {
-      key: 'open_apps_script_bridge',
-      label: 'Open Apps Script bridge URL on the second device',
-      pointerKey: 'apps_script_web_app_url',
-      mode: 'manual_preview_only',
-      status: section.config.apps_script_web_app_url ? 'Ready' : 'Blocked'
-    },
-    {
-      key: 'restore_from_verified_backup',
-      label: 'Preview restore source from latest verified Drive backup',
-      pointerKey: 'backup_folder_id',
-      mode: 'preview_only',
-      status: section.config.backup_folder_id ? 'Ready' : 'Blocked'
-    },
-    {
-      key: 'open_clean_workbook',
-      label: 'Preview clean workbook connection',
-      pointerKey: 'clean_workbook_id',
-      mode: 'preview_only',
-      status: section.config.clean_workbook_id ? 'Ready' : 'Blocked'
-    },
-    {
-      key: 'keep_protected_actions_blocked',
-      label: 'Keep login-anywhere, restore execution, workers, and automations blocked',
-      mode: 'safety_boundary',
-      status: 'Blocked'
-    }
-  ];
-  var previewReady = !!(
-    pageRead.ok &&
-    section.found &&
-    safePointerPackageReady &&
-    phase8vCloseoutReady &&
-    missingGateItems.length === 0 &&
-    unsafe.length === 0
-  );
-  return jsonResponseV19({
-    status: previewReady ? 'second_device_bootstrap_preview_plan_ready' : 'second_device_bootstrap_preview_plan_needs_review',
-    ok: true,
-    mode: 'second_device_bootstrap_preview_plan_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    previewPlanExecuted: true,
-    previewPlanReady: previewReady,
-    readExecuted: pageRead.ok,
-    configReadExecuted: pageRead.ok,
-    notionReadExecuted: pageRead.ok,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    restoreExecutionEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    bootstrapExecutionEnabled: false,
-    setupAutomationPreviewReady: previewReady,
-    setupAutomationReady: false,
-    phase8vCloseoutReady: phase8vCloseoutReady,
-    safePointerPackageReady: safePointerPackageReady,
-    optionalGapsResolved: optionalGaps.length === 0,
-    requestedPageId: locator.normalized,
-    locatorShapeOk: locator.format === 'notion_page_id_shape_ok',
-    latestBackupMarker: latestBackup.backupId || cellTextV19(payload.latestBackupMarker || '', 160),
-    safeSectionFound: section.found,
-    blockCountRead: pageRead.blockCount || 0,
-    targetDeviceLabel: cellTextV19(payload.targetDeviceLabel || 'second device', 120),
-    pointerRows: pointerRows,
-    previewPlanItems: planItems,
-    missingRequiredPointers: missingRequired,
-    optionalPointerGaps: optionalGaps,
-    missingGateItems: missingGateItems,
-    unsafeFields: unsafe,
-    nextAllowedStepAfterPreviewPlan: previewReady
-      ? 'second_device_bootstrap_dry_run_preview'
-      : 'second_device_bootstrap_preview_plan_repair',
-    blockedActions: [
-      'live master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'restore execution',
-      'worker auth',
-      'automation activation',
-      'second-device bootstrap execution'
-    ],
-    message: previewReady
-      ? 'Second-device bootstrap preview plan is ready. No bootstrap execution ran.'
-      : 'Second-device bootstrap preview plan needs review. No execution ran.'
   });
 }
 
