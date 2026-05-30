@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260530-0740-v24-phase8r-safe-pointer-gap-b3-confirmation';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1552-v24-phase8q-safe-pointer-gap-fill-preview';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -307,7 +307,6 @@ function doGet(e) {
     if (e.parameter.action === 'master_config_safe_pointer_gap_review') return getMasterConfigSafePointerGapReviewV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_pointer_gap_fill_plan') return getMasterConfigSafePointerGapFillPlanV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_pointer_gap_fill_preview') return getMasterConfigSafePointerGapFillPreviewV19(e.parameter);
-    if (e.parameter.action === 'master_config_safe_pointer_gap_b3_confirmation') return getMasterConfigSafePointerGapB3ConfirmationV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -3122,175 +3121,6 @@ function getMasterConfigSafePointerGapFillPreviewV19(input) {
     message: previewReady
       ? 'Safe pointer gap fill preview is ready. Exact two fields only; no read or write executed.'
       : 'Safe pointer gap fill preview needs review. No read or write executed.'
-  });
-}
-
-function getMasterConfigSafePointerGapB3ConfirmationV19(input) {
-  var checkedAt = new Date().toISOString();
-  var payload = input || {};
-  var expectedKeys = ['clean_workbook_id', 'backup_folder_id'];
-  var previewItems = parseMasterConfigJsonParamV19(payload.previewItemsJson, []);
-  var optionalGaps = parseMasterConfigJsonParamV19(payload.optionalPointerGapsJson, []);
-  var missingPreviewValues = parseMasterConfigJsonParamV19(payload.missingPreviewValuesJson, []);
-  var missingCandidates = parseMasterConfigJsonParamV19(payload.missingCandidateValuesJson, []);
-  var unexpectedKeys = parseMasterConfigJsonParamV19(payload.unexpectedPreviewKeysJson, []);
-  var unknownGaps = parseMasterConfigJsonParamV19(payload.unknownOptionalGapsJson, []);
-  var missingRequired = parseMasterConfigJsonParamV19(payload.missingRequiredPointersJson, []);
-  var missingFields = parseMasterConfigJsonParamV19(payload.missingFieldsJson, []);
-  var unsafeFields = parseMasterConfigJsonParamV19(payload.unsafeFieldsJson, []);
-  previewItems = Array.isArray(previewItems) ? previewItems : [];
-  optionalGaps = Array.isArray(optionalGaps) ? optionalGaps.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  missingPreviewValues = Array.isArray(missingPreviewValues) ? missingPreviewValues.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  missingCandidates = Array.isArray(missingCandidates) ? missingCandidates.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  unexpectedKeys = Array.isArray(unexpectedKeys) ? unexpectedKeys.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  unknownGaps = Array.isArray(unknownGaps) ? unknownGaps.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  missingRequired = Array.isArray(missingRequired) ? missingRequired.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  missingFields = Array.isArray(missingFields) ? missingFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; }) : [];
-  unsafeFields = Array.isArray(unsafeFields) ? unsafeFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; }) : [];
-  var normalizedItems = previewItems.map(function(item) {
-    return {
-      key: cellTextV19(item && item.key || '', 120),
-      label: cellTextV19(item && item.label || item && item.key || '', 180),
-      target: cellTextV19(item && item.target || 'MC Master Config safe read section', 180),
-      previousValue: cellTextV19(item && item.previousValue || 'blank_or_missing_in_safe_section', 180),
-      candidateValue: cellTextV19(item && item.candidateValue || '', 220),
-      candidateSource: cellTextV19(item && item.candidateSource || '', 180),
-      operation: cellTextV19(item && item.operation || '', 120),
-      status: cellTextV19(item && item.status || '', 80)
-    };
-  }).filter(function(item) { return item.key; });
-  var normalizedKeys = normalizedItems.map(function(item) { return item.key; });
-  var exactTwoFields = normalizedItems.length === 2
-    && optionalGaps.length === 2
-    && expectedKeys.every(function(key) { return normalizedKeys.indexOf(key) >= 0 && optionalGaps.indexOf(key) >= 0; })
-    && unexpectedKeys.length === 0;
-  var compactUnsafe = detectUnsafeMasterConfigReadSkeletonInputV19({
-    sourceBuild: payload.sourceBuild || '',
-    optionalPointerGaps: optionalGaps,
-    previewItems: normalizedItems.map(function(item) {
-      return {
-        key: item.key,
-        target: item.target,
-        operation: item.operation,
-        status: item.status
-      };
-    }),
-    missingPreviewValues: missingPreviewValues,
-    missingCandidateValues: missingCandidates,
-    unexpectedPreviewKeys: unexpectedKeys,
-    unknownOptionalGaps: unknownGaps,
-    missingRequiredPointers: missingRequired,
-    missingFields: missingFields,
-    unsafeFields: unsafeFields
-  });
-  unsafeFields = unsafeFields.concat(compactUnsafe).filter(function(item, index, arr) { return item && arr.indexOf(item) === index; });
-  var fillPreviewReady = normalizeBooleanV19(payload.fillPreviewReady);
-  var fillPlanReady = normalizeBooleanV19(payload.fillPlanReady);
-  var packageReady = normalizeBooleanV19(payload.packageReady);
-  var gapReviewReady = normalizeBooleanV19(payload.gapReviewReady);
-  var requiredPointersReady = normalizeBooleanV19(payload.requiredPointersReady);
-  var backupVisible = normalizeBooleanV19(payload.backupVisible);
-  var trustedSource = normalizeBooleanV19(payload.trustedSourceConfirmed);
-  var approvalCaptured = normalizeBooleanV19(payload.a1xxB3ApprovalCaptured);
-  var confirmationText = cellTextV19(payload.confirmationText || '', 120);
-  var expectedConfirmationText = 'B3 CONFIRM TWO SAFE POINTERS';
-  var b3Confirmed = fillPreviewReady
-    && fillPlanReady
-    && packageReady
-    && gapReviewReady
-    && requiredPointersReady
-    && backupVisible
-    && trustedSource
-    && approvalCaptured
-    && confirmationText === expectedConfirmationText
-    && exactTwoFields
-    && missingPreviewValues.length === 0
-    && missingCandidates.length === 0
-    && unexpectedKeys.length === 0
-    && unknownGaps.length === 0
-    && missingRequired.length === 0
-    && missingFields.length === 0
-    && unsafeFields.length === 0;
-  return jsonResponseV19({
-    status: b3Confirmed ? 'b3_confirmation_armed_exact_two_fields' : 'b3_confirmation_needs_review',
-    ok: true,
-    mode: 'safe_pointer_gap_b3_confirmation_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    b3ConfirmationExecuted: true,
-    b3Confirmed: b3Confirmed,
-    b3ArmedAt: b3Confirmed ? checkedAt : '',
-    confirmationText: confirmationText,
-    expectedConfirmationText: expectedConfirmationText,
-    fillPreviewReady: fillPreviewReady,
-    fillPlanReady: fillPlanReady,
-    packageReady: packageReady,
-    gapReviewReady: gapReviewReady,
-    requiredPointersReady: requiredPointersReady,
-    setupAutomationReady: false,
-    readExecuted: false,
-    configReadExecuted: false,
-    notionReadExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    bootstrapExecutionEnabled: false,
-    backupVisible: backupVisible,
-    trustedSourceConfirmed: trustedSource,
-    a1xxB3ApprovalCaptured: approvalCaptured,
-    exactTwoFields: exactTwoFields,
-    writeScope: 'exact_two_safe_pointer_fields_only',
-    target: 'MC Master Config safe read section',
-    optionalPointerGaps: optionalGaps,
-    confirmedPreviewItems: normalizedItems,
-    missingPreviewValues: missingPreviewValues,
-    missingCandidateValues: missingCandidates,
-    unexpectedPreviewKeys: unexpectedKeys,
-    unknownOptionalGaps: unknownGaps,
-    missingRequiredPointers: missingRequired,
-    missingFields: missingFields,
-    unsafeFields: unsafeFields,
-    recommendedDecision: b3Confirmed
-      ? 'review_exact_two_field_write_endpoint_before_write'
-      : 'repair_b3_confirmation_before_any_write',
-    requiredBeforeAnyFutureWrite: [
-      'backup verified immediately before write',
-      'write endpoint contract reviewed for exact two safe fields',
-      'write only clean_workbook_id and backup_folder_id',
-      'readback verification after write',
-      'archive-only recovery if readback fails'
-    ],
-    nextAllowedStepAfterB3: b3Confirmed
-      ? 'safe_pointer_gap_write_endpoint_review'
-      : 'safe_pointer_gap_b3_confirmation_repair',
-    blockedActions: [
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution',
-      'second-device bootstrap execution'
-    ],
-    safety: {
-      notion: 'No Notion read, create, update, archive, or delete executed.',
-      scope: 'B3 confirms only the exact two safe pointer fields previewed in Phase 8Q.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, restores, or deletes.',
-      auth: 'No login-anywhere, auth sync, token export, or secret export.',
-      recovery: 'No restore or bootstrap execution.'
-    },
-    message: b3Confirmed
-      ? 'B3 confirmation is armed for the exact two safe pointer fields. No read or write executed.'
-      : 'B3 confirmation needs review. No read or write executed.'
   });
 }
 
