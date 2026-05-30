@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260530-0918-v24-phase8v-post-write-readback-closeout';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260530-0905-v24-phase8u-safe-marker-match-repair';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -311,7 +311,6 @@ function doGet(e) {
     if (e.parameter.action === 'master_config_safe_pointer_gap_write_endpoint_review') return getMasterConfigSafePointerGapWriteEndpointReviewV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_pointer_gap_exact_two_write_preflight') return getMasterConfigSafePointerGapExactTwoWritePreflightV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_pointer_gap_exact_two_write') return writeMasterConfigSafePointerGapExactTwoV19(e.parameter);
-    if (e.parameter.action === 'master_config_post_write_readback_closeout') return getMasterConfigPostWriteReadbackCloseoutV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -3863,133 +3862,6 @@ function writeMasterConfigSafePointerGapExactTwoV19(input) {
     ? 'Exact two safe pointer fields written and read back cleanly.'
     : 'Exact two safe pointer write ran, but readback needs review.';
   return jsonResponseV19(base);
-}
-
-function getMasterConfigPostWriteReadbackCloseoutV19(input) {
-  var payload = input || {};
-  var checkedAt = new Date().toISOString();
-  var locator = normalizeMasterConfigPageLocatorV19(
-    payload.masterConfigPageLocator || payload.masterConfigPageUrl || payload.masterConfigPageId || payload.pageId || ''
-  );
-  var writeReceipt = parseMasterConfigJsonParamV19(payload.writeReceiptJson, {});
-  var readbackReceipt = parseMasterConfigJsonParamV19(payload.readbackReceiptJson, {});
-  var latestBackup = getLatestDriveBackupStatusSnapshotV19().latest || {};
-  var expectedRequired = [
-    'apps_script_web_app_url',
-    'mc_master_config_page_id',
-    'team_chat_database_id',
-    'intelligence_hq_page_id'
-  ];
-  var expectedOptional = [
-    'clean_workbook_id',
-    'backup_folder_id'
-  ];
-  var allExpected = expectedRequired.concat(expectedOptional);
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19({
-    sourceBuild: payload.sourceBuild || '',
-    writeReceiptType: writeReceipt.receiptType || '',
-    readbackReceiptType: readbackReceipt.receiptType || '',
-    expectedKeys: allExpected
-  });
-  var missingGateItems = [];
-  var exactWriteReceiptPresent = !!(
-    writeReceipt &&
-    writeReceipt.receiptType === 'safe_pointer_gap_exact_two_write' &&
-    Array.isArray(writeReceipt.fieldsWritten) &&
-    writeReceipt.fieldsWritten.indexOf('clean_workbook_id') >= 0 &&
-    writeReceipt.fieldsWritten.indexOf('backup_folder_id') >= 0
-  );
-  var readbackVerified = !!(
-    readbackReceipt &&
-    readbackReceipt.receiptType === 'safe_pointer_gap_exact_two_readback' &&
-    readbackReceipt.verified === true
-  );
-  if (!normalizeBooleanV19(payload.a1xxCloseoutApprovalCaptured)) missingGateItems.push('A1XX closeout approval');
-  if (!exactWriteReceiptPresent) missingGateItems.push('Phase 8U exact write receipt');
-  if (!readbackVerified) missingGateItems.push('Phase 8U readback verified receipt');
-  if (!normalizeBooleanV19(payload.backupVisible)) missingGateItems.push('backupVisible');
-  if (!normalizeBooleanV19(payload.trustedSourceConfirmed)) missingGateItems.push('trustedSourceConfirmed');
-  if (locator.normalized === 'preview_only' || locator.format !== 'notion_page_id_shape_ok') missingGateItems.push('real master config page locator');
-  var pageRead = { ok: false, text: '', blockCount: 0, rawError: '' };
-  var section = { found: false, config: {}, lines: [] };
-  if (locator.normalized !== 'preview_only' && locator.format === 'notion_page_id_shape_ok') {
-    pageRead = fetchNotionPagePlainTextV19(locator.normalized);
-    section = pageRead.ok ? extractMasterConfigSafeReadSectionV19(pageRead.text) : section;
-  }
-  var pointerRows = allExpected.map(function(key) {
-    var value = cellTextV19(section.config[key] || '', key === 'apps_script_web_app_url' ? 500 : 220);
-    return {
-      key: key,
-      value: value,
-      required: expectedRequired.indexOf(key) >= 0,
-      status: value ? 'Ready' : 'Missing'
-    };
-  });
-  var missingRequired = pointerRows.filter(function(row) { return row.required && !row.value; }).map(function(row) { return row.key; });
-  var optionalGaps = pointerRows.filter(function(row) { return !row.required && !row.value; }).map(function(row) { return row.key; });
-  var safePointerPackageReady = !!(section.found && missingRequired.length === 0 && optionalGaps.length === 0);
-  var closeoutReady = !!(
-    pageRead.ok &&
-    section.found &&
-    safePointerPackageReady &&
-    exactWriteReceiptPresent &&
-    readbackVerified &&
-    missingGateItems.length === 0 &&
-    unsafe.length === 0
-  );
-  return jsonResponseV19({
-    status: closeoutReady ? 'post_write_readback_closeout_ready' : 'post_write_readback_closeout_needs_review',
-    ok: true,
-    mode: 'master_config_post_write_readback_closeout_read_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    closeoutExecuted: true,
-    readExecuted: pageRead.ok,
-    configReadExecuted: pageRead.ok,
-    notionReadExecuted: pageRead.ok,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    bootstrapExecutionEnabled: false,
-    setupAutomationPreviewReady: closeoutReady,
-    setupAutomationReady: false,
-    safePointerPackageReady: safePointerPackageReady,
-    optionalGapsResolved: optionalGaps.length === 0,
-    exactWriteReceiptPresent: exactWriteReceiptPresent,
-    readbackVerified: readbackVerified,
-    requestedPageId: locator.normalized,
-    locatorShapeOk: locator.format === 'notion_page_id_shape_ok',
-    latestBackupMarker: latestBackup.backupId || cellTextV19(payload.latestBackupMarker || '', 160),
-    safeSectionFound: section.found,
-    blockCountRead: pageRead.blockCount || 0,
-    pointerRows: pointerRows,
-    missingRequiredPointers: missingRequired,
-    optionalPointerGaps: optionalGaps,
-    missingGateItems: missingGateItems,
-    unsafeFields: unsafe,
-    nextAllowedStepAfterCloseout: closeoutReady
-      ? 'second_device_bootstrap_preview_plan'
-      : 'post_write_readback_closeout_repair',
-    blockedActions: [
-      'live master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution',
-      'second-device bootstrap execution'
-    ],
-    message: closeoutReady
-      ? 'Post-write readback closeout is clean. Setup automation is ready for preview only.'
-      : 'Post-write readback closeout needs review. No write executed.'
-  });
 }
 
 function sanitizeDriveFileIndexPointerPreviewV19(input) {
