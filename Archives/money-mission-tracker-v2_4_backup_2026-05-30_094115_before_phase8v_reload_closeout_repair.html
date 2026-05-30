@@ -2810,13 +2810,13 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
         <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Master Config Post-Write Readback Closeout</div>
           <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8V scope</div><div class="settings-row-meta" id="master-config-closeout-scope">Re-read the safe master config section after Phase 8U or after reload. No write or bootstrap.</div></div><span class="settings-badge warn" id="master-config-closeout-scope-badge">Closeout</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Safe package</div><div class="settings-row-meta" id="master-config-closeout-package">Run after Phase 8U, or after reload once Master Config First Real Read confirms pointers are filled.</div></div><span class="settings-badge off" id="master-config-closeout-package-badge">Package</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Phase 8V scope</div><div class="settings-row-meta" id="master-config-closeout-scope">Re-read the safe master config section after Phase 8U. No write or bootstrap.</div></div><span class="settings-badge warn" id="master-config-closeout-scope-badge">Closeout</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Safe package</div><div class="settings-row-meta" id="master-config-closeout-package">Run after Phase 8U write receipt and readback are verified.</div></div><span class="settings-badge off" id="master-config-closeout-package-badge">Package</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Setup preview gate</div><div class="settings-row-meta" id="master-config-closeout-preview">Setup automation can only become ready for preview, not execution.</div></div><span class="settings-badge warn" id="master-config-closeout-preview-badge">Gated</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="master-config-closeout-blocked">No write, login-anywhere, auth sync, token export, secret export, restore, workers, automations, or bootstrap execution.</div></div><span class="settings-badge warn" id="master-config-closeout-blocked-badge">Blocked</span></div>
           </div>
           <label for="master-config-closeout-output">Master config post-write readback closeout</label>
-          <textarea id="master-config-closeout-output" rows="13" readonly placeholder="Click Run closeout after Phase 8U, or after reload once the safe package readback shows all pointers filled."></textarea>
+          <textarea id="master-config-closeout-output" rows="13" readonly placeholder="Click Run closeout after Phase 8U says the exact write is complete and readback verified."></textarea>
           <div class="btn-row" style="margin-top:10px">
             <button class="btn primary" onclick="withGlobalProcessingActionV23('Running master config post-write closeout',function(){return runMasterConfigPostWriteReadbackCloseoutV24();},this,'Master config closeout checked.')">Run closeout</button>
             <button class="btn" onclick="copyMasterConfigPostWriteReadbackCloseoutV24()">Copy closeout</button>
@@ -4917,9 +4917,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-05-30 09:41 ET · OS v2_4 Phase 8V reload closeout repair';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8V reload closeout repair';
-var APP_CACHE_TOKEN='mmos-20260530-0941-v24-phase8v-reload-closeout-repair';
+var APP_BUILD_STAMP='2026-05-30 09:18 ET · OS v2_4 Phase 8V post-write readback closeout';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8V post-write readback closeout';
+var APP_CACHE_TOKEN='mmos-20260530-0918-v24-phase8v-post-write-readback-closeout';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -11578,7 +11578,6 @@ function getMasterConfigPostWriteReadbackCloseoutPayloadV24(){
   var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
   var backup=window.__lastBackupArchiveStatusV22||{};
   var latest=backup.latest||{};
-  var phase8uReceiptReady=!!(writeState&&writeState.passed&&result.status==='exact_two_write_complete');
   return {
     masterConfigPageLocator:getMasterConfigPageLocatorForExactWriteV24(),
     sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
@@ -11586,9 +11585,7 @@ function getMasterConfigPostWriteReadbackCloseoutPayloadV24(){
     trustedSourceConfirmed:!!readiness.trusted,
     backupVisible:!!readiness.backupReady,
     a1xxCloseoutApprovalCaptured:true,
-    exactWriteComplete:phase8uReceiptReady,
-    postReloadCloseoutAccepted:!phase8uReceiptReady,
-    safePackageReadbackAccepted:!phase8uReceiptReady,
+    exactWriteComplete:!!(writeState&&writeState.passed&&result.status==='exact_two_write_complete'),
     writeReceiptJson:JSON.stringify(result.writeReceipt||{}),
     readbackReceiptJson:JSON.stringify(result.readbackReceipt||{}),
     closeoutOnly:true,
@@ -11636,11 +11633,6 @@ function formatMasterConfigPostWriteReadbackCloseoutV24(result){
     '- Optional gaps resolved: '+(result.optionalGapsResolved?'true':'false'),
     '- Exact write receipt present: '+(result.exactWriteReceiptPresent?'true':'false'),
     '- Readback verified: '+(result.readbackVerified?'true':'false'),
-    '- Package readback verified: '+(result.packageReadbackVerified?'true':'false'),
-    '- Post-reload closeout accepted: '+(result.postReloadCloseoutAccepted?'true':'false'),
-    '- Phase 8U receipt path ready: '+(result.phase8uReceiptPathReady?'true':'false'),
-    '- Safe package readback path ready: '+(result.safePackageReadbackPathReady?'true':'false'),
-    '- Closeout source: '+(result.closeoutSource||''),
     '- Requested page ID: '+(result.requestedPageId||''),
     '- Locator shape ok: '+(result.locatorShapeOk?'true':'false'),
     '- Latest backup marker: '+(result.latestBackupMarker||''),
@@ -11686,7 +11678,7 @@ function renderMasterConfigPostWriteReadbackCloseoutStateV24(state){
   var passed=!!(state&&state.passed);
   if(pkg)pkg.textContent=result
     ? (passed?'All safe setup pointers are present after readback.':'Safe pointer package needs review.')
-    : 'Run after Phase 8U, or after reload once the safe package readback shows all pointers filled.';
+    : 'Run after Phase 8U write receipt and readback are verified.';
   if(pkgBadge){
     pkgBadge.textContent=result?(passed?'Ready':'Review'):'Package';
     pkgBadge.className=setupDoctorBadgeClassV23(result?(passed?'ready':'warn'):'off');
@@ -11716,8 +11708,16 @@ async function runMasterConfigPostWriteReadbackCloseoutV24(){
     status.textContent='Running master config post-write readback closeout...';
   }
   var exactWrite=window.__masterConfigSafePointerGapExactWriteV24||null;
-  if((!exactWrite||exactWrite.passed!==true)&&status){
-    status.textContent='Using current master config readback because the Phase 8U receipt is not active after reload...';
+  if(!exactWrite||exactWrite.passed!==true){
+    if(status){
+      status.className='reset-status warn';
+      status.textContent='Run Safe Pointer Gap Exact Write first. Phase 8V needs the Phase 8U write receipt.';
+    }
+    return {
+      passed:false,
+      meta:'Run Safe Pointer Gap Exact Write before post-write closeout.',
+      failures:['Phase 8U exact two-field write receipt']
+    };
   }
   if(typeof refreshAuthSyncReadinessV24==='function')await refreshAuthSyncReadinessV24();
   var payload=getMasterConfigPostWriteReadbackCloseoutPayloadV24();
@@ -11747,8 +11747,8 @@ async function runMasterConfigPostWriteReadbackCloseoutV24(){
     && result.setupAutomationReady===false
     && result.safePointerPackageReady===true
     && result.optionalGapsResolved===true
-    && (result.phase8uReceiptPathReady===true||result.safePackageReadbackPathReady===true)
-    && result.packageReadbackVerified===true
+    && result.exactWriteReceiptPresent===true
+    && result.readbackVerified===true
     && missingRequired.length===0
     && optionalGaps.length===0
     && missingGate.length===0

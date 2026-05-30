@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260530-0941-v24-phase8v-reload-closeout-repair';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260530-0918-v24-phase8v-post-write-readback-closeout';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -3905,6 +3905,8 @@ function getMasterConfigPostWriteReadbackCloseoutV19(input) {
     readbackReceipt.verified === true
   );
   if (!normalizeBooleanV19(payload.a1xxCloseoutApprovalCaptured)) missingGateItems.push('A1XX closeout approval');
+  if (!exactWriteReceiptPresent) missingGateItems.push('Phase 8U exact write receipt');
+  if (!readbackVerified) missingGateItems.push('Phase 8U readback verified receipt');
   if (!normalizeBooleanV19(payload.backupVisible)) missingGateItems.push('backupVisible');
   if (!normalizeBooleanV19(payload.trustedSourceConfirmed)) missingGateItems.push('trustedSourceConfirmed');
   if (locator.normalized === 'preview_only' || locator.format !== 'notion_page_id_shape_ok') missingGateItems.push('real master config page locator');
@@ -3926,24 +3928,12 @@ function getMasterConfigPostWriteReadbackCloseoutV19(input) {
   var missingRequired = pointerRows.filter(function(row) { return row.required && !row.value; }).map(function(row) { return row.key; });
   var optionalGaps = pointerRows.filter(function(row) { return !row.required && !row.value; }).map(function(row) { return row.key; });
   var safePointerPackageReady = !!(section.found && missingRequired.length === 0 && optionalGaps.length === 0);
-  var packageReadbackVerified = !!(pageRead.ok && safePointerPackageReady);
-  var postReloadCloseoutAccepted = !!(
-    normalizeBooleanV19(payload.postReloadCloseoutAccepted) ||
-    normalizeBooleanV19(payload.safePackageReadbackAccepted)
-  );
-  var phase8uReceiptPathReady = !!(exactWriteReceiptPresent && readbackVerified);
-  var safePackageReadbackPathReady = !!(packageReadbackVerified && postReloadCloseoutAccepted);
-  if (!phase8uReceiptPathReady && !safePackageReadbackPathReady) {
-    missingGateItems.push('Phase 8U receipt or current safe package readback acceptance');
-  }
-  var closeoutSource = phase8uReceiptPathReady
-    ? 'phase8u_write_receipt'
-    : (safePackageReadbackPathReady ? 'current_safe_package_readback' : 'none');
   var closeoutReady = !!(
     pageRead.ok &&
     section.found &&
     safePointerPackageReady &&
-    (phase8uReceiptPathReady || safePackageReadbackPathReady) &&
+    exactWriteReceiptPresent &&
+    readbackVerified &&
     missingGateItems.length === 0 &&
     unsafe.length === 0
   );
@@ -3972,11 +3962,6 @@ function getMasterConfigPostWriteReadbackCloseoutV19(input) {
     optionalGapsResolved: optionalGaps.length === 0,
     exactWriteReceiptPresent: exactWriteReceiptPresent,
     readbackVerified: readbackVerified,
-    packageReadbackVerified: packageReadbackVerified,
-    postReloadCloseoutAccepted: postReloadCloseoutAccepted,
-    phase8uReceiptPathReady: phase8uReceiptPathReady,
-    safePackageReadbackPathReady: safePackageReadbackPathReady,
-    closeoutSource: closeoutSource,
     requestedPageId: locator.normalized,
     locatorShapeOk: locator.format === 'notion_page_id_shape_ok',
     latestBackupMarker: latestBackup.backupId || cellTextV19(payload.latestBackupMarker || '', 160),
