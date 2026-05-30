@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260530-0851-v24-phase8u-missing-safe-lines-repair';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260530-0827-v24-phase8t-8u-exact-two-write-preflight-and-write';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -3687,31 +3687,6 @@ function patchNotionRichTextBlockV19(block, text) {
   return { ok: result.code >= 200 && result.code < 300, code: result.code, text: result.text || '' };
 }
 
-function appendNotionSafePointerLinesAfterBlockV19(pageId, afterBlockId, updates) {
-  var apiPageId = formatNotionPageIdForApiV19(pageId);
-  var payload = {
-    after: afterBlockId,
-    children: (updates || []).map(function(update) {
-      return {
-        object: 'block',
-        type: 'paragraph',
-        paragraph: {
-          rich_text: [{ type: 'text', text: { content: update.key + ': ' + update.value } }]
-        }
-      };
-    })
-  };
-  var result = notionRequest('patch', 'https://api.notion.com/v1/blocks/' + encodeURIComponent(apiPageId) + '/children', payload);
-  var parsed = {};
-  try { parsed = result.text ? JSON.parse(result.text) : {}; } catch (err) { parsed = {}; }
-  return {
-    ok: result.code >= 200 && result.code < 300,
-    code: result.code,
-    text: result.text || '',
-    results: parsed.results || []
-  };
-}
-
 function writeMasterConfigSafePointerGapExactTwoV19(input) {
   var checkedAt = new Date().toISOString();
   var gate = getMasterConfigExactTwoWriteGateV19(input, true);
@@ -3768,13 +3743,11 @@ function writeMasterConfigSafePointerGapExactTwoV19(input) {
     return jsonResponseV19(base);
   }
   var safeStarted = false;
-  var safeMarkerBlock = null;
   var targets = {};
   blockRead.blocks.forEach(function(block) {
     var text = getNotionBlockPlainTextV19(block).trim();
     if (text === '[MC_MASTER_CONFIG_SAFE_READ]') {
       safeStarted = true;
-      safeMarkerBlock = block;
       return;
     }
     if (safeStarted && /^\[[A-Z0-9_ -]+\]$/.test(text)) safeStarted = false;
@@ -3784,41 +3757,16 @@ function writeMasterConfigSafePointerGapExactTwoV19(input) {
     });
   });
   var missingBlocks = gate.data.expectedKeys.filter(function(key) { return !targets[key]; });
-  var insertResults = [];
   if (missingBlocks.length) {
-    if (!safeMarkerBlock || !safeMarkerBlock.id) {
-      base.status = 'review';
-      base.missingTargetBlocks = missingBlocks;
-      base.message = 'Could not find safe section marker for missing pointer lines. No write executed.';
-      return jsonResponseV19(base);
-    }
-    var missingUpdates = gate.data.updates.filter(function(update) { return missingBlocks.indexOf(update.key) >= 0; });
-    var insert = appendNotionSafePointerLinesAfterBlockV19(gate.locator.normalized, safeMarkerBlock.id, missingUpdates);
-    insertResults = missingUpdates.map(function(update, index) {
-      var inserted = insert.results && insert.results[index] ? insert.results[index] : {};
-      return {
-        key: update.key,
-        blockId: inserted.id || '',
-        nextText: update.key + ': ' + update.value,
-        code: insert.code,
-        ok: insert.ok,
-        operation: 'insert_missing_safe_line'
-      };
-    });
-    if (!insert.ok) {
-      base.status = 'review';
-      base.missingTargetBlocks = missingBlocks;
-      base.insertResults = insertResults;
-      base.notionError = cellTextV19(insert.text || '', 500);
-      base.message = 'Notion rejected missing safe pointer line creation. No pointer update completed.';
-      return jsonResponseV19(base);
-    }
+    base.status = 'review';
+    base.missingTargetBlocks = missingBlocks;
+    base.message = 'Could not find exact safe pointer lines. No write executed.';
+    return jsonResponseV19(base);
   }
   var patches = [];
   for (var i = 0; i < gate.data.updates.length; i++) {
     var update = gate.data.updates[i];
     var target = targets[update.key];
-    if (!target && missingBlocks.indexOf(update.key) >= 0) continue;
     var nextText = update.key + ': ' + update.value;
     var patch = patchNotionRichTextBlockV19(target.block, nextText);
     patches.push({ key: update.key, blockId: target.block.id, previousText: target.text, nextText: nextText, code: patch.code, ok: patch.ok });
@@ -3829,7 +3777,6 @@ function writeMasterConfigSafePointerGapExactTwoV19(input) {
       return jsonResponseV19(base);
     }
   }
-  Utilities.sleep(600);
   var readback = fetchNotionPagePlainTextV19(gate.locator.normalized);
   var section = readback.ok ? extractMasterConfigSafeReadSectionV19(readback.text) : { config: {} };
   var verified = readback.ok && gate.data.updates.every(function(item) {
@@ -3840,7 +3787,6 @@ function writeMasterConfigSafePointerGapExactTwoV19(input) {
   base.configReadExecuted = true;
   base.writeExecuted = true;
   base.writesEnabled = true;
-  base.insertResults = insertResults;
   base.patchResults = patches;
   base.writeReceipt = {
     receiptType: 'safe_pointer_gap_exact_two_write',
