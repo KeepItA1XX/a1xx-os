@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1552-v24-phase8q-safe-pointer-gap-fill-preview';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260529-1525-v24-phase8p-safe-pointer-gap-fill-plan';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -306,7 +306,6 @@ function doGet(e) {
     if (e.parameter.action === 'master_config_safe_package_normalize') return getMasterConfigSafePackageNormalizeV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_pointer_gap_review') return getMasterConfigSafePointerGapReviewV19(e.parameter);
     if (e.parameter.action === 'master_config_safe_pointer_gap_fill_plan') return getMasterConfigSafePointerGapFillPlanV19(e.parameter);
-    if (e.parameter.action === 'master_config_safe_pointer_gap_fill_preview') return getMasterConfigSafePointerGapFillPreviewV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -2954,173 +2953,6 @@ function getMasterConfigSafePointerGapFillPlanV19(input) {
     message: planReady
       ? 'Safe pointer gap fill plan is ready. No read or write executed.'
       : 'Safe pointer gap fill plan needs review. No read or write executed.'
-  });
-}
-
-function getMasterConfigSafePointerGapFillPreviewV19(input) {
-  var checkedAt = new Date().toISOString();
-  var payload = input || {};
-  var expectedKeys = ['clean_workbook_id', 'backup_folder_id'];
-  var fillPlanItems = parseMasterConfigJsonParamV19(payload.fillPlanItemsJson, []);
-  var optionalGaps = parseMasterConfigJsonParamV19(payload.optionalPointerGapsJson, []);
-  var missingCandidates = parseMasterConfigJsonParamV19(payload.missingCandidateValuesJson, []);
-  var unknownGaps = parseMasterConfigJsonParamV19(payload.unknownOptionalGapsJson, []);
-  var missingRequired = parseMasterConfigJsonParamV19(payload.missingRequiredPointersJson, []);
-  var missingFields = parseMasterConfigJsonParamV19(payload.missingFieldsJson, []);
-  var unsafeFields = parseMasterConfigJsonParamV19(payload.unsafeFieldsJson, []);
-  fillPlanItems = Array.isArray(fillPlanItems) ? fillPlanItems : [];
-  optionalGaps = Array.isArray(optionalGaps) ? optionalGaps.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  missingCandidates = Array.isArray(missingCandidates) ? missingCandidates.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  unknownGaps = Array.isArray(unknownGaps) ? unknownGaps.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  missingRequired = Array.isArray(missingRequired) ? missingRequired.map(function(item) { return cellTextV19(item, 120); }).filter(function(item) { return item; }) : [];
-  missingFields = Array.isArray(missingFields) ? missingFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; }) : [];
-  unsafeFields = Array.isArray(unsafeFields) ? unsafeFields.map(function(item) { return cellTextV19(item, 180); }).filter(function(item) { return item; }) : [];
-  var planByKey = {};
-  fillPlanItems.forEach(function(item) {
-    var key = cellTextV19(item && item.key || '', 120);
-    if (!key) return;
-    planByKey[key] = {
-      key: key,
-      label: cellTextV19(item.label || key, 180),
-      candidateValue: cellTextV19(item.candidateValue || '', 220),
-      candidateSource: cellTextV19(item.candidateSource || '', 180),
-      candidateStatus: cellTextV19(item.candidateStatus || '', 80),
-      fillTarget: cellTextV19(item.fillTarget || 'MC Master Config safe read section', 180)
-    };
-  });
-  var previewItems = expectedKeys.map(function(key) {
-    var plan = planByKey[key] || {};
-    return {
-      key: key,
-      label: plan.label || key,
-      target: 'MC Master Config safe read section',
-      previousValue: 'blank_or_missing_in_safe_section',
-      candidateValue: plan.candidateValue || '',
-      candidateSource: plan.candidateSource || 'Phase 8P candidate plan',
-      operation: 'future_update_safe_field',
-      status: plan.candidateValue ? 'Preview Ready' : 'Candidate Missing'
-    };
-  });
-  var unexpectedKeys = Object.keys(planByKey).filter(function(key) { return expectedKeys.indexOf(key) < 0; });
-  var missingPreviewValues = previewItems.filter(function(item) { return !item.candidateValue; }).map(function(item) { return item.key; });
-  var compactUnsafe = detectUnsafeMasterConfigReadSkeletonInputV19({
-    sourceBuild: payload.sourceBuild || '',
-    optionalPointerGaps: optionalGaps,
-    missingCandidateValues: missingCandidates,
-    unknownOptionalGaps: unknownGaps,
-    missingRequiredPointers: missingRequired,
-    missingFields: missingFields,
-    unsafeFields: unsafeFields,
-    previewItems: previewItems.map(function(item) {
-      return {
-        key: item.key,
-        target: item.target,
-        operation: item.operation,
-        status: item.status
-      };
-    })
-  });
-  unsafeFields = unsafeFields.concat(compactUnsafe).filter(function(item, index, arr) { return item && arr.indexOf(item) === index; });
-  var fillPlanReady = normalizeBooleanV19(payload.fillPlanReady);
-  var packageReady = normalizeBooleanV19(payload.packageReady);
-  var gapReviewReady = normalizeBooleanV19(payload.gapReviewReady);
-  var requiredPointersReady = normalizeBooleanV19(payload.requiredPointersReady);
-  var backupVisible = normalizeBooleanV19(payload.backupVisible);
-  var trustedSource = normalizeBooleanV19(payload.trustedSourceConfirmed);
-  var previewApproval = normalizeBooleanV19(payload.a1xxPreviewApprovalCaptured);
-  var exactTwoFields = previewItems.length === 2
-    && optionalGaps.length === 2
-    && expectedKeys.every(function(key) { return optionalGaps.indexOf(key) >= 0; })
-    && unexpectedKeys.length === 0;
-  var previewReady = fillPlanReady
-    && packageReady
-    && gapReviewReady
-    && requiredPointersReady
-    && backupVisible
-    && trustedSource
-    && previewApproval
-    && exactTwoFields
-    && missingPreviewValues.length === 0
-    && missingCandidates.length === 0
-    && unknownGaps.length === 0
-    && missingRequired.length === 0
-    && missingFields.length === 0
-    && unsafeFields.length === 0;
-  return jsonResponseV19({
-    status: previewReady ? 'fill_preview_ready_exact_two_fields' : 'fill_preview_needs_review',
-    ok: true,
-    mode: 'safe_pointer_gap_fill_preview_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    previewExecuted: true,
-    fillPreviewReady: previewReady,
-    fillPlanReady: fillPlanReady,
-    packageReady: packageReady,
-    gapReviewReady: gapReviewReady,
-    requiredPointersReady: requiredPointersReady,
-    setupAutomationReady: false,
-    readExecuted: false,
-    configReadExecuted: false,
-    notionReadExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    bootstrapExecutionEnabled: false,
-    backupVisible: backupVisible,
-    trustedSourceConfirmed: trustedSource,
-    a1xxPreviewApprovalCaptured: previewApproval,
-    exactTwoFields: exactTwoFields,
-    optionalPointerGaps: optionalGaps,
-    previewItems: previewItems,
-    unexpectedPreviewKeys: unexpectedKeys,
-    missingPreviewValues: missingPreviewValues,
-    missingCandidateValues: missingCandidates,
-    unknownOptionalGaps: unknownGaps,
-    missingRequiredPointers: missingRequired,
-    missingFields: missingFields,
-    unsafeFields: unsafeFields,
-    recommendedDecision: previewReady
-      ? 'confirm_b3_before_exact_two_safe_pointer_write'
-      : 'repair_fill_preview_before_any_write',
-    requiredBeforeAnyFutureWrite: [
-      'A1XX approval for writing only clean_workbook_id and backup_folder_id',
-      'backup verified immediately before write',
-      'B3 confirmation before write',
-      'write only those two safe pointer fields',
-      'readback verification after write',
-      'archive-only recovery if readback fails'
-    ],
-    nextAllowedStepAfterFillPreview: previewReady
-      ? 'safe_pointer_gap_b3_write_confirmation'
-      : 'safe_pointer_gap_fill_preview_repair',
-    blockedActions: [
-      'live master config read',
-      'master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'worker auth',
-      'automation activation',
-      'restore execution',
-      'second-device bootstrap execution'
-    ],
-    safety: {
-      notion: 'No Notion read, create, update, archive, or delete executed.',
-      scope: 'Preview only the exact two safe optional pointer fields from Phase 8P.',
-      sheets: 'No Sheet writes.',
-      drive: 'No Drive writes, moves, renames, shares, restores, or deletes.',
-      auth: 'No login-anywhere, auth sync, token export, or secret export.',
-      recovery: 'No restore or bootstrap execution.'
-    },
-    message: previewReady
-      ? 'Safe pointer gap fill preview is ready. Exact two fields only; no read or write executed.'
-      : 'Safe pointer gap fill preview needs review. No read or write executed.'
   });
 }
 
