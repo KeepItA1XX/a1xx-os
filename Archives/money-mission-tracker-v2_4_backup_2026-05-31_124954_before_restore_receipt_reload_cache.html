@@ -5089,7 +5089,7 @@ var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
 var APP_BUILD_STAMP='2026-05-30 10:28 ET · OS v2_4 Phase 8N Live QA receipt supersede';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8N Live QA receipt supersede';
-var APP_CACHE_TOKEN='mmos-20260531-1249-v24-phase8ah-restore-receipt-reload-cache';
+var APP_CACHE_TOKEN='mmos-20260531-1234-v24-phase8af-8ag-restore-execution-b3-gate-review';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5373,87 +5373,6 @@ function fmtS(s){return pd(s).toLocaleDateString('en-US',{month:'short',day:'num
 function nowMins(){var n=new Date();return n.getHours()*60+n.getMinutes();}
 function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function getStore(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
-var MC_RESTORE_RECEIPT_CACHE_KEY_V24='a1xx_mc_restore_receipt_cache_v24';
-function getRestoreReceiptCacheV24(){
-  var cache=getStore(MC_RESTORE_RECEIPT_CACHE_KEY_V24);
-  return cache&&typeof cache==='object'?cache:{};
-}
-function isRestoreReceiptResultValidV24(phase,result){
-  result=result||{};
-  var expected={
-    phase8y:'second_device_restore_boundary_review_ready',
-    phase8z:'second_device_restore_source_preview_ready',
-    phase8aa:'second_device_restore_source_selection_review_ready',
-    phase8ab:'second_device_restore_integrity_preview_ready',
-    phase8ac:'second_device_restore_execution_boundary_review_ready',
-    phase8ad:'second_device_restore_execution_endpoint_review_ready',
-    phase8ae:'second_device_restore_execution_preflight_review_ready',
-    phase8af8ag:'second_device_restore_execution_b3_gate_review_ready'
-  }[phase]||'';
-  if(!expected||result.status!==expected)return false;
-  if(result.writeExecuted===true||result.writesEnabled===true)return false;
-  if(result.loginAnywhereActive===true||result.secretExport===true||result.tokenExport===true)return false;
-  if(result.restoreEnabled===true||result.restoreExecutionEnabled===true)return false;
-  if(result.workerAuthEnabled===true||result.automationActivationEnabled===true||result.bootstrapExecutionEnabled===true)return false;
-  if(result.safePointerPackageReady===false||result.optionalGapsResolved===false)return false;
-  return true;
-}
-function saveRestoreReceiptStateV24(phase,state){
-  if(!phase||!state||state.passed!==true||!isRestoreReceiptResultValidV24(phase,state.result))return false;
-  var cache=getRestoreReceiptCacheV24();
-  cache[phase]={
-    checkedAt:state.checkedAt||new Date().toISOString(),
-    passed:true,
-    result:state.result||{},
-    previewText:state.previewText||'',
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    cachedAt:new Date().toISOString()
-  };
-  try{
-    localStorage.setItem(MC_RESTORE_RECEIPT_CACHE_KEY_V24,JSON.stringify(cache));
-    return true;
-  }catch(e){
-    return false;
-  }
-}
-function loadRestoreReceiptStateV24(phase,globalKey,renderFn){
-  if(globalKey&&window[globalKey]&&window[globalKey].passed===true)return window[globalKey];
-  var cached=getRestoreReceiptCacheV24()[phase]||null;
-  if(!cached||cached.passed!==true||!isRestoreReceiptResultValidV24(phase,cached.result))return null;
-  var state={
-    checkedAt:cached.checkedAt||cached.cachedAt||new Date().toISOString(),
-    passed:true,
-    result:cached.result||{},
-    previewText:cached.previewText||''
-  };
-  if(globalKey)window[globalKey]=state;
-  if(typeof renderFn==='function')renderFn(state);
-  return state;
-}
-function ensureRestoreBoundaryReceiptV24(){
-  return loadRestoreReceiptStateV24('phase8y','__secondDeviceRestoreBoundaryReviewV24',typeof renderSecondDeviceRestoreBoundaryReviewStateV24==='function'?renderSecondDeviceRestoreBoundaryReviewStateV24:null);
-}
-function ensureRestoreSourcePreviewReceiptV24(){
-  return loadRestoreReceiptStateV24('phase8z','__secondDeviceRestoreSourcePreviewV24',typeof renderSecondDeviceRestoreSourcePreviewStateV24==='function'?renderSecondDeviceRestoreSourcePreviewStateV24:null);
-}
-function ensureRestoreSourceSelectionReceiptV24(){
-  return loadRestoreReceiptStateV24('phase8aa','__secondDeviceRestoreSourceSelectionReviewV24',typeof renderSecondDeviceRestoreSourceSelectionReviewStateV24==='function'?renderSecondDeviceRestoreSourceSelectionReviewStateV24:null);
-}
-function ensureRestoreIntegrityReceiptV24(){
-  return loadRestoreReceiptStateV24('phase8ab','__secondDeviceRestoreIntegrityPreviewV24',typeof renderSecondDeviceRestoreIntegrityPreviewStateV24==='function'?renderSecondDeviceRestoreIntegrityPreviewStateV24:null);
-}
-function ensureRestoreExecutionBoundaryReceiptV24(){
-  return loadRestoreReceiptStateV24('phase8ac','__secondDeviceRestoreExecutionBoundaryReviewV24',typeof renderSecondDeviceRestoreExecutionBoundaryReviewStateV24==='function'?renderSecondDeviceRestoreExecutionBoundaryReviewStateV24:null);
-}
-function ensureRestoreExecutionEndpointReceiptV24(){
-  return loadRestoreReceiptStateV24('phase8ad','__secondDeviceRestoreExecutionEndpointReviewV24',typeof renderSecondDeviceRestoreExecutionEndpointReviewStateV24==='function'?renderSecondDeviceRestoreExecutionEndpointReviewStateV24:null);
-}
-function ensureRestoreExecutionPreflightReceiptV24(){
-  return loadRestoreReceiptStateV24('phase8ae','__secondDeviceRestoreExecutionPreflightReviewV24',typeof renderSecondDeviceRestoreExecutionPreflightReviewStateV24==='function'?renderSecondDeviceRestoreExecutionPreflightReviewStateV24:null);
-}
-function ensureRestoreExecutionB3GateReceiptV24(){
-  return loadRestoreReceiptStateV24('phase8af8ag','__secondDeviceRestoreExecutionB3GateReviewV24',typeof renderSecondDeviceRestoreExecutionB3GateReviewStateV24==='function'?renderSecondDeviceRestoreExecutionB3GateReviewStateV24:null);
-}
 function isStorageQuotaErrorV22(e){
   var name=String(e&&e.name||'').toLowerCase();
   var msg=String(e&&e.message||'').toLowerCase();
@@ -12887,7 +12806,6 @@ async function runSecondDeviceRestoreBoundaryReviewV24(){
     result:result,
     previewText:previewText
   };
-  saveRestoreReceiptStateV24('phase8y',window.__secondDeviceRestoreBoundaryReviewV24);
   renderSecondDeviceRestoreBoundaryReviewStateV24(window.__secondDeviceRestoreBoundaryReviewV24);
   if(status){
     status.className='reset-status '+(clean?'ok':'warn');
@@ -12943,7 +12861,7 @@ function runSecondDeviceRestoreBoundaryReviewSelfCheckV24(){
 }
 
 function runSecondDeviceRestoreBoundaryReviewQACheckV24(){
-  var state=window.__secondDeviceRestoreBoundaryReviewV24||ensureRestoreBoundaryReceiptV24()||null;
+  var state=window.__secondDeviceRestoreBoundaryReviewV24||null;
   if(state&&state.passed===true){
     return {
       passed:true,
@@ -12959,7 +12877,7 @@ function runSecondDeviceRestoreBoundaryReviewQACheckV24(){
 }
 
 function getSecondDeviceRestoreSourcePreviewPayloadV24(){
-  var boundary=window.__secondDeviceRestoreBoundaryReviewV24||ensureRestoreBoundaryReceiptV24()||null;
+  var boundary=window.__secondDeviceRestoreBoundaryReviewV24||null;
   var boundaryResult=boundary&&boundary.result?boundary.result:{};
   var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
   var backup=window.__lastBackupArchiveStatusV22||{};
@@ -13108,7 +13026,7 @@ async function runSecondDeviceRestoreSourcePreviewV24(){
     status.className='reset-status';
     status.textContent='Previewing second-device restore source...';
   }
-  var boundary=window.__secondDeviceRestoreBoundaryReviewV24||ensureRestoreBoundaryReceiptV24()||null;
+  var boundary=window.__secondDeviceRestoreBoundaryReviewV24||null;
   if(!boundary||boundary.passed!==true){
     if(status){
       status.className='reset-status warn';
@@ -13165,7 +13083,6 @@ async function runSecondDeviceRestoreSourcePreviewV24(){
     result:result,
     previewText:previewText
   };
-  saveRestoreReceiptStateV24('phase8z',window.__secondDeviceRestoreSourcePreviewV24);
   renderSecondDeviceRestoreSourcePreviewStateV24(window.__secondDeviceRestoreSourcePreviewV24);
   if(status){
     status.className='reset-status '+(clean?'ok':'warn');
@@ -13221,7 +13138,7 @@ function runSecondDeviceRestoreSourcePreviewSelfCheckV24(){
 }
 
 function runSecondDeviceRestoreSourcePreviewQACheckV24(){
-  var state=window.__secondDeviceRestoreSourcePreviewV24||ensureRestoreSourcePreviewReceiptV24()||null;
+  var state=window.__secondDeviceRestoreSourcePreviewV24||null;
   if(state&&state.passed===true){
     return {
       passed:true,
@@ -13237,7 +13154,7 @@ function runSecondDeviceRestoreSourcePreviewQACheckV24(){
 }
 
 function getSecondDeviceRestoreSourceSelectionReviewPayloadV24(){
-  var sourceState=window.__secondDeviceRestoreSourcePreviewV24||ensureRestoreSourcePreviewReceiptV24()||{};
+  var sourceState=window.__secondDeviceRestoreSourcePreviewV24||{};
   var sourceResult=sourceState.result||{};
   var sourcePassed=!!(sourceState&&sourceState.passed&&sourceResult.status==='second_device_restore_source_preview_ready');
   var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
@@ -13395,7 +13312,7 @@ async function runSecondDeviceRestoreSourceSelectionReviewV24(){
     status.className='reset-status';
     status.textContent='Reviewing second-device restore source selection...';
   }
-  var source=window.__secondDeviceRestoreSourcePreviewV24||ensureRestoreSourcePreviewReceiptV24()||null;
+  var source=window.__secondDeviceRestoreSourcePreviewV24||null;
   if(!source||source.passed!==true){
     if(status){
       status.className='reset-status warn';
@@ -13455,7 +13372,6 @@ async function runSecondDeviceRestoreSourceSelectionReviewV24(){
     result:result,
     previewText:previewText
   };
-  saveRestoreReceiptStateV24('phase8aa',window.__secondDeviceRestoreSourceSelectionReviewV24);
   renderSecondDeviceRestoreSourceSelectionReviewStateV24(window.__secondDeviceRestoreSourceSelectionReviewV24);
   if(status){
     status.className='reset-status '+(clean?'ok':'warn');
@@ -13511,7 +13427,7 @@ function runSecondDeviceRestoreSourceSelectionReviewSelfCheckV24(){
 }
 
 function runSecondDeviceRestoreSourceSelectionReviewQACheckV24(){
-  var state=window.__secondDeviceRestoreSourceSelectionReviewV24||ensureRestoreSourceSelectionReceiptV24()||null;
+  var state=window.__secondDeviceRestoreSourceSelectionReviewV24||null;
   if(state&&state.passed===true){
     return {
       passed:true,
@@ -13527,7 +13443,7 @@ function runSecondDeviceRestoreSourceSelectionReviewQACheckV24(){
 }
 
 function getSecondDeviceRestoreIntegrityPreviewPayloadV24(){
-  var selectionState=window.__secondDeviceRestoreSourceSelectionReviewV24||ensureRestoreSourceSelectionReceiptV24()||{};
+  var selectionState=window.__secondDeviceRestoreSourceSelectionReviewV24||{};
   var selectionResult=selectionState.result||{};
   var selectionPassed=!!(selectionState&&selectionState.passed&&selectionResult.status==='second_device_restore_source_selection_review_ready');
   var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
@@ -13689,7 +13605,7 @@ async function runSecondDeviceRestoreIntegrityPreviewV24(){
     status.className='reset-status';
     status.textContent='Previewing second-device restore integrity...';
   }
-  var selection=window.__secondDeviceRestoreSourceSelectionReviewV24||ensureRestoreSourceSelectionReceiptV24()||null;
+  var selection=window.__secondDeviceRestoreSourceSelectionReviewV24||null;
   if(!selection||selection.passed!==true){
     if(status){
       status.className='reset-status warn';
@@ -13752,7 +13668,6 @@ async function runSecondDeviceRestoreIntegrityPreviewV24(){
     result:result,
     previewText:previewText
   };
-  saveRestoreReceiptStateV24('phase8ab',window.__secondDeviceRestoreIntegrityPreviewV24);
   renderSecondDeviceRestoreIntegrityPreviewStateV24(window.__secondDeviceRestoreIntegrityPreviewV24);
   if(status){
     status.className='reset-status '+(clean?'ok':'warn');
@@ -13808,7 +13723,7 @@ function runSecondDeviceRestoreIntegrityPreviewSelfCheckV24(){
 }
 
 function runSecondDeviceRestoreIntegrityPreviewQACheckV24(){
-  var state=window.__secondDeviceRestoreIntegrityPreviewV24||ensureRestoreIntegrityReceiptV24()||null;
+  var state=window.__secondDeviceRestoreIntegrityPreviewV24||null;
   if(state&&state.passed===true){
     return {
       passed:true,
@@ -13824,7 +13739,7 @@ function runSecondDeviceRestoreIntegrityPreviewQACheckV24(){
 }
 
 function getSecondDeviceRestoreExecutionBoundaryReviewPayloadV24(){
-  var integrityState=window.__secondDeviceRestoreIntegrityPreviewV24||ensureRestoreIntegrityReceiptV24()||{};
+  var integrityState=window.__secondDeviceRestoreIntegrityPreviewV24||{};
   var integrityResult=integrityState.result||{};
   var integrityPassed=!!(integrityState&&integrityState.passed&&integrityResult.status==='second_device_restore_integrity_preview_ready');
   var readiness=typeof getAuthSyncReadinessSnapshotV24==='function'?getAuthSyncReadinessSnapshotV24():{};
@@ -14144,7 +14059,7 @@ async function runSecondDeviceRestoreExecutionBoundaryReviewV24(){
     status.className='reset-status';
     status.textContent='Reviewing second-device restore execution boundary...';
   }
-  var integrity=window.__secondDeviceRestoreIntegrityPreviewV24||ensureRestoreIntegrityReceiptV24()||null;
+  var integrity=window.__secondDeviceRestoreIntegrityPreviewV24||null;
   if(!integrity||integrity.passed!==true){
     if(status){
       status.className='reset-status warn';
@@ -14226,7 +14141,6 @@ async function runSecondDeviceRestoreExecutionBoundaryReviewV24(){
     result:result,
     previewText:previewText
   };
-  saveRestoreReceiptStateV24('phase8ac',window.__secondDeviceRestoreExecutionBoundaryReviewV24);
   renderSecondDeviceRestoreExecutionBoundaryReviewStateV24(window.__secondDeviceRestoreExecutionBoundaryReviewV24);
   if(status){
     status.className='reset-status '+(clean?'ok':'warn');
@@ -14282,7 +14196,7 @@ function runSecondDeviceRestoreExecutionBoundaryReviewSelfCheckV24(){
 }
 
 function runSecondDeviceRestoreExecutionBoundaryReviewQACheckV24(){
-  var state=window.__secondDeviceRestoreExecutionBoundaryReviewV24||ensureRestoreExecutionBoundaryReceiptV24()||null;
+  var state=window.__secondDeviceRestoreExecutionBoundaryReviewV24||null;
   if(state&&state.passed===true){
     return {
       passed:true,
@@ -14298,7 +14212,7 @@ function runSecondDeviceRestoreExecutionBoundaryReviewQACheckV24(){
 }
 
 function getSecondDeviceRestoreExecutionEndpointReviewPayloadV24(){
-  var boundaryState=window.__secondDeviceRestoreExecutionBoundaryReviewV24||ensureRestoreExecutionBoundaryReceiptV24()||{};
+  var boundaryState=window.__secondDeviceRestoreExecutionBoundaryReviewV24||{};
   var boundaryResult=boundaryState.result||{};
   var backup=window.__lastBackupArchiveStatusV22||{};
   var latest=backup.latest||{};
@@ -14589,7 +14503,7 @@ async function runSecondDeviceRestoreExecutionEndpointReviewV24(){
     status.className='reset-status';
     status.textContent='Reviewing second-device restore execution endpoint...';
   }
-  var boundary=window.__secondDeviceRestoreExecutionBoundaryReviewV24||ensureRestoreExecutionBoundaryReceiptV24()||null;
+  var boundary=window.__secondDeviceRestoreExecutionBoundaryReviewV24||null;
   if(!boundary||boundary.passed!==true){
     if(status){
       status.className='reset-status warn';
@@ -14642,7 +14556,6 @@ async function runSecondDeviceRestoreExecutionEndpointReviewV24(){
     result:result,
     previewText:previewText
   };
-  saveRestoreReceiptStateV24('phase8ad',window.__secondDeviceRestoreExecutionEndpointReviewV24);
   renderSecondDeviceRestoreExecutionEndpointReviewStateV24(window.__secondDeviceRestoreExecutionEndpointReviewV24);
   if(status){
     status.className='reset-status '+(clean?'ok':'warn');
@@ -14698,7 +14611,7 @@ function runSecondDeviceRestoreExecutionEndpointReviewSelfCheckV24(){
 }
 
 function runSecondDeviceRestoreExecutionEndpointReviewQACheckV24(){
-  var state=window.__secondDeviceRestoreExecutionEndpointReviewV24||ensureRestoreExecutionEndpointReceiptV24()||null;
+  var state=window.__secondDeviceRestoreExecutionEndpointReviewV24||null;
   if(state&&state.passed===true){
     return {
       passed:true,
@@ -14714,7 +14627,7 @@ function runSecondDeviceRestoreExecutionEndpointReviewQACheckV24(){
 }
 
 function getSecondDeviceRestoreExecutionPreflightReviewPayloadV24(){
-  var endpointState=window.__secondDeviceRestoreExecutionEndpointReviewV24||ensureRestoreExecutionEndpointReceiptV24()||{};
+  var endpointState=window.__secondDeviceRestoreExecutionEndpointReviewV24||{};
   var endpointResult=endpointState.result||{};
   var backup=window.__lastBackupArchiveStatusV22||{};
   var latest=backup.latest||{};
@@ -14954,7 +14867,7 @@ async function runSecondDeviceRestoreExecutionPreflightReviewV24(){
     status.className='reset-status';
     status.textContent='Reviewing second-device restore execution preflight...';
   }
-  var endpoint=window.__secondDeviceRestoreExecutionEndpointReviewV24||ensureRestoreExecutionEndpointReceiptV24()||null;
+  var endpoint=window.__secondDeviceRestoreExecutionEndpointReviewV24||null;
   if(!endpoint||endpoint.passed!==true){
     if(status){
       status.className='reset-status warn';
@@ -15007,7 +14920,6 @@ async function runSecondDeviceRestoreExecutionPreflightReviewV24(){
     result:result,
     previewText:previewText
   };
-  saveRestoreReceiptStateV24('phase8ae',window.__secondDeviceRestoreExecutionPreflightReviewV24);
   renderSecondDeviceRestoreExecutionPreflightReviewStateV24(window.__secondDeviceRestoreExecutionPreflightReviewV24);
   if(status){
     status.className='reset-status '+(clean?'ok':'warn');
@@ -15063,7 +14975,7 @@ function runSecondDeviceRestoreExecutionPreflightReviewSelfCheckV24(){
 }
 
 function runSecondDeviceRestoreExecutionPreflightReviewQACheckV24(){
-  var state=window.__secondDeviceRestoreExecutionPreflightReviewV24||ensureRestoreExecutionPreflightReceiptV24()||null;
+  var state=window.__secondDeviceRestoreExecutionPreflightReviewV24||null;
   if(state&&state.passed===true){
     return {
       passed:true,
@@ -15079,7 +14991,7 @@ function runSecondDeviceRestoreExecutionPreflightReviewQACheckV24(){
 }
 
 function getSecondDeviceRestoreExecutionB3GateReviewPayloadV24(){
-  var preflightState=window.__secondDeviceRestoreExecutionPreflightReviewV24||ensureRestoreExecutionPreflightReceiptV24()||{};
+  var preflightState=window.__secondDeviceRestoreExecutionPreflightReviewV24||{};
   var preflightResult=preflightState.result||{};
   var backup=window.__lastBackupArchiveStatusV22||{};
   var latest=backup.latest||{};
@@ -15337,7 +15249,7 @@ async function runSecondDeviceRestoreExecutionB3GateReviewV24(){
     status.className='reset-status';
     status.textContent='Reviewing second-device restore execution B3 gate...';
   }
-  var preflight=window.__secondDeviceRestoreExecutionPreflightReviewV24||ensureRestoreExecutionPreflightReceiptV24()||null;
+  var preflight=window.__secondDeviceRestoreExecutionPreflightReviewV24||null;
   if(!preflight||preflight.passed!==true){
     if(status){
       status.className='reset-status warn';
@@ -15393,7 +15305,6 @@ async function runSecondDeviceRestoreExecutionB3GateReviewV24(){
     result:result,
     previewText:previewText
   };
-  saveRestoreReceiptStateV24('phase8af8ag',window.__secondDeviceRestoreExecutionB3GateReviewV24);
   renderSecondDeviceRestoreExecutionB3GateReviewStateV24(window.__secondDeviceRestoreExecutionB3GateReviewV24);
   if(status){
     status.className='reset-status '+(clean?'ok':'warn');
@@ -15449,7 +15360,7 @@ function runSecondDeviceRestoreExecutionB3GateReviewSelfCheckV24(){
 }
 
 function runSecondDeviceRestoreExecutionB3GateReviewQACheckV24(){
-  var state=window.__secondDeviceRestoreExecutionB3GateReviewV24||ensureRestoreExecutionB3GateReceiptV24()||null;
+  var state=window.__secondDeviceRestoreExecutionB3GateReviewV24||null;
   if(state&&state.passed===true){
     return {
       passed:true,
