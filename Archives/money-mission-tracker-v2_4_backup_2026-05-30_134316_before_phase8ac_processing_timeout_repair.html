@@ -5038,7 +5038,7 @@ var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
 var APP_BUILD_STAMP='2026-05-30 10:28 ET · OS v2_4 Phase 8N Live QA receipt supersede';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8N Live QA receipt supersede';
-var APP_CACHE_TOKEN='mmos-20260530-1343-v24-phase8ac-processing-timeout-repair';
+var APP_CACHE_TOKEN='mmos-20260530-1328-v24-phase8ac-second-device-restore-execution-boundary-review';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -13858,7 +13858,7 @@ async function runSecondDeviceRestoreExecutionBoundaryReviewV24(){
   }
   if(typeof refreshAuthSyncReadinessV24==='function')await refreshAuthSyncReadinessV24();
   var payload=getSecondDeviceRestoreExecutionBoundaryReviewPayloadV24();
-  var result=await getAppsScriptJson('second_device_restore_execution_boundary_review',payload,{timeoutMs:26000,tries:1});
+  var result=await getAppsScriptJson('second_device_restore_execution_boundary_review',payload,{timeoutMs:16000,tries:1});
   var missingRequired=(result&&result.missingRequiredPointers)||[];
   var optionalGaps=(result&&result.optionalPointerGaps)||[];
   var missingGate=(result&&result.missingGateItems)||[];
@@ -16626,16 +16626,9 @@ function makeGlobalDoneLabelV23(label){
   if(/restore/i.test(label||''))return 'Restore check complete.';
   return clean+' complete.';
 }
-function getGlobalProcessingActionTimeoutMsV24(label){
-  var text=String(label||'');
-  if(/backup|Live QA|exact safe pointer write|restore|master config|Notion/i.test(text))return 45000;
-  if(/registry|Setup Doctor|bridge|probe/i.test(text))return 30000;
-  return 28000;
-}
 async function withGlobalProcessingActionV23(label,fn,button,doneLabel){
   var runId=startGlobalProcessingV23(label||'Working');
   var original='';
-  var actionTimer=null;
   if(button){
     original=button.textContent;
     button.disabled=true;
@@ -16645,27 +16638,10 @@ async function withGlobalProcessingActionV23(label,fn,button,doneLabel){
   }
   try{
     await waitForDiagnosticsActionPaintV22();
-    var actionTimeoutMs=getGlobalProcessingActionTimeoutMsV24(label);
-    var result=await Promise.race([
-      Promise.resolve().then(fn),
-      new Promise(function(resolve,reject){
-        actionTimer=setTimeout(function(){
-          actionTimer=null;
-          reject(new Error((label||'Action')+' timed out after '+Math.round(actionTimeoutMs/1000)+' seconds. No protected action was enabled.'));
-        },actionTimeoutMs);
-      })
-    ]);
-    if(actionTimer){
-      clearTimeout(actionTimer);
-      actionTimer=null;
-    }
+    var result=await Promise.resolve().then(fn);
     finishGlobalProcessingV23(runId,doneLabel||makeGlobalDoneLabelV23(label),'done');
     return result;
   }catch(e){
-    if(actionTimer){
-      clearTimeout(actionTimer);
-      actionTimer=null;
-    }
     var msg=e&&e.message?e.message:String(e);
     finishGlobalProcessingV23(runId,'Review needed: '+msg.slice(0,110),'warn');
     try{console.warn('Global processing action failed:',e);}catch(_){}
