@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260531-1234-v24-phase8af-8ag-restore-execution-b3-gate-review';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260531-1204-v24-phase8ae-restore-execution-preflight-review';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -321,7 +321,6 @@ function doGet(e) {
     if (e.parameter.action === 'second_device_restore_execution_boundary_review') return getSecondDeviceRestoreExecutionBoundaryReviewV19(e.parameter);
     if (e.parameter.action === 'second_device_restore_execution_endpoint_review') return getSecondDeviceRestoreExecutionEndpointReviewV19(e.parameter);
     if (e.parameter.action === 'second_device_restore_execution_preflight_review') return getSecondDeviceRestoreExecutionPreflightReviewV19(e.parameter);
-    if (e.parameter.action === 'second_device_restore_execution_b3_gate_review') return getSecondDeviceRestoreExecutionB3GateReviewV19(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_readback') return getDriveFileIndexPointerReadbackV19(e.parameter);
     if (e.parameter.action === 'daily_log')           return getDailyLog(e);
     if (e.parameter.action === 'prospect_log')        return getProspectLog(e);
@@ -5729,202 +5728,6 @@ function getSecondDeviceRestoreExecutionPreflightReviewV19(input) {
     message: preflightReady
       ? 'Second-device restore execution preflight review is ready. Restore execution remains blocked.'
       : 'Second-device restore execution preflight review needs review. No restore execution ran.'
-  });
-}
-
-function getSecondDeviceRestoreExecutionB3GateReviewV19(input) {
-  var payload = input || {};
-  var checkedAt = new Date().toISOString();
-  var expectedConfirmationText = 'B3 CONFIRM RESTORE EXECUTION GATE';
-  var confirmationText = cellTextV19(payload.confirmationText || '', 120);
-  var preflightReceipt = parseMasterConfigJsonParamV19(payload.executionPreflightReviewReceiptJson || payload.executionPreflightReviewReceipt, {});
-  var unsafe = detectUnsafeMasterConfigReadSkeletonInputV19({
-    sourceBuild: payload.sourceBuild || '',
-    targetDeviceLabel: payload.targetDeviceLabel || '',
-    preflightReviewStatus: preflightReceipt.status || '',
-    selectedRestoreSourceMarker: payload.selectedRestoreSourceMarker || preflightReceipt.selectedRestoreSourceMarker || ''
-  });
-  var preflightReady = !!(
-    normalizeBooleanV19(payload.phase8aePreflightReviewReady) ||
-    (
-      preflightReceipt &&
-      preflightReceipt.status === 'second_device_restore_execution_preflight_review_ready' &&
-      preflightReceipt.preflightReviewReady === true &&
-      preflightReceipt.backupVerified === true &&
-      preflightReceipt.restoreExecutionEnabled === false &&
-      preflightReceipt.bootstrapExecutionEnabled === false &&
-      preflightReceipt.futureRestoreEndpointActive === false &&
-      preflightReceipt.restoreEndpointActive === false
-    )
-  );
-  var selectedRestoreSourceMarker = cellTextV19(
-    payload.selectedRestoreSourceMarker || preflightReceipt.selectedRestoreSourceMarker || preflightReceipt.latestBackupMarker || '',
-    160
-  );
-  var selectedRestoreSourceRow = cellTextV19(
-    payload.selectedRestoreSourceRow || preflightReceipt.selectedRestoreSourceRow || preflightReceipt.latestBackupRow || '',
-    80
-  );
-  var latestBackupMarker = cellTextV19(
-    payload.latestBackupMarker || preflightReceipt.latestBackupMarker || selectedRestoreSourceMarker || '',
-    160
-  );
-  var latestBackupRow = cellTextV19(
-    payload.latestBackupRow || preflightReceipt.latestBackupRow || selectedRestoreSourceRow || '',
-    80
-  );
-  var cleanWorkbookId = cellTextV19(payload.cleanWorkbookId || preflightReceipt.cleanWorkbookId || '', 220);
-  var backupFolderId = cellTextV19(payload.backupFolderId || preflightReceipt.backupFolderId || '', 220);
-  var backupVerified = !!(normalizeBooleanV19(payload.backupVerified) || latestBackupMarker || preflightReceipt.backupVerified === true);
-  var b3Confirmed = !!(
-    normalizeBooleanV19(payload.b3Confirmed) &&
-    confirmationText === expectedConfirmationText
-  );
-  var b3ArmedAt = cellTextV19(payload.b3ArmedAt || checkedAt, 80);
-  var missingGateItems = [];
-  if (!preflightReady) missingGateItems.push('Phase 8AE second-device restore execution preflight review');
-  if (!backupVerified) missingGateItems.push('fresh backup verification');
-  if (!b3Confirmed) missingGateItems.push('B3 confirmation text');
-  if (!selectedRestoreSourceMarker) missingGateItems.push('selectedRestoreSourceMarker');
-  if (!cleanWorkbookId) missingGateItems.push('clean_workbook_id');
-  if (!backupFolderId) missingGateItems.push('backup_folder_id');
-  var gateItems = [
-    {
-      key: 'phase8ae_preflight_receipt',
-      label: 'Phase 8AE restore execution preflight review receipt is present',
-      value: preflightReceipt.status || '',
-      mode: 'review_only',
-      status: preflightReady ? 'Ready' : 'Review'
-    },
-    {
-      key: 'b3_confirmation_exact_text',
-      label: 'B3 confirmation is armed for the final restore execution gate only',
-      value: confirmationText,
-      mode: 'b3_confirmation',
-      status: b3Confirmed ? 'Armed' : 'Review'
-    },
-    {
-      key: 'fresh_backup_visible',
-      label: 'Fresh backup marker remains visible before any later restore execution',
-      value: latestBackupMarker,
-      mode: 'read_only',
-      status: backupVerified ? 'Ready' : 'Review'
-    },
-    {
-      key: 'exact_restore_source_locked',
-      label: 'Selected restore source marker is locked for the future execution phase',
-      value: selectedRestoreSourceMarker,
-      mode: 'final_gate_review_only',
-      status: selectedRestoreSourceMarker ? 'Ready' : 'Review'
-    },
-    {
-      key: 'exact_restore_target_locked',
-      label: 'Clean workbook target pointer is locked for future execution review',
-      pointerKey: 'clean_workbook_id',
-      value: cleanWorkbookId,
-      mode: 'final_gate_review_only',
-      status: cleanWorkbookId ? 'Ready' : 'Review'
-    },
-    {
-      key: 'restore_source_folder_locked',
-      label: 'Backup folder source pointer is locked for future execution review',
-      pointerKey: 'backup_folder_id',
-      value: backupFolderId,
-      mode: 'final_gate_review_only',
-      status: backupFolderId ? 'Ready' : 'Review'
-    },
-    {
-      key: 'actual_restore_requires_separate_phase',
-      label: 'Actual restore execution still requires a later separate approval and execution phase',
-      mode: 'safety_boundary',
-      status: 'Blocked'
-    },
-    {
-      key: 'protected_actions_locked',
-      label: 'Login-anywhere, auth sync, token export, secret export, worker auth, automations, and bootstrap execution remain blocked',
-      mode: 'safety_boundary',
-      status: 'Blocked'
-    }
-  ];
-  var requiredBeforeActualExecution = [
-    'fresh backup verified immediately before restore execution',
-    'separate A1XX approval for actual restore execution',
-    'explicit second-device identity confirmation',
-    'exact selected backup marker confirmed',
-    'actual restore execution endpoint reviewed and activated in its own phase',
-    'restore execution receipt returned',
-    'restore readback verification after execution',
-    'archive-only recovery if readback fails'
-  ];
-  var gateReviewReady = !!(
-    preflightReady &&
-    backupVerified &&
-    b3Confirmed &&
-    selectedRestoreSourceMarker &&
-    cleanWorkbookId &&
-    backupFolderId &&
-    missingGateItems.length === 0 &&
-    unsafe.length === 0
-  );
-  return jsonResponseV19({
-    status: gateReviewReady ? 'second_device_restore_execution_b3_gate_review_ready' : 'second_device_restore_execution_b3_gate_review_needs_review',
-    ok: true,
-    mode: 'second_device_restore_execution_b3_gate_review_only',
-    build: OS_REGISTRY_SUMMARY_BUILD_V19,
-    checkedAt: checkedAt,
-    b3GateReviewExecuted: true,
-    b3GateReviewReady: gateReviewReady,
-    finalExecutionGateReviewed: gateReviewReady,
-    phase8aePreflightReviewReady: preflightReady,
-    b3Confirmed: b3Confirmed,
-    b3ArmedAt: b3ArmedAt,
-    confirmationText: confirmationText,
-    expectedConfirmationText: expectedConfirmationText,
-    backupVerified: backupVerified,
-    latestBackupMarker: latestBackupMarker,
-    latestBackupRow: latestBackupRow,
-    selectedRestoreSourceMarker: selectedRestoreSourceMarker,
-    selectedRestoreSourceRow: selectedRestoreSourceRow,
-    cleanWorkbookId: cleanWorkbookId,
-    backupFolderId: backupFolderId,
-    targetDeviceLabel: cellTextV19(payload.targetDeviceLabel || preflightReceipt.targetDeviceLabel || 'second device', 120),
-    readExecuted: false,
-    configReadExecuted: false,
-    notionReadExecuted: false,
-    writeExecuted: false,
-    writesEnabled: false,
-    loginAnywhereActive: false,
-    secretExport: false,
-    tokenExport: false,
-    restoreEnabled: false,
-    restoreExecutionEnabled: false,
-    workerAuthEnabled: false,
-    automationActivationEnabled: false,
-    bootstrapExecutionEnabled: false,
-    setupAutomationReady: false,
-    futureRestoreEndpointActive: false,
-    restoreEndpointActive: false,
-    gateReviewItems: gateItems,
-    requiredBeforeActualExecution: requiredBeforeActualExecution,
-    missingGateItems: missingGateItems,
-    unsafeFields: unsafe,
-    nextAllowedStepAfterExecutionB3GateReview: gateReviewReady
-      ? 'second_device_restore_execution_actual_run_approval'
-      : 'second_device_restore_execution_b3_gate_review_repair',
-    blockedActions: [
-      'live master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'restore execution',
-      'worker auth',
-      'automation activation',
-      'second-device bootstrap execution'
-    ],
-    message: gateReviewReady
-      ? 'Second-device restore execution B3 and final gate review is ready. Actual restore execution remains blocked for a later separate phase.'
-      : 'Second-device restore execution B3 and final gate review needs review. No restore execution ran.'
   });
 }
 
