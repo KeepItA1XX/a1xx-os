@@ -5038,7 +5038,7 @@ var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
 var APP_BUILD_STAMP='2026-05-30 10:28 ET · OS v2_4 Phase 8N Live QA receipt supersede';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8N Live QA receipt supersede';
-var APP_CACHE_TOKEN='mmos-20260531-1129-v24-phase8ac-local-fallback-repair';
+var APP_CACHE_TOKEN='mmos-20260530-1343-v24-phase8ac-processing-timeout-repair';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -13717,67 +13717,6 @@ function getSecondDeviceRestoreExecutionBoundaryReviewPayloadV24(){
   };
 }
 
-function buildSecondDeviceRestoreExecutionBoundaryFallbackV24(payload,err){
-  payload=payload||{};
-  var msg=(err&&err.message)?err.message:String(err||'No endpoint response returned.');
-  return {
-    status:'second_device_restore_execution_boundary_review_needs_review',
-    mode:'second_device_restore_execution_boundary_review_only',
-    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown',
-    boundaryReviewExecuted:false,
-    boundaryReviewReady:false,
-    readExecuted:false,
-    configReadExecuted:false,
-    notionReadExecuted:false,
-    writeExecuted:false,
-    writesEnabled:false,
-    loginAnywhereActive:false,
-    secretExport:false,
-    tokenExport:false,
-    restoreEnabled:false,
-    restoreExecutionEnabled:false,
-    workerAuthEnabled:false,
-    automationActivationEnabled:false,
-    bootstrapExecutionEnabled:false,
-    setupAutomationPreviewReady:false,
-    setupAutomationReady:false,
-    phase8abIntegrityPreviewReady:!!payload.phase8abIntegrityPreviewReady,
-    safePointerPackageReady:false,
-    optionalGapsResolved:false,
-    requestedPageId:'',
-    locatorShapeOk:false,
-    latestBackupMarker:payload.latestBackupMarker||'',
-    latestBackupRow:payload.latestBackupRow||'',
-    selectedRestoreSourceMarker:payload.selectedRestoreSourceMarker||'',
-    selectedRestoreSourceRow:payload.selectedRestoreSourceRow||'',
-    cleanWorkbookId:'',
-    backupFolderId:'',
-    targetDeviceLabel:payload.targetDeviceLabel||'second device',
-    safeSectionFound:false,
-    blockCountRead:0,
-    pointerRows:[],
-    executionBoundaryItems:[
-      {key:'endpoint_response',status:'Review',mode:'local_fallback_only',label:'Phase 8AC endpoint did not return before the local safety timeout'}
-    ],
-    missingRequiredPointers:[],
-    optionalPointerGaps:[],
-    missingGateItems:['Phase 8AC endpoint response'],
-    unsafeFields:[],
-    nextAllowedStepAfterExecutionBoundaryReview:'second_device_restore_execution_boundary_review',
-    blockedActions:[
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'restore execution',
-      'worker auth',
-      'automation activation',
-      'second-device bootstrap execution'
-    ],
-    message:'Second-device restore execution boundary review timed out locally: '+msg+'. No restore execution ran.'
-  };
-}
-
 function formatSecondDeviceRestoreExecutionBoundaryReviewV24(result){
   result=result||{};
   var rows=result.pointerRows||[];
@@ -13917,26 +13856,9 @@ async function runSecondDeviceRestoreExecutionBoundaryReviewV24(){
       failures:['Phase 8AB second-device restore integrity preview receipt']
     };
   }
-  if(typeof refreshAuthSyncReadinessV24==='function'){
-    try{
-      await Promise.race([
-        refreshAuthSyncReadinessV24(),
-        new Promise(function(resolve){setTimeout(resolve,6500);})
-      ]);
-    }catch(_){}
-  }
+  if(typeof refreshAuthSyncReadinessV24==='function')await refreshAuthSyncReadinessV24();
   var payload=getSecondDeviceRestoreExecutionBoundaryReviewPayloadV24();
-  var result=null;
-  try{
-    result=await Promise.race([
-      getAppsScriptJson('second_device_restore_execution_boundary_review',payload,{timeoutMs:22000,tries:1}),
-      new Promise(function(resolve,reject){
-        setTimeout(function(){reject(new Error('Phase 8AC endpoint response timed out after 30 seconds.'));},30000);
-      })
-    ]);
-  }catch(err){
-    result=buildSecondDeviceRestoreExecutionBoundaryFallbackV24(payload,err);
-  }
+  var result=await getAppsScriptJson('second_device_restore_execution_boundary_review',payload,{timeoutMs:26000,tries:1});
   var missingRequired=(result&&result.missingRequiredPointers)||[];
   var optionalGaps=(result&&result.optionalPointerGaps)||[];
   var missingGate=(result&&result.missingGateItems)||[];
