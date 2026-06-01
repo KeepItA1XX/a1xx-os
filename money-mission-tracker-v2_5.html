@@ -570,6 +570,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rp-skill-score{font-size:10px;color:#7ec845;font-weight:900}
 .rp-skill-track{height:5px;background:#050607;border-radius:4px;overflow:hidden}
 .rp-skill-fill{height:100%;background:#7ec845;border-radius:4px}
+.account-mission-shell{display:grid;gap:10px}
+.account-mission-hero{background:#081007;border:0.5px solid #26381c;border-radius:12px;padding:12px}
+.account-mission-kicker{font-size:9px;color:#7ec845;text-transform:uppercase;letter-spacing:.11em;font-weight:900;margin-bottom:4px}
+.account-mission-title{font-size:16px;color:#f0f3f5;font-weight:900;line-height:1.25}
+.account-mission-copy{font-size:11px;color:#8b949e;line-height:1.5;margin-top:4px}
+.mission-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mission-mini-card{background:#090b0d;border:0.5px solid #1d252c;border-radius:9px;padding:9px}
+.mission-mini-label{font-size:8px;color:#68727c;text-transform:uppercase;letter-spacing:.07em;font-weight:900;margin-bottom:4px}
+.mission-mini-value{font-size:12px;color:#d7dde3;font-weight:900;line-height:1.3}
+.mission-mini-source{font-size:9px;color:#5f6870;line-height:1.35;margin-top:4px}
 .auth-screen{position:fixed;inset:0;z-index:12000;background:radial-gradient(circle at top,#13200b 0%,#090a0b 42%,#040506 100%);display:none;align-items:center;justify-content:center;padding:22px}
 .auth-screen.active{display:flex}
 .auth-card{width:min(92vw,420px);background:rgba(12,15,18,.94);border:1px solid #27323b;border-radius:16px;padding:24px;box-shadow:0 22px 70px rgba(0,0,0,.55)}
@@ -2277,7 +2287,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
       <div class="identity-greeting" id="identity-greeting">Welcome back, <strong>Executive Producer</strong>.</div>
     </div>
   </div>
-  <!-- RIGHT: saved tags + streak + cycle stack -->
+  <!-- RIGHT: saved tags + cycle stack -->
   <div class="topright">
     <div class="mc-notify-wrap">
       <button class="mc-notify-bell" id="mc-notify-bell" type="button" aria-label="Open notifications" onclick="mcToggleNotificationPanelV10()">
@@ -2291,8 +2301,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
     </div>
     <span class="tag green" id="saved-tag">Saved</span>
     <span class="tag blue" id="synced-tag">Synced</span>
-    <div class="streak" style="margin-top:14px"><span style="font-size:12px">🔥</span><span class="streak-num" id="streak-n">0</span><span class="streak-lbl">week streak</span></div>
-    <div class="streak close-streak" style="margin-top:14px"><span style="font-size:12px">💰</span><span class="streak-num" id="close-streak-n">0</span><span class="streak-lbl">close streak</span></div>
     <div class="cycle-stack">
       <div style="font-size:8px;color:#7ec845;text-transform:uppercase;letter-spacing:.14em;font-weight:900;margin-bottom:2px">v2.5 Alpha</div>
       <div class="cycle-pill" id="cycle-pill">Cycle 1 · Loading...</div>
@@ -2335,6 +2343,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   <div id="sync-todoist"></div>
   <div id="sync-notion"></div>
   <div id="sync-cal"></div>
+  <span id="streak-n">0</span>
+  <span id="close-streak-n">0</span>
 </div>
 
 <!-- SETTINGS / SYSTEM HUB -->
@@ -2363,10 +2373,62 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 
     <div class="settings-pane active" id="settings-pane-account">
       <div class="settings-subtabs">
-        <button type="button" class="settings-subtab active" data-account-subtab="profile" onclick="setAccountSubTab('profile')">Profile</button>
+        <button type="button" class="settings-subtab active" data-account-subtab="mission" onclick="setAccountSubTab('mission')">Mission</button>
+        <button type="button" class="settings-subtab" data-account-subtab="profile" onclick="setAccountSubTab('profile')">Profile</button>
         <button type="button" class="settings-subtab" data-account-subtab="signin" onclick="setAccountSubTab('signin')">Sign-In</button>
       </div>
-      <div class="account-subpane active" id="account-subpane-profile">
+      <div class="account-subpane active" id="account-subpane-mission">
+        <div class="account-mission-shell">
+          <div class="account-mission-hero">
+            <div class="account-mission-kicker">Account Mission</div>
+            <div class="account-mission-title">Operator career mode</div>
+            <div class="account-mission-copy">Profile, streaks, attributes, source trust, and future achievements live here so the home screen stays clean.</div>
+          </div>
+          <div class="rolodex-profile">
+            <div class="rp-top">
+              <div>
+                <div class="rp-label">Executive Producer Profile</div>
+                <div class="rp-name" id="rp-name">A1XX</div>
+                <div class="rp-sub" id="rp-summary">Money Mission player card loading from your current mission data.</div>
+              </div>
+              <div class="rp-level">
+                <div class="rp-level-num" id="rp-level">1</div>
+                <div class="rp-level-lbl">Cycle Level</div>
+              </div>
+            </div>
+            <div class="rp-stats">
+              <div class="rp-stat"><div class="rp-stat-val" id="rp-rev">$0</div><div class="rp-stat-lbl">Revenue</div></div>
+              <div class="rp-stat"><div class="rp-stat-val" id="rp-streak">0</div><div class="rp-stat-lbl">Content Streak</div></div>
+              <div class="rp-stat"><div class="rp-stat-val" id="rp-dms">0</div><div class="rp-stat-lbl">DMs Logged</div></div>
+              <div class="rp-stat"><div class="rp-stat-val" id="rp-active">0</div><div class="rp-stat-lbl">Active Assets</div></div>
+            </div>
+            <div class="rp-skill-bars" id="rp-skill-bars"></div>
+          </div>
+          <div class="mission-mini-grid">
+            <div class="mission-mini-card">
+              <div class="mission-mini-label">Weekly Streak</div>
+              <div class="mission-mini-value" id="mission-weekly-streak">0 weeks</div>
+              <div class="mission-mini-source">Source: tracked weekly save chain</div>
+            </div>
+            <div class="mission-mini-card">
+              <div class="mission-mini-label">Close Streak</div>
+              <div class="mission-mini-value" id="mission-close-streak">0 days</div>
+              <div class="mission-mini-source">Source: tracked close log</div>
+            </div>
+            <div class="mission-mini-card">
+              <div class="mission-mini-label">Mission Contract</div>
+              <div class="mission-mini-value">Phase 9F ready</div>
+              <div class="mission-mini-source">Source: local contract receipt</div>
+            </div>
+            <div class="mission-mini-card">
+              <div class="mission-mini-label">Next Build</div>
+              <div class="mission-mini-value">Scoreboard</div>
+              <div class="mission-mini-source">Phase 9H will derive panels from tracked data only</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="account-subpane" id="account-subpane-profile">
         <div class="settings-section">
           <div class="settings-section-title">Account / Profile</div>
           <div class="settings-list">
@@ -3519,6 +3581,21 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <button class="btn" onclick="copyPhase9FAccountMissionContractsV25()">Copy Phase 9F</button>
           </div>
           <div class="reset-status" id="phase9f-mission-status"></div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Account Mission Tab Shell</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Phase 9G scope</div><div class="settings-row-meta" id="phase9g-mission-scope">Install Account &gt; Mission as the operator career-mode shell. No fake unlocks or autonomous actions.</div></div><span class="settings-badge" id="phase9g-mission-scope-badge">Shell</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Profile relocation</div><div class="settings-row-meta" id="phase9g-mission-profile">A1XX player card moved from Rolodex into Account &gt; Mission.</div></div><span class="settings-badge off" id="phase9g-mission-profile-badge">Profile</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Home cleanup</div><div class="settings-row-meta" id="phase9g-mission-home">Weekly streak and close streak are removed from the home topbar and shown inside Mission.</div></div><span class="settings-badge off" id="phase9g-mission-home-badge">Clean</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta" id="phase9g-mission-blocked">No login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, or bootstrap execution.</div></div><span class="settings-badge warn" id="phase9g-mission-blocked-badge">Blocked</span></div>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn primary" onclick="runPhase9GAccountMissionTabShellV25()">Refresh Mission shell</button>
+            <button class="btn" onclick="setSettingsTab('account');setAccountSubTab('mission')">Open Mission</button>
+            <button class="btn" onclick="copyPhase9GAccountMissionTabShellV25()">Copy Phase 9G</button>
+          </div>
+          <div class="reset-status" id="phase9g-mission-status"></div>
         </div>
       </div>
       <div class="health-subpane" id="health-subpane-backups">
@@ -5244,27 +5321,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 <!-- ═══════════════════════════════════════════ ROLODEX TAB ══ -->
 <div id="pane-rolodex" style="display:none">
 
-<div class="rolodex-profile">
-  <div class="rp-top">
-    <div>
-      <div class="rp-label">Executive Producer Profile</div>
-      <div class="rp-name" id="rp-name">A1XX</div>
-      <div class="rp-sub" id="rp-summary">Money Mission player card loading from your current mission data.</div>
-    </div>
-    <div class="rp-level">
-      <div class="rp-level-num" id="rp-level">1</div>
-      <div class="rp-level-lbl">Cycle Level</div>
-    </div>
-  </div>
-  <div class="rp-stats">
-    <div class="rp-stat"><div class="rp-stat-val" id="rp-rev">$0</div><div class="rp-stat-lbl">Revenue</div></div>
-    <div class="rp-stat"><div class="rp-stat-val" id="rp-streak">0</div><div class="rp-stat-lbl">Content Streak</div></div>
-    <div class="rp-stat"><div class="rp-stat-val" id="rp-dms">0</div><div class="rp-stat-lbl">DMs Logged</div></div>
-    <div class="rp-stat"><div class="rp-stat-val" id="rp-active">0</div><div class="rp-stat-lbl">Active Assets</div></div>
-  </div>
-  <div class="rp-skill-bars" id="rp-skill-bars"></div>
-</div>
-
 <div class="rolodex-search">
   <div class="rolodex-search-shell">
     <div class="rolodex-search-icon">⌕</div>
@@ -5345,9 +5401,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 15:46 ET · OS v2_5 Phase 9F Account Mission Contracts';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9F Account Mission Contracts';
-var APP_CACHE_TOKEN='mmos-20260601-1546-v25-phase9f-account-mission-contracts';
+var APP_BUILD_STAMP='2026-06-01 16:01 ET · OS v2_5 Phase 9G Account Mission Tab Shell';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9G Account Mission Tab Shell';
+var APP_CACHE_TOKEN='mmos-20260601-1601-v25-phase9g-account-mission-tab-shell';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8190,7 +8246,7 @@ function renderMasterConfigReadSkeletonStateV24(state){
 function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
   var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
   var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[def]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defg]/.test(APP_CACHE_TOKEN);
   var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
   var result={
     status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
@@ -17698,7 +17754,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdef]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefg]/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -17718,7 +17774,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[abcdef]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[abcdefg]/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -18031,7 +18087,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdef]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefg]/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -18300,7 +18356,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdef]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefg]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -18326,7 +18382,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdef]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefg]/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -18519,7 +18575,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdef]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefg]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -18794,7 +18850,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[def]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defg]/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -18973,7 +19029,7 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[def]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defg]/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
@@ -18989,7 +19045,7 @@ function phase9EFunctionContainsV25(fn,needle){
 
 function getPhase9ENotificationEventWiringResultV25(){
   var log=mcReadNotificationLogV10();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[ef]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efg]/.test(APP_CACHE_TOKEN);
   var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
   var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
   var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
@@ -19183,7 +19239,7 @@ async function copyPhase9ENotificationEventWiringV25(){
 }
 
 function runPhase9ENotificationEventWiringQACheckV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[ef]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efg]/.test(APP_CACHE_TOKEN);
   var result=getPhase9ENotificationEventWiringResultV25();
   if(buildOk&&result.notificationEventWiringReady){
     renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
@@ -19316,7 +19372,7 @@ function getPhase9FNotificationContractMapV25(){
 }
 
 function getPhase9FAccountMissionContractsResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9f/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[fg]/.test(APP_CACHE_TOKEN);
   var phase9EReady=typeof runPhase9ENotificationEventWiringQACheckV25==='function'&&runPhase9ENotificationEventWiringQACheckV25().passed===true;
   var duplicateStatus=getAccountMissionContractDuplicateStatusV25();
   var notificationMap=getPhase9FNotificationContractMapV25();
@@ -19551,6 +19607,214 @@ function runPhase9FAccountMissionContractsQACheckV25(){
     return {passed:true,meta:'Phase 9F Account Mission contracts are installed · Entrepreneur MyPLAYER progression contract ready · no unlock execution.',failures:[]};
   }
   return {passed:false,meta:'Phase 9F Account Mission contracts need review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9F Account Mission contracts']};
+}
+
+var PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25='a1xx_phase9g_account_mission_tab_shell_v1';
+
+function getPhase9GAccountMissionTabShellResultV25(){
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9g/.test(APP_CACHE_TOKEN);
+  var phase9FReady=typeof runPhase9FAccountMissionContractsQACheckV25==='function'&&runPhase9FAccountMissionContractsQACheckV25().passed===true;
+  var missionButton=!!document.querySelector('[data-account-subtab="mission"]');
+  var missionPane=document.getElementById('account-subpane-mission');
+  var profileCard=document.getElementById('rp-name');
+  var profileInMission=!!(missionPane&&profileCard&&missionPane.contains(profileCard));
+  var profileInRolodex=!!document.querySelector('#pane-rolodex .rolodex-profile');
+  var homeStreakPills=document.querySelectorAll('.topright .streak').length;
+  var hiddenWeekly=!!document.getElementById('streak-n');
+  var hiddenClose=!!document.getElementById('close-streak-n');
+  var missionStatsReady=!!(document.getElementById('mission-weekly-streak')&&document.getElementById('mission-close-streak'));
+  var renderReady=typeof renderAccountMissionProfileV25==='function';
+  var ready=!!(buildOk&&phase9FReady&&missionButton&&missionPane&&profileInMission&&!profileInRolodex&&homeStreakPills===0&&hiddenWeekly&&hiddenClose&&missionStatsReady&&renderReady);
+  return {
+    status:ready?'phase9g_account_mission_tab_shell_ready':'phase9g_account_mission_tab_shell_needs_review',
+    mode:'phase9g_account_mission_tab_shell',
+    accountMissionTabShellReady:ready,
+    appVersion:typeof APP_VERSION!=='undefined'?APP_VERSION:'',
+    appFile:typeof APP_BUILD_FILE!=='undefined'?APP_BUILD_FILE:'',
+    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
+    phase9FContractsReady:phase9FReady,
+    missionSubtabInstalled:missionButton,
+    missionPaneInstalled:!!missionPane,
+    profileRelocatedToMission:profileInMission,
+    rolodexProfileRemoved:!profileInRolodex,
+    homeTopbarStreakPillsRemoved:homeStreakPills===0,
+    hiddenStreakCompatibilityReady:hiddenWeekly&&hiddenClose,
+    missionStreakCardsReady:missionStatsReady,
+    renderFunctionReady:renderReady,
+    writeExecuted:false,
+    writesEnabled:false,
+    loginAnywhereActive:false,
+    authSyncWriteEnabled:false,
+    restoreExecutionEnabled:false,
+    tokenExport:false,
+    secretExport:false,
+    workerAuthEnabled:false,
+    automationActivationEnabled:false,
+    bootstrapExecutionEnabled:false,
+    shellItems:[
+      {key:'mission_subtab',status:missionButton&&missionPane?'Ready':'Review',mode:'ui_shell',label:'Account > Mission subtab and pane are installed'},
+      {key:'profile_relocation',status:profileInMission&&!profileInRolodex?'Ready':'Review',mode:'ui_relocation',label:'A1XX operator profile card lives in Account > Mission, not Rolodex'},
+      {key:'home_streak_cleanup',status:homeStreakPills===0?'Ready':'Review',mode:'home_cleanup',label:'Weekly and close streak pills are removed from the home topbar'},
+      {key:'compatibility_ids',status:hiddenWeekly&&hiddenClose?'Ready':'Review',mode:'compatibility',label:'Hidden streak IDs remain available for existing save and close-streak logic'},
+      {key:'mission_streak_cards',status:missionStatsReady?'Ready':'Review',mode:'tracked_display',label:'Mission displays weekly streak and close streak from tracked local state'},
+      {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, and bootstrap execution remain blocked'}
+    ],
+    missingGateItems:[]
+      .concat(buildOk?[]:['Phase 9G build token'])
+      .concat(phase9FReady?[]:['Phase 9F Account Mission contracts'])
+      .concat(missionButton&&missionPane?[]:['Account Mission subtab shell'])
+      .concat(profileInMission&&!profileInRolodex?[]:['profile relocation'])
+      .concat(homeStreakPills===0?[]:['home streak pill cleanup'])
+      .concat(hiddenWeekly&&hiddenClose?[]:['hidden streak compatibility IDs'])
+      .concat(missionStatsReady?[]:['Mission streak cards'])
+      .concat(renderReady?[]:['Mission profile render function']),
+    unsafeFields:[],
+    nextAllowedStepAfterPhase9G:ready?'phase9h_mission_scoreboard_tracked_data':'phase9g_account_mission_tab_shell_repair',
+    blockedActions:[
+      'login-anywhere activation',
+      'auth sync write',
+      'restore execution',
+      'token export',
+      'secret export',
+      'worker auth',
+      'automation activation',
+      'second-device bootstrap execution'
+    ],
+    checkedAt:new Date().toISOString(),
+    message:ready?'Account Mission tab shell is ready. Profile is relocated, home streak pills are cleaned up, and Rolodex stays focused on resources.':'Account Mission tab shell needs review before Phase 9H scoreboard.'
+  };
+}
+
+function formatPhase9GAccountMissionTabShellV25(result){
+  result=result||getPhase9GAccountMissionTabShellResultV25();
+  var items=result.shellItems||[];
+  var missing=result.missingGateItems||[];
+  var blocked=result.blockedActions||[];
+  return [
+    'Phase 9G account mission tab shell',
+    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
+    '',
+    'Shell mode',
+    '- Status: '+(result.status||'unknown'),
+    '- Mode: '+(result.mode||'unknown'),
+    '- Account Mission tab shell ready: '+(result.accountMissionTabShellReady?'true':'false'),
+    '- App version: '+(result.appVersion||''),
+    '- App file: '+(result.appFile||''),
+    '- Phase 9F contracts ready: '+(result.phase9FContractsReady?'true':'false'),
+    '- Mission subtab installed: '+(result.missionSubtabInstalled?'true':'false'),
+    '- Mission pane installed: '+(result.missionPaneInstalled?'true':'false'),
+    '- Profile relocated to Mission: '+(result.profileRelocatedToMission?'true':'false'),
+    '- Rolodex profile removed: '+(result.rolodexProfileRemoved?'true':'false'),
+    '- Home topbar streak pills removed: '+(result.homeTopbarStreakPillsRemoved?'true':'false'),
+    '- Hidden streak compatibility ready: '+(result.hiddenStreakCompatibilityReady?'true':'false'),
+    '- Mission streak cards ready: '+(result.missionStreakCardsReady?'true':'false'),
+    '- Write executed: '+(result.writeExecuted?'true':'false'),
+    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
+    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
+    '- Auth sync write enabled: '+(result.authSyncWriteEnabled?'true':'false'),
+    '- Secret export: '+(result.secretExport?'true':'false'),
+    '- Token export: '+(result.tokenExport?'true':'false'),
+    '- Restore execution enabled: '+(result.restoreExecutionEnabled?'true':'false'),
+    '- Worker auth enabled: '+(result.workerAuthEnabled?'true':'false'),
+    '- Automation activation enabled: '+(result.automationActivationEnabled?'true':'false'),
+    '- Bootstrap execution enabled: '+(result.bootstrapExecutionEnabled?'true':'false'),
+    '',
+    'Shell items',
+    items.length?items.map(function(item){return '- '+(item.key||'')+': '+(item.status||'')+' · '+(item.mode||'')+' · '+(item.label||'');}).join('\n'):'- none returned',
+    '',
+    'Missing gate items',
+    missing.length?('- '+missing.join('\n- ')):'- none',
+    '',
+    'Unsafe fields',
+    (result.unsafeFields||[]).length?('- '+result.unsafeFields.join('\n- ')):'- none',
+    '',
+    'Next allowed step',
+    '- '+(result.nextAllowedStepAfterPhase9G||''),
+    '',
+    'Blocked actions',
+    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
+    '',
+    'Result',
+    result.message||''
+  ].join('\n');
+}
+
+function setPhase9GAccountMissionTabShellStateV25(state){
+  window.__phase9GAccountMissionTabShellV25=state;
+  try{localStorage.setItem(PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25,JSON.stringify(state));}catch(e){}
+  return state;
+}
+
+function getPhase9GAccountMissionTabShellStateV25(){
+  try{return JSON.parse(localStorage.getItem(PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25)||'null')||null;}catch(e){return null;}
+}
+
+function renderPhase9GAccountMissionTabShellStateV25(state){
+  state=state||window.__phase9GAccountMissionTabShellV25||getPhase9GAccountMissionTabShellStateV25()||{};
+  var result=state.result||state||{};
+  var ready=result.accountMissionTabShellReady===true;
+  setTextV24('phase9g-mission-profile',ready?'A1XX player card is live in Account > Mission.':'A1XX player card should live in Account > Mission, not Rolodex.');
+  setTextV24('phase9g-mission-home',ready?'Home topbar streak pills are removed; Mission owns streak display.':'Weekly and close streak pills should be removed from the home topbar.');
+  setTextV24('phase9g-mission-blocked','No login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, or bootstrap execution.');
+  setBadge('phase9g-mission-scope-badge',ready?'Ready':'Shell',ready?'':'warn');
+  setBadge('phase9g-mission-profile-badge',ready?'Ready':'Profile',ready?'':'warn');
+  setBadge('phase9g-mission-home-badge',ready?'Clean':'Review',ready?'':'warn');
+  setBadge('phase9g-mission-blocked-badge','Blocked','warn');
+}
+
+function runPhase9GAccountMissionTabShellV25(){
+  var result=getPhase9GAccountMissionTabShellResultV25();
+  if(result.accountMissionTabShellReady&&typeof mcNotifyProfileUpdateV10==='function'){
+    mcNotifyProfileUpdateV10('Account Mission shell ready','The operator profile moved into Account > Mission and the home screen streak pills were cleaned up.',{source:'phase9g',eventId:'phase9g_account_mission_shell_ready'});
+  }else if(typeof mcNotifyWarningV10==='function'){
+    mcNotifyWarningV10('Account Mission shell needs review','One or more Mission shell checks did not pass yet.','phase9g',{eventId:'phase9g_account_mission_shell_review'});
+  }
+  result=getPhase9GAccountMissionTabShellResultV25();
+  var state={
+    checkedAt:new Date().toISOString(),
+    passed:result.accountMissionTabShellReady===true,
+    result:result,
+    previewText:formatPhase9GAccountMissionTabShellV25(result)
+  };
+  setPhase9GAccountMissionTabShellStateV25(state);
+  renderPhase9GAccountMissionTabShellStateV25(state);
+  renderAccountMissionProfileV25();
+  var status=document.getElementById('phase9g-mission-status');
+  if(status){
+    status.className='reset-status '+(state.passed?'ok':'warn');
+    status.textContent=state.passed?'Account Mission tab shell is ready.':'Account Mission tab shell needs review.';
+  }
+  return {passed:state.passed,meta:state.passed?'Phase 9G Account Mission tab shell is ready · profile moved, home streaks cleaned, Rolodex focused.':'Phase 9G Account Mission tab shell needs review.',failures:state.passed?[]:['Phase 9G Account Mission tab shell']};
+}
+
+async function copyPhase9GAccountMissionTabShellV25(){
+  var state=window.__phase9GAccountMissionTabShellV25||getPhase9GAccountMissionTabShellStateV25();
+  if(!state||!state.previewText){
+    runPhase9GAccountMissionTabShellV25();
+    state=window.__phase9GAccountMissionTabShellV25||getPhase9GAccountMissionTabShellStateV25();
+  }
+  var status=document.getElementById('phase9g-mission-status');
+  try{
+    await navigator.clipboard.writeText(state&&state.previewText||'');
+    if(status){
+      status.className='reset-status ok';
+      status.textContent='Phase 9G receipt copied.';
+    }
+  }catch(err){
+    if(status){
+      status.className='reset-status warn';
+      status.textContent='Copy blocked by browser. Select the Account Mission shell receipt manually.';
+    }
+  }
+}
+
+function runPhase9GAccountMissionTabShellQACheckV25(){
+  var result=getPhase9GAccountMissionTabShellResultV25();
+  if(result.accountMissionTabShellReady){
+    renderPhase9GAccountMissionTabShellStateV25({result:result,previewText:formatPhase9GAccountMissionTabShellV25(result)});
+    return {passed:true,meta:'Phase 9G Account Mission tab shell is installed · profile moved from Rolodex · home streak pills cleaned.',failures:[]};
+  }
+  return {passed:false,meta:'Phase 9G Account Mission tab shell needs review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9G Account Mission tab shell']};
 }
 
 function getSetupPointerRowsV23(){
@@ -22744,7 +23008,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config skeleton, Phase 8G master config preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, Phase 9A v2_5 baseline closeout, Phase 9B multi-device command center, Phase 9C second-device focus mode, Phase 9D notification hub shell, Phase 9E notification event wiring, Phase 9F Account Mission contracts, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config skeleton, Phase 8G master config preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, Phase 9A v2_5 baseline closeout, Phase 9B multi-device command center, Phase 9C second-device focus mode, Phase 9D notification hub shell, Phase 9E notification event wiring, Phase 9F Account Mission contracts, Phase 9G Account Mission tab shell, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -22803,6 +23067,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9D Notification Hub Shell',typeof runPhase9DNotificationHubShellQACheckV25==='function'?runPhase9DNotificationHubShellQACheckV25():{passed:false,meta:'Missing Phase 9D notification hub shell check'});}catch(e){add('Phase 9D Notification Hub Shell',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9E Notification Event Wiring',typeof runPhase9ENotificationEventWiringQACheckV25==='function'?runPhase9ENotificationEventWiringQACheckV25():{passed:false,meta:'Missing Phase 9E notification event wiring check'});}catch(e){add('Phase 9E Notification Event Wiring',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9F Account Mission Contracts',typeof runPhase9FAccountMissionContractsQACheckV25==='function'?runPhase9FAccountMissionContractsQACheckV25():{passed:false,meta:'Missing Phase 9F Account Mission contracts check'});}catch(e){add('Phase 9F Account Mission Contracts',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9G Account Mission Tab Shell',typeof runPhase9GAccountMissionTabShellQACheckV25==='function'?runPhase9GAccountMissionTabShellQACheckV25():{passed:false,meta:'Missing Phase 9G Account Mission tab shell check'});}catch(e){add('Phase 9G Account Mission Tab Shell',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -23508,7 +23773,7 @@ function setSettingsTab(tab){
   document.querySelectorAll('.settings-pane').forEach(function(pane){
     pane.classList.toggle('active',pane.id==='settings-pane-'+window.__settingsTab);
   });
-  if(window.__settingsTab==='account')setAccountSubTab(window.__accountSubTab||'profile');
+  if(window.__settingsTab==='account')setAccountSubTab(window.__accountSubTab||'mission');
   if(window.__settingsTab==='connections')setConnectionsSubTab(window.__connectionsSubTab||'bridge');
   if(window.__settingsTab==='ai')setAISubTab(window.__aiSubTab||'overview');
   if(window.__settingsTab==='health')setHealthSubTab(window.__healthSubTab||'status');
@@ -23518,14 +23783,18 @@ function setSettingsTab(tab){
 }
 
 function setAccountSubTab(tab){
-  if(['profile','signin'].indexOf(tab)<0)tab='profile';
-  window.__accountSubTab=tab||'profile';
+  if(['mission','profile','signin'].indexOf(tab)<0)tab='mission';
+  window.__accountSubTab=tab||'mission';
   document.querySelectorAll('[data-account-subtab]').forEach(function(btn){
     btn.classList.toggle('active',btn.getAttribute('data-account-subtab')===window.__accountSubTab);
   });
   document.querySelectorAll('.account-subpane').forEach(function(pane){
     pane.classList.toggle('active',pane.id==='account-subpane-'+window.__accountSubTab);
   });
+  if(window.__accountSubTab==='mission'){
+    if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
+    if(typeof renderPhase9FAccountMissionContractsStateV25==='function')renderPhase9FAccountMissionContractsStateV25();
+  }
   if(window.__accountSubTab==='profile'){
     if(typeof renderDeviceProfileV23==='function')renderDeviceProfileV23();
     if(typeof renderDeviceReadinessV23==='function')renderDeviceReadinessV23();
@@ -28186,19 +28455,23 @@ function toggleResourceDrawer(prefix){
   if(wrap)wrap.classList.toggle('collapsed');
 }
 
-function renderRolodex(){
+function renderAccountMissionProfileV25(){
   var ci=getCycleIdx(),cy=CYCLES[ci];
   var rev=parseFloat((document.getElementById('w-rev')||{}).value)||0;
   var dms=parseFloat((document.getElementById('w-dms')||{}).value)||(getDailyCoach().dms||0);
   var contentStreak=typeof getContentStreak==='function'?getContentStreak():0;
   var activeAssets=(window.__contentPipelinePieces||[]).length+(window.__productionPieces||[]).length;
   var set=function(id,val){var el=document.getElementById(id);if(el)el.textContent=val;};
-  renderAccountIdentity();
+  if(typeof renderAccountIdentity==='function')renderAccountIdentity();
   set('rp-level',cy.num);
   set('rp-rev',fmt(rev));
   set('rp-streak',contentStreak);
   set('rp-dms',dms);
   set('rp-active',activeAssets);
+  var weekly=getStore(STREAK_KEY)||{count:0};
+  var closeStreak=typeof getCloseStreak==='function'?getCloseStreak():0;
+  set('mission-weekly-streak',(weekly.count||0)+' week'+((weekly.count||0)===1?'':'s'));
+  set('mission-close-streak',closeStreak+' day'+(closeStreak===1?'':'s'));
   var summary=document.getElementById('rp-summary');
   if(summary)summary.textContent='Cycle '+cy.num+' · '+cy.name+' · '+daysLeft(ci)+' days left. Current build: consistency, outreach, production delivery, and weekly revenue proof.';
   var scores=[
@@ -28213,6 +28486,11 @@ function renderRolodex(){
       return '<div class="rp-skill"><div class="rp-skill-top"><div class="rp-skill-name">'+s.name+'</div><div class="rp-skill-score">'+s.score+'%</div></div><div class="rp-skill-track"><div class="rp-skill-fill" style="width:'+s.score+'%"></div></div></div>';
     }).join('');
   }
+  return {cycle:cy,rev:rev,dms:dms,contentStreak:contentStreak,activeAssets:activeAssets,weeklyStreak:weekly.count||0,closeStreak:closeStreak};
+}
+
+function renderRolodex(){
+  renderAccountMissionProfileV25();
   renderRolodexQueues();
   renderRolodexLive();
   filterRolodex();
@@ -50158,7 +50436,7 @@ function init(){
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
   safeRender('system health',function(){renderSystemHealth();});
-  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();renderPhase9ENotificationEventWiringStateV25();renderPhase9FAccountMissionContractsStateV25();});
+  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();renderPhase9ENotificationEventWiringStateV25();renderPhase9FAccountMissionContractsStateV25();renderPhase9GAccountMissionTabShellStateV25();});
   safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);renderMissionJourney();});
   safeRender('auto backup',function(){startAutoBackup();});
