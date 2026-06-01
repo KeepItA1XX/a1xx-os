@@ -5160,9 +5160,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-06-01 09:59 ET · OS v2_4 Phase 8AN Clean Workbook Pointer Derivation';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8AN Clean Workbook Pointer Derivation';
-var APP_CACHE_TOKEN='mmos-20260601-0959-v24-phase8an-clean-workbook-pointer-derivation';
+var APP_BUILD_STAMP='2026-06-01 10:07 ET · OS v2_4 Phase 8AO Restore Run No-Hang Fallback';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8AO Restore Run No-Hang Fallback';
+var APP_CACHE_TOKEN='mmos-20260601-1007-v24-phase8ao-restore-run-no-hang-fallback';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -16870,6 +16870,195 @@ function getSafeSetupPointerValueV24(key){
   return '';
 }
 
+function isSecondDeviceRestoreProtectedKeyV24(key){
+  var protectedKeys=typeof getProtectedRestoreKeysV22==='function'?getProtectedRestoreKeysV22():{};
+  return !!(protectedKeys[key]||/token|secret|password|pin|oauth|webhook|todoist|notion|ig_token|sheets_url|sheets_config/i.test(String(key||'')));
+}
+
+function extractCleanWorkbookIdFromBackupPayloadV24(backupPayload){
+  function shaped(value){
+    value=String(value||'').trim();
+    return /^[A-Za-z0-9_-]{20,}$/.test(value)?value:'';
+  }
+  function inspectValue(value){
+    if(!value)return '';
+    if(typeof value==='object')return inspectObject(value);
+    var text=String(value||'');
+    var direct=shaped(text);
+    if(direct)return direct;
+    try{return inspectObject(JSON.parse(text));}
+    catch(e){return '';}
+  }
+  function inspectObject(obj){
+    if(!obj||typeof obj!=='object')return '';
+    var candidates=[
+      'clean_workbook_id',
+      'cleanWorkbookId',
+      'cleanWorkbookID',
+      'cleanWorkbook',
+      'workbookId',
+      'spreadsheetId',
+      'sheetsId',
+      'targetSpreadsheetId',
+      'targetWorkbookId'
+    ];
+    for(var i=0;i<candidates.length;i++){
+      var direct=shaped(obj[candidates[i]]);
+      if(direct)return direct;
+    }
+    Object.keys(obj).some(function(key){
+      if(!/clean|workbook|spreadsheet|sheets|target/i.test(key))return false;
+      var nested=inspectValue(obj[key]);
+      if(nested){
+        direct=nested;
+        return true;
+      }
+      return false;
+    });
+    return direct||'';
+  }
+  var found=inspectObject(backupPayload);
+  if(found)return found;
+  Object.keys(backupPayload||{}).some(function(key){
+    if(!/config|pointer|profile|setup|registry|sheets|workbook/i.test(key))return false;
+    found=inspectValue(backupPayload[key]);
+    return !!found;
+  });
+  return found||'';
+}
+
+function buildSecondDeviceRestoreExecutionPayloadFromBackupV24(backupPayload){
+  backupPayload=backupPayload||{};
+  var restorePayload={};
+  var protectedSkipped=[];
+  Object.keys(backupPayload).forEach(function(key){
+    if(key==='__mmos_backup_verification_v22')return;
+    if(!(key.indexOf('a1xx_')===0||key==='mmos_webhook_token_v1'))return;
+    if(isSecondDeviceRestoreProtectedKeyV24(key)){
+      protectedSkipped.push(key);
+      return;
+    }
+    restorePayload[key]=String(backupPayload[key]||'');
+  });
+  return {restorePayload:restorePayload,protectedSkipped:protectedSkipped};
+}
+
+async function buildSecondDeviceRestoreExecutionFallbackResultV24(endpointResult,endpointError){
+  var payload=getSecondDeviceRestoreExecutionRunPayloadV24();
+  var marker=payload.selectedRestoreSourceMarker||getExactRestoreSourceMarkerV24();
+  var backupFolderId=payload.backupFolderId||getSafeSetupPointerValueV24('backup_folder_id')||'';
+  var missingGateItems=[];
+  var backupPayload={};
+  var backupResponse=null;
+  var markerVerified=false;
+  var markerRead=null;
+  var fallbackError='';
+  if(!marker)missingGateItems.push('exact restore source marker');
+  try{
+    if(marker)backupResponse=await getAppsScriptJson('get_backup',{marker:marker},{timeoutMs:18000,tries:1});
+  }catch(e){
+    fallbackError=e&&e.message?e.message:String(e||'backup read failed');
+  }
+  try{
+    if(backupResponse&&backupResponse.backup&&backupResponse.backup.payload){
+      backupPayload=JSON.parse(String(backupResponse.backup.payload||'{}'))||{};
+    }
+  }catch(parseErr){
+    fallbackError=fallbackError||'Backup payload parse failed.';
+  }
+  markerRead=typeof getBackupVerificationMarkerV22==='function'?getBackupVerificationMarkerV22(backupPayload):null;
+  markerVerified=!!(marker&&markerRead&&markerRead.id===marker);
+  if(!backupResponse||!backupResponse.backup)missingGateItems.push('backup payload read');
+  if(backupResponse&&backupResponse.backup&&!markerVerified)missingGateItems.push('exact backup marker readback');
+  var cleanWorkbookId=payload.cleanWorkbookId||extractCleanWorkbookIdFromBackupPayloadV24(backupPayload);
+  if(!cleanWorkbookId)missingGateItems.push('clean_workbook_id');
+  if(!backupFolderId)missingGateItems.push('backup_folder_id');
+  var filtered=buildSecondDeviceRestoreExecutionPayloadFromBackupV24(backupPayload);
+  var restoreKeys=Object.keys(filtered.restorePayload);
+  if(!restoreKeys.length)missingGateItems.push('restore payload keys');
+  var ready=!!(
+    marker&&
+    markerVerified&&
+    cleanWorkbookId&&
+    backupFolderId&&
+    restoreKeys.length&&
+    !fallbackError&&
+    missingGateItems.length===0
+  );
+  return Object.assign({},endpointResult||{},{
+    status:ready?'second_device_restore_execution_run_ready':'second_device_restore_execution_run_needs_review',
+    ok:true,
+    mode:'second_device_restore_execution_run',
+    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown',
+    checkedAt:new Date().toISOString(),
+    restoreExecutionRunEndpointActive:false,
+    restoreExecutionRunReady:ready,
+    endpointFallbackUsed:true,
+    endpointFallbackReason:endpointError&&endpointError.message?endpointError.message:(endpointError?String(endpointError):'endpoint did not return a ready package'),
+    phase8ajFinalPreExecutionPreflightReady:payload.phase8ajFinalPreExecutionPreflightReady,
+    portableRestoreMarkerGate:payload.portableRestoreMarkerGate,
+    a1xxRestoreExecutionRunConfirmed:true,
+    restoreExecutionRunText:payload.restoreExecutionRunText,
+    expectedRestoreExecutionRunText:'A1XX EXECUTE RESTORE RUN',
+    selectedRestoreSourceConfirmed:!!marker,
+    restoreTargetPointersConfirmed:!!(cleanWorkbookId&&backupFolderId),
+    secondDeviceIdentityConfirmed:!!payload.targetDeviceLabel,
+    backupVerified:markerVerified,
+    latestBackupMarker:marker,
+    latestBackupRow:(backupResponse&&backupResponse.matchedRow)||payload.latestBackupRow||'',
+    selectedRestoreSourceMarker:marker,
+    selectedRestoreSourceRow:(backupResponse&&backupResponse.matchedRow)||payload.selectedRestoreSourceRow||'',
+    cleanWorkbookId:cleanWorkbookId,
+    backupFolderId:backupFolderId,
+    targetDeviceLabel:payload.targetDeviceLabel||'second device',
+    backupDriveFileId:backupResponse&&backupResponse.backup&&backupResponse.backup.driveFileId||'',
+    backupDriveUrl:backupResponse&&backupResponse.backup&&backupResponse.backup.driveUrl||'',
+    restorePayload:ready?filtered.restorePayload:{},
+    restoreKeyCount:restoreKeys.length,
+    protectedSkippedKeys:filtered.protectedSkipped,
+    readExecuted:!!backupResponse,
+    configReadExecuted:false,
+    notionReadExecuted:false,
+    writeExecuted:false,
+    writesEnabled:false,
+    loginAnywhereActive:false,
+    secretExport:false,
+    tokenExport:false,
+    restoreEnabled:ready,
+    restoreExecutionEnabled:ready,
+    workerAuthEnabled:false,
+    automationActivationEnabled:false,
+    bootstrapExecutionEnabled:false,
+    setupAutomationReady:false,
+    restoreEndpointActive:ready,
+    restoreExecutionItems:[
+      {key:'phase8al_endpoint_response',status:'Ready',mode:'local_fallback_only',label:'Phase 8AL endpoint did not finish cleanly, so exact-marker Drive backup fallback was used',value:(endpointError&&endpointError.message)||''},
+      {key:'selected_restore_source_marker',status:marker?'Ready':'Review',mode:'exact_marker_gate',label:'Selected restore source marker is confirmed for this run',value:marker},
+      {key:'backup_payload_read',status:backupResponse&&backupResponse.backup?'Ready':'Review',mode:'drive_read',label:'Selected Drive backup payload is readable',value:backupResponse&&backupResponse.backup&&backupResponse.backup.driveFileId||fallbackError||''},
+      {key:'exact_marker_readback',status:markerVerified?'Ready':'Review',mode:'exact_marker_gate',label:'Drive backup payload marker matches the requested restore marker',value:markerRead&&markerRead.id||''},
+      {key:'protected_keys_filtered',status:'Ready',mode:'safety_boundary',label:'Protected setup/token keys are filtered from the restore payload',value:String(filtered.protectedSkipped.length)},
+      {key:'restore_payload_ready',status:restoreKeys.length?'Ready':'Review',mode:'execution_payload',label:'Non-protected restore payload is ready for browser restore',value:String(restoreKeys.length)},
+      {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, token export, secret export, worker auth, automations, and bootstrap execution remain blocked'}
+    ],
+    missingGateItems:missingGateItems,
+    unsafeFields:[],
+    nextAllowedStepAfterRestoreExecutionRun:ready?'second_device_restore_execution_readback_verification':'second_device_restore_execution_run_repair',
+    blockedActions:[
+      'live master config write',
+      'login-anywhere activation',
+      'auth sync write',
+      'token export',
+      'secret export',
+      'worker auth',
+      'automation activation',
+      'second-device bootstrap execution'
+    ],
+    message:ready
+      ? 'Second-device restore execution run package was built from the exact-marker Drive backup fallback. Browser restore may execute only the filtered non-protected keys.'
+      : 'Second-device restore execution fallback needs review. No restore payload should be applied.'
+  });
+}
+
 function formatSecondDeviceRestoreExecutionRunV24(result){
   result=result||{};
   var items=result.restoreExecutionItems||[];
@@ -16981,11 +17170,21 @@ async function runSecondDeviceRestoreExecutionRunV24(){
     };
   }
   try{
-    var fresh=await getAppsScriptJson('backup_status',{}, {timeoutMs:12000, tries:1});
+    var fresh=await getAppsScriptJson('backup_status',{}, {timeoutMs:6000, tries:1});
     if(fresh)window.__lastBackupArchiveStatusV22=fresh;
   }catch(backupErr){}
-  var result=await getAppsScriptJson('second_device_restore_execution_run',getSecondDeviceRestoreExecutionRunPayloadV24(),{timeoutMs:30000,tries:1});
+  var endpointError=null;
+  var result=null;
+  try{
+    result=await getAppsScriptJson('second_device_restore_execution_run',getSecondDeviceRestoreExecutionRunPayloadV24(),{timeoutMs:14000,tries:1});
+  }catch(runErr){
+    endpointError=runErr;
+  }
   result=result||{};
+  if(endpointError||result.restoreExecutionRunReady!==true||!result.restorePayload||!Object.keys(result.restorePayload||{}).length){
+    var fallbackResult=await buildSecondDeviceRestoreExecutionFallbackResultV24(result,endpointError);
+    if(fallbackResult.restoreExecutionRunReady===true||endpointError)result=fallbackResult;
+  }
   var restorePayload=result.restorePayload||{};
   var restoreKeys=Object.keys(restorePayload);
   var failedKeys=[];
