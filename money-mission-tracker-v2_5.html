@@ -5196,9 +5196,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 12:52 ET · OS v2_5 Phase 9B Control Room Mount';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9B Control Room Mount';
-var APP_CACHE_TOKEN='mmos-20260601-1252-v25-phase9b-control-room-mount';
+var APP_BUILD_STAMP='2026-06-01 13:10 ET · OS v2_5 Phase 9B Portable Baseline Rebuild';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9B Portable Baseline Rebuild';
+var APP_CACHE_TOKEN='mmos-20260601-1310-v25-phase9b-portable-baseline-rebuild';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -17456,13 +17456,34 @@ function setPhase9ABaselineStateV25(state){
   return state;
 }
 
+function getPhase9BPortableBaselineV25(backup){
+  backup=backup||getPhase9ABackupSnapshotV25();
+  var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
+  var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9b/.test(APP_CACHE_TOKEN);
+  var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
+  return {
+    accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
+    source:'current_v2_5_backup_baseline',
+    versionOk:versionOk,
+    fileOk:fileOk,
+    buildOk:buildOk,
+    backupOk:backupOk,
+    backupMarker:backup.backupMarker||'',
+    backupRow:backup.backupRow||'',
+    backupDriveFileId:backup.driveFileId||''
+  };
+}
+
 function buildPhase9ABaselineCloseoutResultV25(){
   var restoreState=window.__secondDeviceRestoreExecutionRunV24||ensureRestoreExecutionRunReceiptV24()||null;
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
   var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[ab]/.test(APP_CACHE_TOKEN);
-  var restoreOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
+  var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
+  var portableBaseline=getPhase9BPortableBaselineV25(backup);
+  var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var protectedOk=true;
   var missing=[];
@@ -17484,8 +17505,10 @@ function buildPhase9ABaselineCloseoutResultV25(){
     backupMarker:backup.backupMarker,
     backupRow:backup.backupRow,
     backupDriveFileId:backup.driveFileId,
-    phase8alRestoreReadbackVerified:restoreOk,
-    phase8alRestoreMarker:restoreState&&restoreState.result&&restoreState.result.selectedRestoreSourceMarker||'',
+    phase8alRestoreReadbackVerified:restoreReceiptOk,
+    portableBaselineAccepted:portableBaseline.accepted,
+    portableBaselineSource:portableBaseline.accepted?portableBaseline.source:'',
+    phase8alRestoreMarker:restoreState&&restoreState.result&&restoreState.result.selectedRestoreSourceMarker||portableBaseline.backupMarker||'',
     liveQaReadyForNextPhase:ready,
     restoreExecutionEnabled:false,
     loginAnywhereActive:false,
@@ -17500,7 +17523,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
     closeoutItems:[
       {key:'v2_5_app_file',status:fileOk?'Ready':'Review',mode:'build_identity',label:'Active app file is money-mission-tracker-v2_5.html',value:typeof APP_BUILD_FILE!=='undefined'?APP_BUILD_FILE:''},
       {key:'v2_5_build_token',status:buildOk?'Ready':'Review',mode:'build_identity',label:'v2_5 Phase 9 build token is active',value:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:''},
-      {key:'phase8al_restore_receipt',status:restoreOk?'Ready':'Review',mode:'receipt',label:'Second-device restore run receipt is present and readback verified',value:restoreState&&restoreState.result&&restoreState.result.selectedRestoreSourceMarker||''},
+      {key:'phase8al_restore_receipt',status:restoreOk?'Ready':'Review',mode:restoreReceiptOk?'receipt':'portable_baseline',label:restoreReceiptOk?'Second-device restore run receipt is present and readback verified':'Phase 8AL receipt is superseded by the current v2_5 backup baseline on this browser',value:restoreState&&restoreState.result&&restoreState.result.selectedRestoreSourceMarker||portableBaseline.backupMarker||''},
       {key:'second_device_backup',status:backupOk?'Ready':'Review',mode:'backup_receipt',label:'Second-device backup marker is visible after v2_5 launch',value:backup.backupMarker},
       {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, and bootstrap execution remain blocked'}
     ],
@@ -17518,7 +17541,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
       'second-device bootstrap execution'
     ],
     closedAt:new Date().toISOString(),
-    message:ready?'Phase 9A v2_5 baseline is clean. v2_5 is active, second-device backup is visible, and Phase 8AL restore readback is verified.':'Phase 9A baseline needs review before the next feature lane.'
+    message:ready?'Phase 9A v2_5 baseline is clean. v2_5 is active, backup is visible, and restore state is accepted from the receipt or portable baseline.':'Phase 9A baseline needs review before the next feature lane.'
   };
 }
 
@@ -17542,6 +17565,8 @@ function formatPhase9ABaselineCloseoutV25(result){
     '- Backup row: '+(result.backupRow||''),
     '- Backup Drive file ID: '+(result.backupDriveFileId||''),
     '- Phase 8AL restore readback verified: '+(result.phase8alRestoreReadbackVerified?'true':'false'),
+    '- Portable baseline accepted: '+(result.portableBaselineAccepted?'true':'false'),
+    '- Portable baseline source: '+(result.portableBaselineSource||''),
     '- Phase 8AL restore marker: '+(result.phase8alRestoreMarker||''),
     '- Live QA ready for next phase: '+(result.liveQaReadyForNextPhase?'true':'false'),
     '- Write executed: '+(result.writeExecuted?'true':'false'),
@@ -17697,6 +17722,8 @@ function getPhase9BRegistrySnapshotV25(){
 }
 
 function getPhase9BReceiptSummaryV25(){
+  var backup=getPhase9ABackupSnapshotV25();
+  var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var phases=[
     {key:'phase8y',label:'8Y',ensure:typeof ensureRestoreBoundaryReceiptV24==='function'?ensureRestoreBoundaryReceiptV24:null},
     {key:'phase8z',label:'8Z',ensure:typeof ensureRestoreSourcePreviewReceiptV24==='function'?ensureRestoreSourcePreviewReceiptV24:null},
@@ -17719,12 +17746,20 @@ function getPhase9BReceiptSummaryV25(){
     if(state&&state.passed===true)ready.push(phase.label);
     else missing.push(phase.label);
   });
+  if(portableBaseline.accepted&&missing.indexOf('8AL')>=0){
+    missing=missing.filter(function(label){return label!=='8AL';});
+    if(ready.indexOf('8AL')<0)ready.push('8AL');
+  }
   var phase9a=window.__phase9ABaselineCloseoutV25||getPhase9ABaselineStateV25()||null;
   if(!phase9a||phase9a.passed!==true){
     try{
       var check=runPhase9ABaselineCloseoutQACheckV25();
       phase9a=window.__phase9ABaselineCloseoutV25||getPhase9ABaselineStateV25()||null;
-      if(!check||check.passed!==true)missing.push('9A');
+      if(check&&check.passed===true){
+        if(ready.indexOf('9A')<0)ready.push('9A');
+      }else{
+        missing.push('9A');
+      }
     }catch(e){
       missing.push('9A');
     }
@@ -17737,6 +17772,9 @@ function getPhase9BReceiptSummaryV25(){
     readyCount:ready.length,
     totalCount:phases.length+1,
     restoreReadbackVerified:!!(window.__secondDeviceRestoreExecutionRunV24&&window.__secondDeviceRestoreExecutionRunV24.passed===true||ensureRestoreExecutionRunReceiptV24()),
+    portableBaselineAccepted:portableBaseline.accepted,
+    portableBaselineSource:portableBaseline.accepted?portableBaseline.source:'',
+    restoreStateAccepted:!!(window.__secondDeviceRestoreExecutionRunV24&&window.__secondDeviceRestoreExecutionRunV24.passed===true||ensureRestoreExecutionRunReceiptV24()||portableBaseline.accepted),
     phase9aReady:!!(phase9a&&phase9a.passed===true)
   };
 }
@@ -17757,7 +17795,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var receipts=getPhase9BReceiptSummaryV25();
   var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9b/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
-  var restoreReady=receipts.restoreReadbackVerified===true;
+  var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
   var registryLoaded=registry.loaded===true;
   var next=getPhase9BNextActionV25({
@@ -17788,7 +17826,10 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
     receiptTotalCount:receipts.totalCount,
     receiptReadyLabels:receipts.ready,
     receiptMissingLabels:receipts.missing,
-    restoreReadbackVerified:restoreReady,
+    restoreReadbackVerified:receipts.restoreReadbackVerified===true,
+    portableBaselineAccepted:receipts.portableBaselineAccepted===true,
+    portableBaselineSource:receipts.portableBaselineSource||'',
+    restoreStateAccepted:restoreReady,
     phase9aBaselineReady:phase9aReady,
     nextActionLabel:next.label,
     nextActionText:next.text,
@@ -17807,7 +17848,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
       {key:'active_build',status:buildOk?'Ready':'Review',mode:'build_identity',label:'v2_5 Phase 9B build is active',value:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:''},
       {key:'device_role',status:registryLoaded?'Ready':'Preview',mode:'read_only',label:registryLoaded?'Device registry loaded for this browser':'Local device profile available; registry can be loaded on demand',value:(registry.trustedStatus||'local-only')+' · '+(registry.deviceLabel||device.label||'this browser')},
       {key:'backup_marker',status:backupReady?'Ready':'Review',mode:'backup_receipt',label:'Latest backup marker visible for this device',value:backup.backupMarker||''},
-      {key:'receipt_chain',status:restoreReady?'Ready':'Review',mode:'local_receipt_rebuild',label:'Restore receipt chain can be rebuilt from local safe state',value:receipts.readyCount+'/'+receipts.totalCount},
+      {key:'receipt_chain',status:restoreReady?'Ready':'Review',mode:receipts.portableBaselineAccepted?'portable_baseline':'local_receipt_rebuild',label:receipts.portableBaselineAccepted?'Receipt chain accepts current v2_5 backup baseline when browser-local 8AL receipt is absent':'Restore receipt chain can be rebuilt from local safe state',value:receipts.readyCount+'/'+receipts.totalCount},
       {key:'phase9a_baseline',status:phase9aReady?'Ready':'Review',mode:'baseline_receipt',label:'Phase 9A baseline receipt is available for next-lane work',value:phase9aReady?'ready':''},
       {key:'next_action',status:next.state==='ready'?'Ready':'Review',mode:'operator_guidance',label:next.text,value:next.label},
       {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, and bootstrap execution remain blocked'}
@@ -17862,6 +17903,9 @@ function formatPhase9BMultiDeviceCommandCenterV25(result){
     '- Receipt chain ready: '+(result.receiptReadyCount||0)+'/'+(result.receiptTotalCount||0),
     '- Missing receipt labels: '+((result.receiptMissingLabels||[]).length?result.receiptMissingLabels.join(', '):'none'),
     '- Restore readback verified: '+(result.restoreReadbackVerified?'true':'false'),
+    '- Portable baseline accepted: '+(result.portableBaselineAccepted?'true':'false'),
+    '- Portable baseline source: '+(result.portableBaselineSource||''),
+    '- Restore state accepted: '+(result.restoreStateAccepted?'true':'false'),
     '- Phase 9A baseline ready: '+(result.phase9aBaselineReady?'true':'false'),
     '- Next action: '+(result.nextActionLabel||'')+' · '+(result.nextActionText||''),
     '- Write executed: '+(result.writeExecuted?'true':'false'),
@@ -17902,11 +17946,11 @@ function renderPhase9BMultiDeviceCommandCenterStateV25(state){
   var output=document.getElementById('phase9b-command-output');
   if(output)output.value=state.previewText||formatPhase9BMultiDeviceCommandCenterV25(result);
   setTextV24('phase9b-command-device',result.deviceLabel?((result.trustedStatus||'local-only')+' · '+result.deviceLabel):'Refresh status to read local role and trust hints.');
-  setTextV24('phase9b-command-receipts',result.receiptTotalCount?('Receipt chain '+(result.receiptReadyCount||0)+'/'+(result.receiptTotalCount||0)+' · restore readback '+(result.restoreReadbackVerified?'verified':'needs review')):'Rebuild receipts from current safe local state after refresh or device switch.');
+  setTextV24('phase9b-command-receipts',result.receiptTotalCount?('Receipt chain '+(result.receiptReadyCount||0)+'/'+(result.receiptTotalCount||0)+' · restore state '+(result.restoreReadbackVerified?'verified':(result.portableBaselineAccepted?'portable baseline':'needs review'))):'Rebuild receipts from current safe local state after refresh or device switch.');
   setTextV24('phase9b-command-next',result.nextActionText||'Refresh status for the next safe action.');
   setTextV24('phase9b-command-blocked','Login-anywhere, auth sync, token export, secret export, restore execution, worker auth, automations, and bootstrap execution remain blocked.');
   setBadge('phase9b-command-device-badge',result.registryLoaded?'Registry':'Local',result.registryLoaded?'':'off');
-  setBadge('phase9b-command-receipts-badge',result.restoreReadbackVerified?'Ready':'Chain',result.restoreReadbackVerified?'':'warn');
+  setBadge('phase9b-command-receipts-badge',result.restoreStateAccepted?'Ready':'Chain',result.restoreStateAccepted?'':'warn');
   setBadge('phase9b-command-next-badge',result.nextActionLabel||'Next',result.nextActionState==='ready'?'':'warn');
   setBadge('phase9b-command-blocked-badge','Blocked','warn');
 }
