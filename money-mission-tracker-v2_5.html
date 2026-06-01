@@ -570,16 +570,44 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rp-skill-score{font-size:10px;color:#7ec845;font-weight:900}
 .rp-skill-track{height:5px;background:#050607;border-radius:4px;overflow:hidden}
 .rp-skill-fill{height:100%;background:#7ec845;border-radius:4px}
-.account-mission-shell{display:grid;gap:10px}
-.account-mission-hero{background:#081007;border:0.5px solid #26381c;border-radius:12px;padding:12px}
+.account-mission-shell{display:grid;gap:12px}
+.account-mission-hero{background:#081007;border:0;border-radius:12px;padding:14px;box-shadow:inset 3px 0 0 rgba(126,200,69,.34)}
 .account-mission-kicker{font-size:9px;color:#7ec845;text-transform:uppercase;letter-spacing:.11em;font-weight:900;margin-bottom:4px}
-.account-mission-title{font-size:16px;color:#f0f3f5;font-weight:900;line-height:1.25}
+.account-mission-title{font-size:17px;color:#f0f3f5;font-weight:900;line-height:1.25}
 .account-mission-copy{font-size:11px;color:#8b949e;line-height:1.5;margin-top:4px}
+.mission-tabbar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px}
+.mission-tab{flex:0 0 auto;height:28px;border:0;border-radius:8px;background:#0d1114;color:#7b858d;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;padding:0 10px;cursor:pointer}
+.mission-tab.active{background:#14200e;color:#7ec845;box-shadow:inset 0 0 0 1px rgba(126,200,69,.26)}
+.mission-panel{display:none}
+.mission-panel.active{display:grid;gap:10px}
+.mission-action-board{display:grid;grid-template-columns:1.1fr .9fr;gap:10px}
+.mission-objective-card,.mission-action-card,.mission-section-card{background:#090d10;border:0;border-radius:10px;padding:11px;box-shadow:inset 2px 0 0 rgba(126,200,69,.2)}
+.mission-objective-label,.mission-section-label{font-size:8px;color:#6f7a82;text-transform:uppercase;letter-spacing:.08em;font-weight:900;margin-bottom:5px}
+.mission-objective-title{font-size:15px;color:#f0f3f5;font-weight:900;line-height:1.25}
+.mission-objective-copy{font-size:11px;color:#9aa3aa;line-height:1.55;margin-top:5px}
+.mission-focus-list{display:grid;gap:7px}
+.mission-focus-item{display:flex;align-items:flex-start;gap:8px;background:#070a0c;border-radius:8px;padding:8px}
+.mission-focus-dot{width:7px;height:7px;border-radius:999px;background:#7ec845;margin-top:4px;box-shadow:0 0 8px rgba(126,200,69,.12)}
+.mission-focus-name{font-size:11px;color:#d7dde3;font-weight:900;line-height:1.25}
+.mission-focus-meta{font-size:9px;color:#68727c;line-height:1.35;margin-top:2px}
 .mission-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.mission-mini-card{background:#090b0d;border:0.5px solid #1d252c;border-radius:9px;padding:9px}
+.mission-mini-card{background:#090b0d;border:0;border-radius:9px;padding:9px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
 .mission-mini-label{font-size:8px;color:#68727c;text-transform:uppercase;letter-spacing:.07em;font-weight:900;margin-bottom:4px}
 .mission-mini-value{font-size:12px;color:#d7dde3;font-weight:900;line-height:1.3}
 .mission-mini-source{font-size:9px;color:#5f6870;line-height:1.35;margin-top:4px}
+.mission-skill-grid,.mission-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mission-skill,.mission-status-card{background:#090b0d;border:0;border-radius:9px;padding:9px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
+.mission-skill-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.mission-skill-name,.mission-status-name{font-size:10px;color:#d7dde3;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+.mission-skill-trust,.mission-status-trust{font-size:8px;color:#7ec845;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+.mission-skill-track{height:5px;background:#050607;border-radius:999px;overflow:hidden}
+.mission-skill-fill{height:100%;background:#7ec845;border-radius:999px}
+.mission-skill-meta,.mission-status-meta{font-size:9px;color:#68727c;line-height:1.35;margin-top:6px}
+.mission-empty-state{background:#070a0c;border-radius:9px;padding:10px;color:#8b949e;font-size:11px;line-height:1.5}
+@media(max-width:720px){
+  .mission-action-board{grid-template-columns:1fr}
+  .mission-skill-grid,.mission-card-grid{grid-template-columns:1fr}
+}
 .auth-screen{position:fixed;inset:0;z-index:12000;background:radial-gradient(circle at top,#13200b 0%,#090a0b 42%,#040506 100%);display:none;align-items:center;justify-content:center;padding:22px}
 .auth-screen.active{display:flex}
 .auth-card{width:min(92vw,420px);background:rgba(12,15,18,.94);border:1px solid #27323b;border-radius:16px;padding:24px;box-shadow:0 22px 70px rgba(0,0,0,.55)}
@@ -2380,50 +2408,115 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
       <div class="account-subpane active" id="account-subpane-mission">
         <div class="account-mission-shell">
           <div class="account-mission-hero">
-            <div class="account-mission-kicker">Account Mission</div>
-            <div class="account-mission-title">Operator career mode</div>
-            <div class="account-mission-copy">Profile, streaks, attributes, source trust, and future achievements live here so the home screen stays clean.</div>
+            <div class="account-mission-kicker">Money Mission</div>
+            <div class="account-mission-title" id="mission-story-title">Cycle mission loading...</div>
+            <div class="account-mission-copy" id="mission-story-copy">Loading your current business movement and next money move.</div>
           </div>
-          <div class="rolodex-profile">
-            <div class="rp-top">
-              <div>
-                <div class="rp-label">Executive Producer Profile</div>
-                <div class="rp-name" id="rp-name">A1XX</div>
-                <div class="rp-sub" id="rp-summary">Money Mission player card loading from your current mission data.</div>
-              </div>
-              <div class="rp-level">
-                <div class="rp-level-num" id="rp-level">1</div>
-                <div class="rp-level-lbl">Cycle Level</div>
-              </div>
-            </div>
-            <div class="rp-stats">
-              <div class="rp-stat"><div class="rp-stat-val" id="rp-rev">$0</div><div class="rp-stat-lbl">Revenue</div></div>
-              <div class="rp-stat"><div class="rp-stat-val" id="rp-streak">0</div><div class="rp-stat-lbl">Content Streak</div></div>
-              <div class="rp-stat"><div class="rp-stat-val" id="rp-dms">0</div><div class="rp-stat-lbl">DMs Logged</div></div>
-              <div class="rp-stat"><div class="rp-stat-val" id="rp-active">0</div><div class="rp-stat-lbl">Active Assets</div></div>
-            </div>
-            <div class="rp-skill-bars" id="rp-skill-bars"></div>
+          <div class="mission-tabbar" aria-label="Mission sections">
+            <button type="button" class="mission-tab active" data-mission-subtab="overview" onclick="setMissionSubTabV25('overview')">Overview</button>
+            <button type="button" class="mission-tab" data-mission-subtab="attributes" onclick="setMissionSubTabV25('attributes')">Attributes</button>
+            <button type="button" class="mission-tab" data-mission-subtab="badges" onclick="setMissionSubTabV25('badges')">Badges</button>
+            <button type="button" class="mission-tab" data-mission-subtab="missions" onclick="setMissionSubTabV25('missions')">Missions</button>
+            <button type="button" class="mission-tab" data-mission-subtab="training" onclick="setMissionSubTabV25('training')">Training</button>
+            <button type="button" class="mission-tab" data-mission-subtab="trophies" onclick="setMissionSubTabV25('trophies')">Trophies</button>
+            <button type="button" class="mission-tab" data-mission-subtab="records" onclick="setMissionSubTabV25('records')">Records</button>
+            <button type="button" class="mission-tab" data-mission-subtab="journey" onclick="setMissionSubTabV25('journey')">Journey</button>
           </div>
-          <div class="mission-mini-grid">
-            <div class="mission-mini-card">
-              <div class="mission-mini-label">Weekly Streak</div>
-              <div class="mission-mini-value" id="mission-weekly-streak">0 weeks</div>
-              <div class="mission-mini-source">Source: tracked weekly save chain</div>
+          <div class="mission-panel active" id="mission-panel-overview">
+            <div class="mission-action-board">
+              <div class="mission-objective-card">
+                <div class="mission-objective-label">Current Objective</div>
+                <div class="mission-objective-title" id="mission-current-objective">Build today's money movement.</div>
+                <div class="mission-objective-copy" id="mission-current-objective-copy">Log one real business action: outreach, follow-up, call, offer, close, content proof, or production delivery.</div>
+              </div>
+              <div class="mission-action-card">
+                <div class="mission-section-label">Next Money Move</div>
+                <div class="mission-focus-list" id="mission-next-money-move-list"></div>
+              </div>
             </div>
-            <div class="mission-mini-card">
-              <div class="mission-mini-label">Close Streak</div>
-              <div class="mission-mini-value" id="mission-close-streak">0 days</div>
-              <div class="mission-mini-source">Source: tracked close log</div>
+            <div class="rolodex-profile">
+              <div class="rp-top">
+                <div>
+                  <div class="rp-label">A1XX Operator Profile</div>
+                  <div class="rp-name" id="rp-name">A1XX</div>
+                  <div class="rp-sub" id="rp-summary">Money Mission profile loading from your current business action data.</div>
+                </div>
+                <div class="rp-level">
+                  <div class="rp-level-num" id="rp-level">1</div>
+                  <div class="rp-level-lbl">Cycle</div>
+                </div>
+              </div>
+              <div class="rp-stats">
+                <div class="rp-stat"><div class="rp-stat-val" id="rp-rev">$0</div><div class="rp-stat-lbl">Revenue Logged</div></div>
+                <div class="rp-stat"><div class="rp-stat-val" id="rp-streak">0</div><div class="rp-stat-lbl">Content Streak</div></div>
+                <div class="rp-stat"><div class="rp-stat-val" id="rp-dms">0</div><div class="rp-stat-lbl">DMs Logged</div></div>
+                <div class="rp-stat"><div class="rp-stat-val" id="rp-active">0</div><div class="rp-stat-lbl">Active Assets</div></div>
+              </div>
+              <div class="rp-skill-bars" id="rp-skill-bars"></div>
             </div>
-            <div class="mission-mini-card">
-              <div class="mission-mini-label">Mission Contract</div>
-              <div class="mission-mini-value">Phase 9F ready</div>
-              <div class="mission-mini-source">Source: local contract receipt</div>
+            <div class="mission-mini-grid">
+              <div class="mission-mini-card">
+                <div class="mission-mini-label">Outreach Today</div>
+                <div class="mission-mini-value" id="mission-outreach-today">Not Tracked</div>
+                <div class="mission-mini-source" id="mission-outreach-source">Source: DPC action log</div>
+              </div>
+              <div class="mission-mini-card">
+                <div class="mission-mini-label">Calls + Offers</div>
+                <div class="mission-mini-value" id="mission-sales-today">Not Tracked</div>
+                <div class="mission-mini-source" id="mission-sales-source">Source: calls, closes, and offers when tracked</div>
+              </div>
+              <div class="mission-mini-card">
+                <div class="mission-mini-label">Weekly Streak</div>
+                <div class="mission-mini-value" id="mission-weekly-streak">0 weeks</div>
+                <div class="mission-mini-source">Source: tracked weekly save chain</div>
+              </div>
+              <div class="mission-mini-card">
+                <div class="mission-mini-label">Close Streak</div>
+                <div class="mission-mini-value" id="mission-close-streak">0 days</div>
+                <div class="mission-mini-source">Source: tracked close log</div>
+              </div>
             </div>
-            <div class="mission-mini-card">
-              <div class="mission-mini-label">Next Build</div>
-              <div class="mission-mini-value">Scoreboard</div>
-              <div class="mission-mini-source">Phase 9H will derive panels from tracked data only</div>
+          </div>
+          <div class="mission-panel" id="mission-panel-attributes">
+            <div class="mission-section-card">
+              <div class="mission-section-label">Entrepreneur Attributes</div>
+              <div class="mission-skill-grid" id="mission-attribute-grid"></div>
+            </div>
+          </div>
+          <div class="mission-panel" id="mission-panel-badges">
+            <div class="mission-section-card">
+              <div class="mission-section-label">Business Badges</div>
+              <div class="mission-card-grid" id="mission-badge-grid"></div>
+            </div>
+          </div>
+          <div class="mission-panel" id="mission-panel-missions">
+            <div class="mission-section-card">
+              <div class="mission-section-label">Money Missions</div>
+              <div class="mission-focus-list" id="mission-objective-list"></div>
+            </div>
+          </div>
+          <div class="mission-panel" id="mission-panel-training">
+            <div class="mission-section-card">
+              <div class="mission-section-label">Training Drills</div>
+              <div class="mission-focus-list" id="mission-training-list"></div>
+            </div>
+          </div>
+          <div class="mission-panel" id="mission-panel-trophies">
+            <div class="mission-section-card">
+              <div class="mission-section-label">Trophies</div>
+              <div class="mission-card-grid" id="mission-trophy-grid"></div>
+            </div>
+          </div>
+          <div class="mission-panel" id="mission-panel-records">
+            <div class="mission-section-card">
+              <div class="mission-section-label">Personal Records</div>
+              <div class="mission-card-grid" id="mission-record-grid"></div>
+            </div>
+          </div>
+          <div class="mission-panel" id="mission-panel-journey">
+            <div class="mission-section-card">
+              <div class="mission-section-label">Journey</div>
+              <div class="mission-focus-list" id="mission-journey-list"></div>
             </div>
           </div>
         </div>
@@ -3596,6 +3689,21 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <button class="btn" onclick="copyPhase9GAccountMissionTabShellV25()">Copy Phase 9G</button>
           </div>
           <div class="reset-status" id="phase9g-mission-status"></div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Mission UI Expansion</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Phase 9H scope</div><div class="settings-row-meta" id="phase9h-mission-scope">Expand Account &gt; Mission into a business-action story hub with internal subtabs.</div></div><span class="settings-badge" id="phase9h-mission-scope-badge">Mission</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Money movement</div><div class="settings-row-meta" id="phase9h-mission-action">Mission panels use outreach, follow-up, calls, closes, revenue, content, proof, production, community, and records.</div></div><span class="settings-badge off" id="phase9h-mission-action-badge">Action</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Source trust</div><div class="settings-row-meta" id="phase9h-mission-trust">Unavailable metrics say Not Tracked instead of inventing stats.</div></div><span class="settings-badge off" id="phase9h-mission-trust-badge">Trust</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta" id="phase9h-mission-blocked">Developer/build status stays out of Mission; protected system actions remain blocked.</div></div><span class="settings-badge warn" id="phase9h-mission-blocked-badge">Blocked</span></div>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn primary" onclick="runPhase9HMissionUIExpansionV25()">Refresh Mission UI</button>
+            <button class="btn" onclick="setSettingsTab('account');setAccountSubTab('mission')">Open Mission</button>
+            <button class="btn" onclick="copyPhase9HMissionUIExpansionV25()">Copy Phase 9H</button>
+          </div>
+          <div class="reset-status" id="phase9h-mission-status"></div>
         </div>
       </div>
       <div class="health-subpane" id="health-subpane-backups">
@@ -5401,9 +5509,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 16:01 ET · OS v2_5 Phase 9G Account Mission Tab Shell';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9G Account Mission Tab Shell';
-var APP_CACHE_TOKEN='mmos-20260601-1601-v25-phase9g-account-mission-tab-shell';
+var APP_BUILD_STAMP='2026-06-01 16:34 ET · OS v2_5 Phase 9H Mission UI Expansion';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9H Mission UI Expansion';
+var APP_CACHE_TOKEN='mmos-20260601-1634-v25-phase9h-mission-ui-expansion';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8246,7 +8354,7 @@ function renderMasterConfigReadSkeletonStateV24(state){
 function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
   var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
   var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defgh]/.test(APP_CACHE_TOKEN);
   var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
   var result={
     status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
@@ -17754,7 +17862,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefgh]/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -17774,7 +17882,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[abcdefg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[abcdefgh]/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -18087,7 +18195,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefgh]/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -18356,7 +18464,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefgh]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -18382,7 +18490,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefgh]/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -18575,7 +18683,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefgh]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -18850,7 +18958,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defgh]/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -19029,7 +19137,7 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defgh]/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
@@ -19045,7 +19153,7 @@ function phase9EFunctionContainsV25(fn,needle){
 
 function getPhase9ENotificationEventWiringResultV25(){
   var log=mcReadNotificationLogV10();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efgh]/.test(APP_CACHE_TOKEN);
   var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
   var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
   var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
@@ -19239,7 +19347,7 @@ async function copyPhase9ENotificationEventWiringV25(){
 }
 
 function runPhase9ENotificationEventWiringQACheckV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efgh]/.test(APP_CACHE_TOKEN);
   var result=getPhase9ENotificationEventWiringResultV25();
   if(buildOk&&result.notificationEventWiringReady){
     renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
@@ -19372,7 +19480,7 @@ function getPhase9FNotificationContractMapV25(){
 }
 
 function getPhase9FAccountMissionContractsResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[fg]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[fgh]/.test(APP_CACHE_TOKEN);
   var phase9EReady=typeof runPhase9ENotificationEventWiringQACheckV25==='function'&&runPhase9ENotificationEventWiringQACheckV25().passed===true;
   var duplicateStatus=getAccountMissionContractDuplicateStatusV25();
   var notificationMap=getPhase9FNotificationContractMapV25();
@@ -19612,7 +19720,7 @@ function runPhase9FAccountMissionContractsQACheckV25(){
 var PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25='a1xx_phase9g_account_mission_tab_shell_v1';
 
 function getPhase9GAccountMissionTabShellResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9g/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[gh]/.test(APP_CACHE_TOKEN);
   var phase9FReady=typeof runPhase9FAccountMissionContractsQACheckV25==='function'&&runPhase9FAccountMissionContractsQACheckV25().passed===true;
   var missionButton=!!document.querySelector('[data-account-subtab="mission"]');
   var missionPane=document.getElementById('account-subpane-mission');
@@ -19669,7 +19777,7 @@ function getPhase9GAccountMissionTabShellResultV25(){
       .concat(missionStatsReady?[]:['Mission streak cards'])
       .concat(renderReady?[]:['Mission profile render function']),
     unsafeFields:[],
-    nextAllowedStepAfterPhase9G:ready?'phase9h_mission_scoreboard_tracked_data':'phase9g_account_mission_tab_shell_repair',
+    nextAllowedStepAfterPhase9G:ready?'phase9h_mission_ui_expansion':'phase9g_account_mission_tab_shell_repair',
     blockedActions:[
       'login-anywhere activation',
       'auth sync write',
@@ -19681,7 +19789,7 @@ function getPhase9GAccountMissionTabShellResultV25(){
       'second-device bootstrap execution'
     ],
     checkedAt:new Date().toISOString(),
-    message:ready?'Account Mission tab shell is ready. Profile is relocated, home streak pills are cleaned up, and Rolodex stays focused on resources.':'Account Mission tab shell needs review before Phase 9H scoreboard.'
+    message:ready?'Account Mission tab shell is ready. Profile is relocated, home streak pills are cleaned up, and Rolodex stays focused on resources.':'Account Mission tab shell needs review before Phase 9H Mission UI expansion.'
   };
 }
 
@@ -19815,6 +19923,221 @@ function runPhase9GAccountMissionTabShellQACheckV25(){
     return {passed:true,meta:'Phase 9G Account Mission tab shell is installed · profile moved from Rolodex · home streak pills cleaned.',failures:[]};
   }
   return {passed:false,meta:'Phase 9G Account Mission tab shell needs review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9G Account Mission tab shell']};
+}
+
+var PHASE9H_MISSION_UI_EXPANSION_KEY_V25='a1xx_phase9h_mission_ui_expansion_v1';
+
+function getPhase9HMissionUIExpansionResultV25(){
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9h/.test(APP_CACHE_TOKEN);
+  var phase9GReady=typeof runPhase9GAccountMissionTabShellQACheckV25==='function'&&runPhase9GAccountMissionTabShellQACheckV25().passed===true;
+  var missionPane=document.getElementById('account-subpane-mission');
+  var tabs=document.querySelectorAll('[data-mission-subtab]');
+  var panels=document.querySelectorAll('.mission-panel');
+  var storyReady=!!(document.getElementById('mission-story-title')&&document.getElementById('mission-current-objective')&&document.getElementById('mission-next-money-move-list'));
+  var actionPanelsReady=!!(document.getElementById('mission-attribute-grid')&&document.getElementById('mission-badge-grid')&&document.getElementById('mission-training-list')&&document.getElementById('mission-trophy-grid')&&document.getElementById('mission-record-grid')&&document.getElementById('mission-journey-list'));
+  var missionText=missionPane?missionPane.textContent:'';
+  var technicalLeak=!/Phase 9|Build:|Apps Script|restore execution|login-anywhere|Developer|QA receipt|contract receipt|Next Build/i.test(missionText);
+  var stats=typeof getAccountMissionActionStatsV25==='function'?getAccountMissionActionStatsV25():{};
+  var dataTrustReady=typeof renderMissionPanelsV25==='function'&&typeof missionSkillCardV25==='function';
+  var ready=!!(buildOk&&phase9GReady&&tabs.length>=8&&panels.length>=8&&storyReady&&actionPanelsReady&&technicalLeak&&dataTrustReady);
+  return {
+    status:ready?'phase9h_mission_ui_expansion_ready':'phase9h_mission_ui_expansion_needs_review',
+    mode:'phase9h_mission_ui_expansion',
+    missionUIExpansionReady:ready,
+    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
+    appVersion:typeof APP_VERSION!=='undefined'?APP_VERSION:'',
+    phase9GReady:phase9GReady,
+    internalMissionTabs:tabs.length,
+    missionPanels:panels.length,
+    storyOverviewReady:storyReady,
+    businessActionPanelsReady:actionPanelsReady,
+    sourceTrustReady:dataTrustReady,
+    technicalLanguageKeptOutOfMission:technicalLeak,
+    currentCycle:stats.cycle?('Cycle '+stats.cycle.num+' - '+stats.cycle.name):'',
+    nextMoneyMove:(getMissionNextMovesV25(stats)[0]||{}).name||'',
+    visibleActionStats:{
+      revenue:stats.revenue||0,
+      dms:stats.dms||0,
+      calls:stats.calls||0,
+      closes:stats.closes||0,
+      content:stats.content||0,
+      productionMoves:(stats.beats||0)+(stats.soundee||0)+(stats.activeAssets||0)
+    },
+    writeExecuted:false,
+    writesEnabled:false,
+    loginAnywhereActive:false,
+    authSyncWriteEnabled:false,
+    restoreExecutionEnabled:false,
+    tokenExport:false,
+    secretExport:false,
+    workerAuthEnabled:false,
+    automationActivationEnabled:false,
+    bootstrapExecutionEnabled:false,
+    uiItems:[
+      {key:'story_overview',status:storyReady?'Ready':'Review',mode:'mission_story',label:'Mission Overview uses current objective and next money move language'},
+      {key:'mission_subtabs',status:tabs.length>=8&&panels.length>=8?'Ready':'Review',mode:'ui_tabs',label:'Overview, Attributes, Badges, Missions, Training, Trophies, Records, and Journey are installed'},
+      {key:'business_action_surfaces',status:actionPanelsReady?'Ready':'Review',mode:'money_movement',label:'Mission panels focus on outreach, sales, content, proof, production, records, and journey'},
+      {key:'source_trust',status:dataTrustReady?'Ready':'Review',mode:'source_trust',label:'Missing metrics render as Not Tracked instead of fake numbers'},
+      {key:'technical_boundary',status:technicalLeak?'Ready':'Review',mode:'product_boundary',label:'Visible Mission copy avoids build, developer, restore, and QA receipt language'},
+      {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, and bootstrap execution remain blocked'}
+    ],
+    missingGateItems:[]
+      .concat(buildOk?[]:['Phase 9H build token'])
+      .concat(phase9GReady?[]:['Phase 9G Account Mission shell'])
+      .concat(tabs.length>=8&&panels.length>=8?[]:['Mission internal subtabs'])
+      .concat(storyReady?[]:['story-driven Mission Overview'])
+      .concat(actionPanelsReady?[]:['business-action Mission panels'])
+      .concat(dataTrustReady?[]:['source trust renderers'])
+      .concat(technicalLeak?[]:['remove technical/build language from Mission']),
+    unsafeFields:[],
+    nextAllowedStepAfterPhase9H:ready?'phase9i_entrepreneur_attribute_model':'phase9h_mission_ui_expansion_repair',
+    blockedActions:[
+      'login-anywhere activation',
+      'auth sync write',
+      'restore execution',
+      'token export',
+      'secret export',
+      'worker auth',
+      'automation activation',
+      'second-device bootstrap execution'
+    ],
+    checkedAt:new Date().toISOString(),
+    message:ready?'Mission UI expansion is ready. Account Mission now reads as a money-moving action hub with internal tabs and source-trusted placeholders.':'Mission UI expansion needs review before attribute scoring.'
+  };
+}
+
+function formatPhase9HMissionUIExpansionV25(result){
+  result=result||getPhase9HMissionUIExpansionResultV25();
+  var items=result.uiItems||[];
+  var stats=result.visibleActionStats||{};
+  var missing=result.missingGateItems||[];
+  var blocked=result.blockedActions||[];
+  return [
+    'Phase 9H mission UI expansion',
+    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
+    '',
+    'Mission UI mode',
+    '- Status: '+(result.status||'unknown'),
+    '- Mode: '+(result.mode||'unknown'),
+    '- Mission UI expansion ready: '+(result.missionUIExpansionReady?'true':'false'),
+    '- Phase 9G shell ready: '+(result.phase9GReady?'true':'false'),
+    '- Internal Mission tabs: '+(result.internalMissionTabs||0),
+    '- Mission panels: '+(result.missionPanels||0),
+    '- Story overview ready: '+(result.storyOverviewReady?'true':'false'),
+    '- Business action panels ready: '+(result.businessActionPanelsReady?'true':'false'),
+    '- Source trust ready: '+(result.sourceTrustReady?'true':'false'),
+    '- Technical language kept out of Mission: '+(result.technicalLanguageKeptOutOfMission?'true':'false'),
+    '- Current cycle: '+(result.currentCycle||''),
+    '- Next money move: '+(result.nextMoneyMove||''),
+    '- Write executed: '+(result.writeExecuted?'true':'false'),
+    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
+    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
+    '- Auth sync write enabled: '+(result.authSyncWriteEnabled?'true':'false'),
+    '- Secret export: '+(result.secretExport?'true':'false'),
+    '- Token export: '+(result.tokenExport?'true':'false'),
+    '- Restore execution enabled: '+(result.restoreExecutionEnabled?'true':'false'),
+    '- Worker auth enabled: '+(result.workerAuthEnabled?'true':'false'),
+    '- Automation activation enabled: '+(result.automationActivationEnabled?'true':'false'),
+    '- Bootstrap execution enabled: '+(result.bootstrapExecutionEnabled?'true':'false'),
+    '',
+    'Visible action stats',
+    '- revenue: '+(stats.revenue||0),
+    '- dms: '+(stats.dms||0),
+    '- calls: '+(stats.calls||0),
+    '- closes: '+(stats.closes||0),
+    '- content: '+(stats.content||0),
+    '- production moves: '+(stats.productionMoves||0),
+    '',
+    'Mission UI items',
+    items.length?items.map(function(item){return '- '+(item.key||'')+': '+(item.status||'')+' · '+(item.mode||'')+' · '+(item.label||'');}).join('\n'):'- none returned',
+    '',
+    'Missing gate items',
+    missing.length?('- '+missing.join('\n- ')):'- none',
+    '',
+    'Unsafe fields',
+    (result.unsafeFields||[]).length?('- '+result.unsafeFields.join('\n- ')):'- none',
+    '',
+    'Next allowed step',
+    '- '+(result.nextAllowedStepAfterPhase9H||''),
+    '',
+    'Blocked actions',
+    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
+    '',
+    'Result',
+    result.message||''
+  ].join('\n');
+}
+
+function setPhase9HMissionUIExpansionStateV25(state){
+  window.__phase9HMissionUIExpansionV25=state;
+  try{localStorage.setItem(PHASE9H_MISSION_UI_EXPANSION_KEY_V25,JSON.stringify(state));}catch(e){}
+  return state;
+}
+
+function getPhase9HMissionUIExpansionStateV25(){
+  try{return JSON.parse(localStorage.getItem(PHASE9H_MISSION_UI_EXPANSION_KEY_V25)||'null')||null;}catch(e){return null;}
+}
+
+function renderPhase9HMissionUIExpansionStateV25(state){
+  state=state||window.__phase9HMissionUIExpansionV25||getPhase9HMissionUIExpansionStateV25()||{};
+  var result=state.result||state||{};
+  var ready=result.missionUIExpansionReady===true;
+  setTextV24('phase9h-mission-action',ready?'Mission panels are focused on business actions and money movement.':'Mission panels should focus only on money-moving business actions.');
+  setTextV24('phase9h-mission-trust',ready?'Missing metrics show Not Tracked and do not invent scores.':'Unavailable metrics must say Not Tracked.');
+  setTextV24('phase9h-mission-blocked','Developer/build status stays out of Mission; protected system actions remain blocked.');
+  setBadge('phase9h-mission-scope-badge',ready?'Ready':'Mission',ready?'':'warn');
+  setBadge('phase9h-mission-action-badge',ready?'Action':'Review',ready?'':'warn');
+  setBadge('phase9h-mission-trust-badge',ready?'Trust':'Review',ready?'':'warn');
+  setBadge('phase9h-mission-blocked-badge','Blocked','warn');
+}
+
+function runPhase9HMissionUIExpansionV25(){
+  if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
+  var result=getPhase9HMissionUIExpansionResultV25();
+  var state={
+    checkedAt:new Date().toISOString(),
+    passed:result.missionUIExpansionReady===true,
+    result:result,
+    previewText:formatPhase9HMissionUIExpansionV25(result)
+  };
+  setPhase9HMissionUIExpansionStateV25(state);
+  renderPhase9HMissionUIExpansionStateV25(state);
+  var status=document.getElementById('phase9h-mission-status');
+  if(status){
+    status.className='reset-status '+(state.passed?'ok':'warn');
+    status.textContent=state.passed?'Mission UI expansion is ready.':'Mission UI expansion needs review.';
+  }
+  return {passed:state.passed,meta:state.passed?'Phase 9H Mission UI expansion is ready · story overview, internal tabs, business action panels, and Not Tracked states installed.':'Phase 9H Mission UI expansion needs review.',failures:state.passed?[]:['Phase 9H Mission UI expansion']};
+}
+
+async function copyPhase9HMissionUIExpansionV25(){
+  var state=window.__phase9HMissionUIExpansionV25||getPhase9HMissionUIExpansionStateV25();
+  if(!state||!state.previewText){
+    runPhase9HMissionUIExpansionV25();
+    state=window.__phase9HMissionUIExpansionV25||getPhase9HMissionUIExpansionStateV25();
+  }
+  var status=document.getElementById('phase9h-mission-status');
+  try{
+    await navigator.clipboard.writeText(state&&state.previewText||'');
+    if(status){
+      status.className='reset-status ok';
+      status.textContent='Phase 9H receipt copied.';
+    }
+  }catch(err){
+    if(status){
+      status.className='reset-status warn';
+      status.textContent='Copy blocked by browser. Select the Mission UI expansion receipt manually.';
+    }
+  }
+}
+
+function runPhase9HMissionUIExpansionQACheckV25(){
+  var result=getPhase9HMissionUIExpansionResultV25();
+  if(result.missionUIExpansionReady){
+    renderPhase9HMissionUIExpansionStateV25({result:result,previewText:formatPhase9HMissionUIExpansionV25(result)});
+    return {passed:true,meta:'Phase 9H Mission UI expansion is installed · business-action Mission tabs · no fake stats.',failures:[]};
+  }
+  return {passed:false,meta:'Phase 9H Mission UI expansion needs review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9H Mission UI expansion']};
 }
 
 function getSetupPointerRowsV23(){
@@ -23008,7 +23331,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config skeleton, Phase 8G master config preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, Phase 9A v2_5 baseline closeout, Phase 9B multi-device command center, Phase 9C second-device focus mode, Phase 9D notification hub shell, Phase 9E notification event wiring, Phase 9F Account Mission contracts, Phase 9G Account Mission tab shell, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config skeleton, Phase 8G master config preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, Phase 9A v2_5 baseline closeout, Phase 9B multi-device command center, Phase 9C second-device focus mode, Phase 9D notification hub shell, Phase 9E notification event wiring, Phase 9F Account Mission contracts, Phase 9G Account Mission tab shell, Phase 9H Mission UI expansion, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -23068,6 +23391,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9E Notification Event Wiring',typeof runPhase9ENotificationEventWiringQACheckV25==='function'?runPhase9ENotificationEventWiringQACheckV25():{passed:false,meta:'Missing Phase 9E notification event wiring check'});}catch(e){add('Phase 9E Notification Event Wiring',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9F Account Mission Contracts',typeof runPhase9FAccountMissionContractsQACheckV25==='function'?runPhase9FAccountMissionContractsQACheckV25():{passed:false,meta:'Missing Phase 9F Account Mission contracts check'});}catch(e){add('Phase 9F Account Mission Contracts',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9G Account Mission Tab Shell',typeof runPhase9GAccountMissionTabShellQACheckV25==='function'?runPhase9GAccountMissionTabShellQACheckV25():{passed:false,meta:'Missing Phase 9G Account Mission tab shell check'});}catch(e){add('Phase 9G Account Mission Tab Shell',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9H Mission UI Expansion',typeof runPhase9HMissionUIExpansionQACheckV25==='function'?runPhase9HMissionUIExpansionQACheckV25():{passed:false,meta:'Missing Phase 9H Mission UI expansion check'});}catch(e){add('Phase 9H Mission UI Expansion',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -23793,7 +24117,9 @@ function setAccountSubTab(tab){
   });
   if(window.__accountSubTab==='mission'){
     if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
+    if(typeof setMissionSubTabV25==='function')setMissionSubTabV25(window.__missionSubTabV25||'overview');
     if(typeof renderPhase9FAccountMissionContractsStateV25==='function')renderPhase9FAccountMissionContractsStateV25();
+    if(typeof renderPhase9HMissionUIExpansionStateV25==='function')renderPhase9HMissionUIExpansionStateV25();
   }
   if(window.__accountSubTab==='profile'){
     if(typeof renderDeviceProfileV23==='function')renderDeviceProfileV23();
@@ -28455,38 +28781,234 @@ function toggleResourceDrawer(prefix){
   if(wrap)wrap.classList.toggle('collapsed');
 }
 
-function renderAccountMissionProfileV25(){
+function missionNumberFromInputV25(id){
+  var el=document.getElementById(id);
+  return parseFloat((el&&el.value)||0)||0;
+}
+
+function missionActionValueV25(value,unit,empty){
+  value=parseFloat(value)||0;
+  if(value<=0)return empty||'Not Tracked';
+  if(unit==='money')return fmt(value);
+  return value+' '+unit+(value===1?'':'s');
+}
+
+function missionTrustV25(value){
+  return (parseFloat(value)||0)>0?'tracked':'not tracked';
+}
+
+function getAccountMissionActionStatsV25(){
   var ci=getCycleIdx(),cy=CYCLES[ci];
-  var rev=parseFloat((document.getElementById('w-rev')||{}).value)||0;
-  var dms=parseFloat((document.getElementById('w-dms')||{}).value)||(getDailyCoach().dms||0);
+  var d=typeof getDailyCoach==='function'?getDailyCoach():{};
+  var production=typeof getProductionData==='function'?getProductionData():{};
+  var rev=missionNumberFromInputV25('w-rev')||(parseFloat(d.money)||0);
+  var dms=missionNumberFromInputV25('w-dms')||(parseFloat(d.dms)||0);
+  var responses=missionNumberFromInputV25('w-resp')||(parseFloat(d.leads)||0);
+  var calls=missionNumberFromInputV25('w-calls')||(parseFloat(d.calls)||0);
+  var closes=missionNumberFromInputV25('w-closes')||(parseFloat(d.closes)||0);
+  var content=missionNumberFromInputV25('w-content')||(parseFloat(d.content)||0);
+  var beats=missionNumberFromInputV25('w-beats-made')||(parseFloat(production.beatsMadeCycle)||0);
+  var soundee=missionNumberFromInputV25('w-soundee')||(parseFloat(production.soundeeCycle)||0);
   var contentStreak=typeof getContentStreak==='function'?getContentStreak():0;
   var activeAssets=(window.__contentPipelinePieces||[]).length+(window.__productionPieces||[]).length;
-  var set=function(id,val){var el=document.getElementById(id);if(el)el.textContent=val;};
-  if(typeof renderAccountIdentity==='function')renderAccountIdentity();
-  set('rp-level',cy.num);
-  set('rp-rev',fmt(rev));
-  set('rp-streak',contentStreak);
-  set('rp-dms',dms);
-  set('rp-active',activeAssets);
   var weekly=getStore(STREAK_KEY)||{count:0};
   var closeStreak=typeof getCloseStreak==='function'?getCloseStreak():0;
-  set('mission-weekly-streak',(weekly.count||0)+' week'+((weekly.count||0)===1?'':'s'));
-  set('mission-close-streak',closeStreak+' day'+(closeStreak===1?'':'s'));
-  var summary=document.getElementById('rp-summary');
-  if(summary)summary.textContent='Cycle '+cy.num+' · '+cy.name+' · '+daysLeft(ci)+' days left. Current build: consistency, outreach, production delivery, and weekly revenue proof.';
-  var scores=[
-    {name:'Outreach',score:Math.min(100,Math.round(dms/40*100))},
-    {name:'Content',score:Math.min(100,contentStreak*14)},
-    {name:'Production',score:Math.min(100,(getProductionData().banginThisWeek===1?80:20)+Math.min(20,(window.__productionPieces||[]).length*5))},
-    {name:'Tracking',score:rev>0?70:35}
+  var actionTotal=dms+responses+calls+closes+content+beats+soundee+(rev>0?1:0);
+  return {
+    cycle:cy,
+    cycleIndex:ci,
+    revenue:rev,
+    dms:dms,
+    responses:responses,
+    calls:calls,
+    closes:closes,
+    content:content,
+    beats:beats,
+    soundee:soundee,
+    contentStreak:contentStreak,
+    activeAssets:activeAssets,
+    weeklyStreak:weekly.count||0,
+    closeStreak:closeStreak,
+    actionTotal:actionTotal,
+    daysLeft:daysLeft(ci)
+  };
+}
+
+function getMissionNextMovesV25(stats){
+  stats=stats||getAccountMissionActionStatsV25();
+  if((stats.dms||0)<=0){
+    return [
+      {name:'Pipeline Push',meta:'Send or log the first DM today.'},
+      {name:'Follow-Up Sprint',meta:'Touch one warm lead and create movement.'},
+      {name:'Content Proof',meta:'Ship one proof asset if outreach is blocked.'}
+    ];
+  }
+  if((stats.calls||0)<=0){
+    return [
+      {name:'Turn Replies Into Calls',meta:'Use today\'s conversations to book the next sales call.'},
+      {name:'Offer Attempt',meta:'Make one clear offer to a warm lead.'},
+      {name:'Follow-Up Sprint',meta:'Clear the next follow-up before it goes cold.'}
+    ];
+  }
+  if((stats.closes||0)<=0){
+    return [
+      {name:'Close Attempt',meta:'Move one active conversation to a paid decision.'},
+      {name:'Offer Follow-Up',meta:'Follow up with the strongest open offer.'},
+      {name:'Proof Builder',meta:'Post proof that supports the offer.'}
+    ];
+  }
+  return [
+    {name:'Stack The Win',meta:'Log the close, collect proof, and follow up for the next deal.'},
+    {name:'Pipeline Refill',meta:'Add new outreach so the next close has a path.'},
+    {name:'Delivery Push',meta:'Move the paid work forward today.'}
   ];
+}
+
+function missionRenderFocusListV25(id,items){
+  var el=document.getElementById(id);
+  if(!el)return;
+  items=items||[];
+  el.innerHTML=items.length?items.map(function(item){
+    return '<div class="mission-focus-item"><span class="mission-focus-dot"></span><div><div class="mission-focus-name">'+escapeHtml(item.name||'Next move')+'</div><div class="mission-focus-meta">'+escapeHtml(item.meta||'No detail yet.')+'</div></div></div>';
+  }).join(''):'<div class="mission-empty-state">Not Tracked yet. Log a real business action to light this up.</div>';
+}
+
+function missionSkillCardV25(item){
+  var value=parseFloat(item.value)||0;
+  var tracked=value>0;
+  var max=parseFloat(item.max)||1;
+  var width=tracked?Math.max(8,Math.min(100,Math.round(value/max*100))):4;
+  var trust=tracked?'tracked':'not tracked';
+  var display=tracked?(item.display||String(value)):'Not Tracked';
+  return '<div class="mission-skill"><div class="mission-skill-top"><div class="mission-skill-name">'+escapeHtml(item.name)+'</div><div class="mission-skill-trust">'+trust+'</div></div><div class="mission-skill-track"><div class="mission-skill-fill" style="width:'+width+'%"></div></div><div class="mission-skill-meta">'+escapeHtml(display+' · '+(item.next||'Log a real action to upgrade this skill.'))+'</div></div>';
+}
+
+function missionStatusCardV25(item){
+  var status=item.status||'Not Tracked';
+  var trust=item.trust||(/tracked|unlocked|ready/i.test(status)?'tracked':'not tracked');
+  return '<div class="mission-status-card"><div class="mission-status-name">'+escapeHtml(item.name||'Mission item')+'</div><div class="mission-status-trust">'+escapeHtml(status)+'</div><div class="mission-status-meta">'+escapeHtml((item.meta||'Waiting on a tracked business action.')+' · '+trust)+'</div></div>';
+}
+
+function renderMissionPanelsV25(stats){
+  stats=stats||getAccountMissionActionStatsV25();
+  var nextMoves=getMissionNextMovesV25(stats);
+  var objectiveTitle=(stats.dms||0)<=0?'Start the pipeline':(stats.calls||0)<=0?'Turn conversations into calls':(stats.closes||0)<=0?'Push for the close':'Stack the win';
+  var objectiveCopy=(stats.actionTotal||0)>0?
+    'You have movement logged. Keep pressing the next money move before the day cools off.':
+    'No business action is logged yet. Start with outreach, follow-up, a sales call, an offer, content proof, or production delivery.';
+  setTextV24('mission-story-title','Cycle '+stats.cycle.num+': '+stats.cycle.name+' - '+objectiveTitle);
+  setTextV24('mission-story-copy','You have '+stats.daysLeft+' days left in this cycle. The mission is simple: create movement that can turn into money.');
+  setTextV24('mission-current-objective',objectiveTitle);
+  setTextV24('mission-current-objective-copy',objectiveCopy);
+  setTextV24('mission-outreach-today',missionActionValueV25(stats.dms,'DM','No DM Logged Yet'));
+  setTextV24('mission-outreach-source','Source: '+missionTrustV25(stats.dms)+' DPC outreach log');
+  setTextV24('mission-sales-today',missionActionValueV25((stats.calls||0)+(stats.closes||0),'action','No Sales Action Logged Yet'));
+  setTextV24('mission-sales-source','Source: '+(((stats.calls||0)+(stats.closes||0))>0?'tracked':'not tracked')+' calls and closes');
+  missionRenderFocusListV25('mission-next-money-move-list',nextMoves);
+  var attributes=[
+    {name:'Outreach',value:stats.dms,max:40,display:missionActionValueV25(stats.dms,'DM','Not Tracked'),next:'Send or log DMs.'},
+    {name:'Follow-Up',value:stats.responses,max:15,display:missionActionValueV25(stats.responses,'reply','Not Tracked'),next:'Move warm replies forward.'},
+    {name:'Sales',value:stats.calls,max:10,display:missionActionValueV25(stats.calls,'call','Not Tracked'),next:'Book or make calls.'},
+    {name:'Closing',value:stats.closes,max:4,display:missionActionValueV25(stats.closes,'close','Not Tracked'),next:'Make the offer and close.'},
+    {name:'Revenue',value:stats.revenue,max:Math.max(1,stats.cycle.target),display:missionActionValueV25(stats.revenue,'money','Not Tracked'),next:'Collect and log money.'},
+    {name:'Content Proof',value:stats.content,max:7,display:missionActionValueV25(stats.content,'post','Not Tracked'),next:'Ship one proof asset.'},
+    {name:'Production',value:stats.beats+stats.soundee+stats.activeAssets,max:12,display:(stats.beats+stats.soundee+stats.activeAssets)>0?(stats.beats+stats.soundee+stats.activeAssets)+' production move'+((stats.beats+stats.soundee+stats.activeAssets)===1?'':'s'):'Not Tracked',next:'Move a project toward delivery.'},
+    {name:'Consistency',value:stats.weeklyStreak+stats.closeStreak+stats.contentStreak,max:21,display:(stats.weeklyStreak+stats.closeStreak+stats.contentStreak)>0?'Streak movement logged':'Not Tracked',next:'Repeat the money action tomorrow.'}
+  ];
+  var attr=document.getElementById('mission-attribute-grid');
+  if(attr)attr.innerHTML=attributes.map(missionSkillCardV25).join('');
+  var badges=[
+    {name:'Pipeline Starter',status:stats.dms>0?'Ready':'Locked',meta:'Log first DM to start the pipeline.'},
+    {name:'Follow-Up Builder',status:stats.responses>0?'Ready':'Locked',meta:'Move replies and warm leads forward.'},
+    {name:'Call Motion',status:stats.calls>0?'Ready':'Locked',meta:'Book or make a sales call.'},
+    {name:'Closer Badge',status:stats.closes>0?'Ready':'Locked',meta:'Close paid business.'},
+    {name:'Proof Builder',status:stats.content>0?'Ready':'Locked',meta:'Publish or log content proof.'},
+    {name:'Production Push',status:(stats.beats+stats.soundee+stats.activeAssets)>0?'Ready':'Locked',meta:'Move production toward delivery.'}
+  ];
+  var badgeGrid=document.getElementById('mission-badge-grid');
+  if(badgeGrid)badgeGrid.innerHTML=badges.map(missionStatusCardV25).join('');
+  missionRenderFocusListV25('mission-objective-list',[
+    {name:'Weekly Mission',meta:'Create business movement before the week resets.'},
+    {name:'Pipeline Push',meta:'Outreach and follow-up are the first lane if no sales action is logged.'},
+    {name:'Revenue Target',meta:'Cycle target: '+fmt(stats.cycle.target)+'. Logged revenue: '+missionActionValueV25(stats.revenue,'money','Not Tracked')+'.'},
+    {name:'Proof + Delivery',meta:'Support the offer with content proof or production progress.'}
+  ]);
+  missionRenderFocusListV25('mission-training-list',[
+    {name:'Outreach Drill',meta:'Send or log 10 DMs.'},
+    {name:'Follow-Up Drill',meta:'Clear 3 warm follow-ups.'},
+    {name:'Sales Drill',meta:'Book or make 1 sales call.'},
+    {name:'Offer Drill',meta:'Make 1 clear offer to a qualified lead.'},
+    {name:'Content Proof Drill',meta:'Script, post, or log 1 proof asset.'},
+    {name:'Production Drill',meta:'Move 1 project closer to delivery.'}
+  ]);
+  var trophyGrid=document.getElementById('mission-trophy-grid');
+  if(trophyGrid)trophyGrid.innerHTML=[
+    {name:'First Revenue Logged',status:stats.revenue>0?'Ready':'Locked',meta:'Money collected becomes part of the mission record.'},
+    {name:'First Close',status:stats.closes>0?'Ready':'Locked',meta:'A paid decision starts the closing story.'},
+    {name:'Proof Shipped',status:stats.content>0?'Ready':'Locked',meta:'Published proof compounds trust.'},
+    {name:'Pipeline Day',status:stats.dms>=10?'Ready':'Locked',meta:'10 DMs in one tracked day.'}
+  ].map(missionStatusCardV25).join('');
+  var recordGrid=document.getElementById('mission-record-grid');
+  if(recordGrid)recordGrid.innerHTML=[
+    {name:'Revenue Logged',status:stats.revenue>0?fmt(stats.revenue):'Not Tracked',meta:'Current tracked revenue movement.'},
+    {name:'DMs Logged',status:stats.dms>0?String(stats.dms):'Not Tracked',meta:'Current outreach volume.'},
+    {name:'Calls Logged',status:stats.calls>0?String(stats.calls):'Not Tracked',meta:'Current sales activity.'},
+    {name:'Closes Logged',status:stats.closes>0?String(stats.closes):'Not Tracked',meta:'Current paid wins.'},
+    {name:'Content Logged',status:stats.content>0?String(stats.content):'Not Tracked',meta:'Current proof movement.'},
+    {name:'Active Assets',status:stats.activeAssets>0?String(stats.activeAssets):'Not Tracked',meta:'Current content and production assets.'}
+  ].map(missionStatusCardV25).join('');
+  missionRenderFocusListV25('mission-journey-list',[
+    {name:'Current Chapter',meta:'Cycle '+stats.cycle.num+' - '+stats.cycle.name+'. '+stats.daysLeft+' days left.'},
+    {name:'Today\'s Story',meta:(stats.actionTotal||0)>0?'Movement is on the board. Keep stacking reps.':'The next chapter starts with one logged money action.'},
+    {name:'Next Unlock Path',meta:nextMoves[0]?nextMoves[0].name+' - '+nextMoves[0].meta:'Log the next business action.'},
+    {name:'Long Game',meta:'Records, badges, trophies, and skill growth unlock from tracked business actions only.'}
+  ]);
+}
+
+function setMissionSubTabV25(tab){
+  var allowed=['overview','attributes','badges','missions','training','trophies','records','journey'];
+  if(allowed.indexOf(tab)<0)tab='overview';
+  window.__missionSubTabV25=tab;
+  document.querySelectorAll('[data-mission-subtab]').forEach(function(btn){
+    btn.classList.toggle('active',btn.getAttribute('data-mission-subtab')===tab);
+  });
+  document.querySelectorAll('.mission-panel').forEach(function(panel){
+    panel.classList.toggle('active',panel.id==='mission-panel-'+tab);
+  });
+  renderAccountMissionProfileV25();
+}
+
+function renderAccountMissionProfileV25(){
+  var stats=getAccountMissionActionStatsV25();
+  var set=function(id,val){var el=document.getElementById(id);if(el)el.textContent=val;};
+  if(typeof renderAccountIdentity==='function')renderAccountIdentity();
+  set('rp-level',stats.cycle.num);
+  set('rp-rev',stats.revenue>0?fmt(stats.revenue):'$0');
+  set('rp-streak',stats.contentStreak);
+  set('rp-dms',stats.dms);
+  set('rp-active',stats.activeAssets);
+  set('mission-weekly-streak',(stats.weeklyStreak||0)+' week'+((stats.weeklyStreak||0)===1?'':'s'));
+  set('mission-close-streak',stats.closeStreak+' day'+(stats.closeStreak===1?'':'s'));
+  var summary=document.getElementById('rp-summary');
+  if(summary){
+    summary.textContent=(stats.actionTotal>0?'Business movement is logged today.':'No money-moving action logged yet today.')+' Current lane: '+(getMissionNextMovesV25(stats)[0]||{}).name+'.';
+  }
   var bars=document.getElementById('rp-skill-bars');
   if(bars){
-    bars.innerHTML=scores.map(function(s){
-      return '<div class="rp-skill"><div class="rp-skill-top"><div class="rp-skill-name">'+s.name+'</div><div class="rp-skill-score">'+s.score+'%</div></div><div class="rp-skill-track"><div class="rp-skill-fill" style="width:'+s.score+'%"></div></div></div>';
+    var quick=[
+      {name:'Outreach',value:stats.dms,max:40,display:missionActionValueV25(stats.dms,'DM','Not Tracked'),next:'Pipeline reps'},
+      {name:'Sales',value:stats.calls+stats.closes,max:10,display:missionActionValueV25(stats.calls+stats.closes,'action','Not Tracked'),next:'Calls and closes'},
+      {name:'Proof',value:stats.content,max:7,display:missionActionValueV25(stats.content,'post','Not Tracked'),next:'Content proof'},
+      {name:'Production',value:stats.beats+stats.soundee+stats.activeAssets,max:12,display:(stats.beats+stats.soundee+stats.activeAssets)>0?(stats.beats+stats.soundee+stats.activeAssets)+' move'+((stats.beats+stats.soundee+stats.activeAssets)===1?'':'s'):'Not Tracked',next:'Delivery movement'}
+    ];
+    bars.innerHTML=quick.map(function(s){
+      var tracked=(parseFloat(s.value)||0)>0;
+      var width=tracked?Math.max(8,Math.min(100,Math.round((parseFloat(s.value)||0)/(parseFloat(s.max)||1)*100))):4;
+      return '<div class="rp-skill"><div class="rp-skill-top"><div class="rp-skill-name">'+escapeHtml(s.name)+'</div><div class="rp-skill-score">'+(tracked?'Tracked':'Not Tracked')+'</div></div><div class="rp-skill-track"><div class="rp-skill-fill" style="width:'+width+'%"></div></div></div>';
     }).join('');
   }
-  return {cycle:cy,rev:rev,dms:dms,contentStreak:contentStreak,activeAssets:activeAssets,weeklyStreak:weekly.count||0,closeStreak:closeStreak};
+  renderMissionPanelsV25(stats);
+  return stats;
 }
 
 function renderRolodex(){
@@ -50436,7 +50958,7 @@ function init(){
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
   safeRender('system health',function(){renderSystemHealth();});
-  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();renderPhase9ENotificationEventWiringStateV25();renderPhase9FAccountMissionContractsStateV25();renderPhase9GAccountMissionTabShellStateV25();});
+  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();renderPhase9ENotificationEventWiringStateV25();renderPhase9FAccountMissionContractsStateV25();renderPhase9GAccountMissionTabShellStateV25();renderPhase9HMissionUIExpansionStateV25();});
   safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);renderMissionJourney();});
   safeRender('auto backup',function(){startAutoBackup();});
