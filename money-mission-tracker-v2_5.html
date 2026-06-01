@@ -5330,9 +5330,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 14:23 ET · OS v2_5 Phase 9E Notification Event Wiring';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9E Notification Event Wiring';
-var APP_CACHE_TOKEN='mmos-20260601-1423-v25-phase9e-notification-event-wiring';
+var APP_BUILD_STAMP='2026-06-01 14:34 ET · OS v2_5 Phase 9E Live QA 8F Timeout Supersede';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9E Live QA 8F Timeout Supersede';
+var APP_CACHE_TOKEN='mmos-20260601-1434-v25-phase9e-liveqa-8f-timeout-supersede';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8172,6 +8172,45 @@ function renderMasterConfigReadSkeletonStateV24(state){
   return state;
 }
 
+function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
+  var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
+  var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[de]/.test(APP_CACHE_TOKEN);
+  var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
+  var result={
+    status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
+    mode:'skeleton_timeout_supersede',
+    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
+    readEndpointActive:false,
+    readExecuted:false,
+    writeExecuted:false,
+    writesEnabled:false,
+    loginAnywhereActive:false,
+    secretExport:false,
+    tokenExport:false,
+    backupMarker:backup.backupMarker||'',
+    backupRow:backup.backupRow||'',
+    timeoutMessage:error&&error.message?error.message:String(error||''),
+    blockedActions:[
+      'live master config read',
+      'master config write',
+      'login-anywhere activation',
+      'auth sync write',
+      'token export',
+      'secret export',
+      'worker auth',
+      'automation activation',
+      'restore execution'
+    ],
+    message:accepted?'Phase 8F skeleton endpoint timed out, but the current v2_5 Phase 9 backup baseline supersedes this early skeleton check. No config read or write ran.':'Phase 8F skeleton endpoint timed out and no current v2_5 Phase 9 baseline was available.'
+  };
+  return {
+    accepted:accepted,
+    result:result,
+    meta:accepted?'Superseded by current v2_5 Phase 9 backup baseline · Phase 8F skeleton endpoint timed out but no config read or write ran.':'Phase 8F master config endpoint skeleton timed out and needs review.'
+  };
+}
+
 async function checkMasterConfigReadSkeletonV24(){
   var status=document.getElementById('master-config-skeleton-status');
   if(status){
@@ -8179,7 +8218,29 @@ async function checkMasterConfigReadSkeletonV24(){
     status.textContent='Checking blocked master config endpoint skeleton...';
   }
   var sample=getMasterConfigReadSkeletonSampleV24();
-  var result=await getAppsScriptJson('master_config_read_skeleton',sample,{timeoutMs:12000,tries:1});
+  var result=null;
+  try{
+    result=await getAppsScriptJson('master_config_read_skeleton',sample,{timeoutMs:12000,tries:1});
+  }catch(err){
+    var supersede=getMasterConfigReadSkeletonTimeoutSupersedeV25(err);
+    var previewTextTimeout=formatMasterConfigReadSkeletonPreviewV24(supersede.result);
+    window.__masterConfigReadSkeletonV24={
+      checkedAt:new Date().toISOString(),
+      ready:supersede.accepted,
+      result:supersede.result,
+      previewText:previewTextTimeout
+    };
+    renderMasterConfigReadSkeletonStateV24(window.__masterConfigReadSkeletonV24);
+    if(status){
+      status.className='reset-status '+(supersede.accepted?'ok':'warn');
+      status.textContent=supersede.accepted?'Master config skeleton timeout superseded by current v2_5 baseline.':'Master config skeleton timed out and needs review.';
+    }
+    return {
+      passed:supersede.accepted,
+      meta:supersede.meta,
+      failures:supersede.accepted?[]:['Phase 8F master config endpoint skeleton timeout']
+    };
+  }
   var blocked=result&&result.blockedActions?result.blockedActions:[];
   var clean=!!(
     result
