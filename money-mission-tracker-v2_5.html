@@ -3490,6 +3490,21 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="reset-status" id="phase9d-notify-status"></div>
         </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Notification Event Wiring</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Phase 9E scope</div><div class="settings-row-meta" id="phase9e-notify-scope">Wire existing safe system events into the notification window. No login-anywhere, restore execution, worker auth, automation, or bootstrap execution.</div></div><span class="settings-badge" id="phase9e-notify-scope-badge">Wire</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">System events</div><div class="settings-row-meta" id="phase9e-notify-system">Backup, Live QA, build status, command center, and focus mode events feed the bell.</div></div><span class="settings-badge off" id="phase9e-notify-system-badge">Events</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Gamification guard</div><div class="settings-row-meta" id="phase9e-notify-game">Achievement wrappers stay ready for verified Account Mission producers only.</div></div><span class="settings-badge off" id="phase9e-notify-game-badge">Guard</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta" id="phase9e-notify-blocked">Login-anywhere, auth sync, restore execution, worker auth, automations, token export, secret export, and bootstrap execution remain blocked.</div></div><span class="settings-badge warn" id="phase9e-notify-blocked-badge">Blocked</span></div>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn primary" onclick="runPhase9ENotificationEventWiringV25()">Refresh event wiring</button>
+            <button class="btn" onclick="mcOpenNotificationPanelV10()">Open window</button>
+            <button class="btn" onclick="copyPhase9ENotificationEventWiringV25()">Copy Phase 9E</button>
+          </div>
+          <div class="reset-status" id="phase9e-notify-status"></div>
+        </div>
       </div>
       <div class="health-subpane" id="health-subpane-backups">
         <div class="settings-section">
@@ -5315,9 +5330,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 14:12 ET · OS v2_5 Phase 9D Live QA 8AL Supersede';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9D Live QA 8AL Supersede';
-var APP_CACHE_TOKEN='mmos-20260601-1412-v25-phase9d-liveqa-8al-supersede';
+var APP_BUILD_STAMP='2026-06-01 14:23 ET · OS v2_5 Phase 9E Notification Event Wiring';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9E Notification Event Wiring';
+var APP_CACHE_TOKEN='mmos-20260601-1423-v25-phase9e-notification-event-wiring';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -17607,7 +17622,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcd]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcde]/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -17627,7 +17642,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[abcd]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[abcde]/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -17940,7 +17955,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcd]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcde]/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -18209,7 +18224,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcd]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcde]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -18235,7 +18250,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cd]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cde]/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -18428,7 +18443,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cd]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cde]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -18540,6 +18555,18 @@ function mcNotifyOutreachProgressV10(title,body,extra){return mcNotifyV10(Object
 function mcNotifySalesProgressV10(title,body,extra){return mcNotifyV10(Object.assign({category:'sales',severity:'celebration',title:title,body:body,source:'account_mission',trust:'verified_required'},extra||{}));}
 function mcNotifyContentProgressV10(title,body,extra){return mcNotifyV10(Object.assign({category:'content',severity:'celebration',title:title,body:body,source:'account_mission',trust:'verified_required'},extra||{}));}
 function mcNotifyProductionProgressV10(title,body,extra){return mcNotifyV10(Object.assign({category:'production',severity:'celebration',title:title,body:body,source:'account_mission',trust:'verified_required'},extra||{}));}
+function mcNotifyBuildStatusV10(extra){
+  extra=extra||{};
+  return mcNotifyV10(Object.assign({
+    category:'system',
+    severity:'info',
+    title:'Build confirmed',
+    body:'Active OS build: '+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown build')+'.',
+    source:'build_status',
+    trust:'local',
+    eventId:'build_status_'+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')
+  },extra));
+}
 
 function mcGetNotificationActiveTabV10(){
   try{return localStorage.getItem(MC_NOTIFY_ACTIVE_TAB_KEY_V10)||'all';}catch(e){return 'all';}
@@ -18691,7 +18718,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9d/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[de]/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -18870,12 +18897,223 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9d/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[de]/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
   }
   return {passed:false,meta:'Phase 9D notification hub shell needs review.',failures:['Phase 9D notification hub UI, API, or build token']};
+}
+
+var PHASE9E_NOTIFICATION_EVENT_WIRING_KEY_V25='a1xx_phase9e_notification_event_wiring_v1';
+
+function phase9EFunctionContainsV25(fn,needle){
+  try{return typeof fn==='function'&&String(fn).indexOf(needle)>=0;}catch(e){return false;}
+}
+
+function getPhase9ENotificationEventWiringResultV25(){
+  var log=mcReadNotificationLogV10();
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9e/.test(APP_CACHE_TOKEN);
+  var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
+  var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
+  var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
+  var commandWired=phase9EFunctionContainsV25(runPhase9BMultiDeviceCommandCenterV25,'mcNotifySyncV10')&&phase9EFunctionContainsV25(rebuildPhase9BReceiptChainV25,'mcNotifySyncV10');
+  var focusWired=phase9EFunctionContainsV25(runPhase9CSecondDeviceFocusModeV25,'mcNotifyFocusV10');
+  var buildStatusWired=typeof mcNotifyBuildStatusV10==='function';
+  var gamificationGuarded=phase9EFunctionContainsV25(mcNotifyAchievementV10,'verified_required')&&phase9EFunctionContainsV25(mcNotifyTrophyV10,'verified_required')&&phase9EFunctionContainsV25(mcNotifyRevenueProgressV10,'verified_required');
+  var ready=!!(buildOk&&hubReady&&backupWired&&liveQaWired&&commandWired&&focusWired&&buildStatusWired&&gamificationGuarded);
+  return {
+    status:ready?'phase9e_notification_event_wiring_ready':'phase9e_notification_event_wiring_needs_review',
+    mode:'phase9e_notification_event_wiring',
+    notificationEventWiringReady:ready,
+    appVersion:typeof APP_VERSION!=='undefined'?APP_VERSION:'',
+    appFile:typeof APP_BUILD_FILE!=='undefined'?APP_BUILD_FILE:'',
+    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
+    notificationCount:log.length,
+    unreadCount:log.filter(function(item){return !item.read&&!item.archived;}).length,
+    buildStatusWired:buildStatusWired,
+    backupEventsWired:backupWired,
+    liveQaEventsWired:liveQaWired,
+    commandCenterEventsWired:commandWired,
+    focusModeEventsWired:focusWired,
+    gamificationGuarded:gamificationGuarded,
+    loginAnywhereActive:false,
+    authSyncWriteEnabled:false,
+    restoreExecutionEnabled:false,
+    tokenExport:false,
+    secretExport:false,
+    workerAuthEnabled:false,
+    automationActivationEnabled:false,
+    bootstrapExecutionEnabled:false,
+    writeExecuted:false,
+    writesEnabled:false,
+    eventWiringItems:[
+      {key:'build_status_event',status:buildStatusWired?'Ready':'Review',mode:'local_event',label:'Build token status can be emitted into the notification window',value:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:''},
+      {key:'backup_events',status:backupWired?'Ready':'Review',mode:'verified_event',label:'Backup verified and backup review states notify the bell'},
+      {key:'live_qa_events',status:liveQaWired?'Ready':'Review',mode:'verified_event',label:'Live QA passed and review states notify the bell'},
+      {key:'command_center_events',status:commandWired?'Ready':'Review',mode:'safe_state_event',label:'Command Center ready/review and receipt rebuild states notify the bell'},
+      {key:'focus_mode_events',status:focusWired?'Ready':'Review',mode:'operator_flow_event',label:'Focus mode ready/review states notify the bell'},
+      {key:'gamification_guard',status:gamificationGuarded?'Ready':'Review',mode:'safety_boundary',label:'Achievement and milestone notifications remain wired to verified producers only'},
+      {key:'home_screen_clean',status:'Ready',mode:'ui_boundary',label:'Status stays in Health/notification window, not on the home screen'},
+      {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, and bootstrap execution remain blocked'}
+    ],
+    missingGateItems:[]
+      .concat(buildOk?[]:['Phase 9E build token'])
+      .concat(hubReady?[]:['Phase 9D notification hub shell'])
+      .concat(backupWired?[]:['backup event wiring'])
+      .concat(liveQaWired?[]:['Live QA event wiring'])
+      .concat(commandWired?[]:['command center event wiring'])
+      .concat(focusWired?[]:['focus mode event wiring'])
+      .concat(buildStatusWired?[]:['build status event wiring'])
+      .concat(gamificationGuarded?[]:['gamification verified-producer guard']),
+    unsafeFields:[],
+    nextAllowedStepAfterPhase9E:ready?'phase9f_gamification_profile_notification_events':'phase9e_notification_event_wiring_repair',
+    blockedActions:[
+      'login-anywhere activation',
+      'auth sync write',
+      'restore execution',
+      'token export',
+      'secret export',
+      'worker auth',
+      'automation activation',
+      'second-device bootstrap execution'
+    ],
+    checkedAt:new Date().toISOString(),
+    message:ready?'Notification event wiring is ready. Existing safe OS events now feed the bell and notification window.':'Notification event wiring needs review before gamification producers are connected.'
+  };
+}
+
+function formatPhase9ENotificationEventWiringV25(result){
+  result=result||getPhase9ENotificationEventWiringResultV25();
+  var items=result.eventWiringItems||[];
+  var missing=result.missingGateItems||[];
+  var blocked=result.blockedActions||[];
+  return [
+    'Phase 9E notification event wiring',
+    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
+    '',
+    'Event wiring mode',
+    '- Status: '+(result.status||'unknown'),
+    '- Mode: '+(result.mode||'unknown'),
+    '- Notification event wiring ready: '+(result.notificationEventWiringReady?'true':'false'),
+    '- App version: '+(result.appVersion||''),
+    '- App file: '+(result.appFile||''),
+    '- Notification count: '+(result.notificationCount||0),
+    '- Unread count: '+(result.unreadCount||0),
+    '- Build status wired: '+(result.buildStatusWired?'true':'false'),
+    '- Backup events wired: '+(result.backupEventsWired?'true':'false'),
+    '- Live QA events wired: '+(result.liveQaEventsWired?'true':'false'),
+    '- Command center events wired: '+(result.commandCenterEventsWired?'true':'false'),
+    '- Focus mode events wired: '+(result.focusModeEventsWired?'true':'false'),
+    '- Gamification guarded: '+(result.gamificationGuarded?'true':'false'),
+    '- Write executed: '+(result.writeExecuted?'true':'false'),
+    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
+    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
+    '- Auth sync write enabled: '+(result.authSyncWriteEnabled?'true':'false'),
+    '- Secret export: '+(result.secretExport?'true':'false'),
+    '- Token export: '+(result.tokenExport?'true':'false'),
+    '- Restore execution enabled: '+(result.restoreExecutionEnabled?'true':'false'),
+    '- Worker auth enabled: '+(result.workerAuthEnabled?'true':'false'),
+    '- Automation activation enabled: '+(result.automationActivationEnabled?'true':'false'),
+    '- Bootstrap execution enabled: '+(result.bootstrapExecutionEnabled?'true':'false'),
+    '',
+    'Event wiring items',
+    items.length?items.map(function(item){return '- '+(item.key||'')+': '+(item.status||'')+' · '+(item.mode||'')+' · '+(item.label||'')+(item.value?' · '+item.value:'');}).join('\n'):'- none returned',
+    '',
+    'Missing gate items',
+    missing.length?('- '+missing.join('\n- ')):'- none',
+    '',
+    'Unsafe fields',
+    (result.unsafeFields||[]).length?('- '+result.unsafeFields.join('\n- ')):'- none',
+    '',
+    'Next allowed step',
+    '- '+(result.nextAllowedStepAfterPhase9E||''),
+    '',
+    'Blocked actions',
+    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
+    '',
+    'Result',
+    result.message||''
+  ].join('\n');
+}
+
+function setPhase9ENotificationEventWiringStateV25(state){
+  window.__phase9ENotificationEventWiringV25=state;
+  try{localStorage.setItem(PHASE9E_NOTIFICATION_EVENT_WIRING_KEY_V25,JSON.stringify(state));}catch(e){}
+  return state;
+}
+
+function getPhase9ENotificationEventWiringStateV25(){
+  try{return JSON.parse(localStorage.getItem(PHASE9E_NOTIFICATION_EVENT_WIRING_KEY_V25)||'null')||null;}catch(e){return null;}
+}
+
+function renderPhase9ENotificationEventWiringStateV25(state){
+  state=state||window.__phase9ENotificationEventWiringV25||getPhase9ENotificationEventWiringStateV25()||{};
+  var result=state.result||state||{};
+  var ready=result.notificationEventWiringReady===true;
+  setTextV24('phase9e-notify-system',ready?'Backup, Live QA, build status, command center, and focus mode events are wired.':'Backup, Live QA, build status, command center, and focus mode events feed the bell.');
+  setTextV24('phase9e-notify-game','Achievement wrappers stay ready for verified Account Mission producers only.');
+  setTextV24('phase9e-notify-blocked','Login-anywhere, auth sync, restore execution, worker auth, automations, token export, secret export, and bootstrap execution remain blocked.');
+  setBadge('phase9e-notify-system-badge',ready?'Ready':'Events',ready?'':'warn');
+  setBadge('phase9e-notify-game-badge','Guard',ready?'':'off');
+  setBadge('phase9e-notify-blocked-badge','Blocked','warn');
+}
+
+function runPhase9ENotificationEventWiringV25(){
+  mcInitNotificationHubV10();
+  mcNotifyBuildStatusV10({eventId:'phase9e_build_status_'+(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown'),silent:false});
+  var result=getPhase9ENotificationEventWiringResultV25();
+  if(result.notificationEventWiringReady){
+    mcNotifySyncV10('Notification wiring ready','Backup, Live QA, command center, focus mode, and build-status events feed the bell.','phase9e',{eventId:'phase9e_event_wiring_ready'});
+  }else{
+    mcNotifyWarningV10('Notification wiring needs review','One or more safe event producers are not wired into the bell yet.','phase9e',{eventId:'phase9e_event_wiring_review'});
+  }
+  result=getPhase9ENotificationEventWiringResultV25();
+  var state={
+    checkedAt:new Date().toISOString(),
+    passed:result.notificationEventWiringReady===true,
+    result:result,
+    previewText:formatPhase9ENotificationEventWiringV25(result)
+  };
+  setPhase9ENotificationEventWiringStateV25(state);
+  renderPhase9ENotificationEventWiringStateV25(state);
+  var status=document.getElementById('phase9e-notify-status');
+  if(status){
+    status.className='reset-status '+(state.passed?'ok':'warn');
+    status.textContent=state.passed?'Notification event wiring is ready.':'Notification event wiring needs review.';
+  }
+  return {passed:state.passed,meta:state.passed?'Phase 9E notification event wiring is ready · safe OS events feed the bell.':'Phase 9E notification event wiring needs review.',failures:state.passed?[]:['Phase 9E notification event wiring']};
+}
+
+async function copyPhase9ENotificationEventWiringV25(){
+  var state=window.__phase9ENotificationEventWiringV25||getPhase9ENotificationEventWiringStateV25();
+  if(!state||!state.previewText){
+    runPhase9ENotificationEventWiringV25();
+    state=window.__phase9ENotificationEventWiringV25||getPhase9ENotificationEventWiringStateV25();
+  }
+  var status=document.getElementById('phase9e-notify-status');
+  try{
+    await navigator.clipboard.writeText(state&&state.previewText||'');
+    if(status){
+      status.className='reset-status ok';
+      status.textContent='Phase 9E receipt copied.';
+    }
+  }catch(err){
+    if(status){
+      status.className='reset-status warn';
+      status.textContent='Copy blocked by browser. Open Live QA or notification status and copy manually.';
+    }
+  }
+}
+
+function runPhase9ENotificationEventWiringQACheckV25(){
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9e/.test(APP_CACHE_TOKEN);
+  var result=getPhase9ENotificationEventWiringResultV25();
+  if(buildOk&&result.notificationEventWiringReady){
+    renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
+    return {passed:true,meta:'Phase 9E notification event wiring is installed · backup, Live QA, command center, focus, and build-status events feed the bell.',failures:[]};
+  }
+  return {passed:false,meta:'Phase 9E notification event wiring needs review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9E notification event wiring']};
 }
 
 function getSetupPointerRowsV23(){
@@ -22069,7 +22307,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config skeleton, Phase 8G master config preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, Phase 9A v2_5 baseline closeout, Phase 9B multi-device command center, Phase 9C second-device focus mode, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config skeleton, Phase 8G master config preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, Phase 9A v2_5 baseline closeout, Phase 9B multi-device command center, Phase 9C second-device focus mode, Phase 9D notification hub shell, Phase 9E notification event wiring, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -22126,6 +22364,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9B Multi-Device Command Center',typeof runPhase9BMultiDeviceCommandCenterQACheckV25==='function'?runPhase9BMultiDeviceCommandCenterQACheckV25():{passed:false,meta:'Missing Phase 9B multi-device command center check'});}catch(e){add('Phase 9B Multi-Device Command Center',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9C Second-Device Focus Mode',typeof runPhase9CSecondDeviceFocusModeQACheckV25==='function'?runPhase9CSecondDeviceFocusModeQACheckV25():{passed:false,meta:'Missing Phase 9C second-device focus mode check'});}catch(e){add('Phase 9C Second-Device Focus Mode',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9D Notification Hub Shell',typeof runPhase9DNotificationHubShellQACheckV25==='function'?runPhase9DNotificationHubShellQACheckV25():{passed:false,meta:'Missing Phase 9D notification hub shell check'});}catch(e){add('Phase 9D Notification Hub Shell',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9E Notification Event Wiring',typeof runPhase9ENotificationEventWiringQACheckV25==='function'?runPhase9ENotificationEventWiringQACheckV25():{passed:false,meta:'Missing Phase 9E notification event wiring check'});}catch(e){add('Phase 9E Notification Event Wiring',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -49481,7 +49720,7 @@ function init(){
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
   safeRender('system health',function(){renderSystemHealth();});
-  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();});
+  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();renderPhase9ENotificationEventWiringStateV25();});
   safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);renderMissionJourney();});
   safeRender('auto backup',function(){startAutoBackup();});
