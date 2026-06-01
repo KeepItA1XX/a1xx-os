@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260601-0948-v24-phase8am-portable-restore-marker-gate';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260601-0929-v24-phase8al-restore-execution-run-gate';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -6587,7 +6587,6 @@ function runSecondDeviceRestoreExecutionRunV19(input) {
   var expectedRunText = 'A1XX EXECUTE RESTORE RUN';
   var runText = cellTextV19(payload.restoreExecutionRunText || '', 140);
   var finalReceipt = parseMasterConfigJsonParamV19(payload.finalPreExecutionPreflightReceiptJson || payload.finalPreExecutionPreflightReceipt, {});
-  var portableMarkerGate = normalizeBooleanV19(payload.portableRestoreMarkerGate);
   var latestBackupStatus = getLatestDriveBackupStatusSnapshotV19();
   var latestBackup = latestBackupStatus.latest || {};
   var selectedRestoreSourceMarker = cellTextV19(
@@ -6616,7 +6615,6 @@ function runSecondDeviceRestoreExecutionRunV19(input) {
     finalReceipt.bootstrapExecutionEnabled === false &&
     finalReceipt.restoreEndpointActive === false
   );
-  var restoreSourceGateReady = !!(phase8ajReady || portableMarkerGate);
   var runConfirmed = !!(
     normalizeBooleanV19(payload.a1xxRestoreExecutionRunConfirmed) &&
     runText === expectedRunText
@@ -6663,7 +6661,7 @@ function runSecondDeviceRestoreExecutionRunV19(input) {
     targetDeviceLabel: targetDeviceLabel
   });
   var missingGateItems = [];
-  if (!restoreSourceGateReady) missingGateItems.push('Phase 8AJ final preflight or exact portable restore marker gate');
+  if (!phase8ajReady) missingGateItems.push('Phase 8AJ second-device restore execution final pre-execution preflight');
   if (!runConfirmed) missingGateItems.push('A1XX restore execution run text');
   if (!sourceConfirmed) missingGateItems.push('selected restore source confirmation');
   if (!targetConfirmed) missingGateItems.push('restore target pointer confirmation');
@@ -6677,7 +6675,7 @@ function runSecondDeviceRestoreExecutionRunV19(input) {
   if (parseError) missingGateItems.push('backup payload parse');
   if (!restoreKeys.length) missingGateItems.push('restore payload keys');
   var runReady = !!(
-    restoreSourceGateReady &&
+    phase8ajReady &&
     runConfirmed &&
     sourceConfirmed &&
     targetConfirmed &&
@@ -6701,7 +6699,6 @@ function runSecondDeviceRestoreExecutionRunV19(input) {
     restoreExecutionRunEndpointActive: true,
     restoreExecutionRunReady: runReady,
     phase8ajFinalPreExecutionPreflightReady: phase8ajReady,
-    portableRestoreMarkerGate: portableMarkerGate,
     a1xxRestoreExecutionRunConfirmed: runConfirmed,
     restoreExecutionRunText: runText,
     expectedRestoreExecutionRunText: expectedRunText,
@@ -6737,7 +6734,7 @@ function runSecondDeviceRestoreExecutionRunV19(input) {
     setupAutomationReady: false,
     restoreEndpointActive: runReady,
     restoreExecutionItems: [
-      { key: 'phase8aj_final_preflight_or_portable_marker_gate', status: restoreSourceGateReady ? 'Ready' : 'Review', mode: phase8ajReady ? 'receipt_gate' : 'portable_marker_gate', label: 'Phase 8AJ receipt or exact portable restore marker gate is present', value: phase8ajReady ? (finalReceipt.status || '') : selectedRestoreSourceMarker },
+      { key: 'phase8aj_final_preflight_receipt', status: phase8ajReady ? 'Ready' : 'Review', mode: 'receipt_gate', label: 'Phase 8AJ final pre-execution preflight receipt is present', value: finalReceipt.status || '' },
       { key: 'restore_execution_run_text', status: runConfirmed ? 'Confirmed' : 'Review', mode: 'execution_gate', label: 'A1XX restore execution run text is captured', value: runText },
       { key: 'selected_restore_source_marker', status: sourceConfirmed ? 'Ready' : 'Review', mode: 'exact_marker_gate', label: 'Selected restore source marker is confirmed for this run', value: selectedRestoreSourceMarker },
       { key: 'backup_payload_read', status: backupRead.ok ? 'Ready' : 'Review', mode: 'drive_read', label: 'Selected Drive backup payload is readable', value: backupRead.driveFileId || backupRead.error || '' },
