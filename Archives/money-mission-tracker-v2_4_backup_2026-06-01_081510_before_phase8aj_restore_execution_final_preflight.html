@@ -3029,23 +3029,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="second-device-restore-execution-endpoint-activation-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
-          <div class="settings-section-title">Second-Device Restore Execution Final Pre-Execution Preflight</div>
-          <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 8AJ scope</div><div class="settings-row-meta" id="second-device-restore-execution-final-preflight-scope">Final pre-execution preflight only. No restore, worker auth, automation, or bootstrap execution.</div></div><span class="settings-badge warn" id="second-device-restore-execution-final-preflight-scope-badge">Preflight</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Activation receipt</div><div class="settings-row-meta" id="second-device-restore-execution-final-preflight-package">Run after Phase 8AI endpoint activation review is ready.</div></div><span class="settings-badge off" id="second-device-restore-execution-final-preflight-package-badge">Receipt</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Final preflight</div><div class="settings-row-meta" id="second-device-restore-execution-final-preflight-review">Final restore pre-execution preflight has not run yet.</div></div><span class="settings-badge off" id="second-device-restore-execution-final-preflight-review-badge">Review</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Blocked actions</div><div class="settings-row-meta" id="second-device-restore-execution-final-preflight-blocked">No login-anywhere, restore execution, workers, automations, or bootstrap execution.</div></div><span class="settings-badge warn" id="second-device-restore-execution-final-preflight-blocked-badge">Blocked</span></div>
-          </div>
-          <label for="second-device-restore-execution-final-preflight-output">Second-device restore execution final pre-execution preflight</label>
-          <textarea id="second-device-restore-execution-final-preflight-output" rows="13" readonly placeholder="Click Run final preflight after Phase 8AI endpoint activation review is ready."></textarea>
-          <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="withGlobalProcessingActionV23('Running second-device restore final preflight',function(){return runSecondDeviceRestoreExecutionFinalPreExecutionPreflightV24();},this,'Second-device restore final preflight reviewed.')">Run final preflight</button>
-            <button class="btn" onclick="copySecondDeviceRestoreExecutionFinalPreExecutionPreflightV24()">Copy final preflight</button>
-            <button class="btn" onclick="withGlobalProcessingActionV23('Reviewing second-device restore endpoint activation',function(){return runSecondDeviceRestoreExecutionEndpointActivationReviewV24();},this,'Second-device restore endpoint activation reviewed.')">Review activation</button>
-          </div>
-          <div class="reset-status" id="second-device-restore-execution-final-preflight-status"></div>
-        </div>
-        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -5140,7 +5123,7 @@ var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
 var APP_BUILD_STAMP='2026-05-30 10:28 ET · OS v2_4 Phase 8N Live QA receipt supersede';
 var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8N Live QA receipt supersede';
-var APP_CACHE_TOKEN='mmos-20260601-0815-v24-phase8aj-restore-execution-final-preflight';
+var APP_CACHE_TOKEN='mmos-20260601-0746-v24-phase8ai-restore-execution-endpoint-activation-review';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -5441,8 +5424,7 @@ function isRestoreReceiptResultValidV24(phase,result){
     phase8ae:'second_device_restore_execution_preflight_review_ready',
     phase8af8ag:'second_device_restore_execution_b3_gate_review_ready',
     phase8ah:'second_device_restore_execution_actual_run_approval_ready',
-    phase8ai:'second_device_restore_execution_run_endpoint_activation_review_ready',
-    phase8aj:'second_device_restore_execution_final_pre_execution_preflight_ready'
+    phase8ai:'second_device_restore_execution_run_endpoint_activation_review_ready'
   }[phase]||'';
   if(!expected||result.status!==expected)return false;
   if(result.writeExecuted===true||result.writesEnabled===true)return false;
@@ -5513,9 +5495,6 @@ function ensureRestoreExecutionActualRunApprovalReceiptV24(){
 }
 function ensureRestoreExecutionEndpointActivationReviewReceiptV24(){
   return loadRestoreReceiptStateV24('phase8ai','__secondDeviceRestoreExecutionEndpointActivationReviewV24',typeof renderSecondDeviceRestoreExecutionEndpointActivationReviewStateV24==='function'?renderSecondDeviceRestoreExecutionEndpointActivationReviewStateV24:null);
-}
-function ensureRestoreExecutionFinalPreExecutionPreflightReceiptV24(){
-  return loadRestoreReceiptStateV24('phase8aj','__secondDeviceRestoreExecutionFinalPreExecutionPreflightV24',typeof renderSecondDeviceRestoreExecutionFinalPreExecutionPreflightStateV24==='function'?renderSecondDeviceRestoreExecutionFinalPreExecutionPreflightStateV24:null);
 }
 function isStorageQuotaErrorV22(e){
   var name=String(e&&e.name||'').toLowerCase();
@@ -16297,409 +16276,6 @@ function runSecondDeviceRestoreExecutionEndpointActivationReviewQACheckV24(){
   };
 }
 
-function getSecondDeviceRestoreExecutionFinalPreExecutionPreflightPayloadV24(){
-  var activationState=window.__secondDeviceRestoreExecutionEndpointActivationReviewV24||ensureRestoreExecutionEndpointActivationReviewReceiptV24()||{};
-  var activationResult=activationState.result||{};
-  var backup=window.__lastBackupArchiveStatusV22||{};
-  var latest=backup.latest||{};
-  var latestMarker=latest.backupId||backup.latestBackupId||backup.backupId||activationResult.latestBackupMarker||activationResult.selectedRestoreSourceMarker||'';
-  var selectedMarker=activationResult.selectedRestoreSourceMarker||activationResult.latestBackupMarker||latestMarker||'';
-  return {
-    sourceBuild:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
-    latestBackupMarker:latestMarker,
-    latestBackupRow:latest.matchedRow||latest.row||backup.latestBackupRow||activationResult.latestBackupRow||activationResult.selectedRestoreSourceRow||'',
-    selectedRestoreSourceMarker:selectedMarker,
-    confirmedRestoreSourceMarker:selectedMarker,
-    selectedRestoreSourceRow:activationResult.selectedRestoreSourceRow||activationResult.latestBackupRow||'',
-    cleanWorkbookId:activationResult.cleanWorkbookId||'',
-    backupFolderId:activationResult.backupFolderId||'',
-    targetDeviceLabel:activationResult.targetDeviceLabel||'second device',
-    backupVerified:!!(latestMarker||activationResult.backupVerified),
-    phase8aiEndpointActivationReviewReady:!!(activationState&&activationState.passed&&activationResult.status==='second_device_restore_execution_run_endpoint_activation_review_ready'),
-    selectedRestoreSourceConfirmed:true,
-    restoreTargetPointersConfirmed:true,
-    secondDeviceIdentityConfirmed:true,
-    a1xxFinalRestorePreflightConfirmed:true,
-    finalPreflightText:'A1XX CONFIRM FINAL RESTORE PREFLIGHT',
-    endpointActivationReviewReceiptJson:JSON.stringify(activationResult||{}),
-    finalPreflightOnly:true,
-    reviewOnly:true,
-    readExecuted:false,
-    writeExecuted:false,
-    restoreEnabled:false,
-    restoreExecutionEnabled:false,
-    workerAuthEnabled:false,
-    automationActivationEnabled:false,
-    bootstrapExecutionEnabled:false
-  };
-}
-
-function buildSecondDeviceRestoreExecutionFinalPreExecutionPreflightResultV24(payload){
-  payload=payload||getSecondDeviceRestoreExecutionFinalPreExecutionPreflightPayloadV24();
-  var expectedPreflightText='A1XX CONFIRM FINAL RESTORE PREFLIGHT';
-  var activationState=window.__secondDeviceRestoreExecutionEndpointActivationReviewV24||{};
-  var activationResult=activationState.result||{};
-  var phase8aiReady=!!(
-    payload.phase8aiEndpointActivationReviewReady
-    && activationState.passed===true
-    && activationResult.endpointActivationReviewReady===true
-    && activationResult.a1xxRestoreEndpointActivationReviewCaptured===true
-    && activationResult.restoreExecutionEnabled===false
-    && activationResult.bootstrapExecutionEnabled===false
-    && activationResult.futureRestoreEndpointActive===false
-    && activationResult.restoreEndpointActive===false
-  );
-  var selectedRestoreSourceMarker=payload.selectedRestoreSourceMarker||activationResult.selectedRestoreSourceMarker||activationResult.latestBackupMarker||'';
-  var selectedRestoreSourceRow=payload.selectedRestoreSourceRow||activationResult.selectedRestoreSourceRow||activationResult.latestBackupRow||'';
-  var latestBackupMarker=payload.latestBackupMarker||activationResult.latestBackupMarker||selectedRestoreSourceMarker||'';
-  var latestBackupRow=payload.latestBackupRow||activationResult.latestBackupRow||selectedRestoreSourceRow||'';
-  var cleanWorkbookId=payload.cleanWorkbookId||activationResult.cleanWorkbookId||'';
-  var backupFolderId=payload.backupFolderId||activationResult.backupFolderId||'';
-  var targetDeviceLabel=payload.targetDeviceLabel||activationResult.targetDeviceLabel||'second device';
-  var backupVerified=!!(payload.backupVerified||latestBackupMarker||activationResult.backupVerified);
-  var finalPreflightText=payload.finalPreflightText||'';
-  var sourceConfirmed=!!(payload.selectedRestoreSourceConfirmed&&selectedRestoreSourceMarker&&(payload.confirmedRestoreSourceMarker||selectedRestoreSourceMarker)===selectedRestoreSourceMarker);
-  var targetConfirmed=!!(payload.restoreTargetPointersConfirmed&&cleanWorkbookId&&backupFolderId);
-  var deviceConfirmed=!!(payload.secondDeviceIdentityConfirmed&&targetDeviceLabel);
-  var finalPreflightConfirmed=!!(payload.a1xxFinalRestorePreflightConfirmed&&finalPreflightText===expectedPreflightText);
-  var missingGate=[];
-  if(!phase8aiReady)missingGate.push('Phase 8AI second-device restore execution endpoint activation review');
-  if(!backupVerified)missingGate.push('fresh backup verification');
-  if(!sourceConfirmed)missingGate.push('selected restore source confirmation');
-  if(!targetConfirmed)missingGate.push('restore target pointer confirmation');
-  if(!deviceConfirmed)missingGate.push('second-device identity confirmation');
-  if(!finalPreflightConfirmed)missingGate.push('A1XX final restore preflight confirmation text');
-  if(!selectedRestoreSourceMarker)missingGate.push('selectedRestoreSourceMarker');
-  if(!cleanWorkbookId)missingGate.push('clean_workbook_id');
-  if(!backupFolderId)missingGate.push('backup_folder_id');
-  var ready=!!(
-    phase8aiReady
-    && backupVerified
-    && sourceConfirmed
-    && targetConfirmed
-    && deviceConfirmed
-    && finalPreflightConfirmed
-    && selectedRestoreSourceMarker
-    && cleanWorkbookId
-    && backupFolderId
-    && missingGate.length===0
-  );
-  return {
-    status:ready?'second_device_restore_execution_final_pre_execution_preflight_ready':'second_device_restore_execution_final_pre_execution_preflight_needs_review',
-    mode:'second_device_restore_execution_final_pre_execution_preflight_only',
-    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown',
-    finalPreExecutionPreflightExecuted:true,
-    finalPreExecutionPreflightReady:ready,
-    phase8aiEndpointActivationReviewReady:phase8aiReady,
-    a1xxFinalRestorePreflightConfirmed:finalPreflightConfirmed,
-    finalPreflightText:finalPreflightText,
-    expectedFinalPreflightText:expectedPreflightText,
-    selectedRestoreSourceConfirmed:sourceConfirmed,
-    restoreTargetPointersConfirmed:targetConfirmed,
-    secondDeviceIdentityConfirmed:deviceConfirmed,
-    backupVerified:backupVerified,
-    latestBackupMarker:latestBackupMarker,
-    latestBackupRow:latestBackupRow,
-    selectedRestoreSourceMarker:selectedRestoreSourceMarker,
-    selectedRestoreSourceRow:selectedRestoreSourceRow,
-    cleanWorkbookId:cleanWorkbookId,
-    backupFolderId:backupFolderId,
-    targetDeviceLabel:targetDeviceLabel,
-    readExecuted:false,
-    configReadExecuted:false,
-    notionReadExecuted:false,
-    writeExecuted:false,
-    writesEnabled:false,
-    loginAnywhereActive:false,
-    secretExport:false,
-    tokenExport:false,
-    restoreEnabled:false,
-    restoreExecutionEnabled:false,
-    workerAuthEnabled:false,
-    automationActivationEnabled:false,
-    bootstrapExecutionEnabled:false,
-    setupAutomationReady:false,
-    futureRestoreEndpointActive:false,
-    restoreEndpointActive:false,
-    finalPreflightItems:[
-      {key:'phase8ai_endpoint_activation_receipt',status:phase8aiReady?'Ready':'Review',mode:'review_only',label:'Phase 8AI endpoint activation review receipt is present',value:activationResult.status||''},
-      {key:'final_preflight_confirmation_text',status:finalPreflightConfirmed?'Confirmed':'Review',mode:'final_preflight_gate',label:'A1XX final restore preflight confirmation is captured',value:finalPreflightText},
-      {key:'fresh_backup_visible',status:backupVerified?'Ready':'Review',mode:'read_only',label:'Fresh backup marker is visible immediately before any future execution phase',value:latestBackupMarker},
-      {key:'restore_source_reconfirmed',status:sourceConfirmed?'Ready':'Review',mode:'final_preflight_only',label:'Selected restore source marker is reconfirmed',value:selectedRestoreSourceMarker},
-      {key:'restore_target_reconfirmed',status:targetConfirmed?'Ready':'Review',mode:'final_preflight_only',label:'Clean workbook and backup folder pointers are reconfirmed',value:cleanWorkbookId&&backupFolderId?cleanWorkbookId+' | '+backupFolderId:''},
-      {key:'second_device_identity_reconfirmed',status:deviceConfirmed?'Ready':'Review',mode:'manual_review_only',label:'Second-device identity is reconfirmed manually',value:targetDeviceLabel},
-      {key:'restore_execution_endpoint_inactive',status:'Blocked',mode:'safety_boundary',label:'Restore execution endpoint remains inactive in final preflight'},
-      {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, token export, secret export, worker auth, automations, and bootstrap execution remain blocked'}
-    ],
-    requiredBeforeRestoreExecution:[
-      'fresh backup verified immediately before execution',
-      'A1XX explicit restore execution run command in the execution phase',
-      'exact selected backup marker supplied to execution request',
-      'second-device identity supplied to execution request',
-      'restore execution receipt returned',
-      'restore readback verification after execution',
-      'archive-only recovery if readback fails'
-    ],
-    missingGateItems:missingGate,
-    unsafeFields:[],
-    nextAllowedStepAfterFinalPreExecutionPreflight:ready?'second_device_restore_execution_run':'second_device_restore_execution_final_pre_execution_preflight_repair',
-    blockedActions:[
-      'live master config write',
-      'login-anywhere activation',
-      'auth sync write',
-      'token export',
-      'secret export',
-      'restore execution',
-      'worker auth',
-      'automation activation',
-      'second-device bootstrap execution'
-    ],
-    message:ready?'Second-device restore execution final pre-execution preflight is ready. Actual restore execution remains blocked for a separate execution phase.':'Second-device restore execution final pre-execution preflight needs review. No restore execution ran.'
-  };
-}
-
-function formatSecondDeviceRestoreExecutionFinalPreExecutionPreflightV24(result){
-  result=result||{};
-  var items=result.finalPreflightItems||[];
-  var required=result.requiredBeforeRestoreExecution||[];
-  var missingGate=result.missingGateItems||[];
-  var unsafe=result.unsafeFields||[];
-  var blocked=result.blockedActions||[];
-  var itemLines=items.length?items.map(function(item){
-    return '- '+(item.key||'')+': '+(item.status||'')+' · '+(item.mode||'')+' · '+(item.label||'')+(item.value?' · '+item.value:'');
-  }).join('\n'):'- none returned';
-  return [
-    'Phase 8AJ second-device restore execution final pre-execution preflight',
-    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
-    '',
-    'Final pre-execution preflight mode',
-    '- Status: '+(result.status||'unknown'),
-    '- Mode: '+(result.mode||'unknown'),
-    '- Final pre-execution preflight executed: '+(result.finalPreExecutionPreflightExecuted?'true':'false'),
-    '- Final pre-execution preflight ready: '+(result.finalPreExecutionPreflightReady?'true':'false'),
-    '- Phase 8AI endpoint activation review ready: '+(result.phase8aiEndpointActivationReviewReady?'true':'false'),
-    '- A1XX final restore preflight confirmed: '+(result.a1xxFinalRestorePreflightConfirmed?'true':'false'),
-    '- Final preflight text: '+(result.finalPreflightText||''),
-    '- Expected final preflight text: '+(result.expectedFinalPreflightText||''),
-    '- Selected restore source confirmed: '+(result.selectedRestoreSourceConfirmed?'true':'false'),
-    '- Restore target pointers confirmed: '+(result.restoreTargetPointersConfirmed?'true':'false'),
-    '- Second-device identity confirmed: '+(result.secondDeviceIdentityConfirmed?'true':'false'),
-    '- Backup verified: '+(result.backupVerified?'true':'false'),
-    '- Latest backup marker: '+(result.latestBackupMarker||''),
-    '- Latest backup row: '+(result.latestBackupRow||''),
-    '- Selected restore source marker: '+(result.selectedRestoreSourceMarker||''),
-    '- Selected restore source row: '+(result.selectedRestoreSourceRow||''),
-    '- Clean workbook ID: '+(result.cleanWorkbookId||''),
-    '- Backup folder ID: '+(result.backupFolderId||''),
-    '- Target device label: '+(result.targetDeviceLabel||''),
-    '- Read executed: '+(result.readExecuted?'true':'false'),
-    '- Config read executed: '+(result.configReadExecuted?'true':'false'),
-    '- Notion read executed: '+(result.notionReadExecuted?'true':'false'),
-    '- Write executed: '+(result.writeExecuted?'true':'false'),
-    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
-    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
-    '- Secret export: '+(result.secretExport?'true':'false'),
-    '- Token export: '+(result.tokenExport?'true':'false'),
-    '- Restore enabled: '+(result.restoreEnabled?'true':'false'),
-    '- Restore execution enabled: '+(result.restoreExecutionEnabled?'true':'false'),
-    '- Worker auth enabled: '+(result.workerAuthEnabled?'true':'false'),
-    '- Automation activation enabled: '+(result.automationActivationEnabled?'true':'false'),
-    '- Bootstrap execution enabled: '+(result.bootstrapExecutionEnabled?'true':'false'),
-    '',
-    'Final preflight items',
-    itemLines,
-    '',
-    'Required before restore execution',
-    required.length?('- '+required.join('\n- ')):'- none returned',
-    '',
-    'Missing gate items',
-    missingGate.length?('- '+missingGate.join('\n- ')):'- none',
-    '',
-    'Unsafe fields',
-    unsafe.length?('- '+unsafe.join('\n- ')):'- none',
-    '',
-    'Next allowed step',
-    '- '+(result.nextAllowedStepAfterFinalPreExecutionPreflight||''),
-    '',
-    'Blocked actions',
-    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
-    '',
-    'Result',
-    result.message||'Second-device restore execution final pre-execution preflight checked.'
-  ].join('\n');
-}
-
-function renderSecondDeviceRestoreExecutionFinalPreExecutionPreflightStateV24(state){
-  state=state||window.__secondDeviceRestoreExecutionFinalPreExecutionPreflightV24||null;
-  var pkg=document.getElementById('second-device-restore-execution-final-preflight-package');
-  var pkgBadge=document.getElementById('second-device-restore-execution-final-preflight-package-badge');
-  var review=document.getElementById('second-device-restore-execution-final-preflight-review');
-  var reviewBadge=document.getElementById('second-device-restore-execution-final-preflight-review-badge');
-  var blocked=document.getElementById('second-device-restore-execution-final-preflight-blocked');
-  var blockedBadge=document.getElementById('second-device-restore-execution-final-preflight-blocked-badge');
-  var output=document.getElementById('second-device-restore-execution-final-preflight-output');
-  var result=state&&state.result?state.result:null;
-  var passed=!!(state&&state.passed);
-  if(pkg)pkg.textContent=result
-    ? (passed?'Phase 8AI endpoint activation receipt is ready for final preflight.':'Phase 8AI endpoint activation receipt needs attention.')
-    : 'Run after Phase 8AI endpoint activation review is ready.';
-  if(pkgBadge){
-    pkgBadge.textContent=result?(passed?'Ready':'Review'):'Receipt';
-    pkgBadge.className=setupDoctorBadgeClassV23(result?(passed?'ready':'warn'):'off');
-  }
-  if(review)review.textContent=result
-    ? (passed?'Final pre-execution preflight is ready. Actual restore remains blocked.':'Final preflight needs review before moving on.')
-    : 'Final restore pre-execution preflight has not run yet.';
-  if(reviewBadge){
-    reviewBadge.textContent=passed?'Ready':'Review';
-    reviewBadge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-  }
-  if(blocked)blocked.textContent=result
-    ? 'Login-anywhere, restore execution, worker auth, automations, and bootstrap execution stayed blocked.'
-    : 'No login-anywhere, restore execution, workers, automations, or bootstrap execution.';
-  if(blockedBadge){
-    blockedBadge.textContent='Blocked';
-    blockedBadge.className=setupDoctorBadgeClassV23(passed?'ready':'warn');
-  }
-  if(output)output.value=state&&state.previewText?state.previewText:'';
-  return result;
-}
-
-async function runSecondDeviceRestoreExecutionFinalPreExecutionPreflightV24(){
-  var status=document.getElementById('second-device-restore-execution-final-preflight-status');
-  if(status){
-    status.className='reset-status';
-    status.textContent='Running second-device restore final preflight...';
-  }
-  var activation=window.__secondDeviceRestoreExecutionEndpointActivationReviewV24||ensureRestoreExecutionEndpointActivationReviewReceiptV24()||null;
-  if(!activation||activation.passed!==true){
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Run Second-Device Restore Execution Endpoint Activation Review first. Phase 8AJ needs the Phase 8AI receipt.';
-    }
-    return {
-      passed:false,
-      meta:'Run Second-Device Restore Execution Endpoint Activation Review before Phase 8AJ.',
-      failures:['Phase 8AI second-device restore execution endpoint activation review receipt']
-    };
-  }
-  var result=buildSecondDeviceRestoreExecutionFinalPreExecutionPreflightResultV24(getSecondDeviceRestoreExecutionFinalPreExecutionPreflightPayloadV24());
-  var missingGate=(result&&result.missingGateItems)||[];
-  var unsafe=(result&&result.unsafeFields)||[];
-  var clean=!!(
-    result
-    && result.mode==='second_device_restore_execution_final_pre_execution_preflight_only'
-    && result.status==='second_device_restore_execution_final_pre_execution_preflight_ready'
-    && result.finalPreExecutionPreflightExecuted===true
-    && result.finalPreExecutionPreflightReady===true
-    && result.phase8aiEndpointActivationReviewReady===true
-    && result.a1xxFinalRestorePreflightConfirmed===true
-    && result.finalPreflightText===result.expectedFinalPreflightText
-    && result.selectedRestoreSourceConfirmed===true
-    && result.restoreTargetPointersConfirmed===true
-    && result.secondDeviceIdentityConfirmed===true
-    && result.backupVerified===true
-    && !!result.latestBackupMarker
-    && !!result.selectedRestoreSourceMarker
-    && !!result.cleanWorkbookId
-    && !!result.backupFolderId
-    && result.readExecuted===false
-    && result.configReadExecuted===false
-    && result.notionReadExecuted===false
-    && result.writeExecuted===false
-    && result.writesEnabled===false
-    && result.loginAnywhereActive===false
-    && result.secretExport===false
-    && result.tokenExport===false
-    && result.restoreEnabled===false
-    && result.restoreExecutionEnabled===false
-    && result.workerAuthEnabled===false
-    && result.automationActivationEnabled===false
-    && result.bootstrapExecutionEnabled===false
-    && result.futureRestoreEndpointActive===false
-    && result.restoreEndpointActive===false
-    && missingGate.length===0
-    && unsafe.length===0
-    && result.nextAllowedStepAfterFinalPreExecutionPreflight==='second_device_restore_execution_run'
-  );
-  var previewText=formatSecondDeviceRestoreExecutionFinalPreExecutionPreflightV24(result);
-  window.__secondDeviceRestoreExecutionFinalPreExecutionPreflightV24={
-    checkedAt:new Date().toISOString(),
-    passed:clean,
-    result:result,
-    previewText:previewText
-  };
-  saveRestoreReceiptStateV24('phase8aj',window.__secondDeviceRestoreExecutionFinalPreExecutionPreflightV24);
-  renderSecondDeviceRestoreExecutionFinalPreExecutionPreflightStateV24(window.__secondDeviceRestoreExecutionFinalPreExecutionPreflightV24);
-  if(status){
-    status.className='reset-status '+(clean?'ok':'warn');
-    status.textContent=clean
-      ? 'Second-device restore final preflight is ready. Actual restore remains blocked.'
-      : 'Second-device restore final preflight needs review.';
-  }
-  return {
-    passed:clean,
-    meta:clean?'Phase 8AJ second-device restore execution final pre-execution preflight is ready · actual restore blocked.':'Phase 8AJ second-device restore execution final pre-execution preflight needs review.',
-    failures:clean?[]:['Phase 8AJ second-device restore execution final pre-execution preflight']
-  };
-}
-
-async function copySecondDeviceRestoreExecutionFinalPreExecutionPreflightV24(){
-  var state=window.__secondDeviceRestoreExecutionFinalPreExecutionPreflightV24||null;
-  var status=document.getElementById('second-device-restore-execution-final-preflight-status');
-  if(!state){
-    var check=await runSecondDeviceRestoreExecutionFinalPreExecutionPreflightV24();
-    state=window.__secondDeviceRestoreExecutionFinalPreExecutionPreflightV24||{previewText:check&&check.meta?check.meta:''};
-  }
-  try{
-    await navigator.clipboard.writeText(state.previewText||'');
-    if(status){
-      status.className='reset-status ok';
-      status.textContent='Second-device restore final preflight copied.';
-    }
-  }catch(err){
-    var output=document.getElementById('second-device-restore-execution-final-preflight-output');
-    if(output){
-      output.focus();
-      output.select();
-    }
-    if(status){
-      status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the restore final preflight text manually.';
-    }
-  }
-}
-
-function runSecondDeviceRestoreExecutionFinalPreExecutionPreflightSelfCheckV24(){
-  var hasUi=!!(
-    document.getElementById('second-device-restore-execution-final-preflight-output')
-    && document.getElementById('second-device-restore-execution-final-preflight-blocked')
-    && typeof getSecondDeviceRestoreExecutionFinalPreExecutionPreflightPayloadV24==='function'
-    && typeof runSecondDeviceRestoreExecutionFinalPreExecutionPreflightV24==='function'
-  );
-  return {
-    passed:hasUi,
-    meta:hasUi?'Phase 8AJ second-device restore execution final pre-execution preflight UI is installed · actual restore remains blocked.':'Phase 8AJ second-device restore execution final pre-execution preflight UI needs review.',
-    failures:hasUi?[]:['Phase 8AJ second-device restore execution final pre-execution preflight UI']
-  };
-}
-
-function runSecondDeviceRestoreExecutionFinalPreExecutionPreflightQACheckV24(){
-  var state=window.__secondDeviceRestoreExecutionFinalPreExecutionPreflightV24||ensureRestoreExecutionFinalPreExecutionPreflightReceiptV24()||null;
-  if(state&&state.passed===true){
-    return {
-      passed:true,
-      meta:'Phase 8AJ second-device restore execution final pre-execution preflight is present · actual restore remains blocked.',
-      failures:[]
-    };
-  }
-  return {
-    passed:false,
-    meta:'Run Second-Device Restore Execution Final Pre-Execution Preflight before Live QA so the Phase 8AJ receipt is available.',
-    failures:['Phase 8AJ second-device restore execution final pre-execution preflight receipt']
-  };
-}
-
 function getSetupPointerRowsV23(){
   var health=window.__lastSetupDoctorHealthV23&&window.__lastSetupDoctorHealthV23.health?window.__lastSetupDoctorHealthV23.health:{};
   var backup=window.__lastBackupArchiveStatusV22||{};
@@ -19890,7 +19466,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -19941,7 +19517,6 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8AF/8AG Second-Device Restore Execution B3 + Final Gate Review',typeof runSecondDeviceRestoreExecutionB3GateReviewQACheckV24==='function'?runSecondDeviceRestoreExecutionB3GateReviewQACheckV24():{passed:false,meta:'Missing Phase 8AF/8AG second-device restore execution B3/final gate check'});}catch(e){add('Phase 8AF/8AG Second-Device Restore Execution B3 + Final Gate Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8AH Second-Device Restore Execution Actual Run Approval',typeof runSecondDeviceRestoreExecutionActualRunApprovalQACheckV24==='function'?runSecondDeviceRestoreExecutionActualRunApprovalQACheckV24():{passed:false,meta:'Missing Phase 8AH second-device restore execution actual run approval check'});}catch(e){add('Phase 8AH Second-Device Restore Execution Actual Run Approval',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8AI Second-Device Restore Execution Endpoint Activation Review',typeof runSecondDeviceRestoreExecutionEndpointActivationReviewQACheckV24==='function'?runSecondDeviceRestoreExecutionEndpointActivationReviewQACheckV24():{passed:false,meta:'Missing Phase 8AI second-device restore execution endpoint activation review check'});}catch(e){add('Phase 8AI Second-Device Restore Execution Endpoint Activation Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 8AJ Second-Device Restore Execution Final Pre-Execution Preflight',typeof runSecondDeviceRestoreExecutionFinalPreExecutionPreflightQACheckV24==='function'?runSecondDeviceRestoreExecutionFinalPreExecutionPreflightQACheckV24():{passed:false,meta:'Missing Phase 8AJ second-device restore execution final pre-execution preflight check'});}catch(e){add('Phase 8AJ Second-Device Restore Execution Final Pre-Execution Preflight',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
