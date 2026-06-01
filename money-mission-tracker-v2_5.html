@@ -33,14 +33,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .close-streak .streak-num{color:#d4a017}
 .close-streak .streak-lbl{color:#a07010}
 .cycle-pill{font-size:11px;color:#555;background:#111;border:0.5px solid #1e1e1e;border-radius:20px;padding:4px 12px}
-.mc-notify-wrap{position:relative;display:flex;align-items:center;justify-content:flex-end;width:100%;margin-bottom:2px}
-.mc-notify-bell{width:26px;height:26px;border-radius:999px;border:0.5px solid #1e242a;background:#0b0d0f;color:#68727c;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;position:relative;transition:border-color .15s,background .15s,color .15s,box-shadow .15s}
+.mc-notify-wrap{position:fixed;top:8px;right:max(14px,calc((100vw - 900px)/2 + 14px));z-index:8025;display:flex;align-items:center;justify-content:flex-end}
+.mc-notify-bell{width:27px;height:27px;border-radius:999px;border:0.5px solid #1e242a;background:#090b0d;color:#68727c;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;position:relative;transition:border-color .15s,background .15s,color .15s,box-shadow .15s}
 .mc-notify-bell:hover,.mc-notify-bell.active{border-color:#2a4015;background:#0f1a0a;color:#7ec845;box-shadow:0 0 0 2px rgba(126,200,69,.05)}
 .mc-notify-bell svg{width:14px;height:14px;display:block;stroke:currentColor}
 .mc-notify-count{position:absolute;top:-5px;right:-6px;min-width:17px;height:17px;border-radius:999px;background:#d4a017;color:#090b0d;border:1px solid #0a0a0a;font-size:9px;font-weight:900;display:none;align-items:center;justify-content:center;padding:0 4px;font-variant-numeric:tabular-nums}
 .mc-notify-count.show{display:flex}
-.mc-notify-panel{position:fixed;top:56px;right:18px;width:min(92vw,340px);max-height:min(76vh,620px);background:#0b0d0f;border:0.5px solid #263039;border-radius:10px;box-shadow:0 18px 46px rgba(0,0,0,.55);z-index:7995;display:none;overflow:hidden}
+.mc-notify-panel{position:fixed;top:42px;right:max(14px,calc((100vw - 900px)/2 + 14px));width:min(92vw,340px);max-height:calc(100vh - 58px);background:#0b0d0f;border:0.5px solid #263039;border-radius:10px;box-shadow:0 18px 46px rgba(0,0,0,.55);z-index:8020;display:none;overflow:visible;transform-origin:top right}
 .mc-notify-panel.open{display:flex;flex-direction:column}
+.mc-notify-panel.open:before{content:'';position:absolute;top:-7px;right:12px;width:12px;height:12px;background:#0b0d0f;border-left:0.5px solid #263039;border-top:0.5px solid #263039;transform:rotate(45deg);border-radius:2px 0 0 0}
 .mc-notify-head{padding:12px;border-bottom:0.5px solid #1e242a;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .mc-notify-title{font-size:12px;font-weight:900;color:#f0f3f5;text-transform:uppercase;letter-spacing:.08em}
 .mc-notify-sub{font-size:10px;color:#7b838b;line-height:1.4;margin-top:3px}
@@ -80,10 +81,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mc-toast-title{font-size:11px;font-weight:900;color:#f0f3f5;margin-bottom:3px}
 .mc-toast-body{font-size:10px;color:#8b949e;line-height:1.4}
 @media(max-width:620px){
-  .mc-notify-panel{top:66px;right:10px}
+  .mc-notify-wrap{top:7px;right:10px}
+  .mc-notify-panel{top:40px;right:10px;width:calc(100vw - 20px);max-height:calc(100vh - 52px)}
   .mc-toast-stack{right:10px;bottom:10px}
   .topright{gap:6px}
-  .mc-notify-bell{width:26px;height:26px}
+  .mc-notify-bell{width:27px;height:27px}
 }
 
 /* TABS */
@@ -2277,21 +2279,21 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
   </div>
   <!-- RIGHT: saved tags + streak + cycle stack -->
   <div class="topright">
+    <div class="mc-notify-wrap">
+      <button class="mc-notify-bell" id="mc-notify-bell" type="button" aria-label="Open notifications" onclick="mcToggleNotificationPanelV10()">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 17H9"></path>
+          <path d="M18 15v-4a6 6 0 0 0-12 0v4l-2 2h16l-2-2Z"></path>
+          <path d="M10 20a2 2 0 0 0 4 0"></path>
+        </svg>
+        <span class="mc-notify-count" id="mc-notify-count">0</span>
+      </button>
+    </div>
     <span class="tag green" id="saved-tag">Saved</span>
     <span class="tag blue" id="synced-tag">Synced</span>
     <div class="streak" style="margin-top:14px"><span style="font-size:12px">🔥</span><span class="streak-num" id="streak-n">0</span><span class="streak-lbl">week streak</span></div>
     <div class="streak close-streak" style="margin-top:14px"><span style="font-size:12px">💰</span><span class="streak-num" id="close-streak-n">0</span><span class="streak-lbl">close streak</span></div>
     <div class="cycle-stack">
-      <div class="mc-notify-wrap">
-        <button class="mc-notify-bell" id="mc-notify-bell" type="button" aria-label="Open notifications" onclick="mcToggleNotificationPanelV10()">
-          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M15 17H9"></path>
-            <path d="M18 15v-4a6 6 0 0 0-12 0v4l-2 2h16l-2-2Z"></path>
-            <path d="M10 20a2 2 0 0 0 4 0"></path>
-          </svg>
-          <span class="mc-notify-count" id="mc-notify-count">0</span>
-        </button>
-      </div>
       <div style="font-size:8px;color:#7ec845;text-transform:uppercase;letter-spacing:.14em;font-weight:900;margin-bottom:2px">v2.5 Alpha</div>
       <div class="cycle-pill" id="cycle-pill">Cycle 1 · Loading...</div>
     </div>
@@ -5313,9 +5315,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 13:50 ET · OS v2_5 Phase 9D Notification Bell Polish';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9D Notification Bell Polish';
-var APP_CACHE_TOKEN='mmos-20260601-1350-v25-phase9d-notification-bell-polish';
+var APP_BUILD_STAMP='2026-06-01 13:58 ET · OS v2_5 Phase 9D Notification Bell Anchor Polish';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9D Notification Bell Anchor Polish';
+var APP_CACHE_TOKEN='mmos-20260601-1358-v25-phase9d-notification-bell-anchor-polish';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
