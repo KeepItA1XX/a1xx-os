@@ -3068,6 +3068,23 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="second-device-restore-execution-run-status"></div>
         </div>
         <div class="settings-section" data-dev-detail="true">
+          <div class="settings-section-title">v2_5 Baseline Closeout</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Phase 9A scope</div><div class="settings-row-meta" id="phase9a-baseline-scope">Confirm v2_5 is active after second-device restore, backup, and Live QA. No restore, login-anywhere, worker auth, automation, or bootstrap execution.</div></div><span class="settings-badge" id="phase9a-baseline-scope-badge">Closeout</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Build identity</div><div class="settings-row-meta" id="phase9a-baseline-build">Run baseline closeout to verify the current v2_5 file and build token.</div></div><span class="settings-badge off" id="phase9a-baseline-build-badge">Build</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Second-device baseline</div><div class="settings-row-meta" id="phase9a-baseline-restore">Run after Phase 8AL restore readback and a second-device backup are clean.</div></div><span class="settings-badge off" id="phase9a-baseline-restore-badge">Receipt</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta" id="phase9a-baseline-blocked">Login-anywhere, auth sync, restore execution, worker auth, automations, token export, secret export, and bootstrap execution remain blocked.</div></div><span class="settings-badge warn" id="phase9a-baseline-blocked-badge">Blocked</span></div>
+          </div>
+          <label for="phase9a-baseline-output">Phase 9A v2_5 baseline closeout</label>
+          <textarea id="phase9a-baseline-output" rows="12" readonly placeholder="Click Close Phase 9A baseline after v2_5 backup and Live QA are clean."></textarea>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn primary" onclick="withGlobalProcessingActionV23('Closing Phase 9A v2_5 baseline',function(){return runPhase9ABaselineCloseoutV25();},this,'Phase 9A baseline closeout ready.')">Close Phase 9A baseline</button>
+            <button class="btn" onclick="copyPhase9ABaselineCloseoutV25()">Copy Phase 9A</button>
+            <button class="btn" onclick="withDiagnosticsActionBusyV22('Running Live QA',function(){return runHealthLiveQACheckV22();},this)">Run Live QA</button>
+          </div>
+          <div class="reset-status" id="phase9a-baseline-status"></div>
+        </div>
+        <div class="settings-section" data-dev-detail="true">
           <div class="settings-section-title">Setup Pointer Index</div>
           <div class="settings-list">
             <div class="settings-row"><div><div class="settings-row-name">Safe pointers</div><div class="settings-row-meta" id="setup-pointer-count">Load registry to read safe setup pointers.</div></div><span class="settings-badge off" id="setup-pointer-count-badge">Index</span></div>
@@ -5160,9 +5177,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 11:21 ET · OS v2_5 Phase 9A Build Start';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9A Build Start';
-var APP_CACHE_TOKEN='mmos-20260601-1121-v25-phase9a-build-start';
+var APP_BUILD_STAMP='2026-06-01 11:57 ET · OS v2_5 Phase 9A Baseline Closeout';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9A Baseline Closeout';
+var APP_CACHE_TOKEN='mmos-20260601-1157-v25-phase9a-baseline-closeout';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -17364,6 +17381,239 @@ function runSecondDeviceRestoreExecutionRunQACheckV24(){
   };
 }
 
+var PHASE9A_BASELINE_CLOSEOUT_KEY_V25='a1xx_phase9a_v25_baseline_closeout_v1';
+
+function getPhase9ABackupSnapshotV25(){
+  var status=window.__lastBackupArchiveStatusV22||{};
+  var latest=status.latest||{};
+  return {
+    backupMarker:latest.backupId||status.latestBackupMarker||'',
+    backupRow:latest.matchedRow||status.latestBackupRow||'',
+    driveFileId:latest.driveFileId||status.latestBackupDriveFileId||'',
+    driveBackupActive:status.driveBackupActive===true,
+    storage:status.storage||''
+  };
+}
+
+function getPhase9ABaselineStateV25(){
+  try{return JSON.parse(localStorage.getItem(PHASE9A_BASELINE_CLOSEOUT_KEY_V25)||'null')||null;}
+  catch(e){return null;}
+}
+
+function setPhase9ABaselineStateV25(state){
+  window.__phase9ABaselineCloseoutV25=state;
+  try{localStorage.setItem(PHASE9A_BASELINE_CLOSEOUT_KEY_V25,JSON.stringify(state));}catch(e){}
+  return state;
+}
+
+function buildPhase9ABaselineCloseoutResultV25(){
+  var restoreState=window.__secondDeviceRestoreExecutionRunV24||ensureRestoreExecutionRunReceiptV24()||null;
+  var backup=getPhase9ABackupSnapshotV25();
+  var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
+  var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9a/.test(APP_CACHE_TOKEN);
+  var restoreOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
+  var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
+  var protectedOk=true;
+  var missing=[];
+  if(!versionOk)missing.push('v2_5 app version');
+  if(!fileOk)missing.push('v2_5 app file');
+  if(!buildOk)missing.push('Phase 9A build token');
+  if(!restoreOk)missing.push('Phase 8AL verified restore receipt');
+  if(!backupOk)missing.push('second-device backup receipt');
+  var ready=versionOk&&fileOk&&buildOk&&restoreOk&&backupOk&&protectedOk;
+  return {
+    status:ready?'phase9a_v25_baseline_closeout_ready':'phase9a_v25_baseline_closeout_needs_review',
+    mode:'phase9a_v25_baseline_closeout_only',
+    phase9aBaselineCloseoutReady:ready,
+    closeoutExecuted:true,
+    appVersion:typeof APP_VERSION!=='undefined'?APP_VERSION:'',
+    appFile:typeof APP_BUILD_FILE!=='undefined'?APP_BUILD_FILE:'',
+    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
+    buildStamp:typeof APP_BUILD_STAMP!=='undefined'?APP_BUILD_STAMP:'',
+    backupMarker:backup.backupMarker,
+    backupRow:backup.backupRow,
+    backupDriveFileId:backup.driveFileId,
+    phase8alRestoreReadbackVerified:restoreOk,
+    phase8alRestoreMarker:restoreState&&restoreState.result&&restoreState.result.selectedRestoreSourceMarker||'',
+    liveQaReadyForNextPhase:ready,
+    restoreExecutionEnabled:false,
+    loginAnywhereActive:false,
+    authSyncWriteEnabled:false,
+    secretExport:false,
+    tokenExport:false,
+    workerAuthEnabled:false,
+    automationActivationEnabled:false,
+    bootstrapExecutionEnabled:false,
+    writeExecuted:false,
+    writesEnabled:false,
+    closeoutItems:[
+      {key:'v2_5_app_file',status:fileOk?'Ready':'Review',mode:'build_identity',label:'Active app file is money-mission-tracker-v2_5.html',value:typeof APP_BUILD_FILE!=='undefined'?APP_BUILD_FILE:''},
+      {key:'v2_5_build_token',status:buildOk?'Ready':'Review',mode:'build_identity',label:'Phase 9A v2_5 build token is active',value:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:''},
+      {key:'phase8al_restore_receipt',status:restoreOk?'Ready':'Review',mode:'receipt',label:'Second-device restore run receipt is present and readback verified',value:restoreState&&restoreState.result&&restoreState.result.selectedRestoreSourceMarker||''},
+      {key:'second_device_backup',status:backupOk?'Ready':'Review',mode:'backup_receipt',label:'Second-device backup marker is visible after v2_5 launch',value:backup.backupMarker},
+      {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, and bootstrap execution remain blocked'}
+    ],
+    missingGateItems:missing,
+    unsafeFields:[],
+    nextAllowedStepAfterPhase9ABaseline:ready?'phase9b_next_feature_lane_plan':'phase9a_baseline_repair',
+    blockedActions:[
+      'login-anywhere activation',
+      'auth sync write',
+      'restore execution',
+      'token export',
+      'secret export',
+      'worker auth',
+      'automation activation',
+      'second-device bootstrap execution'
+    ],
+    closedAt:new Date().toISOString(),
+    message:ready?'Phase 9A v2_5 baseline is clean. v2_5 is active, second-device backup is visible, and Phase 8AL restore readback is verified.':'Phase 9A baseline needs review before the next feature lane.'
+  };
+}
+
+function formatPhase9ABaselineCloseoutV25(result){
+  result=result||{};
+  var items=result.closeoutItems||[];
+  var missing=result.missingGateItems||[];
+  var blocked=result.blockedActions||[];
+  return [
+    'Phase 9A v2_5 baseline closeout',
+    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
+    '',
+    'Closeout mode',
+    '- Status: '+(result.status||'unknown'),
+    '- Mode: '+(result.mode||'unknown'),
+    '- Phase 9A baseline ready: '+(result.phase9aBaselineCloseoutReady?'true':'false'),
+    '- App version: '+(result.appVersion||''),
+    '- App file: '+(result.appFile||''),
+    '- Build stamp: '+(result.buildStamp||''),
+    '- Backup marker: '+(result.backupMarker||''),
+    '- Backup row: '+(result.backupRow||''),
+    '- Backup Drive file ID: '+(result.backupDriveFileId||''),
+    '- Phase 8AL restore readback verified: '+(result.phase8alRestoreReadbackVerified?'true':'false'),
+    '- Phase 8AL restore marker: '+(result.phase8alRestoreMarker||''),
+    '- Live QA ready for next phase: '+(result.liveQaReadyForNextPhase?'true':'false'),
+    '- Write executed: '+(result.writeExecuted?'true':'false'),
+    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
+    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
+    '- Auth sync write enabled: '+(result.authSyncWriteEnabled?'true':'false'),
+    '- Secret export: '+(result.secretExport?'true':'false'),
+    '- Token export: '+(result.tokenExport?'true':'false'),
+    '- Restore execution enabled: '+(result.restoreExecutionEnabled?'true':'false'),
+    '- Worker auth enabled: '+(result.workerAuthEnabled?'true':'false'),
+    '- Automation activation enabled: '+(result.automationActivationEnabled?'true':'false'),
+    '- Bootstrap execution enabled: '+(result.bootstrapExecutionEnabled?'true':'false'),
+    '',
+    'Closeout items',
+    items.length?items.map(function(item){return '- '+(item.key||'')+': '+(item.status||'')+' · '+(item.mode||'')+' · '+(item.label||'')+(item.value?' · '+item.value:'');}).join('\n'):'- none returned',
+    '',
+    'Missing gate items',
+    missing.length?('- '+missing.join('\n- ')):'- none',
+    '',
+    'Unsafe fields',
+    (result.unsafeFields||[]).length?('- '+result.unsafeFields.join('\n- ')):'- none',
+    '',
+    'Next allowed step',
+    '- '+(result.nextAllowedStepAfterPhase9ABaseline||''),
+    '',
+    'Blocked actions',
+    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
+    '',
+    'Result',
+    result.message||''
+  ].join('\n');
+}
+
+function renderPhase9ABaselineCloseoutStateV25(state){
+  state=state||window.__phase9ABaselineCloseoutV25||getPhase9ABaselineStateV25()||{};
+  var result=state.result||state||{};
+  var ready=result.phase9aBaselineCloseoutReady===true;
+  var output=document.getElementById('phase9a-baseline-output');
+  if(output)output.value=state.previewText||formatPhase9ABaselineCloseoutV25(result);
+  setTextV24('phase9a-baseline-build',ready?'v2_5 build identity is active · '+(result.build||''):'Run baseline closeout to verify the current v2_5 file and build token.');
+  setTextV24('phase9a-baseline-restore',ready?'Second-device restore readback and backup are visible.':'Run after Phase 8AL restore readback and a second-device backup are clean.');
+  setTextV24('phase9a-baseline-blocked','Login-anywhere, auth sync, restore execution, worker auth, automations, token export, secret export, and bootstrap execution remain blocked.');
+  setBadge('phase9a-baseline-build-badge',ready?'Ready':'Build',ready?'':'off');
+  setBadge('phase9a-baseline-restore-badge',ready?'Ready':'Receipt',ready?'':'off');
+  setBadge('phase9a-baseline-blocked-badge','Blocked','warn');
+}
+
+async function runPhase9ABaselineCloseoutV25(){
+  var status=document.getElementById('phase9a-baseline-status');
+  if(status){
+    status.className='reset-status warn';
+    status.textContent='Checking Phase 9A v2_5 baseline...';
+  }
+  try{
+    if(typeof runBackupArchiveSelfCheckV22==='function')await runBackupArchiveSelfCheckV22();
+  }catch(e){}
+  var result=buildPhase9ABaselineCloseoutResultV25();
+  var state={
+    checkedAt:new Date().toISOString(),
+    passed:result.phase9aBaselineCloseoutReady===true,
+    result:result,
+    previewText:formatPhase9ABaselineCloseoutV25(result)
+  };
+  setPhase9ABaselineStateV25(state);
+  renderPhase9ABaselineCloseoutStateV25(state);
+  if(status){
+    status.className='reset-status '+(state.passed?'ok':'warn');
+    status.textContent=state.passed?'Phase 9A baseline closeout is ready.':'Phase 9A baseline needs review.';
+  }
+  return {
+    passed:state.passed,
+    meta:state.passed?'Phase 9A v2_5 baseline is clean · ready for next feature lane.':'Phase 9A v2_5 baseline needs review.',
+    failures:state.passed?[]:['Phase 9A v2_5 baseline closeout']
+  };
+}
+
+async function copyPhase9ABaselineCloseoutV25(){
+  var state=window.__phase9ABaselineCloseoutV25||getPhase9ABaselineStateV25();
+  var status=document.getElementById('phase9a-baseline-status');
+  if(!state||!state.previewText){
+    await runPhase9ABaselineCloseoutV25();
+    state=window.__phase9ABaselineCloseoutV25||getPhase9ABaselineStateV25();
+  }
+  try{
+    await navigator.clipboard.writeText(state&&state.previewText||'');
+    if(status){
+      status.className='reset-status ok';
+      status.textContent='Phase 9A closeout copied.';
+    }
+  }catch(err){
+    var output=document.getElementById('phase9a-baseline-output');
+    if(output){
+      output.focus();
+      output.select();
+    }
+    if(status){
+      status.className='reset-status warn';
+      status.textContent='Copy blocked by browser. Select the Phase 9A receipt manually.';
+    }
+  }
+}
+
+function runPhase9ABaselineCloseoutQACheckV25(){
+  var state=window.__phase9ABaselineCloseoutV25||getPhase9ABaselineStateV25();
+  if(state&&state.passed===true&&state.result&&state.result.phase9aBaselineCloseoutReady===true){
+    renderPhase9ABaselineCloseoutStateV25(state);
+    return {passed:true,meta:'Phase 9A v2_5 baseline closeout receipt is present · next feature lane ready.',failures:[]};
+  }
+  var result=buildPhase9ABaselineCloseoutResultV25();
+  if(result.phase9aBaselineCloseoutReady===true){
+    state=setPhase9ABaselineStateV25({
+      checkedAt:new Date().toISOString(),
+      passed:true,
+      result:result,
+      previewText:formatPhase9ABaselineCloseoutV25(result)
+    });
+    renderPhase9ABaselineCloseoutStateV25(state);
+    return {passed:true,meta:'Phase 9A v2_5 baseline closeout auto-cached from current clean receipts.',failures:[]};
+  }
+  return {passed:false,meta:'Run Phase 9A v2_5 Baseline Closeout after backup and Phase 8AL restore readback are clean.',failures:['Phase 9A v2_5 baseline closeout']};
+}
+
 function getSetupPointerRowsV23(){
   var health=window.__lastSetupDoctorHealthV23&&window.__lastSetupDoctorHealthV23.health?window.__lastSetupDoctorHealthV23.health:{};
   var backup=window.__lastBackupArchiveStatusV22||{};
@@ -20555,7 +20805,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config endpoint skeleton, Phase 8G master config read preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, Phase 9A v2_5 baseline closeout, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -20608,6 +20858,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 8AI Second-Device Restore Execution Endpoint Activation Review',typeof runSecondDeviceRestoreExecutionEndpointActivationReviewQACheckV24==='function'?runSecondDeviceRestoreExecutionEndpointActivationReviewQACheckV24():{passed:false,meta:'Missing Phase 8AI second-device restore execution endpoint activation review check'});}catch(e){add('Phase 8AI Second-Device Restore Execution Endpoint Activation Review',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8AJ Second-Device Restore Execution Final Pre-Execution Preflight',typeof runSecondDeviceRestoreExecutionFinalPreExecutionPreflightQACheckV24==='function'?runSecondDeviceRestoreExecutionFinalPreExecutionPreflightQACheckV24():{passed:false,meta:'Missing Phase 8AJ second-device restore execution final pre-execution preflight check'});}catch(e){add('Phase 8AJ Second-Device Restore Execution Final Pre-Execution Preflight',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 8AL Second-Device Restore Execution Run Gate',typeof runSecondDeviceRestoreExecutionRunQACheckV24==='function'?runSecondDeviceRestoreExecutionRunQACheckV24():{passed:false,meta:'Missing Phase 8AL second-device restore execution run gate check'});}catch(e){add('Phase 8AL Second-Device Restore Execution Run Gate',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9A v2_5 Baseline Closeout',typeof runPhase9ABaselineCloseoutQACheckV25==='function'?runPhase9ABaselineCloseoutQACheckV25():{passed:false,meta:'Missing Phase 9A v2_5 baseline closeout check'});}catch(e){add('Phase 9A v2_5 Baseline Closeout',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
