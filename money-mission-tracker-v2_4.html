@@ -5160,9 +5160,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.4 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_4.html';
-var APP_BUILD_STAMP='2026-06-01 10:39 ET · OS v2_4 Phase 8AQ Restore Run Busy Clear';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8AQ Restore Run Busy Clear';
-var APP_CACHE_TOKEN='mmos-20260601-1039-v24-phase8aq-restore-run-busy-clear';
+var APP_BUILD_STAMP='2026-06-01 10:47 ET · OS v2_4 Phase 8AR Portable Pointer Review';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_4 Phase 8AR Portable Pointer Review';
+var APP_CACHE_TOKEN='mmos-20260601-1047-v24-phase8ar-portable-pointer-review';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -16971,16 +16971,16 @@ async function buildSecondDeviceRestoreExecutionFallbackResultV24(endpointResult
   if(!backupResponse||!backupResponse.backup)missingGateItems.push('backup payload read');
   if(backupResponse&&backupResponse.backup&&!markerVerified)missingGateItems.push('exact backup marker readback');
   var cleanWorkbookId=payload.cleanWorkbookId||extractCleanWorkbookIdFromBackupPayloadV24(backupPayload);
-  if(!cleanWorkbookId)missingGateItems.push('clean_workbook_id');
-  if(!backupFolderId)missingGateItems.push('backup_folder_id');
   var filtered=buildSecondDeviceRestoreExecutionPayloadFromBackupV24(backupPayload);
   var restoreKeys=Object.keys(filtered.restorePayload);
+  var portablePointerReviewOnly=!!(payload.portableRestoreMarkerGate&&markerVerified&&restoreKeys.length);
+  if(!cleanWorkbookId&&!portablePointerReviewOnly)missingGateItems.push('clean_workbook_id');
+  if(!backupFolderId&&!portablePointerReviewOnly)missingGateItems.push('backup_folder_id');
   if(!restoreKeys.length)missingGateItems.push('restore payload keys');
   var ready=!!(
     marker&&
     markerVerified&&
-    cleanWorkbookId&&
-    backupFolderId&&
+    (portablePointerReviewOnly||(cleanWorkbookId&&backupFolderId))&&
     restoreKeys.length&&
     !fallbackError&&
     missingGateItems.length===0
@@ -17001,7 +17001,8 @@ async function buildSecondDeviceRestoreExecutionFallbackResultV24(endpointResult
     restoreExecutionRunText:payload.restoreExecutionRunText,
     expectedRestoreExecutionRunText:'A1XX EXECUTE RESTORE RUN',
     selectedRestoreSourceConfirmed:!!marker,
-    restoreTargetPointersConfirmed:!!(cleanWorkbookId&&backupFolderId),
+    restoreTargetPointersConfirmed:!!(portablePointerReviewOnly||(cleanWorkbookId&&backupFolderId)),
+    portablePointerReviewOnly:portablePointerReviewOnly,
     secondDeviceIdentityConfirmed:!!payload.targetDeviceLabel,
     backupVerified:markerVerified,
     latestBackupMarker:marker,
@@ -17036,6 +17037,7 @@ async function buildSecondDeviceRestoreExecutionFallbackResultV24(endpointResult
       {key:'selected_restore_source_marker',status:marker?'Ready':'Review',mode:'exact_marker_gate',label:'Selected restore source marker is confirmed for this run',value:marker},
       {key:'backup_payload_read',status:backupResponse&&backupResponse.backup?'Ready':'Review',mode:'drive_read',label:'Selected Drive backup payload is readable',value:backupResponse&&backupResponse.backup&&backupResponse.backup.driveFileId||fallbackError||''},
       {key:'exact_marker_readback',status:markerVerified?'Ready':'Review',mode:'exact_marker_gate',label:'Drive backup payload marker matches the requested restore marker',value:markerRead&&markerRead.id||''},
+      {key:'safe_pointer_review_only',status:portablePointerReviewOnly?'Ready':'Review',mode:'portable_marker_gate',label:'Clean workbook and backup folder pointers are protected setup keys on this device and are review-only for browser-local restore',value:portablePointerReviewOnly?'exact marker + payload ready':''},
       {key:'protected_keys_filtered',status:'Ready',mode:'safety_boundary',label:'Protected setup/token keys are filtered from the restore payload',value:String(filtered.protectedSkipped.length)},
       {key:'restore_payload_ready',status:restoreKeys.length?'Ready':'Review',mode:'execution_payload',label:'Non-protected restore payload is ready for browser restore',value:String(restoreKeys.length)},
       {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, token export, secret export, worker auth, automations, and bootstrap execution remain blocked'}
@@ -17210,7 +17212,7 @@ async function runSecondDeviceRestoreExecutionRunV24(){
     }
   }
   result=result||{};
-  if(endpointError||result.restoreExecutionRunReady!==true||!result.restorePayload||!Object.keys(result.restorePayload||{}).length){
+  if(result.restoreExecutionRunReady!==true||!result.restorePayload||!Object.keys(result.restorePayload||{}).length){
     var fallbackResult=await buildSecondDeviceRestoreExecutionFallbackResultV24(result,endpointError);
     if(fallbackResult.restoreExecutionRunReady===true||endpointError)result=fallbackResult;
   }
