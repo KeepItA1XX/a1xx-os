@@ -2460,15 +2460,10 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
         <div class="account-mission-shell" data-scroll-guard="true">
           <div class="mission-tabbar" aria-label="Mission sections">
             <button type="button" class="mission-tab active" data-mission-subtab="overview" onclick="setMissionSubTabV25('overview')">Overview</button>
-            <button type="button" class="mission-tab" data-mission-subtab="objective" onclick="setMissionSubTabV25('objective')">Objective</button>
             <button type="button" class="mission-tab" data-mission-subtab="profile" onclick="setMissionSubTabV25('profile')">Profile</button>
-            <button type="button" class="mission-tab" data-mission-subtab="stats" onclick="setMissionSubTabV25('stats')">Stats</button>
             <button type="button" class="mission-tab" data-mission-subtab="attributes" onclick="setMissionSubTabV25('attributes')">Attributes</button>
             <button type="button" class="mission-tab" data-mission-subtab="badges" onclick="setMissionSubTabV25('badges')">Badges</button>
             <button type="button" class="mission-tab" data-mission-subtab="missions" onclick="setMissionSubTabV25('missions')">Missions</button>
-            <button type="button" class="mission-tab" data-mission-subtab="training" onclick="setMissionSubTabV25('training')">Training</button>
-            <button type="button" class="mission-tab" data-mission-subtab="trophies" onclick="setMissionSubTabV25('trophies')">Trophies</button>
-            <button type="button" class="mission-tab" data-mission-subtab="records" onclick="setMissionSubTabV25('records')">Records</button>
             <button type="button" class="mission-tab" data-mission-subtab="journey" onclick="setMissionSubTabV25('journey')">Journey</button>
           </div>
           <div class="mission-panel active" id="mission-panel-overview">
@@ -2494,8 +2489,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
                 <div class="mission-story-meta" id="mission-becoming-line">Who you are becoming will appear here.</div>
               </div>
             </div>
-          </div>
-          <div class="mission-panel" id="mission-panel-objective">
             <div class="mission-action-board">
               <div class="mission-objective-card">
                 <div class="mission-objective-label">Current Objective</div>
@@ -2530,8 +2523,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               </div>
               <div class="rp-skill-bars" id="rp-skill-bars"></div>
             </div>
-          </div>
-          <div class="mission-panel" id="mission-panel-stats">
             <div class="mission-stat-card">
               <div class="mission-stat-title">Cycle Stat Sheet</div>
               <div class="mission-stat-sheet-wrap">
@@ -2574,35 +2565,29 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <div class="mission-section-label">Business Badges</div>
               <div class="mission-card-grid" id="mission-badge-grid"></div>
             </div>
+            <div class="mission-section-card">
+              <div class="mission-section-label">Trophies</div>
+              <div class="mission-card-grid" id="mission-trophy-grid"></div>
+            </div>
           </div>
           <div class="mission-panel" id="mission-panel-missions">
             <div class="mission-section-card">
               <div class="mission-section-label">Money Missions</div>
               <div class="mission-focus-list" id="mission-objective-list"></div>
             </div>
-          </div>
-          <div class="mission-panel" id="mission-panel-training">
             <div class="mission-section-card">
               <div class="mission-section-label">Training Drills</div>
               <div class="mission-focus-list" id="mission-training-list"></div>
-            </div>
-          </div>
-          <div class="mission-panel" id="mission-panel-trophies">
-            <div class="mission-section-card">
-              <div class="mission-section-label">Trophies</div>
-              <div class="mission-card-grid" id="mission-trophy-grid"></div>
-            </div>
-          </div>
-          <div class="mission-panel" id="mission-panel-records">
-            <div class="mission-section-card">
-              <div class="mission-section-label">Personal Records</div>
-              <div class="mission-card-grid" id="mission-record-grid"></div>
             </div>
           </div>
           <div class="mission-panel" id="mission-panel-journey">
             <div class="mission-section-card">
               <div class="mission-section-label">Journey</div>
               <div class="mission-focus-list" id="mission-journey-list"></div>
+            </div>
+            <div class="mission-section-card">
+              <div class="mission-section-label">Personal Records</div>
+              <div class="mission-card-grid" id="mission-record-grid"></div>
             </div>
           </div>
         </div>
@@ -5610,9 +5595,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 17:24 ET · OS v2_5 Phase 9I Mission Scroll + Stats Repair';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9I Mission Scroll + Stats Repair';
-var APP_CACHE_TOKEN='mmos-20260601-1724-v25-phase9i-mission-scroll-stats-repair';
+var APP_BUILD_STAMP='2026-06-01 17:37 ET · OS v2_5 Phase 9I Mission Tab Consolidation';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9I Mission Tab Consolidation';
+var APP_CACHE_TOKEN='mmos-20260601-1737-v25-phase9i-mission-tab-consolidation';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -20040,7 +20025,8 @@ function getPhase9HMissionUIExpansionResultV25(){
   var technicalLeak=!/Phase 9|Build:|Apps Script|restore execution|login-anywhere|Developer|QA receipt|contract receipt|Next Build/i.test(missionText);
   var stats=typeof getAccountMissionActionStatsV25==='function'?getAccountMissionActionStatsV25():{};
   var dataTrustReady=typeof renderMissionPanelsV25==='function'&&typeof missionSkillCardV25==='function';
-  var ready=!!(buildOk&&phase9GReady&&tabs.length>=8&&panels.length>=8&&storyReady&&actionPanelsReady&&technicalLeak&&dataTrustReady);
+  var groupedTabsReady=tabs.length>=6&&panels.length>=6;
+  var ready=!!(buildOk&&phase9GReady&&groupedTabsReady&&storyReady&&actionPanelsReady&&technicalLeak&&dataTrustReady);
   return {
     status:ready?'phase9h_mission_ui_expansion_ready':'phase9h_mission_ui_expansion_needs_review',
     mode:'phase9h_mission_ui_expansion',
@@ -20050,6 +20036,7 @@ function getPhase9HMissionUIExpansionResultV25(){
     phase9GReady:phase9GReady,
     internalMissionTabs:tabs.length,
     missionPanels:panels.length,
+    groupedMissionTabsReady:groupedTabsReady,
     storyOverviewReady:storyReady,
     businessActionPanelsReady:actionPanelsReady,
     sourceTrustReady:dataTrustReady,
@@ -20076,7 +20063,7 @@ function getPhase9HMissionUIExpansionResultV25(){
     bootstrapExecutionEnabled:false,
     uiItems:[
       {key:'story_overview',status:storyReady?'Ready':'Review',mode:'mission_story',label:'Mission Overview uses current objective and next money move language'},
-      {key:'mission_subtabs',status:tabs.length>=8&&panels.length>=8?'Ready':'Review',mode:'ui_tabs',label:'Overview, Attributes, Badges, Missions, Training, Trophies, Records, and Journey are installed'},
+      {key:'mission_subtabs',status:groupedTabsReady?'Ready':'Review',mode:'ui_tabs',label:'Grouped Mission tabs are installed: Overview, Profile, Attributes, Badges, Missions, and Journey'},
       {key:'business_action_surfaces',status:actionPanelsReady?'Ready':'Review',mode:'money_movement',label:'Mission panels focus on outreach, sales, content, proof, production, records, and journey'},
       {key:'source_trust',status:dataTrustReady?'Ready':'Review',mode:'source_trust',label:'Missing metrics render as Not Tracked instead of fake numbers'},
       {key:'technical_boundary',status:technicalLeak?'Ready':'Review',mode:'product_boundary',label:'Visible Mission copy avoids build, developer, restore, and QA receipt language'},
@@ -20085,7 +20072,7 @@ function getPhase9HMissionUIExpansionResultV25(){
     missingGateItems:[]
       .concat(buildOk?[]:['Phase 9H build token'])
       .concat(phase9GReady?[]:['Phase 9G Account Mission shell'])
-      .concat(tabs.length>=8&&panels.length>=8?[]:['Mission internal subtabs'])
+      .concat(groupedTabsReady?[]:['Mission grouped subtabs'])
       .concat(storyReady?[]:['story-driven Mission Overview'])
       .concat(actionPanelsReady?[]:['business-action Mission panels'])
       .concat(dataTrustReady?[]:['source trust renderers'])
@@ -20124,6 +20111,7 @@ function formatPhase9HMissionUIExpansionV25(result){
     '- Phase 9G shell ready: '+(result.phase9GReady?'true':'false'),
     '- Internal Mission tabs: '+(result.internalMissionTabs||0),
     '- Mission panels: '+(result.missionPanels||0),
+    '- Grouped Mission tabs ready: '+(result.groupedMissionTabsReady?'true':'false'),
     '- Story overview ready: '+(result.storyOverviewReady?'true':'false'),
     '- Business action panels ready: '+(result.businessActionPanelsReady?'true':'false'),
     '- Source trust ready: '+(result.sourceTrustReady?'true':'false'),
@@ -20252,21 +20240,22 @@ function getPhase9IMissionCareerModePolishResultV25(){
   var panels=document.querySelectorAll('.mission-panel');
   var scrollGuardReady=!!document.querySelector('.account-mission-shell[data-scroll-guard="true"]');
   var heroOverviewOnly=!!document.querySelector('#mission-panel-overview .account-mission-hero')&&!document.querySelector('.account-mission-shell > .account-mission-hero');
-  var objectiveTabReady=!!document.getElementById('mission-panel-objective');
+  var objectiveMergedReady=!!document.querySelector('#mission-panel-overview #mission-current-objective')&&!!document.querySelector('#mission-panel-overview #mission-next-money-move-list');
   var profileReady=!!document.getElementById('mission-panel-profile');
-  var statsReady=!!document.getElementById('mission-panel-stats');
-  var statSheetReady=!!document.querySelector('#mission-panel-stats .mission-stat-sheet-wrap #mission-stat-sheet-body');
+  var statsMergedReady=!!document.querySelector('#mission-panel-profile .mission-stat-sheet-wrap #mission-stat-sheet-body');
   var storylineReady=!!(document.getElementById('mission-current-chapter')&&document.getElementById('mission-inner-shift')&&document.getElementById('mission-nearest-milestone')&&document.getElementById('mission-becoming-line'));
   var moveCardsReady=document.querySelectorAll('#mission-next-money-move-list .mission-move-card').length>0;
   var verticalAttributesReady=!!(document.querySelector('#mission-attribute-grid.mission-skill-lane')&&document.querySelector('#mission-attribute-grid .mission-skill-track .mission-skill-fill[style*="mission-skill-height"]'));
   var operatorOverallReady=!!document.getElementById('mission-operator-overall');
   var interactiveMissionsReady=document.querySelectorAll('#mission-objective-list .mission-detail-card').length>=3;
-  var interactiveTrainingReady=document.querySelectorAll('#mission-training-list .mission-detail-card').length>=3;
-  var symbolsReady=document.querySelectorAll('#mission-badge-grid .mission-status-symbol,#mission-trophy-grid .mission-status-symbol').length>=4;
+  var trainingMergedReady=!!document.querySelector('#mission-panel-missions #mission-training-list')&&document.querySelectorAll('#mission-training-list .mission-detail-card').length>=3;
+  var symbolsReady=!!document.querySelector('#mission-panel-badges #mission-trophy-grid')&&document.querySelectorAll('#mission-badge-grid .mission-status-symbol,#mission-trophy-grid .mission-status-symbol').length>=4;
+  var recordsMergedReady=!!document.querySelector('#mission-panel-journey #mission-record-grid')&&document.querySelectorAll('#mission-record-grid .mission-status-card').length>=4;
+  var consolidatedTabsReady=tabs.length===6&&panels.length===6&&!document.getElementById('mission-panel-objective')&&!document.getElementById('mission-panel-stats')&&!document.getElementById('mission-panel-training')&&!document.getElementById('mission-panel-trophies')&&!document.getElementById('mission-panel-records');
   var missionText=missionPane?missionPane.textContent:'';
   var technicalLeak=!/Build:|Apps Script|restore execution|login-anywhere|Developer|QA receipt|contract receipt|endpoint activation/i.test(missionText);
   var fakeClaimFree=!/Level 99|unlocked automatically|guaranteed transformation|fake/i.test(missionText);
-  var ready=!!(buildOk&&phase9HReady&&tabs.length>=11&&panels.length>=11&&scrollGuardReady&&heroOverviewOnly&&objectiveTabReady&&profileReady&&statsReady&&statSheetReady&&storylineReady&&moveCardsReady&&verticalAttributesReady&&operatorOverallReady&&interactiveMissionsReady&&interactiveTrainingReady&&symbolsReady&&technicalLeak&&fakeClaimFree);
+  var ready=!!(buildOk&&phase9HReady&&consolidatedTabsReady&&scrollGuardReady&&heroOverviewOnly&&objectiveMergedReady&&profileReady&&statsMergedReady&&storylineReady&&moveCardsReady&&verticalAttributesReady&&operatorOverallReady&&interactiveMissionsReady&&trainingMergedReady&&symbolsReady&&recordsMergedReady&&technicalLeak&&fakeClaimFree);
   return {
     status:ready?'phase9i_mission_career_mode_polish_ready':'phase9i_mission_career_mode_polish_needs_review',
     mode:'phase9i_mission_career_mode_polish',
@@ -20277,17 +20266,18 @@ function getPhase9IMissionCareerModePolishResultV25(){
     missionPanels:panels.length,
     scrollGuardReady:scrollGuardReady,
     overviewHeroOnly:heroOverviewOnly,
-    objectiveTabReady:objectiveTabReady,
+    consolidatedTabsReady:consolidatedTabsReady,
+    objectiveMergedIntoOverview:objectiveMergedReady,
     profileTabReady:profileReady,
-    statsTabReady:statsReady,
-    statSheetReady:statSheetReady,
+    statsMergedIntoProfile:statsMergedReady,
     storylineLayerReady:storylineReady,
     nextMoveCardsReady:moveCardsReady,
     verticalAttributesReady:verticalAttributesReady,
     operatorOverallReady:operatorOverallReady,
     interactiveMissionsReady:interactiveMissionsReady,
-    interactiveTrainingReady:interactiveTrainingReady,
+    trainingMergedIntoMissions:trainingMergedReady,
     badgeTrophySymbolsReady:symbolsReady,
+    recordsMergedIntoJourney:recordsMergedReady,
     technicalLanguageKeptOutOfMission:technicalLeak,
     fakeClaimsBlocked:fakeClaimFree,
     writeExecuted:false,
@@ -20304,31 +20294,33 @@ function getPhase9IMissionCareerModePolishResultV25(){
       {key:'storyline_overview',status:storylineReady?'Ready':'Review',mode:'hero_second_journey',label:'Overview has Current Chapter, Inner Shift, Nearest Milestone, and becoming line'},
       {key:'mission_scroll_guard',status:scrollGuardReady?'Ready':'Review',mode:'frame_locked',label:'Account Mission frame stays locked while only inner decks scroll'},
       {key:'overview_header_only',status:heroOverviewOnly?'Ready':'Review',mode:'overview_only',label:'Money Mission header lives only on Overview'},
-      {key:'focused_tabs',status:objectiveTabReady&&profileReady&&statsReady&&tabs.length>=11?'Ready':'Review',mode:'one_focus_at_a_time',label:'Objective, Profile, and Stats are separated from Overview'},
-      {key:'stat_sheet',status:statSheetReady?'Ready':'Review',mode:'daily_profit_campaign_rows',label:'Stats tab renders a spreadsheet-style Daily Profit Campaign stat sheet'},
+      {key:'consolidated_tabs',status:consolidatedTabsReady?'Ready':'Review',mode:'six_tab_layout',label:'Mission tabs are consolidated into Overview, Profile, Attributes, Badges, Missions, and Journey'},
+      {key:'overview_objective',status:objectiveMergedReady?'Ready':'Review',mode:'overview_objective',label:'Overview includes Current Objective and Next Money Move cards'},
+      {key:'profile_stats',status:profileReady&&statsMergedReady?'Ready':'Review',mode:'profile_stats',label:'Profile includes the spreadsheet-style Daily Profit Campaign stat sheet'},
       {key:'next_money_move_cards',status:moveCardsReady?'Ready':'Review',mode:'money_move_deck',label:'Next money moves render as individual cards'},
       {key:'vertical_attributes',status:verticalAttributesReady&&operatorOverallReady?'Ready':'Review',mode:'attribute_lane',label:'Attributes render as vertical career-mode cards with operator OVR'},
-      {key:'interactive_missions',status:interactiveMissionsReady?'Ready':'Review',mode:'mission_details',label:'Missions open into objective, resistance, checklist, reward, and trait trained'},
-      {key:'training_drills',status:interactiveTrainingReady?'Ready':'Review',mode:'practice_drills',label:'Training drills open into reps and operator trait trained'},
+      {key:'missions_training',status:interactiveMissionsReady&&trainingMergedReady?'Ready':'Review',mode:'missions_training',label:'Missions and Training are grouped together with interactive drill details'},
       {key:'badge_trophy_symbols',status:symbolsReady?'Ready':'Review',mode:'symbol_cards',label:'Badges and trophies have symbol marks'},
+      {key:'journey_records',status:recordsMergedReady?'Ready':'Review',mode:'journey_records',label:'Journey includes personal records'},
       {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'No fake stats, fake unlocks, restore execution, workers, automations, token export, secret export, or bootstrap execution'}
     ],
     missingGateItems:[]
       .concat(buildOk?[]:['Phase 9I build token'])
       .concat(phase9HReady?[]:['Phase 9H Mission UI expansion receipt'])
+      .concat(consolidatedTabsReady?[]:['Mission six-tab consolidation'])
       .concat(scrollGuardReady?[]:['Mission scroll guard'])
       .concat(heroOverviewOnly?[]:['Move Money Mission header to Overview only'])
-      .concat(objectiveTabReady?[]:['Mission Objective tab'])
+      .concat(objectiveMergedReady?[]:['Merge Objective into Overview'])
       .concat(profileReady?[]:['Mission Profile tab'])
-      .concat(statsReady?[]:['Mission Stats tab'])
-      .concat(statSheetReady?[]:['Mission stat sheet'])
+      .concat(statsMergedReady?[]:['Merge Stats into Profile'])
       .concat(storylineReady?[]:['Hero second-journey storyline fields'])
       .concat(moveCardsReady?[]:['Next money move card deck'])
       .concat(verticalAttributesReady?[]:['Vertical attribute lane'])
       .concat(operatorOverallReady?[]:['Operator OVR marker'])
       .concat(interactiveMissionsReady?[]:['Interactive mission detail cards'])
-      .concat(interactiveTrainingReady?[]:['Interactive training drill cards'])
+      .concat(trainingMergedReady?[]:['Merge Training into Missions'])
       .concat(symbolsReady?[]:['Badge/trophy symbols'])
+      .concat(recordsMergedReady?[]:['Merge Records into Journey'])
       .concat(technicalLeak?[]:['Remove technical language from Mission'])
       .concat(fakeClaimFree?[]:['Remove fake claim language from Mission']),
     unsafeFields:[],
@@ -20344,7 +20336,7 @@ function getPhase9IMissionCareerModePolishResultV25(){
       'second-device bootstrap execution'
     ],
     checkedAt:new Date().toISOString(),
-    message:ready?'Mission Career Mode Polish is ready. Account Mission now locks the frame, separates Objective/Profile/Stats, keeps the Money Mission header Overview-only, renders a DPC-style stat sheet, and uses vertical attributes with OVR.':'Mission Career Mode Polish needs review before attribute scoring.'
+    message:ready?'Mission Career Mode Polish is ready. Account Mission now uses a cleaner six-tab layout: Overview/Objectives, Profile/Stats, Attributes, Badges/Trophies, Missions/Training, and Journey/Records.':'Mission Career Mode Polish needs review before attribute scoring.'
   };
 }
 
@@ -20364,14 +20356,17 @@ function formatPhase9IMissionCareerModePolishV25(result){
     '- Phase 9H ready: '+(result.phase9HReady?'true':'false'),
     '- Mission tabs: '+(result.missionTabs||0),
     '- Mission panels: '+(result.missionPanels||0),
+    '- Consolidated tabs ready: '+(result.consolidatedTabsReady?'true':'false'),
+    '- Objective merged into Overview: '+(result.objectiveMergedIntoOverview?'true':'false'),
     '- Profile tab ready: '+(result.profileTabReady?'true':'false'),
-    '- Stats tab ready: '+(result.statsTabReady?'true':'false'),
+    '- Stats merged into Profile: '+(result.statsMergedIntoProfile?'true':'false'),
     '- Storyline layer ready: '+(result.storylineLayerReady?'true':'false'),
     '- Next move cards ready: '+(result.nextMoveCardsReady?'true':'false'),
     '- Vertical attributes ready: '+(result.verticalAttributesReady?'true':'false'),
     '- Interactive missions ready: '+(result.interactiveMissionsReady?'true':'false'),
-    '- Interactive training ready: '+(result.interactiveTrainingReady?'true':'false'),
+    '- Training merged into Missions: '+(result.trainingMergedIntoMissions?'true':'false'),
     '- Badge/trophy symbols ready: '+(result.badgeTrophySymbolsReady?'true':'false'),
+    '- Records merged into Journey: '+(result.recordsMergedIntoJourney?'true':'false'),
     '- Technical language kept out of Mission: '+(result.technicalLanguageKeptOutOfMission?'true':'false'),
     '- Fake claims blocked: '+(result.fakeClaimsBlocked?'true':'false'),
     '- Write executed: '+(result.writeExecuted?'true':'false'),
@@ -29480,7 +29475,9 @@ function renderMissionPanelsV25(stats){
 }
 
 function setMissionSubTabV25(tab){
-  var allowed=['overview','objective','profile','stats','attributes','badges','missions','training','trophies','records','journey'];
+  var redirects={objective:'overview',stats:'profile',training:'missions',trophies:'badges',records:'journey'};
+  if(redirects[tab])tab=redirects[tab];
+  var allowed=['overview','profile','attributes','badges','missions','journey'];
   if(allowed.indexOf(tab)<0)tab='overview';
   window.__missionSubTabV25=tab;
   document.querySelectorAll('[data-mission-subtab]').forEach(function(btn){
