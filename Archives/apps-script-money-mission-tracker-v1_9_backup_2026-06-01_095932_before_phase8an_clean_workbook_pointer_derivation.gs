@@ -64,7 +64,7 @@ var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
 var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
-var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260601-0959-v24-phase8an-clean-workbook-pointer-derivation';
+var OS_REGISTRY_SUMMARY_BUILD_V19 = 'mmos-20260601-0948-v24-phase8am-portable-restore-marker-gate';
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -6581,59 +6581,6 @@ function getDriveBackupPayloadByMarkerV19(markerId) {
   return { ok: false, error: 'backup_marker_not_found_recent' };
 }
 
-function extractCleanWorkbookIdFromBackupPayloadV19(backupPayload) {
-  function shaped(value) {
-    value = cellTextV19(value || '', 220);
-    return /^[A-Za-z0-9_-]{20,}$/.test(value) ? value : '';
-  }
-  function inspectValue(value) {
-    if (!value) return '';
-    if (typeof value === 'object') return inspectObject(value);
-    var text = String(value || '');
-    var direct = shaped(text);
-    if (direct) return direct;
-    try {
-      return inspectObject(JSON.parse(text));
-    } catch (err) {
-      return '';
-    }
-  }
-  function inspectObject(obj) {
-    if (!obj || typeof obj !== 'object') return '';
-    var candidates = [
-      'clean_workbook_id',
-      'cleanWorkbookId',
-      'cleanWorkbookID',
-      'cleanWorkbook',
-      'workbookId',
-      'spreadsheetId',
-      'sheetsId',
-      'targetSpreadsheetId',
-      'targetWorkbookId'
-    ];
-    for (var i = 0; i < candidates.length; i++) {
-      var found = shaped(obj[candidates[i]]);
-      if (found) return found;
-    }
-    for (var key in obj) {
-      if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
-      if (!/clean|workbook|spreadsheet|sheets|target/i.test(key)) continue;
-      var nested = inspectValue(obj[key]);
-      if (nested) return nested;
-    }
-    return '';
-  }
-  var direct = inspectObject(backupPayload);
-  if (direct) return direct;
-  var keys = Object.keys(backupPayload || {});
-  for (var i = 0; i < keys.length; i++) {
-    if (!/config|pointer|profile|setup|registry|sheets|workbook/i.test(keys[i])) continue;
-    var found = inspectValue(backupPayload[keys[i]]);
-    if (found) return found;
-  }
-  return '';
-}
-
 function runSecondDeviceRestoreExecutionRunV19(input) {
   var payload = input || {};
   var checkedAt = new Date().toISOString();
@@ -6699,12 +6646,6 @@ function runSecondDeviceRestoreExecutionRunV19(input) {
       parseError = err.toString();
     }
   }
-  if (!cleanWorkbookId) cleanWorkbookId = extractCleanWorkbookIdFromBackupPayloadV19(backupPayload);
-  targetConfirmed = !!(
-    normalizeBooleanV19(payload.restoreTargetPointersConfirmed) &&
-    cleanWorkbookId &&
-    backupFolderId
-  );
   var protectedKeys = getSecondDeviceRestoreProtectedStorageKeysV19();
   var restorePayload = {};
   var protectedSkipped = [];
