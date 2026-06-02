@@ -16,7 +16,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media (max-width:520px){.brand{font-size:24px;margin-bottom:8px}}
 .identity-greeting{font-size:11px;color:#8b949e;margin-top:5px;line-height:1.35}
 .identity-greeting strong{color:#f0f3f5}
-.identity-pill{display:inline-flex;align-items:center;gap:5px;border:0.5px solid #2a4015;background:#0d1808;color:#7ec845;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;white-space:nowrap}
+.identity-pill{display:inline-flex;align-items:center;gap:6px;border:0.5px solid #2a4015;background:#0d1808;color:#7ec845;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;white-space:nowrap;appearance:none;cursor:pointer}
+.identity-pill:hover{border-color:#4f7d31;background:#111f08;color:#9ee878}
+.identity-pill-name{line-height:1}
+.identity-pill-score{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;border-radius:999px;background:#050805;border:0.5px solid rgba(126,200,69,.34);color:#f4f8f0;font-size:10px;font-weight:950;line-height:1}
 .topbar-data-strip{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:nowrap;font-size:10px;color:#6a737a;letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
 .topbar-pct{color:#9ee878;font-weight:700}
 .topbar-clock{font-size:10px;color:#555;margin-bottom:3px;letter-spacing:.02em;font-variant-numeric:tabular-nums}
@@ -2880,7 +2883,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <span class="ch-label">Biz</span>
           <span class="ch-score" id="ch-score">—</span>
         </div>
-        <span class="identity-pill" id="identity-pill" title="Signed in account">A1XX</span>
+        <button class="identity-pill" id="identity-pill" type="button" title="Open Account profile" onclick="openAccountProfileFromHeaderV25(event)"><span class="identity-pill-name">A1XX</span><span class="identity-pill-score">48</span></button>
         <div class="save-nudge" id="save-nudge" onclick="checkAutoBackup(true)" title="Unsaved changes — tap to save now" style="display:none">💾</div>
       </div>
       <!-- Row 2: Time/Date · Revenue · % · Days left — condensed data strip -->
@@ -6403,9 +6406,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-02 19:57 ET · OS v2_5 Phase 9CE Legacy Action Scale Hardening';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9CE Legacy Action Scale Hardening';
-var APP_CACHE_TOKEN='mmos-20260602-1957-v25-phase9ce-legacy-action-scale-hardening';
+var APP_BUILD_STAMP='2026-06-02 20:19 ET · OS v2_5 Phase 9CF Header Account Shortcut';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9CF Header Account Shortcut';
+var APP_CACHE_TOKEN='mmos-20260602-2019-v25-phase9cf-header-account-shortcut';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -7576,7 +7579,17 @@ function renderAccountIdentity(){
   var accountUser=document.getElementById('account-username');
   var rpName=document.getElementById('rp-name');
   if(greeting)greeting.innerHTML='Welcome back, <strong>Executive Producer</strong>.';
-  if(pill)pill.textContent=name;
+  if(pill){
+    var score='48';
+    try{
+      if(typeof getMissionOperatorOverallV25==='function'){
+        var overall=getMissionOperatorOverallV25();
+        score=overall&&overall.score?String(overall.score):score;
+      }
+    }catch(e){}
+    pill.innerHTML='<span class="identity-pill-name">'+escapeHtml(name)+'</span><span class="identity-pill-score">'+escapeHtml(score)+'</span>';
+    pill.setAttribute('aria-label','Open Account profile. Operator overall '+score+'.');
+  }
   if(signed)signed.textContent=name+' · Executive Producer';
   if(accountUser)accountUser.value=name;
   if(rpName)rpName.textContent=name;
@@ -9248,7 +9261,7 @@ function renderMasterConfigReadSkeletonStateV24(state){
 function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
   var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
   var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
   var result={
     status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
@@ -18756,7 +18769,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -18776,7 +18789,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[abcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[abcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -19089,7 +19102,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -19358,7 +19371,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -19384,7 +19397,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -19577,7 +19590,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -19852,7 +19865,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -20031,7 +20044,7 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
@@ -20047,7 +20060,7 @@ function phase9EFunctionContainsV25(fn,needle){
 
 function getPhase9ENotificationEventWiringResultV25(){
   var log=mcReadNotificationLogV10();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
   var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
   var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
@@ -20241,7 +20254,7 @@ async function copyPhase9ENotificationEventWiringV25(){
 }
 
 function runPhase9ENotificationEventWiringQACheckV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var result=getPhase9ENotificationEventWiringResultV25();
   if(buildOk&&result.notificationEventWiringReady){
     renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
@@ -20374,7 +20387,7 @@ function getPhase9FNotificationContractMapV25(){
 }
 
 function getPhase9FAccountMissionContractsResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[fghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[fghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var phase9EReady=typeof runPhase9ENotificationEventWiringQACheckV25==='function'&&runPhase9ENotificationEventWiringQACheckV25().passed===true;
   var duplicateStatus=getAccountMissionContractDuplicateStatusV25();
   var notificationMap=getPhase9FNotificationContractMapV25();
@@ -20620,7 +20633,7 @@ function runPhase9FAccountMissionContractsQACheckV25(){
 var PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25='a1xx_phase9g_account_mission_tab_shell_v1';
 
 function getPhase9GAccountMissionTabShellResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var phase9FReady=typeof runPhase9FAccountMissionContractsQACheckV25==='function'&&runPhase9FAccountMissionContractsQACheckV25().passed===true;
   var missionButton=!!document.querySelector('[data-account-subtab="mission"]');
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20831,7 +20844,7 @@ function runPhase9GAccountMissionTabShellQACheckV25(){
 var PHASE9H_MISSION_UI_EXPANSION_KEY_V25='a1xx_phase9h_mission_ui_expansion_v1';
 
 function getPhase9HMissionUIExpansionResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[hijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[hijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var phase9GReady=typeof runPhase9GAccountMissionTabShellQACheckV25==='function'&&runPhase9GAccountMissionTabShellQACheckV25().passed===true;
   var missionPane=document.getElementById('account-subpane-mission');
   var tabs=document.querySelectorAll('[data-mission-subtab]');
@@ -21052,7 +21065,7 @@ function runPhase9HMissionUIExpansionQACheckV25(){
 var PHASE9I_MISSION_CAREER_POLISH_KEY_V25='a1xx_phase9i_mission_career_mode_polish_v1';
 
 function getPhase9IMissionCareerModePolishResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var phase9HReady=typeof runPhase9HMissionUIExpansionQACheckV25==='function'&&runPhase9HMissionUIExpansionQACheckV25().passed===true;
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var missionPane=document.getElementById('account-subpane-mission');
@@ -21306,7 +21319,7 @@ function runPhase9IMissionCareerModePolishQACheckV25(){
 
 function runPhase9JMissionRatingCalibrationQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[jklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[jklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var profileOvrReady=!!document.querySelector('#mission-panel-profile .rp-level #mission-operator-overall');
   var titleClean=!!document.querySelector('#mission-panel-profile .rp-label')&&!/A1XX Operator Profile/i.test((document.querySelector('#mission-panel-profile .rp-label')||{}).textContent||'');
   var oldOverallRemoved=!document.querySelector('#mission-panel-profile .mission-section-card #mission-operator-overall');
@@ -21555,7 +21568,7 @@ function getPhase9KTrophyClassCountsV25(){
 
 function getPhase9KMissionCatalogRulesResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[klmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[klmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var phase9JReady=typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'&&runPhase9JMissionRatingCalibrationQACheckV25().passed===true;
   var duplicateStatus=getPhase9KDuplicateStatusV25();
   var classCounts=getPhase9KTrophyClassCountsV25();
@@ -22122,7 +22135,7 @@ function getPhase9LMissionRewardPreviewV25(mission){
 
 function isPhase9LMissionContractSupersedeReadyV25(){
   try{
-    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
     if(!buildOk||typeof getPhase9LMissionUnlockProgressionContractResultV25!=='function')return false;
     var result=getPhase9LMissionUnlockProgressionContractResultV25();
     return !!(result&&result.missionUnlockProgressionContractReady===true&&result.baselineLevel===48&&result.levelCap===99&&result.exactlyOneCurrentMission===true&&result.completionExecutionEnabled===false&&result.skipPathEnabled===false);
@@ -22133,7 +22146,7 @@ function isPhase9LMissionContractSupersedeReadyV25(){
 
 function getPhase9LMissionUnlockProgressionContractResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var phase9KReady=typeof runPhase9KMissionCatalogRulesQACheckV25==='function'&&runPhase9KMissionCatalogRulesQACheckV25().passed===true;
   var baseline=PHASE9L_OPERATOR_BASELINE_V25;
   var baselineReady=baseline.baselineLevel===48&&baseline.levelCap===99&&baseline.baselineAwardExecution===false;
@@ -22466,7 +22479,7 @@ function getPhase9CDRevenueTrophyCatalogV25(){
 function getPhase9CDMissionAchievementRewardScaleContractResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
-  var buildOk=/phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(token);
+  var buildOk=/phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(token);
   var phase9LReady=typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'&&runPhase9LMissionUnlockProgressionContractQACheckV25().passed===true;
   var missionAchievements=getPhase9CDMissionCompletionAchievementCatalogV25();
   var trophyEligibility=getPhase9CDMissionTrophyEligibilityV25();
@@ -22585,7 +22598,7 @@ function runPhase9CDMissionAchievementRewardScaleContractQACheckV25(){
 
 function runPhase9CELegacyActionScaleHardeningQACheckV25(){
   var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
-  var buildOk=/phase9ce-legacy-action-scale-hardening/.test(token);
+  var buildOk=/phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(token);
   var phase9CDReady=typeof runPhase9CDMissionAchievementRewardScaleContractQACheckV25==='function'&&runPhase9CDMissionAchievementRewardScaleContractQACheckV25().passed===true;
   var targets=PHASE9CD_LONG_RANGE_TARGETS_V25||{};
   var trophyCount=MISSION_TROPHY_CATALOG_V25.length;
@@ -22641,6 +22654,35 @@ function runPhase9CELegacyActionScaleHardeningQACheckV25(){
   };
 }
 
+function runPhase9CFHeaderAccountShortcutQACheckV25(){
+  var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
+  var buildOk=/phase9cf-header-account-shortcut/.test(token);
+  var pill=document.getElementById('identity-pill');
+  var pillReady=!!(pill&&pill.tagName&&String(pill.tagName).toLowerCase()==='button'&&pill.querySelector('.identity-pill-score')&&pill.querySelector('.identity-pill-name'));
+  var scoreReady=!!(pill&&/Open Account profile/i.test(pill.getAttribute('aria-label')||'')&&/\d+/.test((pill.querySelector('.identity-pill-score')||{}).textContent||''));
+  var accountRouteReady=typeof openAccountProfileFromHeaderV25==='function'
+    &&/setSettingsTab\('account'\)/.test(String(openAccountProfileFromHeaderV25))
+    &&/setAccountSubTab\('mission'\)/.test(String(openAccountProfileFromHeaderV25))
+    &&/setMissionSubTabV25\('profile'\)/.test(String(openAccountProfileFromHeaderV25));
+  var healthRouteReady=typeof toggleSystemPanel==='function'
+    &&/setSettingsTab\('health'\)/.test(String(toggleSystemPanel))
+    &&/setHealthSubTab/.test(String(toggleSystemPanel));
+  var protectedBoundaryReady=typeof runHealthProtectedBoundaryQACheckV25==='function'&&runHealthProtectedBoundaryQACheckV25().passed===true;
+  var failures=[];
+  if(!buildOk)failures.push('Phase 9CF build token');
+  if(!pillReady)failures.push('clickable A1XX account pill');
+  if(!scoreReady)failures.push('operator OVR score in header pill');
+  if(!accountRouteReady)failures.push('A1XX pill opens Account Profile');
+  if(!healthRouteReady)failures.push('settings health route');
+  if(!protectedBoundaryReady)failures.push('Protected boundary');
+  var ready=buildOk&&pillReady&&scoreReady&&accountRouteReady&&healthRouteReady&&protectedBoundaryReady;
+  return {
+    passed:ready,
+    meta:ready?'Phase 9CF Header Account Shortcut is installed · A1XX score pill opens Account Profile · settings opens Health.':'Phase 9CF Header Account Shortcut needs review.',
+    failures:failures
+  };
+}
+
 function runPhase9BDDeveloperReceiptRelocationQACheckV25(){
   var health=document.getElementById('health-subpane-status');
   var dev=document.getElementById('settings-pane-dev');
@@ -22657,7 +22699,7 @@ function runPhase9BDDeveloperReceiptRelocationQACheckV25(){
     'Mission Unlock Progression Contract',
     'Attribute Detail Popout'
   ];
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var healthClear=receiptLabels.every(function(label){return healthText.indexOf(label)<0;});
   var devReady=receiptLabels.every(function(label){return devText.indexOf(label)>=0;});
   var failures=[];
@@ -22673,7 +22715,7 @@ function runPhase9BDDeveloperReceiptRelocationQACheckV25(){
 
 function runPhase9BHMissionProfileUICleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bh-mission-profile-ui-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bh-mission-profile-ui-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
   var resumeRailHiddenReady=/\.mission-resume-rail\{display:none!important;visibility:hidden!important;position:absolute!important;left:-9999px!important/.test(styleText);
   var resumeRailMemoryReady=!!document.getElementById('mission-resume-rail')&&typeof renderMissionResumeRailV25==='function'&&typeof setMissionResumeTargetV25==='function';
   var trustTitleCompactReady=/\.mission-profile-lens-panel\[data-profile-lens="trust"\] \.mission-profile-lens-title\{font-size:12px;line-height:1\.25\}/.test(styleText);
@@ -22700,7 +22742,7 @@ function runPhase9BIRewardCardPopoverCleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionStatusCardV25);
   var popoutText=String(showMissionRewardDetailV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bi-reward-card-popout-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bi-reward-card-popout-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
   var steadyTileReady=/\.mission-status-card\{appearance:none;[^}]*display:grid;grid-template-rows:auto minmax\(0,1fr\) auto/.test(styleText)&&/\.mission-status-card:not\(\[open\]\)\{aspect-ratio:1\/1\}/.test(styleText);
   var noNativeExpansionReady=rendererText.indexOf('<details')<0&&rendererText.indexOf('<summary')<0&&/showMissionRewardDetailV25/.test(rendererText);
   var popoutReady=document.querySelectorAll('#mission-panel-badges .mission-reward-detail-popout').length>=2&&typeof showMissionRewardDetailV25==='function'&&/mission-reward-detail-row/.test(popoutText);
@@ -22727,7 +22769,7 @@ function runPhase9BJMissionResumeRailHardHideQACheckV25(){
   if(typeof renderMissionResumeRailV25==='function')renderMissionResumeRailV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rail=document.getElementById('mission-resume-rail');
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BIRewardCardPopoverCleanupQACheckV25==='function'&&runPhase9BIRewardCardPopoverCleanupQACheckV25().passed===true;
   var railMarkupReady=!!rail&&!!document.getElementById('mission-resume-chips');
   var railHiddenAttrReady=!!rail&&rail.hidden===true&&rail.getAttribute('aria-hidden')==='true';
@@ -22752,7 +22794,7 @@ function runPhase9BKAttributeDetailPopoutQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionSkillCardV25);
   var popoutText=String(showMissionSkillDetailV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BJMissionResumeRailHardHideQACheckV25==='function'&&runPhase9BJMissionResumeRailHardHideQACheckV25().passed===true;
   var fixedCardReady=rendererText.indexOf('<details')<0&&rendererText.indexOf('<summary')<0&&/showMissionSkillDetailV25/.test(rendererText)&&document.querySelectorAll('#mission-attribute-grid .mission-skill').length>=15;
   var popoutReady=!!document.getElementById('mission-attribute-detail-popout')&&typeof showMissionSkillDetailV25==='function'&&/mission-skill-detail-row/.test(popoutText);
@@ -22784,7 +22826,7 @@ function runPhase9BLAccountMissionNavCleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var account=document.getElementById('settings-pane-account');
   var connections=document.getElementById('settings-pane-connections');
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BKAttributeDetailPopoutQACheckV25==='function'&&runPhase9BKAttributeDetailPopoutQACheckV25().passed===true;
   var legacyAccountTabsRemoved=account&&!account.querySelector('[data-account-subtab]');
   var accountMissionDirect=!!(account&&account.querySelector('#account-subpane-mission.active .mission-tabbar'));
@@ -22814,7 +22856,7 @@ function runPhase9BMMilestoneLaneFormatRepairQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionCheckpointLaneV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BLAccountMissionNavCleanupQACheckV25==='function'&&runPhase9BLAccountMissionNavCleanupQACheckV25().passed===true;
   var laneCardsReady=document.querySelectorAll('#mission-journey-chain .mission-checkpoint-lane').length>=4;
   var stackedHeaderReady=/\.mission-checkpoint-lane-top\{[^}]*display:flex[^}]*flex-direction:column/.test(styleText);
@@ -22840,7 +22882,7 @@ function runPhase9BMMilestoneLaneFormatRepairQACheckV25(){
 function runPhase9BNAttributeCardAlignmentQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BMMilestoneLaneFormatRepairQACheckV25==='function'&&runPhase9BMMilestoneLaneFormatRepairQACheckV25().passed===true;
   var cardGridReady=document.querySelectorAll('#mission-attribute-grid .mission-skill').length>=15;
   var fixedCardHeightReady=/\.mission-skill-lane \.mission-skill\{[^}]*height:34[06]px[^}]*grid-template-rows:104px minmax\(0,1fr\)/.test(styleText)||/\.mission-skill-lane \.mission-skill\{[^}]*height:326px[^}]*grid-template-rows:104px minmax\(0,1fr\)/.test(styleText);
@@ -22866,7 +22908,7 @@ function runPhase9BOAttributeDetailCuePolishQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionSkillCardV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BNAttributeCardAlignmentQACheckV25==='function'&&runPhase9BNAttributeCardAlignmentQACheckV25().passed===true;
   var cueStyleReady=/\.mission-skill-more-cue\{[^}]*width:14px[^}]*height:14px[^}]*border-radius:999px/.test(styleText);
   var cueMarkupReady=/mission-skill-more-cue/.test(rendererText)&&/aria-hidden="true">\+/.test(rendererText);
@@ -22890,7 +22932,7 @@ function runPhase9BPCheckpointCardDecontentQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionCheckpointLaneV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BOAttributeDetailCuePolishQACheckV25==='function'&&runPhase9BOAttributeDetailCuePolishQACheckV25().passed===true;
   var summarySpacingReady=/\.mission-checkpoint-lane summary\{[^}]*display:grid[^}]*gap:7px/.test(styleText);
   var visibleSourceRemoved=rendererText.indexOf('mission-checkpoint-lane-trust')<0&&rendererText.indexOf("value>0?'tracked':'not tracked'")<0;
@@ -22914,7 +22956,7 @@ function runPhase9BQOverviewMoneyMoveDrawerQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var overviewText=(document.getElementById('mission-panel-overview')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BPCheckpointCardDecontentQACheckV25==='function'&&runPhase9BPCheckpointCardDecontentQACheckV25().passed===true;
   var drawerReady=!!document.querySelector('#mission-panel-overview details.mission-overview-action-drawer #mission-overview-guide-moves.mission-move-deck');
   var oldDrawerTitle='Action cards '+'tucked away';
@@ -22944,7 +22986,7 @@ function runPhase9BRMissionRoadmapFocusCleanupQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var missionText=(document.getElementById('mission-panel-missions')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BQOverviewMoneyMoveDrawerQACheckV25==='function'&&runPhase9BQOverviewMoneyMoveDrawerQACheckV25().passed===true;
   var oldNextPreviewSelector='.mission-next-'+'preview';
   var activeFocusReady=!document.querySelector('#mission-unlock-board .mission-active-map')&&!document.querySelector('#mission-unlock-board '+oldNextPreviewSelector)&&!document.querySelector('#mission-unlock-board .mission-chain-strip');
@@ -22973,7 +23015,7 @@ function runPhase9BRMissionRoadmapFocusCleanupQACheckV25(){
 function runPhase9BSMissionFinishPathPolishQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var missionText=(document.getElementById('mission-panel-missions')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BRMissionRoadmapFocusCleanupQACheckV25==='function'&&runPhase9BRMissionRoadmapFocusCleanupQACheckV25().passed===true;
   var finishPathReady=!!document.querySelector('#mission-unlock-board .mission-finish-path')&&document.querySelectorAll('#mission-unlock-board .mission-finish-node').length>=1;
   var finishPathStateReady=!!document.querySelector('#mission-unlock-board .mission-finish-node.complete')||!!document.querySelector('#mission-unlock-board .mission-finish-node.open');
@@ -23005,7 +23047,7 @@ function runPhase9BTAccountMissionUXStressHardeningQACheckV25(){
   var profileText=(document.getElementById('mission-panel-profile')||{}).textContent||'';
   var missionText=(document.getElementById('mission-panel-missions')||{}).textContent||'';
   var rewardText=(document.getElementById('mission-panel-badges')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BSMissionFinishPathPolishQACheckV25==='function'&&runPhase9BSMissionFinishPathPolishQACheckV25().passed===true;
   var systemLensSelector='[data-overview-lens="sys'+'tem"]';
   var systemLensRemoved=!document.querySelector('#mission-panel-overview '+systemLensSelector)&&!/System summary|health \+ backup/i.test(overviewText);
@@ -23039,7 +23081,7 @@ function runPhase9BUAccountMissionCopyDecontaminationQACheckV25(){
   var journeyText=(document.getElementById('mission-panel-journey')||{}).textContent||'';
   var combined=[overviewText,profileText,missionText,rewardText,journeyText].join(' ');
   var renderCopy=String(renderMissionPanelsV25)+String(missionJourneySurfaceV25)+String(getMissionRewardCatalogV25)+String(missionDetailCardV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BTAccountMissionUXStressHardeningQACheckV25==='function'&&runPhase9BTAccountMissionUXStressHardeningQACheckV25().passed===true;
   var staticCopyReady=/All-cycle profile loading/.test(profileText)&&/Momentum/.test(profileText)&&/Unlock alerts/.test(rewardText)&&/Reward alerts/.test(rewardText)&&/Mission Steps/.test(missionText);
   var oldVisiblePattern=new RegExp('Notification bridge|Reward alerts preview|All-cycle profile signal loading|Signal strength|Filtered badge cat'+'alog|Filtered trophy cat'+'alog|tracked mission progress|Preview-only reward proof|tracked checklist','i');
@@ -23068,7 +23110,7 @@ function runPhase9BVRewardShelfDensityQACheckV25(){
   var catalog=typeof getMissionRewardCatalogV25==='function'?getMissionRewardCatalogV25():{badges:[],trophies:[]};
   var badgeCards=document.querySelectorAll('#mission-badge-grid .mission-status-card');
   var trophyCards=document.querySelectorAll('#mission-trophy-grid .mission-status-card');
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BUAccountMissionCopyDecontaminationQACheckV25==='function'&&runPhase9BUAccountMissionCopyDecontaminationQACheckV25().passed===true;
   var compactGridReady=/#mission-panel-badges \.mission-card-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);gap:8px\}/.test(styleText);
   var compactCardReady=/#mission-panel-badges \.mission-status-card\{[^}]*border-radius:11px[^}]*padding:9px[^}]*gap:6px/.test(styleText);
@@ -23110,7 +23152,7 @@ function runPhase9BWAwardCatalogSyncQACheckV25(){
   var expandedAwards=typeof getPhase9KCombinedAwardsV25==='function'?getPhase9KCombinedAwardsV25():[];
   var expandedDuplicateStatus=typeof getPhase9KDuplicateStatusV25==='function'?getPhase9KDuplicateStatusV25():{duplicateIds:[]};
   var phase9FResult=typeof getPhase9FAccountMissionContractsResultV25==='function'?getPhase9FAccountMissionContractsResultV25():{};
-  var buildOk=/phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(token);
+  var buildOk=/phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(token);
   var baselineReady=typeof runPhase9BVRewardShelfDensityQACheckV25==='function'&&runPhase9BVRewardShelfDensityQACheckV25().passed===true;
   var expandedAwardCatalogReady=expandedAwards.length>=90;
   var phase9FContractSynced=(phase9FResult.awardCatalogCount||0)>=90&&(phase9FResult.starterAwardCatalogCount||0)>=12;
@@ -23144,7 +23186,7 @@ function runPhase9BXRewardShelfPagingQACheckV25(){
   var trophyGrid=document.getElementById('mission-trophy-grid');
   var badgeCards=badgeGrid?[].slice.call(badgeGrid.querySelectorAll('.mission-status-card')):[];
   var trophyCards=trophyGrid?[].slice.call(trophyGrid.querySelectorAll('.mission-status-card')):[];
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BWAwardCatalogSyncQACheckV25==='function'&&runPhase9BWAwardCatalogSyncQACheckV25().passed===true;
   var threeAcrossReady=/#mission-panel-badges \.mission-card-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);gap:8px\}/.test(styleText);
   var readableCardReady=/#mission-panel-badges \.mission-status-heading \.mission-status-name\{font-size:8\.5px;line-height:1\.08/.test(styleText)&&/#mission-panel-badges \.mission-status-state-dot\{top:7px;right:7px;width:8px;height:8px/.test(styleText);
@@ -23181,7 +23223,7 @@ function runPhase9BYRewardCategoryNavigatorQACheckV25(){
   var badgeCards=badgeGrid?[].slice.call(badgeGrid.querySelectorAll('.mission-status-card')):[];
   var trophyCards=trophyGrid?[].slice.call(trophyGrid.querySelectorAll('.mission-status-card')):[];
   var expected=['money','pipeline','sales','proof','rhythm'];
-  var buildOk=/phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(token);
+  var buildOk=/phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(token);
   var baselineReady=typeof runPhase9BXRewardShelfPagingQACheckV25==='function'&&runPhase9BXRewardShelfPagingQACheckV25().passed===true;
   var buttonReady=expected.every(function(key){
     return !!document.querySelector('#mission-panel-badges [data-reward-filter-scope="badges"] [data-reward-filter="'+key+'"]')
@@ -23220,7 +23262,7 @@ function runPhase9BZRewardStateDotGuidanceQACheckV25(){
   var badgeCards=badgeGrid?[].slice.call(badgeGrid.querySelectorAll('.mission-status-card')):[];
   var trophyCards=trophyGrid?[].slice.call(trophyGrid.querySelectorAll('.mission-status-card')):[];
   var allCards=badgeCards.concat(trophyCards);
-  var buildOk=/phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(token);
+  var buildOk=/phase9bz-reward-state-dot-guidance|phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(token);
   var baselineReady=typeof runPhase9BYRewardCategoryNavigatorQACheckV25==='function'&&runPhase9BYRewardCategoryNavigatorQACheckV25().passed===true;
   var stateDotStyleReady=/\.mission-status-state-dot\{/.test(styleText)&&/\.mission-status-card\.ready \.mission-status-state-dot/.test(styleText)&&/\.mission-status-card\.preview \.mission-status-state-dot/.test(styleText)&&/\.mission-status-card\.locked \.mission-status-state-dot/.test(styleText);
   var stateWordsHiddenReady=/\.mission-status-trust\{display:none\}/.test(styleText)&&/#mission-panel-badges \.mission-status-trust\{display:none\}/.test(styleText);
@@ -23256,7 +23298,7 @@ function runPhase9CARewardUnlockRequirementDetailsQACheckV25(){
   var trophyCards=trophyGrid?[].slice.call(trophyGrid.querySelectorAll('.mission-status-card')):[];
   var allCards=badgeCards.concat(trophyCards);
   var catalog=typeof getMissionRewardCatalogV25==='function'?getMissionRewardCatalogV25():{badges:[],trophies:[]};
-  var buildOk=/phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(token);
+  var buildOk=/phase9ca-reward-unlock-requirement-details|phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(token);
   var baselineReady=typeof runPhase9BZRewardStateDotGuidanceQACheckV25==='function'&&runPhase9BZRewardStateDotGuidanceQACheckV25().passed===true;
   var catalogMetricReady=(catalog.badges||[]).concat(catalog.trophies||[]).every(function(item){
     return typeof item.metric==='number'&&typeof item.target==='number';
@@ -23300,7 +23342,7 @@ function runPhase9CBRewardDetailActionLinksQACheckV25(){
   var trophyGrid=document.getElementById('mission-trophy-grid');
   var badgeCards=badgeGrid?[].slice.call(badgeGrid.querySelectorAll('.mission-status-card')):[];
   var trophyCards=trophyGrid?[].slice.call(trophyGrid.querySelectorAll('.mission-status-card')):[];
-  var buildOk=/phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(token);
+  var buildOk=/phase9cb-reward-detail-action-links|phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(token);
   var baselineReady=typeof runPhase9CARewardUnlockRequirementDetailsQACheckV25==='function'&&runPhase9CARewardUnlockRequirementDetailsQACheckV25().passed===true;
   var actionStyleReady=/\.mission-reward-detail-actions\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\);gap:7px\}/.test(styleText)&&/\.mission-reward-detail-action/.test(styleText);
   var actionFunctionReady=typeof setMissionRewardDetailActionV25==='function'
@@ -23339,7 +23381,7 @@ function runPhase9CBRewardDetailActionLinksQACheckV25(){
 function runPhase9CCAccountMissionLanguageDetailCleanupQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
-  var buildOk=/phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening/.test(token);
+  var buildOk=/phase9cc-account-mission-language-detail-cleanup|phase9cd-mission-achievement-reward-scale-contract|phase9ce-legacy-action-scale-hardening|phase9cf-header-account-shortcut/.test(token);
   var baselineReady=typeof runPhase9CBRewardDetailActionLinksQACheckV25==='function'&&runPhase9CBRewardDetailActionLinksQACheckV25().passed===true;
   var profileTab=document.querySelector('.mission-profile-lens-tab[data-profile-lens="trust"]');
   var profileMeta=document.getElementById('mission-profile-trust-meta');
@@ -23376,7 +23418,7 @@ function runPhase9CCAccountMissionLanguageDetailCleanupQACheckV25(){
 
 function getPhase9NMissionUnlockUIResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(APP_CACHE_TOKEN);
   var missionStyleText=(document.querySelector('style')||{}).textContent||'';
   var phase9LReady=typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'&&runPhase9LMissionUnlockProgressionContractQACheckV25().passed===true;
   var chain=typeof getPhase9LMissionChainV25==='function'?getPhase9LMissionChainV25():null;
@@ -27386,8 +27428,8 @@ async function runBackupArchiveSelfCheckV22(){
 
 function runHealthCurrentBuildIdentityQACheckV25(){
   var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
-  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce)/.test(token);
-  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9CE build token.'};
+  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz|ca|cb|cc|cd|ce|cf)/.test(token);
+  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9CF build token.'};
 }
 
 function runHealthProtectedBoundaryQACheckV25(){
@@ -27433,7 +27475,7 @@ async function runHealthFastLiveQACheckV25(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Fast QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Fast QA';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9BY Reward Category Navigator, Phase 9BZ Reward State Dot Guidance, Phase 9CA Reward Unlock Requirement Details, Phase 9CB Reward Detail Action Links, Phase 9CC Account Mission Language + Detail Cleanup, Phase 9CD Mission Achievement + Reward Scale Contract, Phase 9CE Legacy Action Scale Hardening, Phase 9BD receipt placement, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
+  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9BY Reward Category Navigator, Phase 9BZ Reward State Dot Guidance, Phase 9CA Reward Unlock Requirement Details, Phase 9CB Reward Detail Action Links, Phase 9CC Account Mission Language + Detail Cleanup, Phase 9CD Mission Achievement + Reward Scale Contract, Phase 9CE Legacy Action Scale Hardening, Phase 9CF Header Account Shortcut, Phase 9BD receipt placement, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -27466,6 +27508,7 @@ async function runHealthFastLiveQACheckV25(){
   try{add('Phase 9CC Account Mission Language + Detail Cleanup',typeof runPhase9CCAccountMissionLanguageDetailCleanupQACheckV25==='function'?runPhase9CCAccountMissionLanguageDetailCleanupQACheckV25():{passed:false,meta:'Missing Phase 9CC Account Mission Language + Detail Cleanup check'});}catch(e){add('Phase 9CC Account Mission Language + Detail Cleanup',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9CD Mission Achievement + Reward Scale Contract',typeof runPhase9CDMissionAchievementRewardScaleContractQACheckV25==='function'?runPhase9CDMissionAchievementRewardScaleContractQACheckV25():{passed:false,meta:'Missing Phase 9CD Mission Achievement + Reward Scale Contract check'});}catch(e){add('Phase 9CD Mission Achievement + Reward Scale Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9CE Legacy Action Scale Hardening',typeof runPhase9CELegacyActionScaleHardeningQACheckV25==='function'?runPhase9CELegacyActionScaleHardeningQACheckV25():{passed:false,meta:'Missing Phase 9CE Legacy Action Scale Hardening check'});}catch(e){add('Phase 9CE Legacy Action Scale Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9CF Header Account Shortcut',typeof runPhase9CFHeaderAccountShortcutQACheckV25==='function'?runPhase9CFHeaderAccountShortcutQACheckV25():{passed:false,meta:'Missing Phase 9CF Header Account Shortcut check'});}catch(e){add('Phase 9CF Header Account Shortcut',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BD Developer Receipt Relocation',typeof runPhase9BDDeveloperReceiptRelocationQACheckV25==='function'?runPhase9BDDeveloperReceiptRelocationQACheckV25():{passed:false,meta:'Missing Phase 9BD Developer Receipt Relocation check'});}catch(e){add('Phase 9BD Developer Receipt Relocation',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Protected Boundary',runHealthProtectedBoundaryQACheckV25());}catch(e){add('Protected Boundary',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -27575,6 +27618,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9CC Account Mission Language + Detail Cleanup',typeof runPhase9CCAccountMissionLanguageDetailCleanupQACheckV25==='function'?runPhase9CCAccountMissionLanguageDetailCleanupQACheckV25():{passed:false,meta:'Missing Phase 9CC Account Mission Language + Detail Cleanup check'});}catch(e){add('Phase 9CC Account Mission Language + Detail Cleanup',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9CD Mission Achievement + Reward Scale Contract',typeof runPhase9CDMissionAchievementRewardScaleContractQACheckV25==='function'?runPhase9CDMissionAchievementRewardScaleContractQACheckV25():{passed:false,meta:'Missing Phase 9CD Mission Achievement + Reward Scale Contract check'});}catch(e){add('Phase 9CD Mission Achievement + Reward Scale Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9CE Legacy Action Scale Hardening',typeof runPhase9CELegacyActionScaleHardeningQACheckV25==='function'?runPhase9CELegacyActionScaleHardeningQACheckV25():{passed:false,meta:'Missing Phase 9CE Legacy Action Scale Hardening check'});}catch(e){add('Phase 9CE Legacy Action Scale Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9CF Header Account Shortcut',typeof runPhase9CFHeaderAccountShortcutQACheckV25==='function'?runPhase9CFHeaderAccountShortcutQACheckV25():{passed:false,meta:'Missing Phase 9CF Header Account Shortcut check'});}catch(e){add('Phase 9CF Header Account Shortcut',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BD Developer Receipt Relocation',typeof runPhase9BDDeveloperReceiptRelocationQACheckV25==='function'?runPhase9BDDeveloperReceiptRelocationQACheckV25():{passed:false,meta:'Missing Phase 9BD Developer Receipt Relocation check'});}catch(e){add('Phase 9BD Developer Receipt Relocation',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -27950,7 +27994,24 @@ function toggleSystemPanel(e){
   if(open&&typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('system-panel-open',{system:true});
   p.classList.toggle('open',open);
   if(b)b.classList.toggle('open',open);
-  if(open){renderDeveloperModeV23();setSettingsTab(window.__settingsTab||'account');renderSystemHealth();}
+  if(open){renderDeveloperModeV23();setSettingsTab('health');setHealthSubTab(window.__healthSubTab||'status');renderSystemHealth();}
+}
+
+function openAccountProfileFromHeaderV25(e){
+  if(e&&e.stopPropagation)e.stopPropagation();
+  if(e&&e.preventDefault)e.preventDefault();
+  var p=document.getElementById('system-panel');
+  var b=document.getElementById('settings-backdrop');
+  if(!p)return false;
+  if(typeof closeTransientUiSurfacesV22==='function')closeTransientUiSurfacesV22('account-profile-header-open',{system:true});
+  p.classList.add('open');
+  if(b)b.classList.add('open');
+  if(typeof renderDeveloperModeV23==='function')renderDeveloperModeV23();
+  if(typeof setSettingsTab==='function')setSettingsTab('account');
+  if(typeof setAccountSubTab==='function')setAccountSubTab('mission');
+  if(typeof setMissionSubTabV25==='function')setMissionSubTabV25('profile');
+  if(typeof renderSystemHealth==='function')renderSystemHealth();
+  return false;
 }
 
 function closeSystemPanel(e){
