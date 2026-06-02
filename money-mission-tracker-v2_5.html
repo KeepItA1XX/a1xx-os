@@ -922,6 +922,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mission-overview-command-line span{font-size:9px;color:#a4adb3;text-transform:none;letter-spacing:0;line-height:1.4;font-weight:750}
 .mission-overview-command-link{appearance:none;border:0;background:#101a0c;color:#9ee878;border-radius:9px;padding:8px 9px;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;text-align:left}
 .mission-overview-command-link:hover{background:#13220d;color:#f4f8f0}
+.mission-overview-lens-shell{display:grid;gap:9px;background:linear-gradient(180deg,#090e10,#050708);border-radius:14px;padding:11px;box-shadow:inset 0 0 0 1px rgba(126,200,69,.1)}
+.mission-overview-lens-tabs{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;padding-bottom:2px}
+.mission-overview-lens-tab{appearance:none;border:0;flex:0 0 auto;background:#050708;color:#8f9aa3;border-radius:999px;padding:8px 10px;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.mission-overview-lens-tab.active{background:#101a0c;color:#9ee878;box-shadow:inset 0 0 0 1px rgba(126,200,69,.22)}
+.mission-overview-lens-deck{display:grid;gap:8px}
+.mission-overview-lens-panel{display:none;grid-template-columns:minmax(0,1fr) 90px;gap:10px;align-items:center;background:radial-gradient(circle at 92% 10%,rgba(126,200,69,.12),transparent 44%),#050708;border-radius:12px;padding:11px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035)}
+.mission-overview-lens-panel.active{display:grid}
+.mission-overview-lens-kicker{font-size:7px;color:#7ec845;text-transform:uppercase;letter-spacing:.1em;font-weight:950}
+.mission-overview-lens-title{font-size:17px;color:#f4f8f0;font-weight:950;line-height:1.08;margin-top:5px}
+.mission-overview-lens-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px}
+.mission-overview-lens-stat{background:#080b0d;border-radius:9px;padding:8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035)}
+.mission-overview-lens-stat b{display:block;color:#f0f3f5;font-size:14px;line-height:1;font-weight:950}
+.mission-overview-lens-stat span{display:block;color:#7f8a92;font-size:7px;text-transform:uppercase;letter-spacing:.07em;font-weight:900;margin-top:5px}
+.mission-overview-lens-orb{width:76px;aspect-ratio:1;border-radius:999px;background:conic-gradient(#7ec845 var(--mission-overview-lens-progress,0%),#101417 0);display:grid;place-items:center;justify-self:end;box-shadow:inset 0 0 0 1px rgba(126,200,69,.14),0 12px 26px rgba(0,0,0,.18)}
+.mission-overview-lens-orb-inner{width:56px;aspect-ratio:1;border-radius:999px;background:#050708;display:grid;place-items:center;text-align:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.mission-overview-lens-orb-inner b{font-size:16px;color:#f4f8f0;line-height:1;font-weight:950}
+.mission-overview-lens-orb-inner span{display:block;font-size:6px;color:#7ec845;text-transform:uppercase;letter-spacing:.07em;font-weight:950;margin-top:3px}
+.mission-overview-lens-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.mission-overview-lens-action{appearance:none;border:0;background:#101a0c;color:#9ee878;border-radius:9px;padding:8px 9px;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
+.mission-overview-lens-action:hover{background:#14240e;color:#f4f8f0}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .mission-overview-drawer,.mission-section-toggle{background:linear-gradient(180deg,#090e10,#050708);border-radius:12px;box-shadow:inset 0 0 0 1px rgba(126,200,69,.08);overflow:hidden}
 .mission-overview-drawer summary,.mission-section-toggle summary{cursor:pointer;list-style:none;padding:10px 11px;color:#9ee878;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between;gap:8px}
 .mission-overview-drawer summary::-webkit-details-marker,.mission-section-toggle summary::-webkit-details-marker{display:none}
@@ -932,7 +953,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:720px){
   .mission-action-board{grid-template-columns:1fr}
   .mission-story-grid,.mission-skill-grid,.mission-card-grid,.mission-stat-grid,.account-mission-home-grid{grid-template-columns:1fr}
-  .mission-overview-strip,.mission-overview-nav,.mission-overview-command-grid,.mission-profile-command-grid{grid-template-columns:1fr}
+  .mission-overview-strip,.mission-overview-nav,.mission-overview-command-grid,.mission-profile-command-grid,.mission-overview-lens-panel,.mission-overview-lens-grid{grid-template-columns:1fr}
+  .mission-overview-lens-orb{justify-self:start}
   .rp-top{grid-template-columns:1fr}
   .mission-active-map{grid-template-columns:1fr}
   .mission-command-track{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -2758,92 +2780,18 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <div class="mission-overview-guide-kicker">Cycle 1 Foundation</div>
               <div class="mission-overview-guide-title" id="mission-story-title">Cycle mission loading...</div>
               <div class="mission-overview-guide-copy" id="mission-story-copy">Loading current mission progress, closest gap, and next unlock path.</div>
-              <div class="mission-overview-command-grid">
-                <details class="mission-overview-command">
-                  <summary><span>Done</span><b id="mission-overview-done">Reading progress</b><small id="mission-overview-done-meta">Tracked movement will appear here.</small></summary>
-                  <div class="mission-overview-command-body">
-                    <div class="mission-overview-command-line"><b>Progress read</b><span id="mission-overview-done-detail">Mission progress loads from tracked action only.</span></div>
-                    <button type="button" class="mission-overview-command-link" onclick="setMissionSubTabV25('journey')">Open Journey</button>
-                  </div>
-                </details>
-                <details class="mission-overview-command">
-                  <summary><span>Missing</span><b id="mission-overview-missing">Finding closest gap</b><small id="mission-overview-missing-meta">Mission gates stay source-trusted.</small></summary>
-                  <div class="mission-overview-command-body">
-                    <div class="mission-overview-command-line"><b>Closest gap</b><span id="mission-overview-missing-detail">The next gap appears from the current mission checklist.</span></div>
-                    <button type="button" class="mission-overview-command-link" onclick="setMissionSubTabV25('missions')">Open Missions</button>
-                  </div>
-                </details>
-                <details class="mission-overview-command">
-                  <summary><span>Possible</span><b id="mission-overview-possible">Next unlock loading</b><small id="mission-overview-possible-meta">Preview only until verified.</small></summary>
-                  <div class="mission-overview-command-body">
-                    <div class="mission-overview-command-line"><b>Unlock path</b><span id="mission-overview-possible-detail">Badges, milestones, and trophies stay preview-only until tracked.</span></div>
-                    <button type="button" class="mission-overview-command-link" onclick="setMissionSubTabV25('badges')">Open Badges</button>
-                  </div>
-                </details>
-                <details class="mission-overview-command">
-                  <summary><span>Operator</span><b id="mission-overview-operator">OVR loading</b><small id="mission-overview-operator-meta">Profile rating and weekly score load here.</small></summary>
-                  <div class="mission-overview-command-body">
-                    <div class="mission-overview-command-line"><b>Profile signal</b><span id="mission-overview-operator-detail">Operator rating reflects all-cycle progress, not one mission.</span></div>
-                    <button type="button" class="mission-overview-command-link" onclick="setMissionSubTabV25('profile')">Open Profile</button>
-                  </div>
-                </details>
-              </div>
             </div>
-            <details class="mission-overview-drawer">
-              <summary>More mission context</summary>
-              <div class="mission-overview-drawer-body">
-                <div class="mission-story-stack">
-                  <button type="button" class="mission-story-card" onclick="setMissionSubTabV25('journey')">
-                    <div class="mission-story-label">Current Path</div>
-                    <div class="mission-story-value" id="mission-current-chapter">Cycle loading</div>
-                    <div class="mission-story-meta" id="mission-current-chapter-meta">Season context loads from the current cycle.</div>
-                  </button>
-                  <button type="button" class="mission-story-card" onclick="setMissionSubTabV25('profile')">
-                    <div class="mission-story-label">Focus Lane</div>
-                    <div class="mission-story-value" id="mission-inner-shift">Build pipeline momentum</div>
-                    <div class="mission-story-meta" id="mission-inner-shift-meta">The business lane behind the next move.</div>
-                  </button>
-                  <button type="button" class="mission-story-card" onclick="setMissionSubTabV25('badges')">
-                    <div class="mission-story-label">Next Milestone</div>
-                    <div class="mission-story-value" id="mission-nearest-milestone">First logged action</div>
-                    <div class="mission-story-meta" id="mission-becoming-line">Roadmap note loading.</div>
-                  </button>
-                </div>
-                <div class="mission-action-board">
-                  <div class="mission-objective-card" role="button" tabindex="0" onclick="setMissionSubTabV25('missions')">
-                    <div class="mission-objective-label">Current Objective</div>
-                    <div class="mission-objective-title" id="mission-current-objective">Build today's money movement.</div>
-                    <div class="mission-objective-copy" id="mission-current-objective-copy">Log one real business action: outreach, follow-up, call, offer, close, content proof, or production delivery.</div>
-                  </div>
-                  <div class="mission-action-card" role="button" tabindex="0" onclick="setMissionSubTabV25('missions')">
-                    <div class="mission-section-label">Next Money Move</div>
-                    <div class="mission-focus-list" id="mission-next-money-move-list"></div>
-                  </div>
-                </div>
-                <div class="account-mission-home-grid mission-overview-nav">
-                  <button type="button" class="mission-home-button" onclick="setMissionSubTabV25('profile')">
-                    <div class="mission-home-button-label">Profile</div>
-                    <div class="mission-home-button-score" id="mission-overview-ovr">--</div>
-                    <div class="mission-home-button-meta" id="mission-overview-ovr-meta">Pending tracked career signal.</div>
-                  </button>
-                  <button type="button" class="mission-home-button" onclick="setMissionSubTabV25('missions')">
-                    <div class="mission-home-button-label">Missions</div>
-                    <div class="mission-home-button-value">Current lock</div>
-                    <div class="mission-home-button-meta">Checklist, training, and rewards.</div>
-                  </button>
-                  <button type="button" class="mission-home-button" onclick="setMissionSubTabV25('badges')">
-                    <div class="mission-home-button-label">Badges</div>
-                    <div class="mission-home-button-value">Unlock track</div>
-                    <div class="mission-home-button-meta">Badges and trophies from progress.</div>
-                  </button>
-                  <button type="button" class="mission-home-button" onclick="setMissionSubTabV25('journey')">
-                    <div class="mission-home-button-label">Journey</div>
-                    <div class="mission-home-button-value">Roadmap</div>
-                    <div class="mission-home-button-meta">Cycle path and records.</div>
-                  </button>
-                </div>
+            <div class="mission-overview-lens-shell" id="mission-overview-lens-shell">
+              <div class="mission-overview-lens-tabs" aria-label="Overview summary lenses">
+                <button type="button" class="mission-overview-lens-tab active" data-overview-lens="today" onclick="return setMissionOverviewLensV25('today')">Today</button>
+                <button type="button" class="mission-overview-lens-tab" data-overview-lens="profile" onclick="return setMissionOverviewLensV25('profile')">Profile</button>
+                <button type="button" class="mission-overview-lens-tab" data-overview-lens="rewards" onclick="return setMissionOverviewLensV25('rewards')">Rewards</button>
+                <button type="button" class="mission-overview-lens-tab" data-overview-lens="missions" onclick="return setMissionOverviewLensV25('missions')">Missions</button>
+                <button type="button" class="mission-overview-lens-tab" data-overview-lens="journey" onclick="return setMissionOverviewLensV25('journey')">Journey</button>
+                <button type="button" class="mission-overview-lens-tab" data-overview-lens="system" onclick="return setMissionOverviewLensV25('system')">System</button>
               </div>
-            </details>
+              <div class="mission-overview-lens-deck" id="mission-overview-lens-deck"></div>
+            </div>
           </div>
           <div class="mission-panel" id="mission-panel-profile">
             <div class="mission-profile-card">
@@ -4205,15 +4153,15 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
         <div class="settings-section">
           <div class="settings-section-title">Mission Unlock UI</div>
           <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 9AB scope</div><div class="settings-row-meta" id="phase9n-mission-scope">Add Profile detail drawers for Career, Attributes, Cycle Stats, and Source Trust. No awards, writes, notification dispatch, or autonomous action.</div></div><span class="settings-badge" id="phase9n-mission-scope-badge">Profile</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Phase 9AC scope</div><div class="settings-row-meta" id="phase9n-mission-scope">Add visual Overview lens tabs for Today, Profile, Rewards, Missions, Journey, and System. No awards, writes, notification dispatch, or autonomous action.</div></div><span class="settings-badge" id="phase9n-mission-scope-badge">Overview</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Million journey map</div><div class="settings-row-meta" id="phase9n-mission-chain">Previous, current, next, locked missions, and money checkpoints render from read-only state.</div></div><span class="settings-badge off" id="phase9n-mission-chain-badge">Chain</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Profile detail drawers</div><div class="settings-row-meta" id="phase9n-mission-checklist">Profile opens live Career, Attributes, Cycle Stats, and Source Trust detail drawers from read-only state.</div></div><span class="settings-badge off" id="phase9n-mission-checklist-badge">Preview</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Overview lens tabs</div><div class="settings-row-meta" id="phase9n-mission-checklist">Overview summarizes Today, Profile, Rewards, Missions, Journey, and System without duplicating deep tab detail.</div></div><span class="settings-badge off" id="phase9n-mission-checklist-badge">Lens</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta" id="phase9n-mission-blocked">No fake completion, mission ledger write, notification dispatch, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.</div></div><span class="settings-badge warn" id="phase9n-mission-blocked-badge">Blocked</span></div>
           </div>
           <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="runPhase9NMissionUnlockUIV25()">Review profile drawers</button>
-            <button class="btn" onclick="setSettingsTab('account');setAccountSubTab('mission');setMissionSubTabV25('profile')">Open Profile</button>
-            <button class="btn" onclick="copyPhase9NMissionUnlockUIV25()">Copy Phase 9AB</button>
+            <button class="btn primary" onclick="runPhase9NMissionUnlockUIV25()">Review overview lenses</button>
+            <button class="btn" onclick="setSettingsTab('account');setAccountSubTab('mission');setMissionSubTabV25('overview')">Open Overview</button>
+            <button class="btn" onclick="copyPhase9NMissionUnlockUIV25()">Copy Phase 9AC</button>
           </div>
           <div class="reset-status" id="phase9n-mission-status"></div>
         </div>
@@ -6022,9 +5970,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-02 01:26 ET · OS v2_5 Phase 9AB Profile Detail Drawers';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9AB Profile Detail Drawers';
-var APP_CACHE_TOKEN='mmos-20260602-0126-v25-phase9ab-profile-detail-drawers';
+var APP_BUILD_STAMP='2026-06-02 01:38 ET · OS v2_5 Phase 9AC Overview Lens Tabs';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9AC Overview Lens Tabs';
+var APP_CACHE_TOKEN='mmos-20260602-0138-v25-phase9ac-overview-lens-tabs';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8867,7 +8815,7 @@ function renderMasterConfigReadSkeletonStateV24(state){
 function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
   var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
   var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
   var result={
     status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
@@ -18375,7 +18323,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -18395,7 +18343,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[abcdefghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[abcdefghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -18708,7 +18656,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -18977,7 +18925,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -19003,7 +18951,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -19196,7 +19144,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -19471,7 +19419,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -19650,7 +19598,7 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
@@ -19666,7 +19614,7 @@ function phase9EFunctionContainsV25(fn,needle){
 
 function getPhase9ENotificationEventWiringResultV25(){
   var log=mcReadNotificationLogV10();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
   var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
   var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
@@ -19860,7 +19808,7 @@ async function copyPhase9ENotificationEventWiringV25(){
 }
 
 function runPhase9ENotificationEventWiringQACheckV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var result=getPhase9ENotificationEventWiringResultV25();
   if(buildOk&&result.notificationEventWiringReady){
     renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
@@ -19993,7 +19941,7 @@ function getPhase9FNotificationContractMapV25(){
 }
 
 function getPhase9FAccountMissionContractsResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[fghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[fghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var phase9EReady=typeof runPhase9ENotificationEventWiringQACheckV25==='function'&&runPhase9ENotificationEventWiringQACheckV25().passed===true;
   var duplicateStatus=getAccountMissionContractDuplicateStatusV25();
   var notificationMap=getPhase9FNotificationContractMapV25();
@@ -20233,7 +20181,7 @@ function runPhase9FAccountMissionContractsQACheckV25(){
 var PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25='a1xx_phase9g_account_mission_tab_shell_v1';
 
 function getPhase9GAccountMissionTabShellResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ghijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ghijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var phase9FReady=typeof runPhase9FAccountMissionContractsQACheckV25==='function'&&runPhase9FAccountMissionContractsQACheckV25().passed===true;
   var missionButton=!!document.querySelector('[data-account-subtab="mission"]');
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20444,7 +20392,7 @@ function runPhase9GAccountMissionTabShellQACheckV25(){
 var PHASE9H_MISSION_UI_EXPANSION_KEY_V25='a1xx_phase9h_mission_ui_expansion_v1';
 
 function getPhase9HMissionUIExpansionResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[hijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[hijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var phase9GReady=typeof runPhase9GAccountMissionTabShellQACheckV25==='function'&&runPhase9GAccountMissionTabShellQACheckV25().passed===true;
   var missionPane=document.getElementById('account-subpane-mission');
   var tabs=document.querySelectorAll('[data-mission-subtab]');
@@ -20665,7 +20613,7 @@ function runPhase9HMissionUIExpansionQACheckV25(){
 var PHASE9I_MISSION_CAREER_POLISH_KEY_V25='a1xx_phase9i_mission_career_mode_polish_v1';
 
 function getPhase9IMissionCareerModePolishResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ijklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ijklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var phase9HReady=typeof runPhase9HMissionUIExpansionQACheckV25==='function'&&runPhase9HMissionUIExpansionQACheckV25().passed===true;
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20919,7 +20867,7 @@ function runPhase9IMissionCareerModePolishQACheckV25(){
 
 function runPhase9JMissionRatingCalibrationQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[jklmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[jklmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var profileOvrReady=!!document.querySelector('#mission-panel-profile .rp-level #mission-operator-overall');
   var titleClean=!!document.querySelector('#mission-panel-profile .rp-label')&&!/A1XX Operator Profile/i.test((document.querySelector('#mission-panel-profile .rp-label')||{}).textContent||'');
   var oldOverallRemoved=!document.querySelector('#mission-panel-profile .mission-section-card #mission-operator-overall');
@@ -21142,7 +21090,7 @@ function getPhase9KTrophyClassCountsV25(){
 
 function getPhase9KMissionCatalogRulesResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[klmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[klmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var phase9JReady=typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'&&runPhase9JMissionRatingCalibrationQACheckV25().passed===true;
   var duplicateStatus=getPhase9KDuplicateStatusV25();
   var classCounts=getPhase9KTrophyClassCountsV25();
@@ -21709,7 +21657,7 @@ function getPhase9LMissionRewardPreviewV25(mission){
 
 function isPhase9LMissionContractSupersedeReadyV25(){
   try{
-    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
     if(!buildOk||typeof getPhase9LMissionUnlockProgressionContractResultV25!=='function')return false;
     var result=getPhase9LMissionUnlockProgressionContractResultV25();
     return !!(result&&result.missionUnlockProgressionContractReady===true&&result.baselineLevel===48&&result.levelCap===99&&result.exactlyOneCurrentMission===true&&result.completionExecutionEnabled===false&&result.skipPathEnabled===false);
@@ -21720,7 +21668,7 @@ function isPhase9LMissionContractSupersedeReadyV25(){
 
 function getPhase9LMissionUnlockProgressionContractResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var phase9KReady=typeof runPhase9KMissionCatalogRulesQACheckV25==='function'&&runPhase9KMissionCatalogRulesQACheckV25().passed===true;
   var baseline=PHASE9L_OPERATOR_BASELINE_V25;
   var baselineReady=baseline.baselineLevel===48&&baseline.levelCap===99&&baseline.baselineAwardExecution===false;
@@ -21979,7 +21927,7 @@ function runPhase9LMissionUnlockProgressionContractQACheckV25(){
 
 function getPhase9NMissionUnlockUIResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac)/.test(APP_CACHE_TOKEN);
   var phase9LReady=typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'&&runPhase9LMissionUnlockProgressionContractQACheckV25().passed===true;
   var chain=typeof getPhase9LMissionChainV25==='function'?getPhase9LMissionChainV25():null;
   var missionScopedProgressReady=!!(chain&&chain.missionScopedProgressReady&&chain.current&&(chain.current.requirements||[]).every(function(req){return req.missionScoped===true&&typeof req.priorTarget==='number'&&typeof req.missionScopedTarget==='number';}));
@@ -22029,12 +21977,14 @@ function getPhase9NMissionUnlockUIResultV25(){
   var profileClutterRemoved=!document.getElementById('rp-summary')&&!document.getElementById('mission-profile-identity')&&!document.getElementById('rp-skill-bars');
   var missionToggleDepthReady=!!document.querySelector('#mission-unlock-board .mission-collapsed-preview');
   var catalogCollapsedReady=!document.querySelector('#mission-objective-list .mission-detail-card[open]');
-  var overviewGuideReady=!!document.querySelector('#mission-panel-overview .mission-overview-guide')&&document.querySelectorAll('#mission-panel-overview .mission-overview-command').length>=4;
-  var overviewDrawerReady=!!document.querySelector('#mission-panel-overview .mission-overview-drawer');
-  var overviewCommandDrawersReady=document.querySelectorAll('#mission-panel-overview details.mission-overview-command').length>=4;
-  var overviewCommandBodiesReady=document.querySelectorAll('#mission-panel-overview .mission-overview-command-body').length>=4;
-  var overviewCommandLinksReady=document.querySelectorAll('#mission-panel-overview .mission-overview-command-link[onclick*="setMissionSubTabV25"]').length>=4;
-  var overviewCommandLiveCopyReady=/Progress read|Closest gap|Unlock path|Profile signal/.test((document.getElementById('mission-panel-overview')||{}).textContent||'');
+  var overviewGuideReady=!!document.querySelector('#mission-panel-overview .mission-overview-guide');
+  var overviewLensShellReady=!!document.querySelector('#mission-panel-overview .mission-overview-lens-shell');
+  var overviewLensTabsReady=document.querySelectorAll('#mission-panel-overview .mission-overview-lens-tab').length>=6;
+  var overviewLensPanelsReady=document.querySelectorAll('#mission-panel-overview .mission-overview-lens-panel').length>=6&&!!document.querySelector('#mission-panel-overview .mission-overview-lens-panel.active');
+  var overviewLensStatsReady=document.querySelectorAll('#mission-panel-overview .mission-overview-lens-stat').length>=20;
+  var overviewLensOrbReady=document.querySelectorAll('#mission-panel-overview .mission-overview-lens-orb[style*="mission-overview-lens-progress"]').length>=6;
+  var overviewLensSwitchReady=typeof setMissionOverviewLensV25==='function';
+  var overviewLensSummaryCopyReady=/Today from Reports \+ Daily Profit|Operator profile summary|Badges \+ trophies summary|Current mission summary|Full road summary|Whole OS summary/.test((document.getElementById('mission-panel-overview')||{}).textContent||'');
   var missionSectionTogglesReady=document.querySelectorAll('#mission-panel-missions .mission-section-toggle').length>=2;
   var profileOvrMetaHidden=!document.getElementById('mission-operator-overall-meta');
   var profileIdentityReady=!!document.querySelector('#mission-panel-profile .rp-identity-line.handle')&&!!document.getElementById('mission-operator-level-title')&&/executiveproducer/i.test((document.querySelector('#mission-panel-profile .rp-identity-line.handle')||{}).textContent||'');
@@ -22060,10 +22010,10 @@ function getPhase9NMissionUnlockUIResultV25(){
   var completionExecutionEnabled=false;
   var awardExecution=false;
   var notificationDispatch=false;
-  var ready=!!(buildOk&&phase9LReady&&missionScopedProgressReady&&currentMissionDepthReady&&catalogSimplifiedReady&&lockedMissionStateReady&&profileOvrHeroReady&&profileClutterRemoved&&profileOvrMetaHidden&&profileIdentityReady&&compactProfileOvrReady&&tallerAttributeTrackReady&&profileCommandDrawersReady&&profileCommandBodiesReady&&profileSectionDrawersReady&&profileCommandLiveCopyReady&&rewardStageReady&&rewardProgressReady&&rewardRarityReady&&badgeCatalogReady&&trophyCatalogReady&&rewardNotificationPreviewReady&&rewardNotificationPillReady&&rewardNotificationContractReady&&rewardPreviewOnly&&missionToggleDepthReady&&catalogCollapsedReady&&overviewGuideReady&&overviewDrawerReady&&overviewCommandDrawersReady&&overviewCommandBodiesReady&&overviewCommandLinksReady&&overviewCommandLiveCopyReady&&missionSectionTogglesReady&&overviewBoard&&missionBoard&&journeyBoard&&journeyRoadmapReady&&journeyMillionMapReady&&journeyMillionNodesReady&&journeyMillionOrbitReady&&journeyVisualChartsReady&&journeyFilterLensesReady&&journeyLensPanelsReady&&journeyLensDonutsReady&&journeyLensSwitchReady&&journeyMilestonePanelsReady&&journeyMilestoneButtonsReady&&journeyMilestoneSwitchReady&&journeyMilestoneMetricsReady&&journeyCheckpointLanesReady&&journeyCheckpointLaneBarsReady&&journeyCheckpointLaneCopyReady&&journeyLaneDrawersReady&&journeyLaneDrawerDetailsReady&&journeyLaneStepChipsReady&&journeyLaneDrawerCopyReady&&journeyFullRoadCopyReady&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
+  var ready=!!(buildOk&&phase9LReady&&missionScopedProgressReady&&currentMissionDepthReady&&catalogSimplifiedReady&&lockedMissionStateReady&&profileOvrHeroReady&&profileClutterRemoved&&profileOvrMetaHidden&&profileIdentityReady&&compactProfileOvrReady&&tallerAttributeTrackReady&&profileCommandDrawersReady&&profileCommandBodiesReady&&profileSectionDrawersReady&&profileCommandLiveCopyReady&&rewardStageReady&&rewardProgressReady&&rewardRarityReady&&badgeCatalogReady&&trophyCatalogReady&&rewardNotificationPreviewReady&&rewardNotificationPillReady&&rewardNotificationContractReady&&rewardPreviewOnly&&missionToggleDepthReady&&catalogCollapsedReady&&overviewGuideReady&&overviewLensShellReady&&overviewLensTabsReady&&overviewLensPanelsReady&&overviewLensStatsReady&&overviewLensOrbReady&&overviewLensSwitchReady&&overviewLensSummaryCopyReady&&missionSectionTogglesReady&&overviewBoard&&missionBoard&&journeyBoard&&journeyRoadmapReady&&journeyMillionMapReady&&journeyMillionNodesReady&&journeyMillionOrbitReady&&journeyVisualChartsReady&&journeyFilterLensesReady&&journeyLensPanelsReady&&journeyLensDonutsReady&&journeyLensSwitchReady&&journeyMilestonePanelsReady&&journeyMilestoneButtonsReady&&journeyMilestoneSwitchReady&&journeyMilestoneMetricsReady&&journeyCheckpointLanesReady&&journeyCheckpointLaneBarsReady&&journeyCheckpointLaneCopyReady&&journeyLaneDrawersReady&&journeyLaneDrawerDetailsReady&&journeyLaneStepChipsReady&&journeyLaneDrawerCopyReady&&journeyFullRoadCopyReady&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
   return {
-    status:ready?'phase9ab_profile_detail_drawers_ready':'phase9ab_profile_detail_drawers_needs_review',
-    mode:'phase9ab_profile_detail_drawers_only',
+    status:ready?'phase9ac_overview_lens_tabs_ready':'phase9ac_overview_lens_tabs_needs_review',
+    mode:'phase9ac_overview_lens_tabs_only',
     missionUnlockUIReady:ready,
     build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
     phase9LContractReady:phase9LReady,
@@ -22107,11 +22057,13 @@ function getPhase9NMissionUnlockUIResultV25(){
     missionToggleDepthReady:missionToggleDepthReady,
     catalogCollapsedReady:catalogCollapsedReady,
     overviewGuideReady:overviewGuideReady,
-    overviewDrawerReady:overviewDrawerReady,
-    overviewCommandDrawersReady:overviewCommandDrawersReady,
-    overviewCommandBodiesReady:overviewCommandBodiesReady,
-    overviewCommandLinksReady:overviewCommandLinksReady,
-    overviewCommandLiveCopyReady:overviewCommandLiveCopyReady,
+    overviewLensShellReady:overviewLensShellReady,
+    overviewLensTabsReady:overviewLensTabsReady,
+    overviewLensPanelsReady:overviewLensPanelsReady,
+    overviewLensStatsReady:overviewLensStatsReady,
+    overviewLensOrbReady:overviewLensOrbReady,
+    overviewLensSwitchReady:overviewLensSwitchReady,
+    overviewLensSummaryCopyReady:overviewLensSummaryCopyReady,
     missionSectionTogglesReady:missionSectionTogglesReady,
     missionCommandHeaderReady:missionCommandHeaderReady,
     missionCommandTrackReady:missionCommandTrackReady,
@@ -22157,7 +22109,7 @@ function getPhase9NMissionUnlockUIResultV25(){
     automationActivationEnabled:false,
     bootstrapExecutionEnabled:false,
     missingGateItems:[]
-      .concat(buildOk?[]:['Phase 9AB build token'])
+      .concat(buildOk?[]:['Phase 9AC build token'])
       .concat(phase9LReady?[]:['Phase 9L mission unlock contract'])
       .concat(missionScopedProgressReady?[]:['mission-scoped progress guard'])
       .concat(currentMissionDepthReady?[]:['current mission command UX depth'])
@@ -22185,12 +22137,14 @@ function getPhase9NMissionUnlockUIResultV25(){
       .concat(rewardPreviewOnly?[]:['reward preview-only boundary'])
       .concat(missionToggleDepthReady?[]:['mission collapsed depth drawer'])
       .concat(catalogCollapsedReady?[]:['collapsed mission catalog cards'])
-      .concat(overviewGuideReady?[]:['overview command guide'])
-      .concat(overviewDrawerReady?[]:['overview context drawer'])
-      .concat(overviewCommandDrawersReady?[]:['overview command drawers'])
-      .concat(overviewCommandBodiesReady?[]:['overview command drawer bodies'])
-      .concat(overviewCommandLinksReady?[]:['overview command drawer links'])
-      .concat(overviewCommandLiveCopyReady?[]:['overview live drawer copy'])
+      .concat(overviewGuideReady?[]:['overview guide'])
+      .concat(overviewLensShellReady?[]:['overview lens shell'])
+      .concat(overviewLensTabsReady?[]:['overview lens tabs'])
+      .concat(overviewLensPanelsReady?[]:['overview lens panels'])
+      .concat(overviewLensStatsReady?[]:['overview compact summary stats'])
+      .concat(overviewLensOrbReady?[]:['overview progress rings'])
+      .concat(overviewLensSwitchReady?[]:['overview lens switch function'])
+      .concat(overviewLensSummaryCopyReady?[]:['overview broad summary copy'])
       .concat(missionSectionTogglesReady?[]:['mission section toggles'])
       .concat(journeyRoadmapReady?[]:['journey roadmap surface'])
       .concat(journeyMillionMapReady?[]:['$1M journey roadmap surface'])
@@ -22241,7 +22195,7 @@ function getPhase9NMissionUnlockUIResultV25(){
       'automation activation',
       'second-device bootstrap execution'
     ],
-    message:ready?'Phase 9AB Profile Detail Drawers are ready. Profile now opens Career, Attributes, Cycle Stats, and Source Trust detail drawers while awards, writes, and notification dispatch remain blocked.':'Phase 9AB Profile Detail Drawers need review.'
+    message:ready?'Phase 9AC Overview Lens Tabs are ready. Overview now summarizes Today, Profile, Rewards, Missions, Journey, and System without duplicating deep tab detail while awards, writes, and notification dispatch remain blocked.':'Phase 9AC Overview Lens Tabs need review.'
   };
 }
 
@@ -22250,7 +22204,7 @@ function formatPhase9NMissionUnlockUIV25(result){
   var missing=result.missingGateItems||[];
   var blocked=result.blockedActions||[];
   return [
-    'Phase 9AB profile detail drawers',
+    'Phase 9AC overview lens tabs',
     'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
     '',
     'UI mode',
@@ -22283,11 +22237,13 @@ function formatPhase9NMissionUnlockUIV25(result){
     '- Reward notification contract ready: '+(result.rewardNotificationContractReady?'true':'false'),
     '- Reward preview only: '+(result.rewardPreviewOnly?'true':'false'),
     '- Overview guide ready: '+(result.overviewGuideReady?'true':'false'),
-    '- Overview drawer ready: '+(result.overviewDrawerReady?'true':'false'),
-    '- Overview command drawers ready: '+(result.overviewCommandDrawersReady?'true':'false'),
-    '- Overview command bodies ready: '+(result.overviewCommandBodiesReady?'true':'false'),
-    '- Overview command links ready: '+(result.overviewCommandLinksReady?'true':'false'),
-    '- Overview command live copy ready: '+(result.overviewCommandLiveCopyReady?'true':'false'),
+    '- Overview lens shell ready: '+(result.overviewLensShellReady?'true':'false'),
+    '- Overview lens tabs ready: '+(result.overviewLensTabsReady?'true':'false'),
+    '- Overview lens panels ready: '+(result.overviewLensPanelsReady?'true':'false'),
+    '- Overview compact summary stats ready: '+(result.overviewLensStatsReady?'true':'false'),
+    '- Overview progress rings ready: '+(result.overviewLensOrbReady?'true':'false'),
+    '- Overview lens switch ready: '+(result.overviewLensSwitchReady?'true':'false'),
+    '- Overview broad summary copy ready: '+(result.overviewLensSummaryCopyReady?'true':'false'),
     '- Mission section toggles ready: '+(result.missionSectionTogglesReady?'true':'false'),
     '- Mission toggle depth ready: '+(result.missionToggleDepthReady?'true':'false'),
     '- Catalog collapsed ready: '+(result.catalogCollapsedReady?'true':'false'),
@@ -22362,11 +22318,11 @@ function renderPhase9NMissionUnlockUIStateV25(state){
   var result=(state&&state.result)||state||getPhase9NMissionUnlockUIResultV25();
   var ready=result.missionUnlockUIReady===true;
   setTextV24('phase9n-mission-chain',ready?'Million journey map renders clickable money checkpoints plus previous, current, next, and locked missions.':'Million journey map needs review.');
-  setTextV24('phase9n-mission-checklist',ready?'Profile opens Career, Attributes, Cycle Stats, and Source Trust detail drawers from read-only state.':'Profile Detail Drawers need review.');
+  setTextV24('phase9n-mission-checklist',ready?'Overview lens tabs summarize Today, Profile, Rewards, Missions, Journey, and System without duplicating deep detail.':'Overview Lens Tabs need review.');
   setTextV24('phase9n-mission-blocked','No fake completion, mission ledger write, notification dispatch, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.');
   setBadge('phase9n-mission-scope-badge',ready?'Ready':'Review',ready?'':'warn');
   setBadge('phase9n-mission-chain-badge',ready?'Chain':'Review',ready?'':'warn');
-  setBadge('phase9n-mission-checklist-badge',ready?'Preview':'Review',ready?'':'warn');
+  setBadge('phase9n-mission-checklist-badge',ready?'Lens':'Review',ready?'':'warn');
   setBadge('phase9n-mission-blocked-badge','Blocked','warn');
 }
 
@@ -22378,9 +22334,9 @@ function runPhase9NMissionUnlockUIV25(){
   var status=document.getElementById('phase9n-mission-status');
   if(status){
     status.className='reset-status '+(state.passed?'ok':'warn');
-    status.textContent=state.passed?'Profile Detail Drawers are ready.':'Profile Detail Drawers need review.';
+    status.textContent=state.passed?'Overview Lens Tabs are ready.':'Overview Lens Tabs need review.';
   }
-  return {passed:state.passed,meta:state.passed?'Phase 9AB Profile Detail Drawers are ready · Career/Attributes/Cycle Stats/Source Trust drawers open live context · protected gates blocked.':'Phase 9AB Profile Detail Drawers need review.',failures:state.passed?[]:['Phase 9AB Profile Detail Drawers']};
+  return {passed:state.passed,meta:state.passed?'Phase 9AC Overview Lens Tabs are ready · broad visual summaries for Today/Profile/Rewards/Missions/Journey/System · protected gates blocked.':'Phase 9AC Overview Lens Tabs need review.',failures:state.passed?[]:['Phase 9AC Overview Lens Tabs']};
 }
 
 async function copyPhase9NMissionUnlockUIV25(){
@@ -22394,12 +22350,12 @@ async function copyPhase9NMissionUnlockUIV25(){
     await navigator.clipboard.writeText(state&&state.previewText||'');
     if(status){
       status.className='reset-status ok';
-      status.textContent='Phase 9AB receipt copied.';
+      status.textContent='Phase 9AC receipt copied.';
     }
   }catch(err){
     if(status){
       status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the Profile Detail Drawers receipt manually.';
+      status.textContent='Copy blocked by browser. Select the Overview Lens Tabs receipt manually.';
     }
   }
 }
@@ -22408,9 +22364,9 @@ function runPhase9NMissionUnlockUIQACheckV25(){
   var result=getPhase9NMissionUnlockUIResultV25();
   if(result.missionUnlockUIReady){
     renderPhase9NMissionUnlockUIStateV25({result:result,previewText:formatPhase9NMissionUnlockUIV25(result)});
-    return {passed:true,meta:'Phase 9AB Profile Detail Drawers are installed · live profile drawers · no awards or writes.',failures:[]};
+    return {passed:true,meta:'Phase 9AC Overview Lens Tabs are installed · visual summary lenses · no awards or writes.',failures:[]};
   }
-  return {passed:false,meta:'Phase 9AB Profile Detail Drawers need review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9AB Profile Detail Drawers']};
+  return {passed:false,meta:'Phase 9AC Overview Lens Tabs need review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9AC Overview Lens Tabs']};
 }
 
 function getSetupPointerRowsV23(){
@@ -25601,7 +25557,7 @@ async function runBackupArchiveSelfCheckV22(){
 
 function runHealthCurrentBuildIdentityQACheckV25(){
   var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
-  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab)/.test(token);
+  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac)/.test(token);
   return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9AB build token.'};
 }
 
@@ -25648,7 +25604,7 @@ async function runHealthFastLiveQACheckV25(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Fast QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Fast QA';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9AB profile detail drawers, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
+  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9AC overview lens tabs, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -25661,7 +25617,7 @@ async function runHealthFastLiveQACheckV25(){
   try{add('Current Build',runHealthCurrentBuildIdentityQACheckV25());}catch(e){add('Current Build',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9L Mission Unlock Progression Contract',typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'?runPhase9LMissionUnlockProgressionContractQACheckV25():{passed:false,meta:'Missing Phase 9L Mission Unlock Progression Contract check'});}catch(e){add('Phase 9L Mission Unlock Progression Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 9AB Profile Detail Drawers',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9AB Profile Detail Drawers check'});}catch(e){add('Phase 9AB Profile Detail Drawers',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9AC Overview Lens Tabs',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9AC Overview Lens Tabs check'});}catch(e){add('Phase 9AC Overview Lens Tabs',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Protected Boundary',runHealthProtectedBoundaryQACheckV25());}catch(e){add('Protected Boundary',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -25750,7 +25706,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9J Mission Rating Calibration',typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'?runPhase9JMissionRatingCalibrationQACheckV25():{passed:false,meta:'Missing Phase 9J Mission Rating Calibration check'});}catch(e){add('Phase 9J Mission Rating Calibration',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9L Mission Unlock Progression Contract',typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'?runPhase9LMissionUnlockProgressionContractQACheckV25():{passed:false,meta:'Missing Phase 9L Mission Unlock Progression Contract check'});}catch(e){add('Phase 9L Mission Unlock Progression Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 9AB Profile Detail Drawers',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9AB Profile Detail Drawers check'});}catch(e){add('Phase 9AB Profile Detail Drawers',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9AC Overview Lens Tabs',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9AC Overview Lens Tabs check'});}catch(e){add('Phase 9AC Overview Lens Tabs',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -31693,6 +31649,158 @@ function setMissionJourneyLensV25(btn,lens){
   return false;
 }
 
+function setMissionOverviewLensV25(key){
+  key=key||'today';
+  window.__missionOverviewLensV25=key;
+  var root=document.getElementById('mission-panel-overview')||document;
+  [].slice.call(root.querySelectorAll('.mission-overview-lens-tab')).forEach(function(btn){
+    btn.classList.toggle('active',btn.getAttribute('data-overview-lens')===key);
+  });
+  [].slice.call(root.querySelectorAll('.mission-overview-lens-panel')).forEach(function(panel){
+    panel.classList.toggle('active',panel.getAttribute('data-overview-lens')===key);
+  });
+  return false;
+}
+
+function missionOverviewLensStatV25(label,value,id,metaId){
+  return '<div class="mission-overview-lens-stat"><b'+(id?' id="'+escapeHtml(id)+'"':'')+'>'+escapeHtml(value||'--')+'</b><span'+(metaId?' id="'+escapeHtml(metaId)+'"':'')+'>'+escapeHtml(label||'Signal')+'</span></div>';
+}
+
+function missionOverviewLensActionV25(label,tab){
+  return '<button type="button" class="mission-overview-lens-action" onclick="setMissionSubTabV25(\''+escapeHtml(tab||'overview')+'\')">'+escapeHtml(label||'Open')+'</button>';
+}
+
+function missionOverviewLensOrbV25(progress,value,label){
+  progress=Math.max(0,Math.min(99,parseFloat(progress)||0));
+  return '<div class="mission-overview-lens-orb" style="--mission-overview-lens-progress:'+progress+'%"><div class="mission-overview-lens-orb-inner"><div><b>'+escapeHtml(value||String(progress)+'%')+'</b><span>'+escapeHtml(label||'Pulse')+'</span></div></div></div>';
+}
+
+function missionOverviewMoveDeckV25(items){
+  items=(items||[]).slice(0,3);
+  if(!items.length)return '<div class="mission-empty-state">Not Tracked yet. Log real movement to fill this summary.</div>';
+  return '<div class="mission-move-deck" id="mission-next-money-move-list">'+items.map(function(item,idx){
+    return '<div class="mission-move-card" role="button" tabindex="0" onclick="setMissionSubTabV25(\'missions\')"><div class="mission-move-top"><div class="mission-move-kicker">Money move</div><div class="mission-move-index">'+(idx+1)+'</div></div><div class="mission-move-name">'+escapeHtml(item.name||'Next move')+'</div><div class="mission-move-meta">'+escapeHtml(item.meta||'Log one real business action.')+'</div></div>';
+  }).join('')+'</div>';
+}
+
+function missionOverviewLensPanelV25(key,kicker,title,statsHtml,progress,value,label,actionsHtml,active,extraHtml){
+  return '<div class="mission-overview-lens-panel '+(active?'active':'')+'" data-overview-lens="'+escapeHtml(key||'today')+'">'
+    +'<div>'
+      +'<div class="mission-overview-lens-kicker">'+escapeHtml(kicker||'Overview')+'</div>'
+      +'<div class="mission-overview-lens-title">'+title+'</div>'
+      +'<div class="mission-overview-lens-grid">'+(statsHtml||'')+'</div>'
+      +(extraHtml||'')
+      +'<div class="mission-overview-lens-actions">'+(actionsHtml||'')+'</div>'
+    +'</div>'
+    +missionOverviewLensOrbV25(progress,value,label)
+  +'</div>';
+}
+
+function renderMissionOverviewLensesV25(ctx){
+  ctx=ctx||{};
+  var deck=document.getElementById('mission-overview-lens-deck');
+  if(!deck)return;
+  var stats=ctx.stats||getAccountMissionActionStatsV25();
+  var chain=ctx.chain||null;
+  var current=chain&&chain.current?chain.current:null;
+  var next=chain&&chain.next?chain.next:null;
+  var reqs=current&&current.requirements?current.requirements:[];
+  var openReq=reqs.filter(function(req){return !req.complete;}).sort(function(a,b){return (a.remaining||999999)-(b.remaining||999999);})[0]||null;
+  var overall=ctx.overall||getMissionOperatorOverallV25(stats);
+  var weekly=ctx.weeklyRating||getMissionWeeklyRatingV25(stats);
+  var rewardCatalog=ctx.rewardCatalog||getMissionRewardCatalogV25(stats,chain);
+  var nextReward=rewardCatalog.next||{};
+  var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
+  var liveQA=window.__lastHealthLiveQAV22||window.__lastHealthLiveQAResultV22||{};
+  var actionProgress=Math.min(99,Math.floor(Math.min((stats.actionTotal||0)/10,0.999)*99));
+  var missionProgress=current?Math.max(0,Math.min(99,parseFloat(current.progress)||0)):0;
+  var journeyRaw=(parseFloat(stats.revenue)||0)/1000000*100;
+  var journeyProgress=(stats.revenue>0&&journeyRaw<1)?0.5:Math.max(0,Math.min(99,journeyRaw));
+  var rewardProgress=rewardCatalog.totalCount?Math.floor((rewardCatalog.readyCount/rewardCatalog.totalCount)*99):0;
+  var activeLanes=(overall.ratings||[]).filter(function(item){return (parseFloat(item.rating)||0)>0;}).length;
+  var systemScore=(backup.backupMarker?40:0)+(liveQA.passed?40:0)+(backup.driveBackupActive?19:0);
+  var todayTitle='<span id="mission-current-objective">'+escapeHtml(current?(current.title||'Current mission'):'Today\'s movement')+'</span>';
+  var profileTitle='<span id="mission-overview-operator">'+escapeHtml((overall.score||'--')+' OVR')+'</span>';
+  var rewardTitle='<span id="mission-overview-possible">'+escapeHtml(nextReward.name||nextReward.label||'Next unlock')+'</span>';
+  var missionTitle='<span id="mission-overview-missing">'+escapeHtml(openReq?(openReq.label||'Closest mission gate'):(current?'Ready for review':'First tracked action'))+'</span>';
+  var journeyTitle='<span id="mission-current-chapter">'+escapeHtml('$1,000,000 Mission Path')+'</span>';
+  var systemTitle='<span>'+escapeHtml(backup.backupMarker?'System signal visible':'System signal pending')+'</span>';
+  deck.innerHTML=[
+    missionOverviewLensPanelV25('today','Today from Reports + Daily Profit',todayTitle,
+      missionOverviewLensStatV25('Revenue',stats.revenue>0?fmt(stats.revenue):'$0')
+      +missionOverviewLensStatV25('DMs',String(stats.dms||0))
+      +missionOverviewLensStatV25('Calls / Closes',String(stats.calls||0)+' / '+String(stats.closes||0))
+      +missionOverviewLensStatV25('Content',String(stats.content||0)),
+      actionProgress,(stats.actionTotal||0)+'','Actions',
+      missionOverviewLensActionV25('Open Missions','missions')+missionOverviewLensActionV25('Open Profile','profile'),
+      true,
+      '<div class="mission-overview-lens-grid">'
+        +missionOverviewLensStatV25('Done',current?((current.completeCount||0)+'/'+(current.requirementCount||0)):((stats.actionTotal||0)+' actions'),'mission-overview-done','mission-overview-done-meta')
+        +missionOverviewLensStatV25('Next',openReq?missionFormatMetricValueV25(openReq.metric,openReq.remaining):(next&&next.title?next.title:'Pending'),'mission-overview-missing-meta')
+        +missionOverviewLensStatV25('Focus',current?(current.focusLane||'Money Movement'):'Money Movement','mission-inner-shift','mission-inner-shift-meta')
+      +'</div><div class="mission-overview-lens-actions">'+missionOverviewMoveDeckV25(ctx.nextMoves||[])+'</div>'
+        +'<span class="sr-only" id="mission-current-objective-copy">'+escapeHtml(ctx.objectiveCopy||'Overview reads tracked business movement only.')+'</span>'
+    ),
+    missionOverviewLensPanelV25('profile','Operator profile summary',profileTitle,
+      missionOverviewLensStatV25('Level title',getMissionOperatorLevelTitleV25(overall.score))
+      +missionOverviewLensStatV25('Weekly',weekly.score||'--')
+      +missionOverviewLensStatV25('Active lanes',activeLanes+'/'+((overall.ratings||[]).length||15))
+      +missionOverviewLensStatV25('Career source',overall.confidence||'Baseline'),
+      parseFloat(overall.score)||0,overall.score||'--','OVR',
+      missionOverviewLensActionV25('Open Profile','profile')+missionOverviewLensActionV25('Open Stats','profile'),
+      false,
+      '<span class="sr-only" id="mission-overview-ovr">'+escapeHtml(overall.score||'--')+'</span>'
+      +'<span class="sr-only" id="mission-overview-ovr-meta">'+escapeHtml((overall.meta||'')+' · weekly '+(weekly.score||'--'))+'</span>'
+      +'<span class="sr-only" id="mission-overview-operator-meta">'+escapeHtml(getMissionOperatorLevelTitleV25(overall.score)+' · weekly '+(weekly.score||'--'))+'</span>'
+      +'<span class="sr-only" id="mission-overview-operator-detail">Operator OVR is the all-cycle profile signal.</span>'
+    ),
+    missionOverviewLensPanelV25('rewards','Badges + trophies summary',rewardTitle,
+      missionOverviewLensStatV25('Ready',String(rewardCatalog.readyCount||0)+'/'+String(rewardCatalog.totalCount||0))
+      +missionOverviewLensStatV25('Next progress',(nextReward.progress||0)+'%')
+      +missionOverviewLensStatV25('Type',nextReward.rarity||'Preview')
+      +missionOverviewLensStatV25('Trust',nextReward.trust||'tracked'),
+      nextReward.progress||rewardProgress,(nextReward.progress||rewardProgress)+'%','Reward',
+      missionOverviewLensActionV25('Open Badges','badges')+missionOverviewLensActionV25('Open Missions','missions'),
+      false,
+      '<span class="sr-only" id="mission-overview-possible-meta">'+escapeHtml((nextReward.rarity||'Preview')+' · no award execution')+'</span>'
+      +'<span class="sr-only" id="mission-overview-possible-detail">Badges, milestones, and trophies stay preview-only until tracked.</span>'
+      +'<span class="sr-only" id="mission-nearest-milestone">'+escapeHtml((current&&current.rewards&&current.rewards.milestonePreview)||nextReward.name||'Next milestone pending')+'</span>'
+      +'<span class="sr-only" id="mission-becoming-line">Next reward stays tied to verified business movement.</span>'
+    ),
+    missionOverviewLensPanelV25('missions','Current mission summary',missionTitle,
+      missionOverviewLensStatV25('Mission score',String(missionProgress)+'%')
+      +missionOverviewLensStatV25('Gates',current?((current.completeCount||0)+'/'+(current.requirementCount||0)):'--')
+      +missionOverviewLensStatV25('Closest gap',openReq?missionFormatMetricValueV25(openReq.metric,openReq.remaining):'Ready')
+      +missionOverviewLensStatV25('Next mission',next&&next.title?next.title:'Preview'),
+      missionProgress,String(missionProgress)+'%','Mission',
+      missionOverviewLensActionV25('Open Mission','missions')+missionOverviewLensActionV25('Open Journey','journey'),
+      false,
+      '<span class="sr-only" id="mission-overview-done-detail">Mission progress loads from tracked action only.</span>'
+      +'<span class="sr-only" id="mission-overview-missing-detail">The closest gap appears from the current mission checklist.</span>'
+    ),
+    missionOverviewLensPanelV25('journey','Full road summary',journeyTitle,
+      missionOverviewLensStatV25('Revenue',stats.revenue>0?fmt(stats.revenue):'$0')
+      +missionOverviewLensStatV25('$1K marker',stats.revenue>=1000?'Cleared':'Ahead')
+      +missionOverviewLensStatV25('$10K marker',stats.revenue>=10000?'Cleared':'Ahead')
+      +missionOverviewLensStatV25('$1M road',journeyRaw>0?(journeyRaw<1?'<1%':Math.floor(journeyRaw)+'%'):'0%'),
+      journeyProgress,journeyRaw>0?(journeyRaw<1?'<1%':Math.floor(journeyRaw)+'%'):'0%','Journey',
+      missionOverviewLensActionV25('Open Journey','journey')+missionOverviewLensActionV25('Open Profile','profile'),
+      false,
+      '<span class="sr-only" id="mission-current-chapter-meta">'+escapeHtml('Cycle '+stats.cycle.num+' · '+stats.daysLeft+' days left')+'</span>'
+    ),
+    missionOverviewLensPanelV25('system','Whole OS summary',systemTitle,
+      missionOverviewLensStatV25('Backup',backup.backupMarker?'Visible':'Pending')
+      +missionOverviewLensStatV25('Live QA',liveQA.passed?'Green':'Not checked')
+      +missionOverviewLensStatV25('Build','v2.5')
+      +missionOverviewLensStatV25('Protected gates','Blocked'),
+      systemScore,systemScore?String(systemScore)+'%':'--','System',
+      missionOverviewLensActionV25('Open Profile','profile')+missionOverviewLensActionV25('Open Journey','journey'),
+      false
+    )
+  ].join('');
+  setMissionOverviewLensV25(window.__missionOverviewLensV25||'today');
+}
+
 function missionJourneyLensPanelV25(lens){
   lens=lens||{};
   var progress=Math.max(0,Math.min(99,parseFloat(lens.progress)||0));
@@ -32180,6 +32288,15 @@ function renderMissionPanelsV25(stats){
   var attr=document.getElementById('mission-attribute-grid');
   if(attr)attr.innerHTML=attributes.map(missionSkillCardV25).join('');
   var rewardCatalog=getMissionRewardCatalogV25(stats,phase9LChain);
+  renderMissionOverviewLensesV25({
+    stats:stats,
+    chain:phase9LChain,
+    overall:overall,
+    weeklyRating:weeklyRating,
+    rewardCatalog:rewardCatalog,
+    nextMoves:nextMoves,
+    objectiveCopy:objectiveCopy
+  });
   renderMissionRewardStageV25('mission-reward-stage',rewardCatalog);
   renderMissionRewardNotificationPreviewV25('mission-reward-notify-preview',rewardCatalog);
   var badges=rewardCatalog.badges||[];
