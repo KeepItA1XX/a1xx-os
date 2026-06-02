@@ -797,6 +797,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mission-action-filter-rail{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;padding:1px 0 3px}
 .mission-action-filter{appearance:none;border:0;flex:0 0 auto;background:#050708;color:#7f8a92;border-radius:999px;padding:7px 9px;font-size:7px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
 .mission-action-filter.active{background:#101a0c;color:#9ee878;box-shadow:inset 0 0 0 1px rgba(126,200,69,.22)}
+.mission-action-shelf-drawer{background:linear-gradient(180deg,#080d0f,#050708);border-radius:13px;box-shadow:inset 0 0 0 1px rgba(126,200,69,.1);overflow:hidden}
+.mission-action-shelf-drawer summary{list-style:none;cursor:pointer;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mission-action-shelf-drawer summary::-webkit-details-marker{display:none}
+.mission-action-shelf-title{display:block;color:#f4f8f0;font-size:13px;font-weight:950;line-height:1.15}
+.mission-action-shelf-meta{display:block;color:#7f8a92;font-size:8px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;margin-top:4px}
+.mission-action-shelf-pill{flex:0 0 auto;border-radius:999px;background:#101a0c;color:#9ee878;padding:6px 8px;font-size:7px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+.mission-action-shelf-drawer[open] .mission-action-shelf-pill{background:#120f05;color:#d4a017}
+.mission-action-shelf-body{display:grid;gap:9px;padding:0 11px 11px}
 .mission-step-card.is-filter-hidden,.mission-detail-card.is-filter-hidden{display:none}
 .mission-step-feed{display:grid;gap:8px}
 .mission-step-card{display:grid;grid-template-columns:30px 1fr auto;gap:9px;align-items:center;background:#080c0e;border-radius:11px;padding:9px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035)}
@@ -3168,13 +3176,18 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
                   </div>
                   <div class="mission-action-lens-score"><b id="mission-action-step-count">--</b><span>Steps</span></div>
                 </div>
-                <div class="mission-action-filter-rail" data-action-filter-scope="steps" aria-label="Mission step filters">
-                  <button type="button" class="mission-action-filter active" data-action-filter="all" onclick="return setMissionStepFilterV25('all')">All</button>
-                  <button type="button" class="mission-action-filter" data-action-filter="open" onclick="return setMissionStepFilterV25('open')">Open</button>
-                  <button type="button" class="mission-action-filter" data-action-filter="complete" onclick="return setMissionStepFilterV25('complete')">Done</button>
-                  <button type="button" class="mission-action-filter" data-action-filter="support" onclick="return setMissionStepFilterV25('support')">Support</button>
-                </div>
-                <div class="mission-step-feed" id="mission-current-step-list"></div>
+                <details class="mission-action-shelf-drawer" id="mission-step-shelf-drawer" data-default-collapsed="true">
+                  <summary><div><span class="mission-action-shelf-title">Step Feed</span><span class="mission-action-shelf-meta" id="mission-step-shelf-meta">Filters inside</span></div><span class="mission-action-shelf-pill">Open</span></summary>
+                  <div class="mission-action-shelf-body">
+                    <div class="mission-action-filter-rail" data-action-filter-scope="steps" aria-label="Mission step filters">
+                      <button type="button" class="mission-action-filter active" data-action-filter="all" onclick="return setMissionStepFilterV25('all')">All</button>
+                      <button type="button" class="mission-action-filter" data-action-filter="open" onclick="return setMissionStepFilterV25('open')">Open</button>
+                      <button type="button" class="mission-action-filter" data-action-filter="complete" onclick="return setMissionStepFilterV25('complete')">Done</button>
+                      <button type="button" class="mission-action-filter" data-action-filter="support" onclick="return setMissionStepFilterV25('support')">Support</button>
+                    </div>
+                    <div class="mission-step-feed" id="mission-current-step-list"></div>
+                  </div>
+                </details>
               </div>
               <div class="mission-action-lens-panel" data-action-lens="training">
                 <div class="mission-action-lens-head">
@@ -3184,14 +3197,19 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
                   </div>
                   <div class="mission-action-lens-score"><b id="mission-action-training-count">--</b><span>Drills</span></div>
                 </div>
-                <div class="mission-action-filter-rail" data-action-filter-scope="training" aria-label="Mission training filters">
-                  <button type="button" class="mission-action-filter active" data-action-filter="all" onclick="return setMissionTrainingFilterV25('all')">All</button>
-                  <button type="button" class="mission-action-filter" data-action-filter="outreach" onclick="return setMissionTrainingFilterV25('outreach')">Outreach</button>
-                  <button type="button" class="mission-action-filter" data-action-filter="sales" onclick="return setMissionTrainingFilterV25('sales')">Sales</button>
-                  <button type="button" class="mission-action-filter" data-action-filter="content" onclick="return setMissionTrainingFilterV25('content')">Content</button>
-                  <button type="button" class="mission-action-filter" data-action-filter="production" onclick="return setMissionTrainingFilterV25('production')">Production</button>
-                </div>
-                <div class="mission-focus-list" id="mission-training-list"></div>
+                <details class="mission-action-shelf-drawer" id="mission-training-shelf-drawer" data-default-collapsed="true">
+                  <summary><div><span class="mission-action-shelf-title">Training Shelf</span><span class="mission-action-shelf-meta" id="mission-training-shelf-meta">Filters inside</span></div><span class="mission-action-shelf-pill">Open</span></summary>
+                  <div class="mission-action-shelf-body">
+                    <div class="mission-action-filter-rail" data-action-filter-scope="training" aria-label="Mission training filters">
+                      <button type="button" class="mission-action-filter active" data-action-filter="all" onclick="return setMissionTrainingFilterV25('all')">All</button>
+                      <button type="button" class="mission-action-filter" data-action-filter="outreach" onclick="return setMissionTrainingFilterV25('outreach')">Outreach</button>
+                      <button type="button" class="mission-action-filter" data-action-filter="sales" onclick="return setMissionTrainingFilterV25('sales')">Sales</button>
+                      <button type="button" class="mission-action-filter" data-action-filter="content" onclick="return setMissionTrainingFilterV25('content')">Content</button>
+                      <button type="button" class="mission-action-filter" data-action-filter="production" onclick="return setMissionTrainingFilterV25('production')">Production</button>
+                    </div>
+                    <div class="mission-focus-list" id="mission-training-list"></div>
+                  </div>
+                </details>
               </div>
               <div class="mission-action-lens-panel" data-action-lens="catalog">
                 <div class="mission-action-lens-head">
@@ -3201,7 +3219,12 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
                   </div>
                   <div class="mission-action-lens-score"><b id="mission-action-catalog-count">--</b><span>Catalog</span></div>
                 </div>
-                <div class="mission-focus-list" id="mission-objective-list"></div>
+                <details class="mission-action-shelf-drawer" id="mission-catalog-shelf-drawer" data-default-collapsed="true">
+                  <summary><div><span class="mission-action-shelf-title">Mission Catalog Shelf</span><span class="mission-action-shelf-meta" id="mission-catalog-shelf-meta">Previous, next, and locked missions inside</span></div><span class="mission-action-shelf-pill">Open</span></summary>
+                  <div class="mission-action-shelf-body">
+                    <div class="mission-focus-list" id="mission-objective-list"></div>
+                  </div>
+                </details>
               </div>
             </div>
           </div>
@@ -4445,17 +4468,17 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           <div class="reset-status" id="phase9l-mission-status"></div>
         </div>
         <div class="settings-section">
-          <div class="settings-section-title">Reward Room Hierarchy</div>
+          <div class="settings-section-title">Mission Room Hierarchy</div>
           <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 9AX scope</div><div class="settings-row-meta" id="phase9n-mission-scope">Polish Reward Room hierarchy: Next unlock remains the scan surface, Badge/Trophy catalogs move into shelf drawers, and filters stay available inside the shelves. No completion, awards, writes, notification dispatch, or autonomous action.</div></div><span class="settings-badge" id="phase9n-mission-scope-badge">Rewards</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Reward shelves</div><div class="settings-row-meta" id="phase9n-mission-chain">Badge and trophy catalogs are collapsed by default so the tab scans before it expands.</div></div><span class="settings-badge off" id="phase9n-mission-chain-badge">Shelf</span></div>
-            <div class="settings-row"><div><div class="settings-row-name">Reward filters</div><div class="settings-row-meta" id="phase9n-mission-checklist">Ready, progress, locked, quick, and hard filters remain inside each shelf drawer.</div></div><span class="settings-badge off" id="phase9n-mission-checklist-badge">Filter</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Phase 9AY scope</div><div class="settings-row-meta" id="phase9n-mission-scope">Polish Missions hierarchy: Current Mission Lock remains the scan surface while Step Feed, Training Drills, and Mission Catalog move into shelf drawers. No completion, awards, writes, notification dispatch, or autonomous action.</div></div><span class="settings-badge" id="phase9n-mission-scope-badge">Missions</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Mission shelves</div><div class="settings-row-meta" id="phase9n-mission-chain">Step Feed, Training Drills, and Mission Catalog are collapsed by default so the tab scans before it expands.</div></div><span class="settings-badge off" id="phase9n-mission-chain-badge">Shelf</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Mission filters</div><div class="settings-row-meta" id="phase9n-mission-checklist">Step and training filters remain inside their shelf drawers.</div></div><span class="settings-badge off" id="phase9n-mission-checklist-badge">Filter</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta" id="phase9n-mission-blocked">No fake completion, mission ledger write, notification dispatch, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.</div></div><span class="settings-badge warn" id="phase9n-mission-blocked-badge">Blocked</span></div>
           </div>
           <div class="btn-row" style="margin-top:10px">
-            <button class="btn primary" onclick="runPhase9NMissionUnlockUIV25()">Review reward shelves</button>
-            <button class="btn" onclick="setSettingsTab('account');setAccountSubTab('mission');setMissionSubTabV25('badges')">Open Badges</button>
-            <button class="btn" onclick="copyPhase9NMissionUnlockUIV25()">Copy Phase 9AX</button>
+            <button class="btn primary" onclick="runPhase9NMissionUnlockUIV25()">Review mission shelves</button>
+            <button class="btn" onclick="setSettingsTab('account');setAccountSubTab('mission');setMissionSubTabV25('missions')">Open Missions</button>
+            <button class="btn" onclick="copyPhase9NMissionUnlockUIV25()">Copy Phase 9AY</button>
           </div>
           <div class="reset-status" id="phase9n-mission-status"></div>
         </div>
@@ -6264,9 +6287,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-02 13:45 ET · OS v2_5 Phase 9AX Reward Room Hierarchy';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9AX Reward Room Hierarchy';
-var APP_CACHE_TOKEN='mmos-20260602-1345-v25-phase9ax-reward-room-hierarchy';
+var APP_BUILD_STAMP='2026-06-02 03:31 ET · OS v2_5 Phase 9AY Mission Room Hierarchy';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9AY Mission Room Hierarchy';
+var APP_CACHE_TOKEN='mmos-20260602-0331-v25-phase9ay-mission-room-hierarchy';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -9109,7 +9132,7 @@ function renderMasterConfigReadSkeletonStateV24(state){
 function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
   var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
   var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
   var result={
     status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
@@ -18617,7 +18640,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -18637,7 +18660,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[abcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[abcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -18950,7 +18973,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -19219,7 +19242,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -19245,7 +19268,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -19438,7 +19461,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -19713,7 +19736,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -19892,7 +19915,7 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
@@ -19908,7 +19931,7 @@ function phase9EFunctionContainsV25(fn,needle){
 
 function getPhase9ENotificationEventWiringResultV25(){
   var log=mcReadNotificationLogV10();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
   var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
   var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
@@ -20102,7 +20125,7 @@ async function copyPhase9ENotificationEventWiringV25(){
 }
 
 function runPhase9ENotificationEventWiringQACheckV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var result=getPhase9ENotificationEventWiringResultV25();
   if(buildOk&&result.notificationEventWiringReady){
     renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
@@ -20235,7 +20258,7 @@ function getPhase9FNotificationContractMapV25(){
 }
 
 function getPhase9FAccountMissionContractsResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[fghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[fghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var phase9EReady=typeof runPhase9ENotificationEventWiringQACheckV25==='function'&&runPhase9ENotificationEventWiringQACheckV25().passed===true;
   var duplicateStatus=getAccountMissionContractDuplicateStatusV25();
   var notificationMap=getPhase9FNotificationContractMapV25();
@@ -20475,7 +20498,7 @@ function runPhase9FAccountMissionContractsQACheckV25(){
 var PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25='a1xx_phase9g_account_mission_tab_shell_v1';
 
 function getPhase9GAccountMissionTabShellResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var phase9FReady=typeof runPhase9FAccountMissionContractsQACheckV25==='function'&&runPhase9FAccountMissionContractsQACheckV25().passed===true;
   var missionButton=!!document.querySelector('[data-account-subtab="mission"]');
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20686,7 +20709,7 @@ function runPhase9GAccountMissionTabShellQACheckV25(){
 var PHASE9H_MISSION_UI_EXPANSION_KEY_V25='a1xx_phase9h_mission_ui_expansion_v1';
 
 function getPhase9HMissionUIExpansionResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[hijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[hijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var phase9GReady=typeof runPhase9GAccountMissionTabShellQACheckV25==='function'&&runPhase9GAccountMissionTabShellQACheckV25().passed===true;
   var missionPane=document.getElementById('account-subpane-mission');
   var tabs=document.querySelectorAll('[data-mission-subtab]');
@@ -20907,7 +20930,7 @@ function runPhase9HMissionUIExpansionQACheckV25(){
 var PHASE9I_MISSION_CAREER_POLISH_KEY_V25='a1xx_phase9i_mission_career_mode_polish_v1';
 
 function getPhase9IMissionCareerModePolishResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var phase9HReady=typeof runPhase9HMissionUIExpansionQACheckV25==='function'&&runPhase9HMissionUIExpansionQACheckV25().passed===true;
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var missionPane=document.getElementById('account-subpane-mission');
@@ -21161,7 +21184,7 @@ function runPhase9IMissionCareerModePolishQACheckV25(){
 
 function runPhase9JMissionRatingCalibrationQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[jklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[jklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var profileOvrReady=!!document.querySelector('#mission-panel-profile .rp-level #mission-operator-overall');
   var titleClean=!!document.querySelector('#mission-panel-profile .rp-label')&&!/A1XX Operator Profile/i.test((document.querySelector('#mission-panel-profile .rp-label')||{}).textContent||'');
   var oldOverallRemoved=!document.querySelector('#mission-panel-profile .mission-section-card #mission-operator-overall');
@@ -21384,7 +21407,7 @@ function getPhase9KTrophyClassCountsV25(){
 
 function getPhase9KMissionCatalogRulesResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[klmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[klmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var phase9JReady=typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'&&runPhase9JMissionRatingCalibrationQACheckV25().passed===true;
   var duplicateStatus=getPhase9KDuplicateStatusV25();
   var classCounts=getPhase9KTrophyClassCountsV25();
@@ -21951,7 +21974,7 @@ function getPhase9LMissionRewardPreviewV25(mission){
 
 function isPhase9LMissionContractSupersedeReadyV25(){
   try{
-    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
     if(!buildOk||typeof getPhase9LMissionUnlockProgressionContractResultV25!=='function')return false;
     var result=getPhase9LMissionUnlockProgressionContractResultV25();
     return !!(result&&result.missionUnlockProgressionContractReady===true&&result.baselineLevel===48&&result.levelCap===99&&result.exactlyOneCurrentMission===true&&result.completionExecutionEnabled===false&&result.skipPathEnabled===false);
@@ -21962,7 +21985,7 @@ function isPhase9LMissionContractSupersedeReadyV25(){
 
 function getPhase9LMissionUnlockProgressionContractResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var phase9KReady=typeof runPhase9KMissionCatalogRulesQACheckV25==='function'&&runPhase9KMissionCatalogRulesQACheckV25().passed===true;
   var baseline=PHASE9L_OPERATOR_BASELINE_V25;
   var baselineReady=baseline.baselineLevel===48&&baseline.levelCap===99&&baseline.baselineAwardExecution===false;
@@ -22221,7 +22244,7 @@ function runPhase9LMissionUnlockProgressionContractQACheckV25(){
 
 function getPhase9NMissionUnlockUIResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(APP_CACHE_TOKEN);
   var phase9LReady=typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'&&runPhase9LMissionUnlockProgressionContractQACheckV25().passed===true;
   var chain=typeof getPhase9LMissionChainV25==='function'?getPhase9LMissionChainV25():null;
   var missionScopedProgressReady=!!(chain&&chain.missionScopedProgressReady&&chain.current&&(chain.current.requirements||[]).every(function(req){return req.missionScoped===true&&typeof req.priorTarget==='number'&&typeof req.missionScopedTarget==='number';}));
@@ -22362,16 +22385,20 @@ function getPhase9NMissionUnlockUIResultV25(){
   var rewardPreviewOnly=true;
   var missionCatalogCompactReady=!/mission score/.test((document.querySelector('#mission-objective-list .mission-detail-card:not(.locked) summary .mission-detail-meta')||{}).textContent||'')&&!!document.querySelector('#mission-objective-list .mission-detail-card .mission-detail-row');
   var missionStepMetaCompactReady=!/this mission/.test((document.querySelector('#mission-current-step-list .mission-step-card .mission-step-meta')||{}).textContent||'');
+  var missionActionShelfDrawersReady=document.querySelectorAll('#mission-panel-missions details.mission-action-shelf-drawer').length>=3;
+  var missionActionShelfCollapsedReady=!!document.querySelector('#mission-step-shelf-drawer[data-default-collapsed="true"]')&&!!document.querySelector('#mission-training-shelf-drawer[data-default-collapsed="true"]')&&!!document.querySelector('#mission-catalog-shelf-drawer[data-default-collapsed="true"]');
+  var missionActionShelfMetaReady=/steps · filters inside|drills · filters inside|missions · locked previews inside/.test((document.getElementById('mission-panel-missions')||{}).textContent||'');
+  var missionActionShelfFilterContainmentReady=!!document.querySelector('#mission-step-shelf-drawer .mission-action-filter-rail[data-action-filter-scope="steps"]')&&!!document.querySelector('#mission-training-shelf-drawer .mission-action-filter-rail[data-action-filter-scope="training"]');
   var currentMissionDepthReady=currentDepthTabs.length>=4&&currentDepthPages.length>=4&&currentCarousels.length>=4&&currentPageControls.length>=8&&actionableSteps.length>=6&&previousCurrentMap&&missionCommandHeaderReady&&missionCommandTrackReady&&largerMissionPagesReady;
   var catalogSimplifiedReady=catalogDeepPanels.length===0;
   var lockedMissionStateReady=lockedCards.length>=1;
   var completionExecutionEnabled=false;
   var awardExecution=false;
   var notificationDispatch=false;
-  var ready=!!(buildOk&&phase9LReady&&missionScopedProgressReady&&currentMissionDepthReady&&catalogSimplifiedReady&&lockedMissionStateReady&&profileOvrHeroReady&&profileClutterRemoved&&profileOvrMetaHidden&&profileIdentityReady&&compactProfileOvrReady&&tallerAttributeTrackReady&&compactAttributeCardsReady&&widerAttributeMeterReady&&attributeDetailDrawerReady&&profileLensShellReady&&profileLensTabsReady&&profileLensPanelsReady&&profileLensStatsReady&&profileLensSwitchReady&&profileLensVisualReady&&profileCommandLiveCopyReady&&profileSkillFilterRailReady&&profileSkillFilterButtonsReady&&profileSkillFilterTagsReady&&profileSkillFilterFunctionReady&&profileDuplicateNavRemovedReady&&profileLensTabsOnlyReady&&profileBuildOvrDedupedReady&&compactDetailDrawerReady&&profileSourceDrawerReady&&rewardStageReady&&rewardLensShellReady&&rewardLensTabsReady&&rewardLensPanelsReady&&rewardLensStatsReady&&rewardLensSwitchReady&&rewardLensVisualReady&&rewardProgressReady&&rewardRarityReady&&badgeCatalogReady&&trophyCatalogReady&&rewardDetailDrawersReady&&rewardDetailRowsReady&&rewardDetailCopyReady&&rewardFilterRailsReady&&rewardFilterButtonsReady&&rewardFilterTagsReady&&rewardFilterFunctionReady&&rewardFilterGridTargetReady&&rewardFilterStatusReady&&rewardFilterEmptyStateReady&&rewardFilterFeedbackFunctionReady&&rewardShelfDrawersReady&&rewardShelfCollapsedReady&&rewardShelfMetaReady&&rewardShelfFilterContainmentReady&&rewardNotificationPreviewReady&&rewardNotificationPillReady&&rewardNotificationContractReady&&rewardAlertCopyCompactReady&&rewardPreviewOnly&&missionToggleDepthReady&&catalogCollapsedReady&&missionCatalogCompactReady&&missionStepMetaCompactReady&&overviewGuideReady&&overviewStartScreenReady&&overviewActionCardsCollapsedReady&&overviewWidthGuardReady&&overviewDrawerLayoutReady&&overviewLensShellReady&&overviewLensTabsReady&&overviewLensPanelsReady&&overviewLensStatsReady&&overviewLensOrbReady&&overviewLensSwitchReady&&overviewLensSummaryCopyReady&&overviewPulseStripReady&&overviewPulseChipsReady&&overviewPulseSwitchReady&&overviewPulseCopyReady&&missionActionLensShellReady&&missionActionLensTabsReady&&missionActionLensPanelsReady&&missionActionLensStatsReady&&missionActionLensSwitchReady&&missionActionLensVisualReady&&missionStepFeedReady&&missionActionFilterRailsReady&&missionStepFilterButtonsReady&&missionTrainingFilterButtonsReady&&missionStepFilterTagsReady&&missionTrainingFilterTagsReady&&missionActionFilterFunctionsReady&&overviewBoard&&missionBoard&&journeyBoard&&journeyRoadmapReady&&journeyMillionMapReady&&journeyMillionNodesReady&&journeyMillionOrbitReady&&journeyVisualChartsReady&&journeyLegacyLensRemovedReady&&journeyMilestonePanelsReady&&journeyMilestoneButtonsReady&&journeyMilestoneSwitchReady&&journeyMilestoneMetricsReady&&journeyCheckpointLanesReady&&journeyCheckpointLaneBarsReady&&journeyCheckpointLaneCopyReady&&journeyLaneDrawersReady&&journeyLaneDrawerDetailsReady&&journeyLaneStepChipsReady&&journeyLaneDrawerCopyReady&&journeyFullRoadCopyReady&&journeyFocusTabsReady&&journeyFocusViewsReady&&journeyFocusedDefaultReady&&journeyRecordsViewReady&&journeyViewSwitchReady&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
+  var ready=!!(buildOk&&phase9LReady&&missionScopedProgressReady&&currentMissionDepthReady&&catalogSimplifiedReady&&lockedMissionStateReady&&profileOvrHeroReady&&profileClutterRemoved&&profileOvrMetaHidden&&profileIdentityReady&&compactProfileOvrReady&&tallerAttributeTrackReady&&compactAttributeCardsReady&&widerAttributeMeterReady&&attributeDetailDrawerReady&&profileLensShellReady&&profileLensTabsReady&&profileLensPanelsReady&&profileLensStatsReady&&profileLensSwitchReady&&profileLensVisualReady&&profileCommandLiveCopyReady&&profileSkillFilterRailReady&&profileSkillFilterButtonsReady&&profileSkillFilterTagsReady&&profileSkillFilterFunctionReady&&profileDuplicateNavRemovedReady&&profileLensTabsOnlyReady&&profileBuildOvrDedupedReady&&compactDetailDrawerReady&&profileSourceDrawerReady&&rewardStageReady&&rewardLensShellReady&&rewardLensTabsReady&&rewardLensPanelsReady&&rewardLensStatsReady&&rewardLensSwitchReady&&rewardLensVisualReady&&rewardProgressReady&&rewardRarityReady&&badgeCatalogReady&&trophyCatalogReady&&rewardDetailDrawersReady&&rewardDetailRowsReady&&rewardDetailCopyReady&&rewardFilterRailsReady&&rewardFilterButtonsReady&&rewardFilterTagsReady&&rewardFilterFunctionReady&&rewardFilterGridTargetReady&&rewardFilterStatusReady&&rewardFilterEmptyStateReady&&rewardFilterFeedbackFunctionReady&&rewardShelfDrawersReady&&rewardShelfCollapsedReady&&rewardShelfMetaReady&&rewardShelfFilterContainmentReady&&rewardNotificationPreviewReady&&rewardNotificationPillReady&&rewardNotificationContractReady&&rewardAlertCopyCompactReady&&rewardPreviewOnly&&missionToggleDepthReady&&catalogCollapsedReady&&missionCatalogCompactReady&&missionStepMetaCompactReady&&missionActionShelfDrawersReady&&missionActionShelfCollapsedReady&&missionActionShelfMetaReady&&missionActionShelfFilterContainmentReady&&overviewGuideReady&&overviewStartScreenReady&&overviewActionCardsCollapsedReady&&overviewWidthGuardReady&&overviewDrawerLayoutReady&&overviewLensShellReady&&overviewLensTabsReady&&overviewLensPanelsReady&&overviewLensStatsReady&&overviewLensOrbReady&&overviewLensSwitchReady&&overviewLensSummaryCopyReady&&overviewPulseStripReady&&overviewPulseChipsReady&&overviewPulseSwitchReady&&overviewPulseCopyReady&&missionActionLensShellReady&&missionActionLensTabsReady&&missionActionLensPanelsReady&&missionActionLensStatsReady&&missionActionLensSwitchReady&&missionActionLensVisualReady&&missionStepFeedReady&&missionActionFilterRailsReady&&missionStepFilterButtonsReady&&missionTrainingFilterButtonsReady&&missionStepFilterTagsReady&&missionTrainingFilterTagsReady&&missionActionFilterFunctionsReady&&overviewBoard&&missionBoard&&journeyBoard&&journeyRoadmapReady&&journeyMillionMapReady&&journeyMillionNodesReady&&journeyMillionOrbitReady&&journeyVisualChartsReady&&journeyLegacyLensRemovedReady&&journeyMilestonePanelsReady&&journeyMilestoneButtonsReady&&journeyMilestoneSwitchReady&&journeyMilestoneMetricsReady&&journeyCheckpointLanesReady&&journeyCheckpointLaneBarsReady&&journeyCheckpointLaneCopyReady&&journeyLaneDrawersReady&&journeyLaneDrawerDetailsReady&&journeyLaneStepChipsReady&&journeyLaneDrawerCopyReady&&journeyFullRoadCopyReady&&journeyFocusTabsReady&&journeyFocusViewsReady&&journeyFocusedDefaultReady&&journeyRecordsViewReady&&journeyViewSwitchReady&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
   return {
-	    status:ready?'phase9ax_reward_room_hierarchy_ready':'phase9ax_reward_room_hierarchy_needs_review',
-	    mode:'phase9ax_reward_room_hierarchy_only',
+	    status:ready?'phase9ay_mission_room_hierarchy_ready':'phase9ay_mission_room_hierarchy_needs_review',
+	    mode:'phase9ay_mission_room_hierarchy_only',
     missionUnlockUIReady:ready,
     build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
     phase9LContractReady:phase9LReady,
@@ -22451,6 +22478,10 @@ function getPhase9NMissionUnlockUIResultV25(){
     rewardPreviewOnly:rewardPreviewOnly,
     missionCatalogCompactReady:missionCatalogCompactReady,
     missionStepMetaCompactReady:missionStepMetaCompactReady,
+    missionActionShelfDrawersReady:missionActionShelfDrawersReady,
+    missionActionShelfCollapsedReady:missionActionShelfCollapsedReady,
+    missionActionShelfMetaReady:missionActionShelfMetaReady,
+    missionActionShelfFilterContainmentReady:missionActionShelfFilterContainmentReady,
     missionToggleDepthReady:missionToggleDepthReady,
     catalogCollapsedReady:catalogCollapsedReady,
     overviewGuideReady:overviewGuideReady,
@@ -22528,7 +22559,7 @@ function getPhase9NMissionUnlockUIResultV25(){
     automationActivationEnabled:false,
     bootstrapExecutionEnabled:false,
     missingGateItems:[]
-				      .concat(buildOk?[]:['Phase 9AX build token'])
+				      .concat(buildOk?[]:['Phase 9AY build token'])
       .concat(phase9LReady?[]:['Phase 9L mission unlock contract'])
       .concat(missionScopedProgressReady?[]:['mission-scoped progress guard'])
       .concat(currentMissionDepthReady?[]:['current mission command UX depth'])
@@ -22595,6 +22626,10 @@ function getPhase9NMissionUnlockUIResultV25(){
       .concat(catalogCollapsedReady?[]:['collapsed mission catalog cards'])
       .concat(missionCatalogCompactReady?[]:['compact mission catalog rows'])
       .concat(missionStepMetaCompactReady?[]:['compact mission step rows'])
+      .concat(missionActionShelfDrawersReady?[]:['mission shelf drawers'])
+      .concat(missionActionShelfCollapsedReady?[]:['collapsed mission shelves'])
+      .concat(missionActionShelfMetaReady?[]:['mission shelf live meta'])
+      .concat(missionActionShelfFilterContainmentReady?[]:['mission filters inside shelf drawers'])
       .concat(overviewGuideReady?[]:['overview guide'])
       .concat(overviewStartScreenReady?[]:['overview start-screen order'])
       .concat(overviewActionCardsCollapsedReady?[]:['collapsed overview action cards'])
@@ -22675,7 +22710,7 @@ function getPhase9NMissionUnlockUIResultV25(){
       'automation activation',
       'second-device bootstrap execution'
     ],
-			    message:ready?'Phase 9AX Reward Room Hierarchy is ready. Next unlock stays first, Badge and Trophy shelves are collapsed by default, filters remain inside each shelf, and protected gates remain blocked.':'Phase 9AX Reward Room Hierarchy needs review.'
+			    message:ready?'Phase 9AY Mission Room Hierarchy is ready. Current Mission Lock stays first, Step Feed, Training Drills, and Mission Catalog shelves are collapsed by default, filters remain inside shelves, and protected gates remain blocked.':'Phase 9AY Mission Room Hierarchy needs review.'
 	  };
 }
 
@@ -22684,7 +22719,7 @@ function formatPhase9NMissionUnlockUIV25(result){
   var missing=result.missingGateItems||[];
   var blocked=result.blockedActions||[];
   return [
-			    'Phase 9AX reward room hierarchy',
+			    'Phase 9AY mission room hierarchy',
     'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
     '',
     'UI mode',
@@ -22786,6 +22821,10 @@ function formatPhase9NMissionUnlockUIV25(result){
     '- Catalog collapsed ready: '+(result.catalogCollapsedReady?'true':'false'),
     '- Mission catalog rows compact: '+(result.missionCatalogCompactReady?'true':'false'),
     '- Mission step rows compact: '+(result.missionStepMetaCompactReady?'true':'false'),
+    '- Mission shelf drawers ready: '+(result.missionActionShelfDrawersReady?'true':'false'),
+    '- Mission shelves collapsed by default: '+(result.missionActionShelfCollapsedReady?'true':'false'),
+    '- Mission shelf live meta ready: '+(result.missionActionShelfMetaReady?'true':'false'),
+    '- Mission filters inside shelves: '+(result.missionActionShelfFilterContainmentReady?'true':'false'),
     '- Journey roadmap ready: '+(result.journeyRoadmapReady?'true':'false'),
     '- Journey $1M map ready: '+(result.journeyMillionMapReady?'true':'false'),
     '- Journey milestone nodes ready: '+(result.journeyMillionNodesReady?'true':'false'),
@@ -22858,8 +22897,8 @@ function formatPhase9NMissionUnlockUIV25(result){
 function renderPhase9NMissionUnlockUIStateV25(state){
   var result=(state&&state.result)||state||getPhase9NMissionUnlockUIResultV25();
   var ready=result.missionUnlockUIReady===true;
-  setTextV24('phase9n-mission-chain',ready?'Badge and trophy catalogs are collapsed by default so the Reward Room scans before it expands.':'Reward shelf hierarchy needs review.');
-  setTextV24('phase9n-mission-checklist',ready?'Ready, progress, locked, quick, and hard filters remain inside each shelf drawer.':'Reward shelf filters need review.');
+  setTextV24('phase9n-mission-chain',ready?'Step Feed, Training Drills, and Mission Catalog are collapsed by default so the Missions tab scans before it expands.':'Mission shelf hierarchy needs review.');
+  setTextV24('phase9n-mission-checklist',ready?'Step and training filters remain inside each shelf drawer.':'Mission shelf filters need review.');
   setTextV24('phase9n-mission-blocked','No fake completion, mission ledger write, notification dispatch, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.');
   setBadge('phase9n-mission-scope-badge',ready?'Ready':'Review',ready?'':'warn');
   setBadge('phase9n-mission-chain-badge',ready?'Shelf':'Review',ready?'':'warn');
@@ -22875,9 +22914,9 @@ function runPhase9NMissionUnlockUIV25(){
   var status=document.getElementById('phase9n-mission-status');
 	  if(status){
 	    status.className='reset-status '+(state.passed?'ok':'warn');
-    status.textContent=state.passed?'Reward Room hierarchy is ready.':'Reward Room hierarchy needs review.';
+    status.textContent=state.passed?'Mission Room hierarchy is ready.':'Mission Room hierarchy needs review.';
   }
-	  return {passed:state.passed,meta:state.passed?'Phase 9AX Reward Room Hierarchy is ready · Next unlock first · badge and trophy shelves collapsed · protected gates blocked.':'Phase 9AX Reward Room Hierarchy needs review.',failures:state.passed?[]:['Phase 9AX Reward Room Hierarchy']};
+	  return {passed:state.passed,meta:state.passed?'Phase 9AY Mission Room Hierarchy is ready · Current Mission first · step/training/catalog shelves collapsed · protected gates blocked.':'Phase 9AY Mission Room Hierarchy needs review.',failures:state.passed?[]:['Phase 9AY Mission Room Hierarchy']};
 }
 
 async function copyPhase9NMissionUnlockUIV25(){
@@ -22891,12 +22930,12 @@ async function copyPhase9NMissionUnlockUIV25(){
     await navigator.clipboard.writeText(state&&state.previewText||'');
 	    if(status){
 	      status.className='reset-status ok';
-	      status.textContent='Phase 9AX receipt copied.';
+	      status.textContent='Phase 9AY receipt copied.';
 	    }
   }catch(err){
 	    if(status){
 	      status.className='reset-status warn';
-				      status.textContent='Copy blocked by browser. Select the Reward Room Hierarchy receipt manually.';
+				      status.textContent='Copy blocked by browser. Select the Mission Room Hierarchy receipt manually.';
 	    }
   }
 }
@@ -22905,9 +22944,9 @@ function runPhase9NMissionUnlockUIQACheckV25(){
   var result=getPhase9NMissionUnlockUIResultV25();
 	  if(result.missionUnlockUIReady){
 	    renderPhase9NMissionUnlockUIStateV25({result:result,previewText:formatPhase9NMissionUnlockUIV25(result)});
-	    return {passed:true,meta:'Phase 9AX Reward Room Hierarchy is installed · Next unlock first · badge and trophy shelves collapsed · filters remain inside drawers · no completion, awards, or writes.',failures:[]};
+	    return {passed:true,meta:'Phase 9AY Mission Room Hierarchy is installed · Current Mission first · step/training/catalog shelves collapsed · filters remain inside drawers · no completion, awards, or writes.',failures:[]};
 	  }
-	  return {passed:false,meta:'Phase 9AX Reward Room Hierarchy needs review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9AX Reward Room Hierarchy']};
+	  return {passed:false,meta:'Phase 9AY Mission Room Hierarchy needs review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9AY Mission Room Hierarchy']};
 }
 
 function getSetupPointerRowsV23(){
@@ -26098,8 +26137,8 @@ async function runBackupArchiveSelfCheckV22(){
 
 function runHealthCurrentBuildIdentityQACheckV25(){
   var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
-  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax)/.test(token);
-  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9AT build token.'};
+  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay)/.test(token);
+  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9AY build token.'};
 }
 
 function runHealthProtectedBoundaryQACheckV25(){
@@ -26145,7 +26184,7 @@ async function runHealthFastLiveQACheckV25(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Fast QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Fast QA';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9AX Reward Room Hierarchy, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
+  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9AY Mission Room Hierarchy, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -26158,7 +26197,7 @@ async function runHealthFastLiveQACheckV25(){
   try{add('Current Build',runHealthCurrentBuildIdentityQACheckV25());}catch(e){add('Current Build',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9L Mission Unlock Progression Contract',typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'?runPhase9LMissionUnlockProgressionContractQACheckV25():{passed:false,meta:'Missing Phase 9L Mission Unlock Progression Contract check'});}catch(e){add('Phase 9L Mission Unlock Progression Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 9AX Reward Room Hierarchy',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9AX Reward Room Hierarchy check'});}catch(e){add('Phase 9AX Reward Room Hierarchy',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9AY Mission Room Hierarchy',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9AY Mission Room Hierarchy check'});}catch(e){add('Phase 9AY Mission Room Hierarchy',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Protected Boundary',runHealthProtectedBoundaryQACheckV25());}catch(e){add('Protected Boundary',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -26247,7 +26286,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9J Mission Rating Calibration',typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'?runPhase9JMissionRatingCalibrationQACheckV25():{passed:false,meta:'Missing Phase 9J Mission Rating Calibration check'});}catch(e){add('Phase 9J Mission Rating Calibration',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9L Mission Unlock Progression Contract',typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'?runPhase9LMissionUnlockProgressionContractQACheckV25():{passed:false,meta:'Missing Phase 9L Mission Unlock Progression Contract check'});}catch(e){add('Phase 9L Mission Unlock Progression Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 9AX Reward Room Hierarchy',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9AX Reward Room Hierarchy check'});}catch(e){add('Phase 9AX Reward Room Hierarchy',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9AY Mission Room Hierarchy',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9AY Mission Room Hierarchy check'});}catch(e){add('Phase 9AY Mission Room Hierarchy',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -33022,6 +33061,9 @@ function renderMissionActionLensSummaryV25(chain){
   setTextV24('mission-action-catalog-count',String((chain.missions||[]).length||'--'));
   var trainingCount=document.querySelectorAll('#mission-training-list .mission-detail-card').length;
   setTextV24('mission-action-training-count',String(trainingCount||'--'));
+  setTextV24('mission-step-shelf-meta',String(stepItems.length)+' steps · filters inside');
+  setTextV24('mission-training-shelf-meta',String(trainingCount||0)+' drills · filters inside');
+  setTextV24('mission-catalog-shelf-meta',String((chain.missions||[]).length||0)+' missions · locked previews inside');
   var stepList=document.getElementById('mission-current-step-list');
   if(stepList)stepList.innerHTML=stepItems.join('');
   setMissionStepFilterV25(window.__missionStepFilterV25||'all');
