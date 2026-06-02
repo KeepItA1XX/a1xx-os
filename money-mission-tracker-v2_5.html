@@ -1054,6 +1054,8 @@ button.mission-journey-visual:hover{background:#0b1208;box-shadow:inset 0 0 0 1p
 .mission-overview-action-drawer .mission-overview-guide-top:after{content:'Open';align-self:start;background:#101a0c;color:#9ee878;border-radius:999px;padding:7px 9px;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;box-shadow:inset 0 0 0 1px rgba(126,200,69,.16)}
 .mission-overview-action-drawer[open] .mission-overview-guide-top:after{content:'Close'}
 .mission-overview-action-drawer #mission-overview-guide-moves{padding:0 14px 12px}
+.mission-overview-action-drawer #mission-overview-guide-moves.mission-move-deck{width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;padding:0 14px 14px;scroll-snap-type:x mandatory;scroll-padding-left:14px;touch-action:pan-x}
+.mission-overview-action-drawer #mission-overview-guide-moves.mission-move-deck .mission-move-card{flex:0 0 min(204px,78%);max-width:min(204px,78vw)}
 .mission-overview-action-drawer .mission-overview-guide-action{margin:0 14px 14px}
 .mission-overview-guide-action{appearance:none;border:0;background:#101a0c;color:#9ee878;border-radius:999px;padding:8px 10px;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;box-shadow:inset 0 0 0 1px rgba(126,200,69,.16)}
 .mission-overview-guide-action:hover{background:#14240e;color:#f4f8f0}
@@ -2968,8 +2970,8 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
               <summary class="mission-overview-guide-top">
                 <div>
                   <div class="mission-overview-guide-kicker">Next Money Moves</div>
-                  <div class="mission-overview-guide-title">Action cards tucked away</div>
-                  <div class="mission-overview-guide-copy">Open this only when you want the three quick money-move cards.</div>
+                  <div class="mission-overview-guide-title">Money move options</div>
+                  <div class="mission-overview-guide-copy">Pick the next move that fits today.</div>
                 </div>
               </summary>
               <div id="mission-overview-guide-moves"></div>
@@ -6336,9 +6338,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-02 11:47 ET · OS v2_5 Phase 9BP Checkpoint Card Decontent';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9BP Checkpoint Card Decontent';
-var APP_CACHE_TOKEN='mmos-20260602-1147-v25-phase9bp-checkpoint-card-decontent';
+var APP_BUILD_STAMP='2026-06-02 11:51 ET · OS v2_5 Phase 9BQ Overview Money Move Drawer';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9BQ Overview Money Move Drawer';
+var APP_CACHE_TOKEN='mmos-20260602-1151-v25-phase9bq-overview-money-move-drawer';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -22307,7 +22309,7 @@ function runPhase9BDDeveloperReceiptRelocationQACheckV25(){
     'Mission Unlock Progression Contract',
     'Attribute Detail Popout'
   ];
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq)/.test(APP_CACHE_TOKEN);
   var healthClear=receiptLabels.every(function(label){return healthText.indexOf(label)<0;});
   var devReady=receiptLabels.every(function(label){return devText.indexOf(label)>=0;});
   var failures=[];
@@ -22323,7 +22325,7 @@ function runPhase9BDDeveloperReceiptRelocationQACheckV25(){
 
 function runPhase9BHMissionProfileUICleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bh-mission-profile-ui-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bh-mission-profile-ui-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
   var resumeRailHiddenReady=/\.mission-resume-rail\{display:none!important;visibility:hidden!important;position:absolute!important;left:-9999px!important/.test(styleText);
   var resumeRailMemoryReady=!!document.getElementById('mission-resume-rail')&&typeof renderMissionResumeRailV25==='function'&&typeof setMissionResumeTargetV25==='function';
   var trustTitleCompactReady=/\.mission-profile-lens-panel\[data-profile-lens="trust"\] \.mission-profile-lens-title\{font-size:12px;line-height:1\.25\}/.test(styleText);
@@ -22350,7 +22352,7 @@ function runPhase9BIRewardCardPopoverCleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionStatusCardV25);
   var popoutText=String(showMissionRewardDetailV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bi-reward-card-popout-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bi-reward-card-popout-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
   var steadyTileReady=/\.mission-status-card\{appearance:none;[^}]*display:grid;grid-template-rows:auto minmax\(0,1fr\) auto/.test(styleText)&&/\.mission-status-card:not\(\[open\]\)\{aspect-ratio:1\/1\}/.test(styleText);
   var noNativeExpansionReady=rendererText.indexOf('<details')<0&&rendererText.indexOf('<summary')<0&&/showMissionRewardDetailV25/.test(rendererText);
   var popoutReady=document.querySelectorAll('#mission-panel-badges .mission-reward-detail-popout').length>=2&&typeof showMissionRewardDetailV25==='function'&&/mission-reward-detail-row/.test(popoutText);
@@ -22377,7 +22379,7 @@ function runPhase9BJMissionResumeRailHardHideQACheckV25(){
   if(typeof renderMissionResumeRailV25==='function')renderMissionResumeRailV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rail=document.getElementById('mission-resume-rail');
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BIRewardCardPopoverCleanupQACheckV25==='function'&&runPhase9BIRewardCardPopoverCleanupQACheckV25().passed===true;
   var railMarkupReady=!!rail&&!!document.getElementById('mission-resume-chips');
   var railHiddenAttrReady=!!rail&&rail.hidden===true&&rail.getAttribute('aria-hidden')==='true';
@@ -22402,7 +22404,7 @@ function runPhase9BKAttributeDetailPopoutQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionSkillCardV25);
   var popoutText=String(showMissionSkillDetailV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BJMissionResumeRailHardHideQACheckV25==='function'&&runPhase9BJMissionResumeRailHardHideQACheckV25().passed===true;
   var fixedCardReady=rendererText.indexOf('<details')<0&&rendererText.indexOf('<summary')<0&&/showMissionSkillDetailV25/.test(rendererText)&&document.querySelectorAll('#mission-attribute-grid .mission-skill').length>=15;
   var popoutReady=!!document.getElementById('mission-attribute-detail-popout')&&typeof showMissionSkillDetailV25==='function'&&/mission-skill-detail-row/.test(popoutText);
@@ -22434,7 +22436,7 @@ function runPhase9BLAccountMissionNavCleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var account=document.getElementById('settings-pane-account');
   var connections=document.getElementById('settings-pane-connections');
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BKAttributeDetailPopoutQACheckV25==='function'&&runPhase9BKAttributeDetailPopoutQACheckV25().passed===true;
   var legacyAccountTabsRemoved=account&&!account.querySelector('[data-account-subtab]');
   var accountMissionDirect=!!(account&&account.querySelector('#account-subpane-mission.active .mission-tabbar'));
@@ -22464,7 +22466,7 @@ function runPhase9BMMilestoneLaneFormatRepairQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionCheckpointLaneV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BLAccountMissionNavCleanupQACheckV25==='function'&&runPhase9BLAccountMissionNavCleanupQACheckV25().passed===true;
   var laneCardsReady=document.querySelectorAll('#mission-journey-chain .mission-checkpoint-lane').length>=4;
   var stackedHeaderReady=/\.mission-checkpoint-lane-top\{[^}]*display:flex[^}]*flex-direction:column/.test(styleText);
@@ -22490,7 +22492,7 @@ function runPhase9BMMilestoneLaneFormatRepairQACheckV25(){
 function runPhase9BNAttributeCardAlignmentQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BMMilestoneLaneFormatRepairQACheckV25==='function'&&runPhase9BMMilestoneLaneFormatRepairQACheckV25().passed===true;
   var cardGridReady=document.querySelectorAll('#mission-attribute-grid .mission-skill').length>=15;
   var fixedCardHeightReady=/\.mission-skill-lane \.mission-skill\{[^}]*height:34[06]px[^}]*grid-template-rows:104px minmax\(0,1fr\)/.test(styleText)||/\.mission-skill-lane \.mission-skill\{[^}]*height:326px[^}]*grid-template-rows:104px minmax\(0,1fr\)/.test(styleText);
@@ -22516,7 +22518,7 @@ function runPhase9BOAttributeDetailCuePolishQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionSkillCardV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BNAttributeCardAlignmentQACheckV25==='function'&&runPhase9BNAttributeCardAlignmentQACheckV25().passed===true;
   var cueStyleReady=/\.mission-skill-more-cue\{[^}]*width:14px[^}]*height:14px[^}]*border-radius:999px/.test(styleText);
   var cueMarkupReady=/mission-skill-more-cue/.test(rendererText)&&/aria-hidden="true">\+/.test(rendererText);
@@ -22540,7 +22542,7 @@ function runPhase9BPCheckpointCardDecontentQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionCheckpointLaneV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bp-checkpoint-card-decontent/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BOAttributeDetailCuePolishQACheckV25==='function'&&runPhase9BOAttributeDetailCuePolishQACheckV25().passed===true;
   var summarySpacingReady=/\.mission-checkpoint-lane summary\{[^}]*display:grid[^}]*gap:7px/.test(styleText);
   var visibleSourceRemoved=rendererText.indexOf('mission-checkpoint-lane-trust')<0&&rendererText.indexOf("value>0?'tracked':'not tracked'")<0;
@@ -22560,9 +22562,39 @@ function runPhase9BPCheckpointCardDecontentQACheckV25(){
   };
 }
 
+function runPhase9BQOverviewMoneyMoveDrawerQACheckV25(){
+  if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
+  var styleText=(document.querySelector('style')||{}).textContent||'';
+  var overviewText=(document.getElementById('mission-panel-overview')||{}).textContent||'';
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bq-overview-money-move-drawer/.test(APP_CACHE_TOKEN);
+  var baselineReady=typeof runPhase9BPCheckpointCardDecontentQACheckV25==='function'&&runPhase9BPCheckpointCardDecontentQACheckV25().passed===true;
+  var drawerReady=!!document.querySelector('#mission-panel-overview details.mission-overview-action-drawer #mission-overview-guide-moves.mission-move-deck');
+  var oldDrawerTitle='Action cards '+'tucked away';
+  var oldDrawerCopy='Open this only '+'when you want the three quick money-move cards';
+  var oldCopyRemoved=overviewText.indexOf(oldDrawerTitle)<0&&overviewText.indexOf(oldDrawerCopy)<0;
+  var newCopyReady=/Money move options/.test(overviewText)&&/Pick the next move that fits today\./.test(overviewText);
+  var scrollCssReady=/\.mission-overview-action-drawer #mission-overview-guide-moves\.mission-move-deck\{[^}]*overflow-x:auto[^}]*scroll-snap-type:x mandatory/.test(styleText);
+  var cardWidthReady=/\.mission-overview-action-drawer #mission-overview-guide-moves\.mission-move-deck \.mission-move-card\{[^}]*flex:0 0 min\(204px,78%\)/.test(styleText);
+  var moveCardsReady=document.querySelectorAll('#mission-overview-guide-moves.mission-move-deck .mission-move-card').length>=3;
+  var failures=[];
+  if(!buildOk)failures.push('Phase 9BQ build token');
+  if(!baselineReady)failures.push('Phase 9BP baseline');
+  if(!drawerReady)failures.push('overview money move drawer deck');
+  if(!oldCopyRemoved)failures.push('old drawer system copy removed');
+  if(!newCopyReady)failures.push('clean money move drawer copy');
+  if(!scrollCssReady)failures.push('drawer horizontal scroll CSS');
+  if(!cardWidthReady)failures.push('drawer card width CSS');
+  if(!moveCardsReady)failures.push('three money move cards render');
+  return {
+    passed:buildOk&&baselineReady&&drawerReady&&oldCopyRemoved&&newCopyReady&&scrollCssReady&&cardWidthReady&&moveCardsReady,
+    meta:buildOk&&baselineReady&&drawerReady&&oldCopyRemoved&&newCopyReady&&scrollCssReady&&cardWidthReady&&moveCardsReady?'Phase 9BQ Overview Money Move Drawer is installed · drawer copy is cleaner and the three money-move cards scroll inside the drawer.':'Phase 9BQ Overview Money Move Drawer needs review.',
+    failures:failures
+  };
+}
+
 function getPhase9NMissionUnlockUIResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq)/.test(APP_CACHE_TOKEN);
   var missionStyleText=(document.querySelector('style')||{}).textContent||'';
   var phase9LReady=typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'&&runPhase9LMissionUnlockProgressionContractQACheckV25().passed===true;
   var chain=typeof getPhase9LMissionChainV25==='function'?getPhase9LMissionChainV25():null;
@@ -26567,8 +26599,8 @@ async function runBackupArchiveSelfCheckV22(){
 
 function runHealthCurrentBuildIdentityQACheckV25(){
   var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
-  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp)/.test(token);
-  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9AY build token.'};
+  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq)/.test(token);
+  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9BQ build token.'};
 }
 
 function runHealthProtectedBoundaryQACheckV25(){
@@ -26614,7 +26646,7 @@ async function runHealthFastLiveQACheckV25(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Fast QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Fast QA';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9BP Checkpoint Card Decontent, Phase 9BD receipt placement, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
+  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9BQ Overview Money Move Drawer, Phase 9BD receipt placement, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -26632,6 +26664,7 @@ async function runHealthFastLiveQACheckV25(){
   try{add('Phase 9BN Attribute Card Alignment',typeof runPhase9BNAttributeCardAlignmentQACheckV25==='function'?runPhase9BNAttributeCardAlignmentQACheckV25():{passed:false,meta:'Missing Phase 9BN Attribute Card Alignment check'});}catch(e){add('Phase 9BN Attribute Card Alignment',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BO Attribute Detail Cue Polish',typeof runPhase9BOAttributeDetailCuePolishQACheckV25==='function'?runPhase9BOAttributeDetailCuePolishQACheckV25():{passed:false,meta:'Missing Phase 9BO Attribute Detail Cue Polish check'});}catch(e){add('Phase 9BO Attribute Detail Cue Polish',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BP Checkpoint Card Decontent',typeof runPhase9BPCheckpointCardDecontentQACheckV25==='function'?runPhase9BPCheckpointCardDecontentQACheckV25():{passed:false,meta:'Missing Phase 9BP Checkpoint Card Decontent check'});}catch(e){add('Phase 9BP Checkpoint Card Decontent',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9BQ Overview Money Move Drawer',typeof runPhase9BQOverviewMoneyMoveDrawerQACheckV25==='function'?runPhase9BQOverviewMoneyMoveDrawerQACheckV25():{passed:false,meta:'Missing Phase 9BQ Overview Money Move Drawer check'});}catch(e){add('Phase 9BQ Overview Money Move Drawer',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BD Developer Receipt Relocation',typeof runPhase9BDDeveloperReceiptRelocationQACheckV25==='function'?runPhase9BDDeveloperReceiptRelocationQACheckV25():{passed:false,meta:'Missing Phase 9BD Developer Receipt Relocation check'});}catch(e){add('Phase 9BD Developer Receipt Relocation',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Protected Boundary',runHealthProtectedBoundaryQACheckV25());}catch(e){add('Protected Boundary',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -26726,6 +26759,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9BN Attribute Card Alignment',typeof runPhase9BNAttributeCardAlignmentQACheckV25==='function'?runPhase9BNAttributeCardAlignmentQACheckV25():{passed:false,meta:'Missing Phase 9BN Attribute Card Alignment check'});}catch(e){add('Phase 9BN Attribute Card Alignment',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BO Attribute Detail Cue Polish',typeof runPhase9BOAttributeDetailCuePolishQACheckV25==='function'?runPhase9BOAttributeDetailCuePolishQACheckV25():{passed:false,meta:'Missing Phase 9BO Attribute Detail Cue Polish check'});}catch(e){add('Phase 9BO Attribute Detail Cue Polish',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BP Checkpoint Card Decontent',typeof runPhase9BPCheckpointCardDecontentQACheckV25==='function'?runPhase9BPCheckpointCardDecontentQACheckV25():{passed:false,meta:'Missing Phase 9BP Checkpoint Card Decontent check'});}catch(e){add('Phase 9BP Checkpoint Card Decontent',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9BQ Overview Money Move Drawer',typeof runPhase9BQOverviewMoneyMoveDrawerQACheckV25==='function'?runPhase9BQOverviewMoneyMoveDrawerQACheckV25():{passed:false,meta:'Missing Phase 9BQ Overview Money Move Drawer check'});}catch(e){add('Phase 9BQ Overview Money Move Drawer',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BD Developer Receipt Relocation',typeof runPhase9BDDeveloperReceiptRelocationQACheckV25==='function'?runPhase9BDDeveloperReceiptRelocationQACheckV25():{passed:false,meta:'Missing Phase 9BD Developer Receipt Relocation check'});}catch(e){add('Phase 9BD Developer Receipt Relocation',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
