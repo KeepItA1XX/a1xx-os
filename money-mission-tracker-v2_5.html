@@ -5719,9 +5719,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-02 01:19 ET · OS v2_5 Phase 9N Mission Unlock UI';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9N Mission Unlock UI';
-var APP_CACHE_TOKEN='mmos-20260602-0119-v25-phase9n-mission-unlock-ui';
+var APP_BUILD_STAMP='2026-06-02 01:32 ET · OS v2_5 Phase 9N Mission Scoped Progress Repair';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9N Mission Scoped Progress Repair';
+var APP_CACHE_TOKEN='mmos-20260602-0132-v25-phase9n-mission-scoped-progress-repair';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -21060,6 +21060,11 @@ function runPhase9KMissionCatalogRulesQACheckV25(){
 }
 
 var PHASE9L_MISSION_UNLOCK_CONTRACT_KEY_V25='a1xx_phase9l_mission_unlock_progression_contract_v1';
+var PHASE9L_MISSION_PROGRESS_STATE_KEY_V25='a1xx_phase9l_mission_progress_state_v1';
+var PHASE9L_BASELINE_COMPLETED_MISSION_IDS_V25=[
+  'mission_pipeline_first_touch',
+  'mission_pipeline_ten_touches'
+];
 var PHASE9L_OPERATOR_BASELINE_V25={
   baselineLevel:48,
   baselineSource:'A1XX approved baseline',
@@ -21257,29 +21262,69 @@ function getPhase9LMetricValueV25(requirement,totals){
   return parseFloat(totals[(requirement||{}).metric])||0;
 }
 
-function getPhase9LRequirementProgressV25(requirement,totals){
+function getPhase9LCompletedMissionIdsV25(){
+  var ids=PHASE9L_BASELINE_COMPLETED_MISSION_IDS_V25.slice();
+  try{
+    var state=JSON.parse(localStorage.getItem(PHASE9L_MISSION_PROGRESS_STATE_KEY_V25)||'null')||{};
+    var stored=Array.isArray(state.completedMissionIds)?state.completedMissionIds:[];
+    stored.forEach(function(id){if(id&&ids.indexOf(id)<0)ids.push(id);});
+  }catch(e){}
+  return ids.filter(function(id){
+    return PHASE9L_MISSION_CATALOG_V25.some(function(mission){return mission.id===id;});
+  });
+}
+
+function getPhase9LRequirementPriorTargetV25(catalogIndex,requirement,completedIds){
+  requirement=requirement||{};
+  completedIds=completedIds||getPhase9LCompletedMissionIdsV25();
+  var prior=0;
+  PHASE9L_MISSION_CATALOG_V25.slice(0,Math.max(0,catalogIndex)).forEach(function(mission){
+    if(completedIds.indexOf(mission.id)<0)return;
+    (mission.requirements||[]).forEach(function(req){
+      if(req&&req.metric===requirement.metric)prior=Math.max(prior,parseFloat(req.target)||0);
+    });
+  });
+  return prior;
+}
+
+function getPhase9LRequirementProgressV25(requirement,totals,priorTarget,mode){
   requirement=requirement||{};
   totals=totals||getPhase9LMissionMetricTotalsV25();
-  var value=getPhase9LMetricValueV25(requirement,totals);
-  var target=Math.max(1,parseFloat(requirement.target)||1);
+  var lifetimeValue=getPhase9LMetricValueV25(requirement,totals);
+  var originalTarget=Math.max(1,parseFloat(requirement.target)||1);
+  var prior=Math.max(0,parseFloat(priorTarget)||0);
+  var target=Math.max(1,originalTarget-prior);
+  var rawScopedValue=Math.max(0,lifetimeValue-prior);
+  var lockedMode=mode==='locked'||mode==='preview';
+  var completedMode=mode==='completed'||mode==='archived';
+  var value=completedMode?target:lockedMode?0:Math.min(rawScopedValue,target);
   var sourceTrust=PHASE9L_REQUIREMENT_SOURCE_TRUST_V25.indexOf(requirement.sourceTrust)>=0?requirement.sourceTrust:'pending';
   var percent=Math.min(99,Math.max(0,Math.floor(Math.min(value/target,0.999)*100)));
-  var complete=value>=target;
+  var complete=completedMode||(!lockedMode&&rawScopedValue>=target);
   var state=complete?'complete':value>0?'in_progress':sourceTrust==='tracked'?'pending':'not_tracked';
   return Object.assign({},requirement,{
     value:value,
     target:target,
+    originalTarget:originalTarget,
+    lifetimeValue:lifetimeValue,
+    priorTarget:prior,
+    rawScopedValue:rawScopedValue,
+    missionScopedTarget:target,
+    scopedValue:value,
+    missionScoped:true,
     progress:complete?99:percent,
-    remaining:Math.max(0,Math.ceil(target-value)),
+    remaining:complete?0:Math.max(0,Math.ceil(target-value)),
     complete:complete,
     state:state,
     sourceTrust:sourceTrust
   });
 }
 
-function getPhase9LMissionProgressV25(mission,totals){
+function getPhase9LMissionProgressV25(mission,totals,mode,catalogIndex,completedIds){
   mission=mission||{};
-  var requirements=(mission.requirements||[]).map(function(req){return getPhase9LRequirementProgressV25(req,totals);});
+  var requirements=(mission.requirements||[]).map(function(req){
+    return getPhase9LRequirementProgressV25(req,totals,getPhase9LRequirementPriorTargetV25(catalogIndex,req,completedIds),mode);
+  });
   var completeCount=requirements.filter(function(req){return req.complete;}).length;
   var allComplete=requirements.length>0&&completeCount===requirements.length;
   var progress=requirements.length?Math.floor(requirements.reduce(function(sum,req){return sum+(req.progress||0);},0)/requirements.length):0;
@@ -21297,17 +21342,18 @@ function getPhase9LMissionProgressV25(mission,totals){
 function getPhase9LMissionChainV25(stats){
   stats=stats||getAccountMissionActionStatsV25();
   var totals=getPhase9LMissionMetricTotalsV25(stats);
-  var evaluated=PHASE9L_MISSION_CATALOG_V25.map(function(mission){return getPhase9LMissionProgressV25(mission,totals);});
-  var firstOpenIndex=evaluated.findIndex(function(mission){return !mission.complete;});
-  if(firstOpenIndex<0)firstOpenIndex=evaluated.length-1;
-  evaluated=evaluated.map(function(mission,idx){
+  var completedIds=getPhase9LCompletedMissionIdsV25();
+  var firstOpenIndex=PHASE9L_MISSION_CATALOG_V25.findIndex(function(mission){return completedIds.indexOf(mission.id)<0;});
+  if(firstOpenIndex<0)firstOpenIndex=PHASE9L_MISSION_CATALOG_V25.length-1;
+  var evaluated=PHASE9L_MISSION_CATALOG_V25.map(function(mission,idx){
     var state='locked';
-    if(idx<firstOpenIndex)state='completed';
+    if(completedIds.indexOf(mission.id)>=0||idx<firstOpenIndex)state='completed';
     else if(idx===firstOpenIndex)state='current';
     else if(idx===firstOpenIndex+1)state='preview';
     else state='locked';
-    if(mission.complete&&idx===firstOpenIndex)state='review';
-    return Object.assign({},mission,{state:state});
+    var evaluatedMission=getPhase9LMissionProgressV25(mission,totals,state,idx,completedIds);
+    if(evaluatedMission.complete&&idx===firstOpenIndex)state='review';
+    return Object.assign({},evaluatedMission,{state:state,missionScopedProgress:true});
   });
   var current=evaluated[firstOpenIndex]||evaluated[0]||null;
   return {
@@ -21317,7 +21363,11 @@ function getPhase9LMissionChainV25(stats){
     next:evaluated[firstOpenIndex+1]||null,
     locked:evaluated.filter(function(mission){return mission.state==='locked';}),
     totals:totals,
+    completedMissionIds:completedIds,
     currentIndex:firstOpenIndex,
+    missionScopedProgressReady:evaluated.every(function(mission){
+      return (mission.requirements||[]).every(function(req){return req.missionScoped===true&&typeof req.priorTarget==='number'&&typeof req.missionScopedTarget==='number';});
+    }),
     exactlyOneCurrent:evaluated.filter(function(mission){return mission.state==='current'||mission.state==='review';}).length===1
   };
 }
@@ -21626,6 +21676,8 @@ function getPhase9NMissionUnlockUIResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9n/.test(APP_CACHE_TOKEN);
   var phase9LReady=typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'&&runPhase9LMissionUnlockProgressionContractQACheckV25().passed===true;
+  var chain=typeof getPhase9LMissionChainV25==='function'?getPhase9LMissionChainV25():null;
+  var missionScopedProgressReady=!!(chain&&chain.missionScopedProgressReady&&chain.current&&(chain.current.requirements||[]).every(function(req){return req.missionScoped===true&&typeof req.priorTarget==='number'&&typeof req.missionScopedTarget==='number';}));
   var overviewBoard=!!document.getElementById('mission-overview-unlock-board');
   var missionBoard=!!document.getElementById('mission-unlock-board');
   var journeyBoard=!!document.getElementById('mission-journey-chain');
@@ -21639,13 +21691,16 @@ function getPhase9NMissionUnlockUIResultV25(){
   var completionExecutionEnabled=false;
   var awardExecution=false;
   var notificationDispatch=false;
-  var ready=!!(buildOk&&phase9LReady&&overviewBoard&&missionBoard&&journeyBoard&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
+  var ready=!!(buildOk&&phase9LReady&&missionScopedProgressReady&&overviewBoard&&missionBoard&&journeyBoard&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
   return {
     status:ready?'phase9n_mission_unlock_ui_ready':'phase9n_mission_unlock_ui_needs_review',
     mode:'phase9n_mission_unlock_ui_only',
     missionUnlockUIReady:ready,
     build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
     phase9LContractReady:phase9LReady,
+    missionScopedProgressReady:missionScopedProgressReady,
+    currentMissionId:chain&&chain.current?chain.current.id:'',
+    completedMissionIds:chain&&chain.completedMissionIds?chain.completedMissionIds:[],
     overviewBoardReady:overviewBoard,
     missionBoardReady:missionBoard,
     journeyBoardReady:journeyBoard,
@@ -21672,6 +21727,7 @@ function getPhase9NMissionUnlockUIResultV25(){
     missingGateItems:[]
       .concat(buildOk?[]:['Phase 9N build token'])
       .concat(phase9LReady?[]:['Phase 9L mission unlock contract'])
+      .concat(missionScopedProgressReady?[]:['mission-scoped progress guard'])
       .concat(overviewBoard?[]:['overview mission unlock board'])
       .concat(missionBoard?[]:['mission unlock board'])
       .concat(journeyBoard?[]:['journey mission chain'])
@@ -21715,6 +21771,9 @@ function formatPhase9NMissionUnlockUIV25(result){
     '- Mode: '+(result.mode||'unknown'),
     '- Mission unlock UI ready: '+(result.missionUnlockUIReady?'true':'false'),
     '- Phase 9L contract ready: '+(result.phase9LContractReady?'true':'false'),
+    '- Mission-scoped progress ready: '+(result.missionScopedProgressReady?'true':'false'),
+    '- Current mission ID: '+(result.currentMissionId||''),
+    '- Completed mission IDs: '+((result.completedMissionIds||[]).join(', ')||'none'),
     '- Overview board ready: '+(result.overviewBoardReady?'true':'false'),
     '- Mission board ready: '+(result.missionBoardReady?'true':'false'),
     '- Journey board ready: '+(result.journeyBoardReady?'true':'false'),
@@ -30886,7 +30945,9 @@ function missionRequirementRowV25(req){
   var mark=req.complete?'✓':'';
   var value=missionFormatMetricValueV25(req.metric,req.value);
   var target=missionFormatMetricValueV25(req.metric,req.target);
-  var meta=value+' / '+target+' · '+(req.remaining>0?(missionFormatMetricValueV25(req.metric,req.remaining)+' remaining'):'complete')+' · '+(req.sourceTrust||'pending');
+  var scoped=req.missionScoped?' this mission':'';
+  var lifetimeGate=req.missionScoped&&req.originalTarget!==req.target?' · lifetime gate '+missionFormatMetricValueV25(req.metric,req.originalTarget):'';
+  var meta=value+' / '+target+scoped+' · '+(req.remaining>0?(missionFormatMetricValueV25(req.metric,req.remaining)+' remaining'):'complete')+lifetimeGate+' · '+(req.sourceTrust||'pending');
   return '<div class="'+cls+'"><div class="mission-requirement-mark">'+escapeHtml(mark)+'</div><div><div class="mission-requirement-name">'+escapeHtml(req.label||'Mission requirement')+'</div><div class="mission-requirement-meta">'+escapeHtml(meta)+'</div></div><div class="mission-requirement-progress">'+escapeHtml((req.progress||0)+'%')+'</div></div>';
 }
 
