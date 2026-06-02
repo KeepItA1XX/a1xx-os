@@ -653,6 +653,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mission-status-symbol{width:26px;height:26px;border-radius:9px;background:#0f180a;color:#9ee878;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:950;margin-bottom:8px;box-shadow:inset 0 0 0 1px rgba(126,200,69,.18)}
 .mission-status-card.locked .mission-status-symbol{background:#0b0d0f;color:#68727c}
 .mission-detail-grid{display:grid;gap:8px}
+.mission-overview-priority{padding:0;background:transparent;box-shadow:none}
 .mission-detail-card{background:#070a0c;border-radius:11px;padding:0;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
 .mission-detail-card.current{box-shadow:inset 3px 0 0 rgba(126,200,69,.72),inset 0 0 0 1px rgba(126,200,69,.16)}
 .mission-detail-card.completed{background:#06090a;opacity:.82}
@@ -751,11 +752,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mission-roadmap{display:grid;gap:8px}
 .mission-road-step{display:grid;grid-template-columns:28px 1fr;gap:9px;align-items:start;background:#070a0c;border-radius:10px;padding:10px}
 .mission-road-node{width:22px;height:22px;border-radius:999px;background:#101a0c;color:#9ee878;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:950}
+.mission-journey-surface{display:grid;gap:12px}
+.mission-journey-head{background:linear-gradient(180deg,#090e10,#050708);border-radius:14px;padding:13px;box-shadow:inset 0 0 0 1px rgba(126,200,69,.12)}
+.mission-journey-title{font-size:18px;color:#f4f8f0;font-weight:950;line-height:1.1}
+.mission-journey-copy{font-size:11px;color:#97a2aa;line-height:1.5;margin-top:6px;max-width:60ch}
+.mission-journey-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
+.mission-journey-stat{background:#050708;border-radius:10px;padding:9px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035)}
+.mission-journey-stat b{display:block;color:#f0f3f5;font-size:15px;font-weight:950;line-height:1}
+.mission-journey-stat span{display:block;color:#7f8a92;font-size:8px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;margin-top:5px}
 @media(max-width:720px){
   .mission-action-board{grid-template-columns:1fr}
   .mission-story-grid,.mission-skill-grid,.mission-card-grid,.mission-stat-grid,.account-mission-home-grid{grid-template-columns:1fr}
   .mission-active-map{grid-template-columns:1fr}
   .mission-command-track{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mission-journey-stats{grid-template-columns:1fr}
 }
 .auth-screen{position:fixed;inset:0;z-index:12000;background:radial-gradient(circle at top,#13200b 0%,#090a0b 42%,#040506 100%);display:none;align-items:center;justify-content:center;padding:22px}
 .auth-screen.active{display:flex}
@@ -2564,6 +2574,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
             <button type="button" class="mission-tab" data-mission-subtab="journey" onclick="setMissionSubTabV25('journey')">Journey</button>
           </div>
           <div class="mission-panel active" id="mission-panel-overview">
+            <div class="mission-section-card mission-overview-priority">
+              <div class="mission-unlock-board" id="mission-overview-unlock-board"></div>
+            </div>
             <div class="account-mission-hero">
               <div class="account-mission-kicker">Money Mission</div>
               <div class="account-mission-title" id="mission-story-title">Cycle mission loading...</div>
@@ -2612,10 +2625,6 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
                 <div class="mission-home-button-value">Roadmap + records</div>
                 <div class="mission-home-button-meta">Cycle path, milestones, and personal records.</div>
               </button>
-            </div>
-            <div class="mission-section-card">
-              <div class="mission-section-label">Mission Progression</div>
-              <div class="mission-unlock-board" id="mission-overview-unlock-board"></div>
             </div>
             <div class="mission-action-board">
               <div class="mission-objective-card" role="button" tabindex="0" onclick="setMissionSubTabV25('missions')">
@@ -3952,7 +3961,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
         <div class="settings-section">
           <div class="settings-section-title">Mission Unlock UI</div>
           <div class="settings-list">
-            <div class="settings-row"><div><div class="settings-row-name">Phase 9P scope</div><div class="settings-row-meta" id="phase9n-mission-scope">Upgrade Mission Command UX with clearer tracking, deeper current-mission tasks, larger mission pages, and research-informed progress feedback. No mission completion, awards, writes, or autonomous action.</div></div><span class="settings-badge" id="phase9n-mission-scope-badge">UX</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Phase 9Q scope</div><div class="settings-row-meta" id="phase9n-mission-scope">Split Mission surfaces by tab: Overview owns the Active Money Mission card, Missions owns deep actionable steps, and Journey owns the long-road roadmap. No mission completion, awards, writes, or autonomous action.</div></div><span class="settings-badge" id="phase9n-mission-scope-badge">UX</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Mission chain UI</div><div class="settings-row-meta" id="phase9n-mission-chain">Previous, current, next, and locked missions render from the Phase 9L contract.</div></div><span class="settings-badge off" id="phase9n-mission-chain-badge">Chain</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Current Mission experience</div><div class="settings-row-meta" id="phase9n-mission-checklist">Current Mission Lock shows one-at-a-time brief, checklist, training, and reward pages.</div></div><span class="settings-badge off" id="phase9n-mission-checklist-badge">Preview</span></div>
             <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta" id="phase9n-mission-blocked">No fake completion, mission ledger write, notification dispatch, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.</div></div><span class="settings-badge warn" id="phase9n-mission-blocked-badge">Blocked</span></div>
@@ -5769,9 +5778,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-02 02:38 ET · OS v2_5 Phase 9P Mission Command UX Upgrade';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9P Mission Command UX Upgrade';
-var APP_CACHE_TOKEN='mmos-20260602-0238-v25-phase9p-mission-command-ux-upgrade';
+var APP_BUILD_STAMP='2026-06-02 02:48 ET · OS v2_5 Phase 9Q Mission Surface Split';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9Q Mission Surface Split';
+var APP_CACHE_TOKEN='mmos-20260602-0248-v25-phase9q-mission-surface-split';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8614,7 +8623,7 @@ function renderMasterConfigReadSkeletonStateV24(state){
 function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
   var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
   var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[defghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[defghijklmnopq]/.test(APP_CACHE_TOKEN);
   var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
   var result={
     status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
@@ -18122,7 +18131,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[bcdefghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[bcdefghijklmnopq]/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -18142,7 +18151,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[abcdefghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[abcdefghijklmnopq]/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -18455,7 +18464,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[bcdefghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[bcdefghijklmnopq]/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -18724,7 +18733,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[bcdefghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[bcdefghijklmnopq]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -18750,7 +18759,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[cdefghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[cdefghijklmnopq]/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -18943,7 +18952,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[cdefghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[cdefghijklmnopq]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -19218,7 +19227,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[defghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[defghijklmnopq]/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -19397,7 +19406,7 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[defghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[defghijklmnopq]/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
@@ -19413,7 +19422,7 @@ function phase9EFunctionContainsV25(fn,needle){
 
 function getPhase9ENotificationEventWiringResultV25(){
   var log=mcReadNotificationLogV10();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[efghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[efghijklmnopq]/.test(APP_CACHE_TOKEN);
   var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
   var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
   var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
@@ -19607,7 +19616,7 @@ async function copyPhase9ENotificationEventWiringV25(){
 }
 
 function runPhase9ENotificationEventWiringQACheckV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[efghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[efghijklmnopq]/.test(APP_CACHE_TOKEN);
   var result=getPhase9ENotificationEventWiringResultV25();
   if(buildOk&&result.notificationEventWiringReady){
     renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
@@ -19740,7 +19749,7 @@ function getPhase9FNotificationContractMapV25(){
 }
 
 function getPhase9FAccountMissionContractsResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[fghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[fghijklmnopq]/.test(APP_CACHE_TOKEN);
   var phase9EReady=typeof runPhase9ENotificationEventWiringQACheckV25==='function'&&runPhase9ENotificationEventWiringQACheckV25().passed===true;
   var duplicateStatus=getAccountMissionContractDuplicateStatusV25();
   var notificationMap=getPhase9FNotificationContractMapV25();
@@ -19980,7 +19989,7 @@ function runPhase9FAccountMissionContractsQACheckV25(){
 var PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25='a1xx_phase9g_account_mission_tab_shell_v1';
 
 function getPhase9GAccountMissionTabShellResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[ghijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[ghijklmnopq]/.test(APP_CACHE_TOKEN);
   var phase9FReady=typeof runPhase9FAccountMissionContractsQACheckV25==='function'&&runPhase9FAccountMissionContractsQACheckV25().passed===true;
   var missionButton=!!document.querySelector('[data-account-subtab="mission"]');
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20191,7 +20200,7 @@ function runPhase9GAccountMissionTabShellQACheckV25(){
 var PHASE9H_MISSION_UI_EXPANSION_KEY_V25='a1xx_phase9h_mission_ui_expansion_v1';
 
 function getPhase9HMissionUIExpansionResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[hijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[hijklmnopq]/.test(APP_CACHE_TOKEN);
   var phase9GReady=typeof runPhase9GAccountMissionTabShellQACheckV25==='function'&&runPhase9GAccountMissionTabShellQACheckV25().passed===true;
   var missionPane=document.getElementById('account-subpane-mission');
   var tabs=document.querySelectorAll('[data-mission-subtab]');
@@ -20412,7 +20421,7 @@ function runPhase9HMissionUIExpansionQACheckV25(){
 var PHASE9I_MISSION_CAREER_POLISH_KEY_V25='a1xx_phase9i_mission_career_mode_polish_v1';
 
 function getPhase9IMissionCareerModePolishResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[ijklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[ijklmnopq]/.test(APP_CACHE_TOKEN);
   var phase9HReady=typeof runPhase9HMissionUIExpansionQACheckV25==='function'&&runPhase9HMissionUIExpansionQACheckV25().passed===true;
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20666,7 +20675,7 @@ function runPhase9IMissionCareerModePolishQACheckV25(){
 
 function runPhase9JMissionRatingCalibrationQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[jklmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[jklmnopq]/.test(APP_CACHE_TOKEN);
   var profileOvrReady=!!document.querySelector('#mission-panel-profile .rp-level #mission-operator-overall');
   var titleClean=!!document.querySelector('#mission-panel-profile .rp-label')&&!/A1XX Operator Profile/i.test((document.querySelector('#mission-panel-profile .rp-label')||{}).textContent||'');
   var oldOverallRemoved=!document.querySelector('#mission-panel-profile .mission-section-card #mission-operator-overall');
@@ -20889,7 +20898,7 @@ function getPhase9KTrophyClassCountsV25(){
 
 function getPhase9KMissionCatalogRulesResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[klmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[klmnopq]/.test(APP_CACHE_TOKEN);
   var phase9JReady=typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'&&runPhase9JMissionRatingCalibrationQACheckV25().passed===true;
   var duplicateStatus=getPhase9KDuplicateStatusV25();
   var classCounts=getPhase9KTrophyClassCountsV25();
@@ -21456,7 +21465,7 @@ function getPhase9LMissionRewardPreviewV25(mission){
 
 function isPhase9LMissionContractSupersedeReadyV25(){
   try{
-    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[lmno]/.test(APP_CACHE_TOKEN);
+    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[lmnopq]/.test(APP_CACHE_TOKEN);
     if(!buildOk||typeof getPhase9LMissionUnlockProgressionContractResultV25!=='function')return false;
     var result=getPhase9LMissionUnlockProgressionContractResultV25();
     return !!(result&&result.missionUnlockProgressionContractReady===true&&result.baselineLevel===48&&result.levelCap===99&&result.exactlyOneCurrentMission===true&&result.completionExecutionEnabled===false&&result.skipPathEnabled===false);
@@ -21467,7 +21476,7 @@ function isPhase9LMissionContractSupersedeReadyV25(){
 
 function getPhase9LMissionUnlockProgressionContractResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[lmno]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[lmnopq]/.test(APP_CACHE_TOKEN);
   var phase9KReady=typeof runPhase9KMissionCatalogRulesQACheckV25==='function'&&runPhase9KMissionCatalogRulesQACheckV25().passed===true;
   var baseline=PHASE9L_OPERATOR_BASELINE_V25;
   var baselineReady=baseline.baselineLevel===48&&baseline.levelCap===99&&baseline.baselineAwardExecution===false;
@@ -21726,7 +21735,7 @@ function runPhase9LMissionUnlockProgressionContractQACheckV25(){
 
 function getPhase9NMissionUnlockUIResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[nop]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[nopq]/.test(APP_CACHE_TOKEN);
   var phase9LReady=typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'&&runPhase9LMissionUnlockProgressionContractQACheckV25().passed===true;
   var chain=typeof getPhase9LMissionChainV25==='function'?getPhase9LMissionChainV25():null;
   var missionScopedProgressReady=!!(chain&&chain.missionScopedProgressReady&&chain.current&&(chain.current.requirements||[]).every(function(req){return req.missionScoped===true&&typeof req.priorTarget==='number'&&typeof req.missionScopedTarget==='number';}));
@@ -21746,9 +21755,10 @@ function getPhase9NMissionUnlockUIResultV25(){
   var previousCurrentMap=!!document.querySelector('#mission-unlock-board .mission-active-map');
   var currentCarousels=document.querySelectorAll('#mission-unlock-board .mission-deep-carousel');
   var currentPageControls=document.querySelectorAll('#mission-unlock-board .mission-page-control');
-  var missionCommandHeaderReady=!!document.querySelector('#mission-unlock-board .mission-command-header');
-  var missionCommandTrackReady=document.querySelectorAll('#mission-unlock-board .mission-command-stat').length>=4;
+  var missionCommandHeaderReady=!!document.querySelector('#mission-overview-unlock-board .mission-command-header');
+  var missionCommandTrackReady=document.querySelectorAll('#mission-overview-unlock-board .mission-command-stat').length>=4;
   var largerMissionPagesReady=document.querySelectorAll('#mission-unlock-board .mission-page-count').length>=4;
+  var journeyRoadmapReady=!!document.querySelector('#mission-journey-chain .mission-journey-surface')&&!document.querySelector('#mission-journey-chain .mission-command-header');
   var actionableSteps=document.querySelectorAll('#mission-unlock-board .mission-deep-item.action');
   var catalogDeepPanels=document.querySelectorAll('#mission-objective-list .mission-current-page');
   var currentMissionDepthReady=currentDepthTabs.length>=4&&currentDepthPages.length>=4&&currentCarousels.length>=4&&currentPageControls.length>=8&&actionableSteps.length>=6&&previousCurrentMap&&missionCommandHeaderReady&&missionCommandTrackReady&&largerMissionPagesReady;
@@ -21757,10 +21767,10 @@ function getPhase9NMissionUnlockUIResultV25(){
   var completionExecutionEnabled=false;
   var awardExecution=false;
   var notificationDispatch=false;
-  var ready=!!(buildOk&&phase9LReady&&missionScopedProgressReady&&currentMissionDepthReady&&catalogSimplifiedReady&&lockedMissionStateReady&&overviewBoard&&missionBoard&&journeyBoard&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
+  var ready=!!(buildOk&&phase9LReady&&missionScopedProgressReady&&currentMissionDepthReady&&catalogSimplifiedReady&&lockedMissionStateReady&&overviewBoard&&missionBoard&&journeyBoard&&journeyRoadmapReady&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
   return {
-    status:ready?'phase9p_mission_command_ux_upgrade_ready':'phase9p_mission_command_ux_upgrade_needs_review',
-    mode:'phase9p_mission_command_ux_upgrade_only',
+    status:ready?'phase9q_mission_surface_split_ready':'phase9q_mission_surface_split_needs_review',
+    mode:'phase9q_mission_surface_split_only',
     missionUnlockUIReady:ready,
     build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
     phase9LContractReady:phase9LReady,
@@ -21784,6 +21794,7 @@ function getPhase9NMissionUnlockUIResultV25(){
     missionCommandHeaderReady:missionCommandHeaderReady,
     missionCommandTrackReady:missionCommandTrackReady,
     largerMissionPagesReady:largerMissionPagesReady,
+    journeyRoadmapReady:journeyRoadmapReady,
     actionableStepCount:actionableSteps.length,
     lockedMissionCardCount:lockedCards.length,
     previousCurrentMapReady:previousCurrentMap,
@@ -21804,13 +21815,14 @@ function getPhase9NMissionUnlockUIResultV25(){
     automationActivationEnabled:false,
     bootstrapExecutionEnabled:false,
     missingGateItems:[]
-      .concat(buildOk?[]:['Phase 9P build token'])
+      .concat(buildOk?[]:['Phase 9Q build token'])
       .concat(phase9LReady?[]:['Phase 9L mission unlock contract'])
       .concat(missionScopedProgressReady?[]:['mission-scoped progress guard'])
       .concat(currentMissionDepthReady?[]:['current mission command UX depth'])
       .concat(missionCommandHeaderReady?[]:['mission command header'])
       .concat(missionCommandTrackReady?[]:['mission tracking strip'])
       .concat(largerMissionPagesReady?[]:['larger mission page controls'])
+      .concat(journeyRoadmapReady?[]:['journey roadmap surface'])
       .concat(catalogSimplifiedReady?[]:['simplified mission catalog'])
       .concat(lockedMissionStateReady?[]:['locked mission visual state'])
       .concat(overviewBoard?[]:['overview mission unlock board'])
@@ -21839,7 +21851,7 @@ function getPhase9NMissionUnlockUIResultV25(){
       'automation activation',
       'second-device bootstrap execution'
     ],
-    message:ready?'Phase 9P Mission Command UX Upgrade is ready. Current Mission has a visible command header, progress tracking strip, larger one-at-a-time pages, deeper actionable checklist, rewards preview-only, and simplified catalog without execution.':'Phase 9P Mission Command UX Upgrade needs review.'
+    message:ready?'Phase 9Q Mission Surface Split is ready. Overview owns the Active Money Mission card; Missions owns the deep action surface; Journey owns the roadmap surface; protected gates remain blocked.':'Phase 9Q Mission Surface Split needs review.'
   };
 }
 
@@ -21848,7 +21860,7 @@ function formatPhase9NMissionUnlockUIV25(result){
   var missing=result.missingGateItems||[];
   var blocked=result.blockedActions||[];
   return [
-    'Phase 9P mission command UX upgrade',
+    'Phase 9Q mission surface split',
     'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
     '',
     'UI mode',
@@ -21861,6 +21873,7 @@ function formatPhase9NMissionUnlockUIV25(result){
     '- Mission command header ready: '+(result.missionCommandHeaderReady?'true':'false'),
     '- Mission tracking strip ready: '+(result.missionCommandTrackReady?'true':'false'),
     '- Larger mission pages ready: '+(result.largerMissionPagesReady?'true':'false'),
+    '- Journey roadmap ready: '+(result.journeyRoadmapReady?'true':'false'),
     '- Catalog simplified ready: '+(result.catalogSimplifiedReady?'true':'false'),
     '- Locked mission state ready: '+(result.lockedMissionStateReady?'true':'false'),
     '- Current mission ID: '+(result.currentMissionId||''),
@@ -21911,7 +21924,7 @@ function renderPhase9NMissionUnlockUIStateV25(state){
   var result=(state&&state.result)||state||getPhase9NMissionUnlockUIResultV25();
   var ready=result.missionUnlockUIReady===true;
   setTextV24('phase9n-mission-chain',ready?'Mission chain UI renders previous, current, next, and locked missions.':'Mission chain UI needs review.');
-  setTextV24('phase9n-mission-checklist',ready?'Current Mission now has a command header, progress tracking strip, larger one-at-a-time pages, and deeper actionable checklist steps.':'Mission Command UX upgrade needs review.');
+  setTextV24('phase9n-mission-checklist',ready?'Overview owns the Active Money Mission card; Missions owns the deep action surface; Journey owns the roadmap surface.':'Mission Surface Split needs review.');
   setTextV24('phase9n-mission-blocked','No fake completion, mission ledger write, notification dispatch, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.');
   setBadge('phase9n-mission-scope-badge',ready?'Ready':'Review',ready?'':'warn');
   setBadge('phase9n-mission-chain-badge',ready?'Chain':'Review',ready?'':'warn');
@@ -21927,9 +21940,9 @@ function runPhase9NMissionUnlockUIV25(){
   var status=document.getElementById('phase9n-mission-status');
   if(status){
     status.className='reset-status '+(state.passed?'ok':'warn');
-    status.textContent=state.passed?'Mission Command UX upgrade is ready.':'Mission Command UX upgrade needs review.';
+    status.textContent=state.passed?'Mission Surface Split is ready.':'Mission Surface Split needs review.';
   }
-  return {passed:state.passed,meta:state.passed?'Phase 9P Mission Command UX Upgrade is ready · command header · progress tracking strip · larger one-at-a-time pages · deeper actionable checklist.':'Phase 9P Mission Command UX Upgrade needs review.',failures:state.passed?[]:['Phase 9P Mission Command UX Upgrade']};
+  return {passed:state.passed,meta:state.passed?'Phase 9Q Mission Surface Split is ready · Overview active mission card · Missions deep action surface · Journey roadmap surface.':'Phase 9Q Mission Surface Split needs review.',failures:state.passed?[]:['Phase 9Q Mission Surface Split']};
 }
 
 async function copyPhase9NMissionUnlockUIV25(){
@@ -21943,12 +21956,12 @@ async function copyPhase9NMissionUnlockUIV25(){
     await navigator.clipboard.writeText(state&&state.previewText||'');
     if(status){
       status.className='reset-status ok';
-      status.textContent='Phase 9P receipt copied.';
+      status.textContent='Phase 9Q receipt copied.';
     }
   }catch(err){
     if(status){
       status.className='reset-status warn';
-      status.textContent='Copy blocked by browser. Select the Mission Command UX receipt manually.';
+      status.textContent='Copy blocked by browser. Select the Mission Surface Split receipt manually.';
     }
   }
 }
@@ -21957,9 +21970,9 @@ function runPhase9NMissionUnlockUIQACheckV25(){
   var result=getPhase9NMissionUnlockUIResultV25();
   if(result.missionUnlockUIReady){
     renderPhase9NMissionUnlockUIStateV25({result:result,previewText:formatPhase9NMissionUnlockUIV25(result)});
-    return {passed:true,meta:'Phase 9P Mission Command UX Upgrade is installed · command header · progress tracking strip · larger mission pages · deeper actionable checklist.',failures:[]};
+    return {passed:true,meta:'Phase 9Q Mission Surface Split is installed · Overview active mission card · Missions deep action surface · Journey roadmap surface.',failures:[]};
   }
-  return {passed:false,meta:'Phase 9P Mission Command UX Upgrade needs review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9P Mission Command UX Upgrade']};
+  return {passed:false,meta:'Phase 9Q Mission Surface Split needs review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9Q Mission Surface Split']};
 }
 
 function getSetupPointerRowsV23(){
@@ -25150,8 +25163,8 @@ async function runBackupArchiveSelfCheckV22(){
 
 function runHealthCurrentBuildIdentityQACheckV25(){
   var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
-  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9[no]/.test(token);
-  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N/9O build token.'};
+  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9[nopq]/.test(token);
+  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9Q build token.'};
 }
 
 function runHealthProtectedBoundaryQACheckV25(){
@@ -25197,7 +25210,7 @@ async function runHealthFastLiveQACheckV25(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Fast QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Fast QA';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9P mission command UX, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
+  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9Q mission surface split, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -25210,7 +25223,7 @@ async function runHealthFastLiveQACheckV25(){
   try{add('Current Build',runHealthCurrentBuildIdentityQACheckV25());}catch(e){add('Current Build',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9L Mission Unlock Progression Contract',typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'?runPhase9LMissionUnlockProgressionContractQACheckV25():{passed:false,meta:'Missing Phase 9L Mission Unlock Progression Contract check'});}catch(e){add('Phase 9L Mission Unlock Progression Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 9P Mission Command UX Upgrade',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9P Mission Command UX Upgrade check'});}catch(e){add('Phase 9P Mission Command UX Upgrade',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9Q Mission Surface Split',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9Q Mission Surface Split check'});}catch(e){add('Phase 9Q Mission Surface Split',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Protected Boundary',runHealthProtectedBoundaryQACheckV25());}catch(e){add('Protected Boundary',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -25299,7 +25312,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9J Mission Rating Calibration',typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'?runPhase9JMissionRatingCalibrationQACheckV25():{passed:false,meta:'Missing Phase 9J Mission Rating Calibration check'});}catch(e){add('Phase 9J Mission Rating Calibration',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9L Mission Unlock Progression Contract',typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'?runPhase9LMissionUnlockProgressionContractQACheckV25():{passed:false,meta:'Missing Phase 9L Mission Unlock Progression Contract check'});}catch(e){add('Phase 9L Mission Unlock Progression Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 9P Mission Command UX Upgrade',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9P Mission Command UX Upgrade check'});}catch(e){add('Phase 9P Mission Command UX Upgrade',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9Q Mission Surface Split',typeof runPhase9NMissionUnlockUIQACheckV25==='function'?runPhase9NMissionUnlockUIQACheckV25():{passed:false,meta:'Missing Phase 9Q Mission Surface Split check'});}catch(e){add('Phase 9Q Mission Surface Split',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -31184,22 +31197,16 @@ function missionChainNodeV25(mission){
     +'</button>';
 }
 
-function renderPhase9NMissionUnlockBoardV25(id,chain,compact){
-  var el=document.getElementById(id);
-  if(!el||!chain)return;
-  var current=chain.current||{};
+function missionCommandHeaderV25(current,chain){
+  current=current||{};
+  chain=chain||{};
   var next=chain.next||{};
   var progress=Math.min(99,Math.max(0,parseFloat(current.progress)||0));
   var completeCount=parseFloat(current.completeCount)||0;
   var requirementCount=parseFloat(current.requirementCount)||0;
   var remainingCount=(current.requirements||[]).filter(function(req){return !req.complete;}).length;
   var closestReq=(current.requirements||[]).filter(function(req){return !req.complete;}).sort(function(a,b){return (a.remaining||999999)-(b.remaining||999999);})[0]||null;
-  var nextUnlock=(current.rewards&&current.rewards.badgePreview)||(current.rewards&&current.rewards.trophyPreview)||(current.rewards&&current.rewards.milestonePreview)||(next&&next.title)||'Pending';
-  var strip=(chain.previous||[]).concat(current?[current]:[]).concat(next?[next]:[]).filter(Boolean);
-  var requirements=(current.requirements||[]).map(missionRequirementRowV25).join('');
-  var reward=missionRewardChipsV25(current.rewards||{});
-  var previous=(chain.previous||[]).length?(chain.previous||[])[(chain.previous||[]).length-1]:null;
-  var commandHeader='<div class="mission-command-header">'
+  return '<div class="mission-command-header" role="button" tabindex="0" onclick="setMissionSubTabV25(\'missions\')">'
     +'<div><div class="mission-command-eyebrow">Active Money Mission</div><div class="mission-command-title">'+escapeHtml(current.title||'Current Mission')+'</div></div>'
     +'<div class="mission-command-meta">'
       +'<span>'+escapeHtml(current.chapter||'Mission Arc')+'</span>'
@@ -31213,6 +31220,50 @@ function renderPhase9NMissionUnlockBoardV25(id,chain,compact){
       +'<div class="mission-command-stat"><b>'+escapeHtml(closestReq?missionFormatMetricValueV25(closestReq.metric,closestReq.remaining):'Ready')+'</b><span>Closest gap</span></div>'
     +'</div>'
   +'</div>';
+}
+
+function missionJourneySurfaceV25(chain){
+  chain=chain||{};
+  var current=chain.current||{};
+  var missions=chain.missions||[];
+  var completed=missions.filter(function(mission){return mission.state==='completed'||mission.state==='archived';}).length;
+  var locked=(chain.locked||[]).length;
+  var next=chain.next||{};
+  var strip=(chain.previous||[]).concat(current?[current]:[]).concat(next?[next]:[]).concat((chain.locked||[]).slice(0,4)).filter(Boolean);
+  return '<div class="mission-journey-surface">'
+    +'<div class="mission-journey-head">'
+      +'<div class="mission-current-kicker">Journey Roadmap</div>'
+      +'<div class="mission-journey-title">'+escapeHtml((current.chapter||'Mission Arc')+' · '+(current.title||'Current Mission'))+'</div>'
+      +'<div class="mission-journey-copy">'+escapeHtml('This is the long route: completed missions behind you, the active lane under your feet, and future arcs locked until the business action catches up.')+'</div>'
+      +'<div class="mission-journey-stats">'
+        +'<div class="mission-journey-stat"><b>'+escapeHtml(String(completed))+'</b><span>Completed</span></div>'
+        +'<div class="mission-journey-stat"><b>'+escapeHtml(String(current.progress||0))+'%</b><span>Current lane</span></div>'
+        +'<div class="mission-journey-stat"><b>'+escapeHtml(String(locked))+'</b><span>Locked ahead</span></div>'
+      +'</div>'
+    +'</div>'
+    +'<div class="mission-chain-strip">'+strip.map(missionChainNodeV25).join('')+'</div>'
+  +'</div>';
+}
+
+function renderPhase9NMissionUnlockBoardV25(id,chain,compact){
+  var el=document.getElementById(id);
+  if(!el||!chain)return;
+  var current=chain.current||{};
+  var next=chain.next||{};
+  var progress=Math.min(99,Math.max(0,parseFloat(current.progress)||0));
+  var nextUnlock=(current.rewards&&current.rewards.badgePreview)||(current.rewards&&current.rewards.trophyPreview)||(current.rewards&&current.rewards.milestonePreview)||(next&&next.title)||'Pending';
+  var strip=(chain.previous||[]).concat(current?[current]:[]).concat(next?[next]:[]).filter(Boolean);
+  var requirements=(current.requirements||[]).map(missionRequirementRowV25).join('');
+  var reward=missionRewardChipsV25(current.rewards||{});
+  var previous=(chain.previous||[]).length?(chain.previous||[])[(chain.previous||[]).length-1]:null;
+  if(id==='mission-overview-unlock-board'){
+    el.innerHTML='<div class="mission-current-lock deep">'+missionCommandHeaderV25(current,chain)+'</div>';
+    return;
+  }
+  if(id==='mission-journey-chain'){
+    el.innerHTML=missionJourneySurfaceV25(chain);
+    return;
+  }
   var activeMap='<div class="mission-active-map">'
     +'<div class="mission-mini-card"><div class="mission-mini-label">Previous mission</div><div class="mission-mini-title">'+escapeHtml(previous&&previous.title?previous.title:'No previous mission yet')+'</div><div class="mission-mini-meta">'+escapeHtml(previous&&previous.title?((previous.progress||99)+'% complete · '+(previous.focusLane||'Money Movement')):'The first completed mission will appear here.')+'</div></div>'
     +'<div class="mission-mini-card"><div class="mission-mini-label">Next unlock</div><div class="mission-mini-title">'+escapeHtml(nextUnlock)+'</div><div class="mission-mini-meta">'+escapeHtml((current.focusLane||'Money Movement')+' is training now · '+(next&&next.title?next.title+' opens next':'next lane stays hidden'))+'</div></div>'
@@ -31223,7 +31274,6 @@ function renderPhase9NMissionUnlockBoardV25(id,chain,compact){
   el.innerHTML=''
     +'<div class="mission-chain-strip">'+strip.map(missionChainNodeV25).join('')+'</div>'
     +'<div class="mission-current-lock deep">'
-      +commandHeader
       +activeMap
       +'<div class="mission-current-top"><div><div class="mission-current-kicker">'+escapeHtml((current.chapter||'Mission Arc')+' · '+missionStateLabelV25(current.state||'current'))+'</div><div class="mission-current-title">'+escapeHtml(current.title||'Current Mission')+'</div><div class="mission-current-copy">'+escapeHtml(current.summary||'Complete the tracked checklist to unlock the next mission.')+'</div></div><div class="mission-current-percent">'+escapeHtml(String(progress))+'%<small>mission score</small></div></div>'
       +'<div class="mission-progress-rail"><div class="mission-progress-fill" style="--mission-progress:'+progress+'%"></div></div>'
