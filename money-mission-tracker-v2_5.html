@@ -628,8 +628,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mission-status-heading{display:grid;gap:6px;align-items:start;min-width:0;margin:0;padding-right:0}
 .mission-status-heading .mission-status-name{font-size:10px;line-height:1.13;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:break-word}
 .mission-skill-trust,.mission-status-trust{font-size:8px;color:#7ec845;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
-.mission-status-trust{display:inline-flex;align-items:center;justify-content:center;justify-self:start;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1;border-radius:999px;background:rgba(16,26,12,.78);padding:4px 7px;box-shadow:inset 0 0 0 1px rgba(126,200,69,.16)}
+.mission-status-trust{display:none}
 .mission-status-card.locked .mission-status-trust{color:#9aa3aa;background:rgba(12,14,16,.78);box-shadow:inset 0 0 0 1px rgba(255,255,255,.055)}
+.mission-status-state-dot{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:999px;background:#3a4148;box-shadow:0 0 0 2px rgba(5,7,8,.9),inset 0 0 0 1px rgba(255,255,255,.12);z-index:2}
+.mission-status-card.ready .mission-status-state-dot{background:#7ec845;box-shadow:0 0 0 2px rgba(5,7,8,.92),0 0 12px rgba(126,200,69,.55)}
+.mission-status-card.preview .mission-status-state-dot{background:#d4a017;box-shadow:0 0 0 2px rgba(5,7,8,.92),0 0 12px rgba(212,160,23,.48)}
+.mission-status-card.locked .mission-status-state-dot{background:#3b4249;box-shadow:0 0 0 2px rgba(5,7,8,.92),inset 0 0 0 1px rgba(255,255,255,.08)}
 .mission-skill-track{width:13px;height:124px;background:#050607;border-radius:999px;overflow:hidden;display:flex;align-items:flex-end;align-self:center;box-shadow:inset 0 0 0 1px rgba(126,200,69,.08)}
 .mission-skill-fill{width:100%;height:var(--mission-skill-height,4%);background:#7ec845;border-radius:999px}
 .mission-skill-meta,.mission-status-meta{font-size:9px;color:#68727c;line-height:1.35;margin-top:6px}
@@ -803,7 +807,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 #mission-panel-badges .mission-status-symbol{width:30px;height:30px;border-radius:9px;font-size:12px;box-shadow:inset 0 0 0 1px rgba(126,200,69,.18),0 7px 16px rgba(0,0,0,.15)}
 #mission-panel-badges .mission-status-heading{gap:4px;align-content:start}
 #mission-panel-badges .mission-status-heading .mission-status-name{font-size:8.5px;line-height:1.08;letter-spacing:.035em;-webkit-line-clamp:3}
-#mission-panel-badges .mission-status-trust{font-size:6.2px;padding:4px 6px;letter-spacing:.045em}
+#mission-panel-badges .mission-status-trust{display:none}
+#mission-panel-badges .mission-status-state-dot{top:7px;right:7px;width:8px;height:8px}
 #mission-panel-badges .mission-status-progress{height:4px;margin-top:3px}
 .mission-status-card.is-filter-hidden,.mission-status-card.is-page-hidden{display:none}
 .mission-reward-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#080b0d;border-radius:11px;padding:7px 8px;box-shadow:inset 0 0 0 1px rgba(212,160,23,.1)}
@@ -6394,9 +6399,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-02 19:18 ET · OS v2_5 Phase 9BY Reward Category Navigator';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9BY Reward Category Navigator';
-var APP_CACHE_TOKEN='mmos-20260602-1918-v25-phase9by-reward-category-navigator';
+var APP_BUILD_STAMP='2026-06-02 19:29 ET · OS v2_5 Phase 9BZ Reward State Dot Guidance';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9BZ Reward State Dot Guidance';
+var APP_CACHE_TOKEN='mmos-20260602-1929-v25-phase9bz-reward-state-dot-guidance';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -9239,7 +9244,7 @@ function renderMasterConfigReadSkeletonStateV24(state){
 function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
   var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
   var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
   var result={
     status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
@@ -18747,7 +18752,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -18767,7 +18772,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[abcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[abcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -19080,7 +19085,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -19349,7 +19354,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[bcdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -19375,7 +19380,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -19568,7 +19573,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[cdefghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -19843,7 +19848,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -20022,7 +20027,7 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[defghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
@@ -20038,7 +20043,7 @@ function phase9EFunctionContainsV25(fn,needle){
 
 function getPhase9ENotificationEventWiringResultV25(){
   var log=mcReadNotificationLogV10();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
   var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
   var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
@@ -20232,7 +20237,7 @@ async function copyPhase9ENotificationEventWiringV25(){
 }
 
 function runPhase9ENotificationEventWiringQACheckV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[efghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var result=getPhase9ENotificationEventWiringResultV25();
   if(buildOk&&result.notificationEventWiringReady){
     renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
@@ -20365,7 +20370,7 @@ function getPhase9FNotificationContractMapV25(){
 }
 
 function getPhase9FAccountMissionContractsResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[fghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[fghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var phase9EReady=typeof runPhase9ENotificationEventWiringQACheckV25==='function'&&runPhase9ENotificationEventWiringQACheckV25().passed===true;
   var duplicateStatus=getAccountMissionContractDuplicateStatusV25();
   var notificationMap=getPhase9FNotificationContractMapV25();
@@ -20611,7 +20616,7 @@ function runPhase9FAccountMissionContractsQACheckV25(){
 var PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25='a1xx_phase9g_account_mission_tab_shell_v1';
 
 function getPhase9GAccountMissionTabShellResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ghijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var phase9FReady=typeof runPhase9FAccountMissionContractsQACheckV25==='function'&&runPhase9FAccountMissionContractsQACheckV25().passed===true;
   var missionButton=!!document.querySelector('[data-account-subtab="mission"]');
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20822,7 +20827,7 @@ function runPhase9GAccountMissionTabShellQACheckV25(){
 var PHASE9H_MISSION_UI_EXPANSION_KEY_V25='a1xx_phase9h_mission_ui_expansion_v1';
 
 function getPhase9HMissionUIExpansionResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[hijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[hijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var phase9GReady=typeof runPhase9GAccountMissionTabShellQACheckV25==='function'&&runPhase9GAccountMissionTabShellQACheckV25().passed===true;
   var missionPane=document.getElementById('account-subpane-mission');
   var tabs=document.querySelectorAll('[data-mission-subtab]');
@@ -21043,7 +21048,7 @@ function runPhase9HMissionUIExpansionQACheckV25(){
 var PHASE9I_MISSION_CAREER_POLISH_KEY_V25='a1xx_phase9i_mission_career_mode_polish_v1';
 
 function getPhase9IMissionCareerModePolishResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[ijklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var phase9HReady=typeof runPhase9HMissionUIExpansionQACheckV25==='function'&&runPhase9HMissionUIExpansionQACheckV25().passed===true;
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var missionPane=document.getElementById('account-subpane-mission');
@@ -21297,7 +21302,7 @@ function runPhase9IMissionCareerModePolishQACheckV25(){
 
 function runPhase9JMissionRatingCalibrationQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[jklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[jklmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var profileOvrReady=!!document.querySelector('#mission-panel-profile .rp-level #mission-operator-overall');
   var titleClean=!!document.querySelector('#mission-panel-profile .rp-label')&&!/A1XX Operator Profile/i.test((document.querySelector('#mission-panel-profile .rp-label')||{}).textContent||'');
   var oldOverallRemoved=!document.querySelector('#mission-panel-profile .mission-section-card #mission-operator-overall');
@@ -21520,7 +21525,7 @@ function getPhase9KTrophyClassCountsV25(){
 
 function getPhase9KMissionCatalogRulesResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[klmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[klmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var phase9JReady=typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'&&runPhase9JMissionRatingCalibrationQACheckV25().passed===true;
   var duplicateStatus=getPhase9KDuplicateStatusV25();
   var classCounts=getPhase9KTrophyClassCountsV25();
@@ -22087,7 +22092,7 @@ function getPhase9LMissionRewardPreviewV25(mission){
 
 function isPhase9LMissionContractSupersedeReadyV25(){
   try{
-    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+    var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
     if(!buildOk||typeof getPhase9LMissionUnlockProgressionContractResultV25!=='function')return false;
     var result=getPhase9LMissionUnlockProgressionContractResultV25();
     return !!(result&&result.missionUnlockProgressionContractReady===true&&result.baselineLevel===48&&result.levelCap===99&&result.exactlyOneCurrentMission===true&&result.completionExecutionEnabled===false&&result.skipPathEnabled===false);
@@ -22098,7 +22103,7 @@ function isPhase9LMissionContractSupersedeReadyV25(){
 
 function getPhase9LMissionUnlockProgressionContractResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[lmnopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var phase9KReady=typeof runPhase9KMissionCatalogRulesQACheckV25==='function'&&runPhase9KMissionCatalogRulesQACheckV25().passed===true;
   var baseline=PHASE9L_OPERATOR_BASELINE_V25;
   var baselineReady=baseline.baselineLevel===48&&baseline.levelCap===99&&baseline.baselineAwardExecution===false;
@@ -22371,7 +22376,7 @@ function runPhase9BDDeveloperReceiptRelocationQACheckV25(){
     'Mission Unlock Progression Contract',
     'Attribute Detail Popout'
   ];
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var healthClear=receiptLabels.every(function(label){return healthText.indexOf(label)<0;});
   var devReady=receiptLabels.every(function(label){return devText.indexOf(label)>=0;});
   var failures=[];
@@ -22387,7 +22392,7 @@ function runPhase9BDDeveloperReceiptRelocationQACheckV25(){
 
 function runPhase9BHMissionProfileUICleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bh-mission-profile-ui-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bh-mission-profile-ui-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
   var resumeRailHiddenReady=/\.mission-resume-rail\{display:none!important;visibility:hidden!important;position:absolute!important;left:-9999px!important/.test(styleText);
   var resumeRailMemoryReady=!!document.getElementById('mission-resume-rail')&&typeof renderMissionResumeRailV25==='function'&&typeof setMissionResumeTargetV25==='function';
   var trustTitleCompactReady=/\.mission-profile-lens-panel\[data-profile-lens="trust"\] \.mission-profile-lens-title\{font-size:12px;line-height:1\.25\}/.test(styleText);
@@ -22414,7 +22419,7 @@ function runPhase9BIRewardCardPopoverCleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionStatusCardV25);
   var popoutText=String(showMissionRewardDetailV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bi-reward-card-popout-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bi-reward-card-popout-cleanup|phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
   var steadyTileReady=/\.mission-status-card\{appearance:none;[^}]*display:grid;grid-template-rows:auto minmax\(0,1fr\) auto/.test(styleText)&&/\.mission-status-card:not\(\[open\]\)\{aspect-ratio:1\/1\}/.test(styleText);
   var noNativeExpansionReady=rendererText.indexOf('<details')<0&&rendererText.indexOf('<summary')<0&&/showMissionRewardDetailV25/.test(rendererText);
   var popoutReady=document.querySelectorAll('#mission-panel-badges .mission-reward-detail-popout').length>=2&&typeof showMissionRewardDetailV25==='function'&&/mission-reward-detail-row/.test(popoutText);
@@ -22441,7 +22446,7 @@ function runPhase9BJMissionResumeRailHardHideQACheckV25(){
   if(typeof renderMissionResumeRailV25==='function')renderMissionResumeRailV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rail=document.getElementById('mission-resume-rail');
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bj-mission-resume-rail-hard-hide|phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance|phase9bm-milestone-lane-format-repair)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BIRewardCardPopoverCleanupQACheckV25==='function'&&runPhase9BIRewardCardPopoverCleanupQACheckV25().passed===true;
   var railMarkupReady=!!rail&&!!document.getElementById('mission-resume-chips');
   var railHiddenAttrReady=!!rail&&rail.hidden===true&&rail.getAttribute('aria-hidden')==='true';
@@ -22466,7 +22471,7 @@ function runPhase9BKAttributeDetailPopoutQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionSkillCardV25);
   var popoutText=String(showMissionSkillDetailV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bk-attribute-detail-popout|phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BJMissionResumeRailHardHideQACheckV25==='function'&&runPhase9BJMissionResumeRailHardHideQACheckV25().passed===true;
   var fixedCardReady=rendererText.indexOf('<details')<0&&rendererText.indexOf('<summary')<0&&/showMissionSkillDetailV25/.test(rendererText)&&document.querySelectorAll('#mission-attribute-grid .mission-skill').length>=15;
   var popoutReady=!!document.getElementById('mission-attribute-detail-popout')&&typeof showMissionSkillDetailV25==='function'&&/mission-skill-detail-row/.test(popoutText);
@@ -22498,7 +22503,7 @@ function runPhase9BLAccountMissionNavCleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var account=document.getElementById('settings-pane-account');
   var connections=document.getElementById('settings-pane-connections');
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bl-account-mission-nav-cleanup|phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BKAttributeDetailPopoutQACheckV25==='function'&&runPhase9BKAttributeDetailPopoutQACheckV25().passed===true;
   var legacyAccountTabsRemoved=account&&!account.querySelector('[data-account-subtab]');
   var accountMissionDirect=!!(account&&account.querySelector('#account-subpane-mission.active .mission-tabbar'));
@@ -22528,7 +22533,7 @@ function runPhase9BMMilestoneLaneFormatRepairQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionCheckpointLaneV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bm-milestone-lane-format-repair|phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BLAccountMissionNavCleanupQACheckV25==='function'&&runPhase9BLAccountMissionNavCleanupQACheckV25().passed===true;
   var laneCardsReady=document.querySelectorAll('#mission-journey-chain .mission-checkpoint-lane').length>=4;
   var stackedHeaderReady=/\.mission-checkpoint-lane-top\{[^}]*display:flex[^}]*flex-direction:column/.test(styleText);
@@ -22554,7 +22559,7 @@ function runPhase9BMMilestoneLaneFormatRepairQACheckV25(){
 function runPhase9BNAttributeCardAlignmentQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bn-attribute-card-alignment|phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BMMilestoneLaneFormatRepairQACheckV25==='function'&&runPhase9BMMilestoneLaneFormatRepairQACheckV25().passed===true;
   var cardGridReady=document.querySelectorAll('#mission-attribute-grid .mission-skill').length>=15;
   var fixedCardHeightReady=/\.mission-skill-lane \.mission-skill\{[^}]*height:34[06]px[^}]*grid-template-rows:104px minmax\(0,1fr\)/.test(styleText)||/\.mission-skill-lane \.mission-skill\{[^}]*height:326px[^}]*grid-template-rows:104px minmax\(0,1fr\)/.test(styleText);
@@ -22580,7 +22585,7 @@ function runPhase9BOAttributeDetailCuePolishQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionSkillCardV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bo-attribute-detail-cue-polish|phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BNAttributeCardAlignmentQACheckV25==='function'&&runPhase9BNAttributeCardAlignmentQACheckV25().passed===true;
   var cueStyleReady=/\.mission-skill-more-cue\{[^}]*width:14px[^}]*height:14px[^}]*border-radius:999px/.test(styleText);
   var cueMarkupReady=/mission-skill-more-cue/.test(rendererText)&&/aria-hidden="true">\+/.test(rendererText);
@@ -22604,7 +22609,7 @@ function runPhase9BPCheckpointCardDecontentQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var rendererText=String(missionCheckpointLaneV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bp-checkpoint-card-decontent|phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BOAttributeDetailCuePolishQACheckV25==='function'&&runPhase9BOAttributeDetailCuePolishQACheckV25().passed===true;
   var summarySpacingReady=/\.mission-checkpoint-lane summary\{[^}]*display:grid[^}]*gap:7px/.test(styleText);
   var visibleSourceRemoved=rendererText.indexOf('mission-checkpoint-lane-trust')<0&&rendererText.indexOf("value>0?'tracked':'not tracked'")<0;
@@ -22628,7 +22633,7 @@ function runPhase9BQOverviewMoneyMoveDrawerQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var overviewText=(document.getElementById('mission-panel-overview')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bq-overview-money-move-drawer|phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BPCheckpointCardDecontentQACheckV25==='function'&&runPhase9BPCheckpointCardDecontentQACheckV25().passed===true;
   var drawerReady=!!document.querySelector('#mission-panel-overview details.mission-overview-action-drawer #mission-overview-guide-moves.mission-move-deck');
   var oldDrawerTitle='Action cards '+'tucked away';
@@ -22658,7 +22663,7 @@ function runPhase9BRMissionRoadmapFocusCleanupQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var styleText=(document.querySelector('style')||{}).textContent||'';
   var missionText=(document.getElementById('mission-panel-missions')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9br-mission-roadmap-focus-cleanup|phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance)/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BQOverviewMoneyMoveDrawerQACheckV25==='function'&&runPhase9BQOverviewMoneyMoveDrawerQACheckV25().passed===true;
   var oldNextPreviewSelector='.mission-next-'+'preview';
   var activeFocusReady=!document.querySelector('#mission-unlock-board .mission-active-map')&&!document.querySelector('#mission-unlock-board '+oldNextPreviewSelector)&&!document.querySelector('#mission-unlock-board .mission-chain-strip');
@@ -22687,7 +22692,7 @@ function runPhase9BRMissionRoadmapFocusCleanupQACheckV25(){
 function runPhase9BSMissionFinishPathPolishQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var missionText=(document.getElementById('mission-panel-missions')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bs-mission-finish-path-polish|phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BRMissionRoadmapFocusCleanupQACheckV25==='function'&&runPhase9BRMissionRoadmapFocusCleanupQACheckV25().passed===true;
   var finishPathReady=!!document.querySelector('#mission-unlock-board .mission-finish-path')&&document.querySelectorAll('#mission-unlock-board .mission-finish-node').length>=1;
   var finishPathStateReady=!!document.querySelector('#mission-unlock-board .mission-finish-node.complete')||!!document.querySelector('#mission-unlock-board .mission-finish-node.open');
@@ -22719,7 +22724,7 @@ function runPhase9BTAccountMissionUXStressHardeningQACheckV25(){
   var profileText=(document.getElementById('mission-panel-profile')||{}).textContent||'';
   var missionText=(document.getElementById('mission-panel-missions')||{}).textContent||'';
   var rewardText=(document.getElementById('mission-panel-badges')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bt-account-mission-ux-stress-hardening|phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BSMissionFinishPathPolishQACheckV25==='function'&&runPhase9BSMissionFinishPathPolishQACheckV25().passed===true;
   var systemLensSelector='[data-overview-lens="sys'+'tem"]';
   var systemLensRemoved=!document.querySelector('#mission-panel-overview '+systemLensSelector)&&!/System summary|health \+ backup/i.test(overviewText);
@@ -22753,7 +22758,7 @@ function runPhase9BUAccountMissionCopyDecontaminationQACheckV25(){
   var journeyText=(document.getElementById('mission-panel-journey')||{}).textContent||'';
   var combined=[overviewText,profileText,missionText,rewardText,journeyText].join(' ');
   var renderCopy=String(renderMissionPanelsV25)+String(missionJourneySurfaceV25)+String(getMissionRewardCatalogV25)+String(missionDetailCardV25);
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bu-account-mission-copy-decontamination|phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BTAccountMissionUXStressHardeningQACheckV25==='function'&&runPhase9BTAccountMissionUXStressHardeningQACheckV25().passed===true;
   var staticCopyReady=/All-cycle profile loading/.test(profileText)&&/Momentum/.test(profileText)&&/Unlock alerts/.test(rewardText)&&/Reward alerts/.test(rewardText)&&/Step Shelf/.test(missionText);
   var oldVisiblePattern=new RegExp('Notification bridge|Reward alerts preview|All-cycle profile signal loading|Signal strength|Filtered badge cat'+'alog|Filtered trophy cat'+'alog|tracked mission progress|Preview-only reward proof|tracked checklist','i');
@@ -22782,13 +22787,13 @@ function runPhase9BVRewardShelfDensityQACheckV25(){
   var catalog=typeof getMissionRewardCatalogV25==='function'?getMissionRewardCatalogV25():{badges:[],trophies:[]};
   var badgeCards=document.querySelectorAll('#mission-badge-grid .mission-status-card');
   var trophyCards=document.querySelectorAll('#mission-trophy-grid .mission-status-card');
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bv-reward-shelf-density|phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BUAccountMissionCopyDecontaminationQACheckV25==='function'&&runPhase9BUAccountMissionCopyDecontaminationQACheckV25().passed===true;
   var compactGridReady=/#mission-panel-badges \.mission-card-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);gap:8px\}/.test(styleText);
   var compactCardReady=/#mission-panel-badges \.mission-status-card\{[^}]*border-radius:11px[^}]*padding:9px[^}]*gap:6px/.test(styleText);
   var compactSymbolReady=/#mission-panel-badges \.mission-status-symbol\{width:30px;height:30px[^}]*font-size:12px/.test(styleText);
   var compactTitleReady=/#mission-panel-badges \.mission-status-heading \.mission-status-name\{font-size:8\.5px;line-height:1\.08/.test(styleText);
-  var compactPillReady=/#mission-panel-badges \.mission-status-trust\{font-size:6\.2px;padding:4px 6px/.test(styleText);
+  var compactStateDotReady=/#mission-panel-badges \.mission-status-state-dot\{top:7px;right:7px;width:8px;height:8px/.test(styleText)&&/\.mission-status-card\.ready \.mission-status-state-dot/.test(styleText);
   var compactProgressReady=/#mission-panel-badges \.mission-status-progress\{height:4px;margin-top:3px/.test(styleText);
   var mobileDensityReady=/@media\(max-width:720px\)\{[\s\S]*#mission-panel-badges \.mission-card-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/.test(styleText);
   var badgeCatalogExpanded=(catalog.badges||[]).length>=25&&badgeCards.length>=25;
@@ -22802,17 +22807,17 @@ function runPhase9BVRewardShelfDensityQACheckV25(){
   if(!compactCardReady)failures.push('compact reward card shell');
   if(!compactSymbolReady)failures.push('compact badge/trophy glyph');
   if(!compactTitleReady)failures.push('compact reward title');
-  if(!compactPillReady)failures.push('compact open/locked peel');
+  if(!compactStateDotReady)failures.push('compact reward state dot');
   if(!compactProgressReady)failures.push('compact reward progress bar');
   if(!mobileDensityReady)failures.push('mobile three-across shelf guard');
   if(!badgeCatalogExpanded)failures.push('25 badge catalog');
   if(!trophyCatalogExpanded)failures.push('25 trophy catalog');
   if(!rewardFilterTagsReady)failures.push('reward filter tags for expanded shelf');
   if(!protectedBoundaryReady)failures.push('Protected boundary');
-  var ready=buildOk&&baselineReady&&compactGridReady&&compactCardReady&&compactSymbolReady&&compactTitleReady&&compactPillReady&&compactProgressReady&&mobileDensityReady&&badgeCatalogExpanded&&trophyCatalogExpanded&&rewardFilterTagsReady&&protectedBoundaryReady;
+  var ready=buildOk&&baselineReady&&compactGridReady&&compactCardReady&&compactSymbolReady&&compactTitleReady&&compactStateDotReady&&compactProgressReady&&mobileDensityReady&&badgeCatalogExpanded&&trophyCatalogExpanded&&rewardFilterTagsReady&&protectedBoundaryReady;
   return {
     passed:ready,
-    meta:ready?'Phase 9BV Reward Shelf Density is installed · Badge and trophy shelves render breathable three-across cards with 25 badges, 25 trophies, readable glyphs, labels, peels, and progress bars.':'Phase 9BV Reward Shelf Density needs review.',
+    meta:ready?'Phase 9BV Reward Shelf Density is installed · Badge and trophy shelves render breathable three-across cards with 25 badges, 25 trophies, readable glyphs, state dots, and progress bars.':'Phase 9BV Reward Shelf Density needs review.',
     failures:failures
   };
 }
@@ -22824,7 +22829,7 @@ function runPhase9BWAwardCatalogSyncQACheckV25(){
   var expandedAwards=typeof getPhase9KCombinedAwardsV25==='function'?getPhase9KCombinedAwardsV25():[];
   var expandedDuplicateStatus=typeof getPhase9KDuplicateStatusV25==='function'?getPhase9KDuplicateStatusV25():{duplicateIds:[]};
   var phase9FResult=typeof getPhase9FAccountMissionContractsResultV25==='function'?getPhase9FAccountMissionContractsResultV25():{};
-  var buildOk=/phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator/.test(token);
+  var buildOk=/phase9bw-award-catalog-sync|phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance/.test(token);
   var baselineReady=typeof runPhase9BVRewardShelfDensityQACheckV25==='function'&&runPhase9BVRewardShelfDensityQACheckV25().passed===true;
   var expandedAwardCatalogReady=expandedAwards.length>=90;
   var phase9FContractSynced=(phase9FResult.awardCatalogCount||0)>=90&&(phase9FResult.starterAwardCatalogCount||0)>=12;
@@ -22858,10 +22863,10 @@ function runPhase9BXRewardShelfPagingQACheckV25(){
   var trophyGrid=document.getElementById('mission-trophy-grid');
   var badgeCards=badgeGrid?[].slice.call(badgeGrid.querySelectorAll('.mission-status-card')):[];
   var trophyCards=trophyGrid?[].slice.call(trophyGrid.querySelectorAll('.mission-status-card')):[];
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bx-reward-shelf-paging|phase9by-reward-category-navigator/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bx-reward-shelf-paging|phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance/.test(APP_CACHE_TOKEN);
   var baselineReady=typeof runPhase9BWAwardCatalogSyncQACheckV25==='function'&&runPhase9BWAwardCatalogSyncQACheckV25().passed===true;
   var threeAcrossReady=/#mission-panel-badges \.mission-card-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);gap:8px\}/.test(styleText);
-  var readableCardReady=/#mission-panel-badges \.mission-status-heading \.mission-status-name\{font-size:8\.5px;line-height:1\.08/.test(styleText)&&/#mission-panel-badges \.mission-status-trust\{font-size:6\.2px;padding:4px 6px/.test(styleText);
+  var readableCardReady=/#mission-panel-badges \.mission-status-heading \.mission-status-name\{font-size:8\.5px;line-height:1\.08/.test(styleText)&&/#mission-panel-badges \.mission-status-state-dot\{top:7px;right:7px;width:8px;height:8px/.test(styleText);
   var pagerUiReady=document.querySelectorAll('#mission-panel-badges .mission-reward-pager[data-reward-pager]').length>=2&&document.querySelectorAll('#mission-panel-badges .mission-reward-page-btn').length>=4;
   var pagerApiReady=typeof stepMissionRewardPageV25==='function'&&typeof setMissionRewardPageV25==='function'&&typeof getMissionRewardPageSizeV25==='function'&&getMissionRewardPageSizeV25()===9;
   var pageHiddenReady=/is-page-hidden/.test(styleText)&&/is-page-hidden/.test(String(setMissionRewardFilterV25));
@@ -22895,7 +22900,7 @@ function runPhase9BYRewardCategoryNavigatorQACheckV25(){
   var badgeCards=badgeGrid?[].slice.call(badgeGrid.querySelectorAll('.mission-status-card')):[];
   var trophyCards=trophyGrid?[].slice.call(trophyGrid.querySelectorAll('.mission-status-card')):[];
   var expected=['money','pipeline','sales','proof','rhythm'];
-  var buildOk=/phase9by-reward-category-navigator/.test(token);
+  var buildOk=/phase9by-reward-category-navigator|phase9bz-reward-state-dot-guidance/.test(token);
   var baselineReady=typeof runPhase9BXRewardShelfPagingQACheckV25==='function'&&runPhase9BXRewardShelfPagingQACheckV25().passed===true;
   var buttonReady=expected.every(function(key){
     return !!document.querySelector('#mission-panel-badges [data-reward-filter-scope="badges"] [data-reward-filter="'+key+'"]')
@@ -22925,9 +22930,45 @@ function runPhase9BYRewardCategoryNavigatorQACheckV25(){
   };
 }
 
+function runPhase9BZRewardStateDotGuidanceQACheckV25(){
+  if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
+  var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
+  var styleText=(document.querySelector('style')||{}).textContent||'';
+  var badgeGrid=document.getElementById('mission-badge-grid');
+  var trophyGrid=document.getElementById('mission-trophy-grid');
+  var badgeCards=badgeGrid?[].slice.call(badgeGrid.querySelectorAll('.mission-status-card')):[];
+  var trophyCards=trophyGrid?[].slice.call(trophyGrid.querySelectorAll('.mission-status-card')):[];
+  var allCards=badgeCards.concat(trophyCards);
+  var buildOk=/phase9bz-reward-state-dot-guidance/.test(token);
+  var baselineReady=typeof runPhase9BYRewardCategoryNavigatorQACheckV25==='function'&&runPhase9BYRewardCategoryNavigatorQACheckV25().passed===true;
+  var stateDotStyleReady=/\.mission-status-state-dot\{/.test(styleText)&&/\.mission-status-card\.ready \.mission-status-state-dot/.test(styleText)&&/\.mission-status-card\.preview \.mission-status-state-dot/.test(styleText)&&/\.mission-status-card\.locked \.mission-status-state-dot/.test(styleText);
+  var stateWordsHiddenReady=/\.mission-status-trust\{display:none\}/.test(styleText)&&/#mission-panel-badges \.mission-status-trust\{display:none\}/.test(styleText);
+  var stateDotRenderReady=allCards.length>=48&&allCards.every(function(card){return !!card.querySelector('.mission-status-state-dot');});
+  var detailGuidanceReady=allCards.length>=48&&allCards.every(function(card){return !!card.getAttribute('data-reward-unlock')&&!!card.getAttribute('data-reward-lane-label');});
+  var detailCopyReady=typeof showMissionRewardDetailV25==='function'&&/How it opens/.test(String(showMissionRewardDetailV25))&&/Next focus/.test(String(showMissionRewardDetailV25))&&/Focus lane/.test(String(showMissionRewardDetailV25));
+  var catalogPreserved=badgeCards.length>=25&&trophyCards.length>=25;
+  var protectedBoundaryReady=runHealthProtectedBoundaryQACheckV25().passed===true;
+  var failures=[];
+  if(!buildOk)failures.push('Phase 9BZ build token');
+  if(!baselineReady)failures.push('Phase 9BY baseline');
+  if(!stateDotStyleReady)failures.push('reward state dot styling');
+  if(!stateWordsHiddenReady)failures.push('visible reward state words removed from card face');
+  if(!stateDotRenderReady)failures.push('reward state dots rendered');
+  if(!detailGuidanceReady)failures.push('reward detail unlock guidance data');
+  if(!detailCopyReady)failures.push('reward detail guidance copy');
+  if(!catalogPreserved)failures.push('full badge/trophy catalog preserved');
+  if(!protectedBoundaryReady)failures.push('Protected boundary');
+  var ready=buildOk&&baselineReady&&stateDotStyleReady&&stateWordsHiddenReady&&stateDotRenderReady&&detailGuidanceReady&&detailCopyReady&&catalogPreserved&&protectedBoundaryReady;
+  return {
+    passed:ready,
+    meta:ready?'Phase 9BZ Reward State Dot Guidance is installed · Badge and trophy cards use compact state dots while details explain status, focus lane, significance, and how to unlock each reward.':'Phase 9BZ Reward State Dot Guidance needs review.',
+    failures:failures
+  };
+}
+
 function getPhase9NMissionUnlockUIResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(APP_CACHE_TOKEN);
   var missionStyleText=(document.querySelector('style')||{}).textContent||'';
   var phase9LReady=typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'&&runPhase9LMissionUnlockProgressionContractQACheckV25().passed===true;
   var chain=typeof getPhase9LMissionChainV25==='function'?getPhase9LMissionChainV25():null;
@@ -23069,7 +23110,7 @@ function getPhase9NMissionUnlockUIResultV25(){
   var trophyCatalogReady=document.querySelectorAll('#mission-trophy-grid .mission-status-card').length>=8;
   var rewardDetailDrawersReady=document.querySelectorAll('#mission-panel-badges .mission-reward-detail-popout').length>=2&&typeof showMissionRewardDetailV25==='function';
   var rewardDetailRowsReady=/mission-reward-detail-row/.test(String(showMissionRewardDetailV25));
-  var rewardDetailCopyReady=/Reward detail|Why it matters|Next step/.test(String(showMissionRewardDetailV25))&&!/Source trust|no fake awards/.test(String(showMissionRewardDetailV25));
+  var rewardDetailCopyReady=/Reward detail/.test(String(showMissionRewardDetailV25))&&/Why it matters/.test(String(showMissionRewardDetailV25))&&/How it opens/.test(String(showMissionRewardDetailV25))&&/Next focus/.test(String(showMissionRewardDetailV25))&&!/Source trust|no fake awards/.test(String(showMissionRewardDetailV25));
   var rewardFilterRailsReady=document.querySelectorAll('#mission-panel-badges .mission-reward-filter-rail').length>=2;
   var rewardFilterButtonsReady=document.querySelectorAll('#mission-panel-badges .mission-reward-filter').length>=12;
   var rewardFilterTagsReady=document.querySelectorAll('#mission-panel-badges .mission-status-card[data-reward-status][data-reward-rarity]').length>=16;
@@ -23094,7 +23135,7 @@ function getPhase9NMissionUnlockUIResultV25(){
 	  var rewardLabelCardContainmentReady=document.querySelectorAll('#mission-panel-badges .mission-status-card .mission-status-heading').length>=4;
   var rewardCardShapeReady=/\.mission-status-card\{appearance:none;[^}]*display:grid;grid-template-rows:auto minmax\(0,1fr\) auto/.test(missionStyleText)&&/\.mission-status-card:not\(\[open\]\)\{aspect-ratio:1\/1\}/.test(missionStyleText);
   var rewardCompactControlReady=/showMissionRewardDetailV25/.test(String(missionStatusCardV25))&&String(missionStatusCardV25).indexOf('<details')<0&&String(missionStatusCardV25).indexOf('<summary')<0;
-  var rewardStatusPillSingleLineReady=/\.mission-status-trust\{[^}]*white-space:nowrap[^}]*text-overflow:ellipsis/.test(missionStyleText)&&!/\.mission-status-trust\{[^}]*overflow-wrap:anywhere/.test(missionStyleText);
+  var rewardStatusPillSingleLineReady=/\.mission-status-trust\{display:none\}/.test(missionStyleText)&&/\.mission-status-state-dot\{/.test(missionStyleText)&&/data-reward-unlock/.test(String(missionStatusCardV25));
   var rewardClosedMetaHiddenReady=String(missionStatusCardV25).indexOf('mission-status-meta')<0&&String(missionStatusCardV25).indexOf('<div class="mission-status-rarity"')<0;
   var rewardGlyphSimplifiedReady=typeof missionRewardGlyphV25==='function'&&/missionRewardGlyphV25/.test(String(missionStatusCardV25));
 	  var missionCatalogCompactReady=!/mission score/.test((document.querySelector('#mission-objective-list .mission-detail-card:not(.locked) summary .mission-detail-meta')||{}).textContent||'')&&!!document.querySelector('#mission-objective-list .mission-detail-card .mission-detail-row');
@@ -26937,8 +26978,8 @@ async function runBackupArchiveSelfCheckV22(){
 
 function runHealthCurrentBuildIdentityQACheckV25(){
   var token=typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'';
-  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by)/.test(token);
-  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9BY build token.'};
+  var buildOk=/^mmos-202606\d{2}-\d{4}-v25-phase9(?:[nopqrstuvwxyz]|aa|ab|ac|ad|ae|af|ag|ah|ai|aj|ak|al|am|an|ao|ap|aq|ar|as|at|au|av|aw|ax|ay|az|ba|bb|bc|bd|be|bf|bg|bh|bi|bj|bk|bl|bm|bn|bo|bp|bq|br|bs|bt|bu|bv|bw|bx|by|bz)/.test(token);
+  return {passed:buildOk,meta:buildOk?'Current build active · '+token:'Expected current Phase 9N-9BZ build token.'};
 }
 
 function runHealthProtectedBoundaryQACheckV25(){
@@ -26984,7 +27025,7 @@ async function runHealthFastLiveQACheckV25(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Fast QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Fast QA';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9BY Reward Category Navigator, Phase 9BD receipt placement, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
+  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9BY Reward Category Navigator, Phase 9BZ Reward State Dot Guidance, Phase 9BD receipt placement, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -27011,6 +27052,7 @@ async function runHealthFastLiveQACheckV25(){
   try{add('Phase 9BW Award Catalog Sync',typeof runPhase9BWAwardCatalogSyncQACheckV25==='function'?runPhase9BWAwardCatalogSyncQACheckV25():{passed:false,meta:'Missing Phase 9BW Award Catalog Sync check'});}catch(e){add('Phase 9BW Award Catalog Sync',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BX Reward Shelf Paging',typeof runPhase9BXRewardShelfPagingQACheckV25==='function'?runPhase9BXRewardShelfPagingQACheckV25():{passed:false,meta:'Missing Phase 9BX Reward Shelf Paging check'});}catch(e){add('Phase 9BX Reward Shelf Paging',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BY Reward Category Navigator',typeof runPhase9BYRewardCategoryNavigatorQACheckV25==='function'?runPhase9BYRewardCategoryNavigatorQACheckV25():{passed:false,meta:'Missing Phase 9BY Reward Category Navigator check'});}catch(e){add('Phase 9BY Reward Category Navigator',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9BZ Reward State Dot Guidance',typeof runPhase9BZRewardStateDotGuidanceQACheckV25==='function'?runPhase9BZRewardStateDotGuidanceQACheckV25():{passed:false,meta:'Missing Phase 9BZ Reward State Dot Guidance check'});}catch(e){add('Phase 9BZ Reward State Dot Guidance',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BD Developer Receipt Relocation',typeof runPhase9BDDeveloperReceiptRelocationQACheckV25==='function'?runPhase9BDDeveloperReceiptRelocationQACheckV25():{passed:false,meta:'Missing Phase 9BD Developer Receipt Relocation check'});}catch(e){add('Phase 9BD Developer Receipt Relocation',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Protected Boundary',runHealthProtectedBoundaryQACheckV25());}catch(e){add('Protected Boundary',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -27114,6 +27156,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9BW Award Catalog Sync',typeof runPhase9BWAwardCatalogSyncQACheckV25==='function'?runPhase9BWAwardCatalogSyncQACheckV25():{passed:false,meta:'Missing Phase 9BW Award Catalog Sync check'});}catch(e){add('Phase 9BW Award Catalog Sync',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BX Reward Shelf Paging',typeof runPhase9BXRewardShelfPagingQACheckV25==='function'?runPhase9BXRewardShelfPagingQACheckV25():{passed:false,meta:'Missing Phase 9BX Reward Shelf Paging check'});}catch(e){add('Phase 9BX Reward Shelf Paging',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BY Reward Category Navigator',typeof runPhase9BYRewardCategoryNavigatorQACheckV25==='function'?runPhase9BYRewardCategoryNavigatorQACheckV25():{passed:false,meta:'Missing Phase 9BY Reward Category Navigator check'});}catch(e){add('Phase 9BY Reward Category Navigator',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9BZ Reward State Dot Guidance',typeof runPhase9BZRewardStateDotGuidanceQACheckV25==='function'?runPhase9BZRewardStateDotGuidanceQACheckV25():{passed:false,meta:'Missing Phase 9BZ Reward State Dot Guidance check'});}catch(e){add('Phase 9BZ Reward State Dot Guidance',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BD Developer Receipt Relocation',typeof runPhase9BDDeveloperReceiptRelocationQACheckV25==='function'?runPhase9BDDeveloperReceiptRelocationQACheckV25():{passed:false,meta:'Missing Phase 9BD Developer Receipt Relocation check'});}catch(e){add('Phase 9BD Developer Receipt Relocation',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -32928,6 +32971,26 @@ function missionRewardLaneV25(item){
   return 'pipeline';
 }
 
+function missionRewardLaneLabelV25(lane){
+  var labels={money:'Money',pipeline:'Pipeline',sales:'Sales',proof:'Proof',rhythm:'Rhythm'};
+  return labels[lane]||'Pipeline';
+}
+
+function missionRewardUnlockGuideV25(item,lane,stateLabel){
+  var name=((item&&item.name)||'Reward').toLowerCase();
+  var target=parseFloat(item&&item.target)||0;
+  var metric=parseFloat(item&&item.metric)||0;
+  var remaining=target?Math.max(0,target-metric):0;
+  var remainingLabel=target?(remaining+' more before this opens.'):('Keep stacking the next real move in this lane.');
+  if(stateLabel==='Open')return 'This one is open. Keep building the next tier from the same real-world moves.';
+  if(/first/.test(name)&&stateLabel!=='Open')remainingLabel='Log the first real action tied to this reward.';
+  if(lane==='money')return 'Log verified revenue, paid decisions, or money movement. '+remainingLabel;
+  if(lane==='sales')return 'Log sales calls, offers, close attempts, or paid decisions. '+remainingLabel;
+  if(lane==='proof')return 'Log proof, content, production, delivery, or visible output. '+remainingLabel;
+  if(lane==='rhythm')return 'Keep the weekly rhythm alive through focus sessions, streaks, reviews, and consistency moves. '+remainingLabel;
+  return 'Log outreach touches, replies, warm signals, or follow-up movement. '+remainingLabel;
+}
+
 function missionStatusCardV25(item){
   var status=item.status||'Not Tracked';
   var trust=item.trust||(/tracked|unlocked|ready/i.test(status)?'tracked':'not tracked');
@@ -32941,7 +33004,10 @@ function missionStatusCardV25(item){
   var filterLane=missionRewardLaneV25(item);
   var stateLabel=locked?'Locked':(cls==='preview'?'In progress':'Open');
   var next=item.next||item.nextMove||(locked?'Log the first action for this lane.':status==='Ready'?'Keep stacking proof toward the next tier.':'Keep going. This reward is visible, but not complete yet.');
-  return '<button type="button" class="mission-status-card '+cls+'" data-reward-status="'+escapeHtml(filterStatus)+'" data-reward-rarity="'+escapeHtml(filterRarity)+'" data-reward-lane="'+escapeHtml(filterLane)+'" data-reward-name="'+escapeHtml(item.name||'Mission item')+'" data-reward-state="'+escapeHtml(stateLabel)+'" data-reward-progress="'+escapeHtml(progress)+'" data-reward-rarity-label="'+escapeHtml(rarity)+'" data-reward-meta="'+escapeHtml(meta)+'" data-reward-next="'+escapeHtml(next)+'" onclick="return showMissionRewardDetailV25(this)">'
+  var unlockGuide=missionRewardUnlockGuideV25(item,filterLane,stateLabel);
+  var laneLabel=missionRewardLaneLabelV25(filterLane);
+  return '<button type="button" class="mission-status-card '+cls+'" data-reward-status="'+escapeHtml(filterStatus)+'" data-reward-rarity="'+escapeHtml(filterRarity)+'" data-reward-lane="'+escapeHtml(filterLane)+'" data-reward-lane-label="'+escapeHtml(laneLabel)+'" data-reward-name="'+escapeHtml(item.name||'Mission item')+'" data-reward-state="'+escapeHtml(stateLabel)+'" data-reward-progress="'+escapeHtml(progress)+'" data-reward-rarity-label="'+escapeHtml(rarity)+'" data-reward-meta="'+escapeHtml(meta)+'" data-reward-next="'+escapeHtml(next)+'" data-reward-unlock="'+escapeHtml(unlockGuide)+'" onclick="return showMissionRewardDetailV25(this)" aria-label="'+escapeHtml((item.name||'Mission item')+' - '+stateLabel)+'">'
+    +'<span class="mission-status-state-dot" title="'+escapeHtml(stateLabel)+'" aria-hidden="true"></span>'
     +'<div class="mission-status-symbol">'+escapeHtml(missionRewardGlyphV25(item))+'</div>'
     +'<div class="mission-status-heading"><div class="mission-status-name">'+escapeHtml(item.name||'Mission item')+'</div><div class="mission-status-trust">'+escapeHtml(stateLabel)+'</div></div>'
     +'<div class="mission-status-progress"><div class="mission-status-progress-fill" style="--mission-reward-progress:'+progress+'%"></div></div>'
@@ -32965,16 +33031,20 @@ function showMissionRewardDetailV25(card){
   var state=card.getAttribute('data-reward-state')||'Open';
   var progress=card.getAttribute('data-reward-progress')||'0';
   var rarity=card.getAttribute('data-reward-rarity-label')||'Starter';
+  var lane=card.getAttribute('data-reward-lane-label')||'Pipeline';
   var meta=card.getAttribute('data-reward-meta')||'Keep stacking real business movement toward this unlock.';
   var next=card.getAttribute('data-reward-next')||'Keep going. The next proof point is close.';
+  var unlock=card.getAttribute('data-reward-unlock')||'Keep stacking real business movement toward this unlock.';
   popout.classList.add('active');
   popout.innerHTML=
     '<div class="mission-reward-detail-head"><div><div class="mission-reward-detail-kicker">Reward detail</div><div class="mission-reward-detail-title">'+escapeHtml(name)+'</div></div><div class="mission-reward-detail-state">'+escapeHtml(state)+'</div></div>'
     +'<div class="mission-reward-detail-grid">'
+      +'<div class="mission-reward-detail-row"><b>Focus lane</b><span>'+escapeHtml(lane)+'</span></div>'
       +'<div class="mission-reward-detail-row"><b>Progress</b><span>'+escapeHtml(progress)+'% complete</span></div>'
       +'<div class="mission-reward-detail-row"><b>Difficulty</b><span>'+escapeHtml(rarity)+'</span></div>'
       +'<div class="mission-reward-detail-row"><b>Why it matters</b><span>'+escapeHtml(meta)+'</span></div>'
-      +'<div class="mission-reward-detail-row"><b>Next step</b><span>'+escapeHtml(next)+'</span></div>'
+      +'<div class="mission-reward-detail-row"><b>How it opens</b><span>'+escapeHtml(unlock)+'</span></div>'
+      +'<div class="mission-reward-detail-row"><b>Next focus</b><span>'+escapeHtml(next)+'</span></div>'
     +'</div>';
   return false;
 }
