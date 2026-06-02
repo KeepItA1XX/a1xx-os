@@ -22316,8 +22316,8 @@ function runPhase9BDDeveloperReceiptRelocationQACheckV25(){
 
 function runPhase9BHMissionProfileUICleanupQACheckV25(){
   var styleText=(document.querySelector('style')||{}).textContent||'';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/phase9bh-mission-profile-ui-cleanup/.test(APP_CACHE_TOKEN);
-  var resumeRailHiddenReady=/\.mission-resume-rail\{display:none;/.test(styleText);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/(phase9bh-mission-profile-ui-cleanup|phase9bj-mission-resume-rail-hard-hide)/.test(APP_CACHE_TOKEN);
+  var resumeRailHiddenReady=/\.mission-resume-rail\{display:none!important;visibility:hidden!important;position:absolute!important;left:-9999px!important/.test(styleText);
   var resumeRailMemoryReady=!!document.getElementById('mission-resume-rail')&&typeof renderMissionResumeRailV25==='function'&&typeof setMissionResumeTargetV25==='function';
   var trustTitleCompactReady=/\.mission-profile-lens-panel\[data-profile-lens="trust"\] \.mission-profile-lens-title\{font-size:12px;line-height:1\.25\}/.test(styleText);
   var trustScoreCompactReady=/\.mission-profile-lens-panel\[data-profile-lens="trust"\] \.mission-profile-lens-score b\{font-size:14px;line-height:1\.05;white-space:normal;overflow-wrap:break-word\}/.test(styleText);
@@ -22455,7 +22455,7 @@ function getPhase9NMissionUnlockUIResultV25(){
   var missionResumeRailCopyReady=/Room:|Focus:|Page:|Road:|Saved local/.test((document.getElementById('mission-resume-chips')||{}).textContent||'');
   var missionResumeRailFunctionReady=typeof renderMissionResumeRailV25==='function'&&typeof setMissionResumeTargetV25==='function';
   var missionResumeRailStyleReady=/\.mission-resume-rail/.test((document.querySelector('style')||{}).textContent||'')&&/\.mission-resume-chip/.test((document.querySelector('style')||{}).textContent||'');
-  var missionResumeRailHiddenReady=/\.mission-resume-rail\{display:none;/.test(missionStyleText);
+  var missionResumeRailHiddenReady=/\.mission-resume-rail\{display:none!important;visibility:hidden!important;position:absolute!important;left:-9999px!important/.test(missionStyleText);
   var profileTrustCompactReady=/\.mission-profile-lens-panel\[data-profile-lens="trust"\] \.mission-profile-lens-title\{font-size:12px;line-height:1\.25\}/.test(missionStyleText)&&/\.mission-profile-lens-panel\[data-profile-lens="trust"\] \.mission-profile-lens-score b\{font-size:14px;line-height:1\.05;white-space:normal;overflow-wrap:break-word\}/.test(missionStyleText);
   var profileSourceCardsCompactReady=/\.mission-profile-source-card b\{[^}]*font-size:10px/.test(missionStyleText)&&/\.mission-profile-source-card span\{[^}]*font-size:8px/.test(missionStyleText);
   var actionableSteps=document.querySelectorAll('#mission-unlock-board .mission-deep-item.action');
@@ -26444,7 +26444,7 @@ async function runHealthFastLiveQACheckV25(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Fast QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Fast QA';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9BI Reward Card Popout Cleanup, Phase 9BD receipt placement, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
+  renderHealthLiveQARowsV22([{name:'Fast QA',passed:true,meta:'Running daily safety lane: storage, backup archive, cloud registry, safe write readiness, current build, Phase 9K/9L contract, Phase 9BJ Mission Resume Rail Hard Hide, Phase 9BD receipt placement, protected gates, bridge, self-hardening, drift, and route smoke.'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -26457,7 +26457,7 @@ async function runHealthFastLiveQACheckV25(){
   try{add('Current Build',runHealthCurrentBuildIdentityQACheckV25());}catch(e){add('Current Build',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9L Mission Unlock Progression Contract',typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'?runPhase9LMissionUnlockProgressionContractQACheckV25():{passed:false,meta:'Missing Phase 9L Mission Unlock Progression Contract check'});}catch(e){add('Phase 9L Mission Unlock Progression Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 9BI Reward Card Popout Cleanup',typeof runPhase9BIRewardCardPopoverCleanupQACheckV25==='function'?runPhase9BIRewardCardPopoverCleanupQACheckV25():{passed:false,meta:'Missing Phase 9BI Reward Card Popout Cleanup check'});}catch(e){add('Phase 9BI Reward Card Popout Cleanup',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9BJ Mission Resume Rail Hard Hide',typeof runPhase9BJMissionResumeRailHardHideQACheckV25==='function'?runPhase9BJMissionResumeRailHardHideQACheckV25():{passed:false,meta:'Missing Phase 9BJ Mission Resume Rail Hard Hide check'});}catch(e){add('Phase 9BJ Mission Resume Rail Hard Hide',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BD Developer Receipt Relocation',typeof runPhase9BDDeveloperReceiptRelocationQACheckV25==='function'?runPhase9BDDeveloperReceiptRelocationQACheckV25():{passed:false,meta:'Missing Phase 9BD Developer Receipt Relocation check'});}catch(e){add('Phase 9BD Developer Receipt Relocation',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Protected Boundary',runHealthProtectedBoundaryQACheckV25());}catch(e){add('Protected Boundary',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -26547,7 +26547,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9J Mission Rating Calibration',typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'?runPhase9JMissionRatingCalibrationQACheckV25():{passed:false,meta:'Missing Phase 9J Mission Rating Calibration check'});}catch(e){add('Phase 9J Mission Rating Calibration',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9L Mission Unlock Progression Contract',typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'?runPhase9LMissionUnlockProgressionContractQACheckV25():{passed:false,meta:'Missing Phase 9L Mission Unlock Progression Contract check'});}catch(e){add('Phase 9L Mission Unlock Progression Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
-  try{add('Phase 9BI Reward Card Popout Cleanup',typeof runPhase9BIRewardCardPopoverCleanupQACheckV25==='function'?runPhase9BIRewardCardPopoverCleanupQACheckV25():{passed:false,meta:'Missing Phase 9BI Reward Card Popout Cleanup check'});}catch(e){add('Phase 9BI Reward Card Popout Cleanup',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9BJ Mission Resume Rail Hard Hide',typeof runPhase9BJMissionResumeRailHardHideQACheckV25==='function'?runPhase9BJMissionResumeRailHardHideQACheckV25():{passed:false,meta:'Missing Phase 9BJ Mission Resume Rail Hard Hide check'});}catch(e){add('Phase 9BJ Mission Resume Rail Hard Hide',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9BD Developer Receipt Relocation',typeof runPhase9BDDeveloperReceiptRelocationQACheckV25==='function'?runPhase9BDDeveloperReceiptRelocationQACheckV25():{passed:false,meta:'Missing Phase 9BD Developer Receipt Relocation check'});}catch(e){add('Phase 9BD Developer Receipt Relocation',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
