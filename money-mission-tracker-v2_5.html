@@ -654,6 +654,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mission-status-card.locked .mission-status-symbol{background:#0b0d0f;color:#68727c}
 .mission-detail-grid{display:grid;gap:8px}
 .mission-detail-card{background:#070a0c;border-radius:11px;padding:0;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
+.mission-detail-card.current{box-shadow:inset 3px 0 0 rgba(126,200,69,.72),inset 0 0 0 1px rgba(126,200,69,.16)}
+.mission-detail-card.completed{background:#06090a;opacity:.82}
+.mission-detail-card.locked{position:relative;background:#050607;opacity:.54;filter:saturate(.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
 .mission-detail-card summary{cursor:pointer;list-style:none;padding:11px;display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:9px}
 .mission-detail-card summary::-webkit-details-marker{display:none}
 .mission-detail-card summary:after{content:'Open';color:#5f8d3d;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
@@ -665,19 +668,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mission-detail-row{background:#090d10;border-radius:8px;padding:8px}
 .mission-detail-row b{display:block;color:#7ec845;font-size:8px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
 .mission-detail-row span{display:block;color:#c5ccd2;font-size:10px;line-height:1.45}
+.mission-detail-lock{display:grid;grid-template-columns:30px 1fr;gap:9px;align-items:center;padding:11px}
+.mission-lock-icon{width:28px;height:28px;border-radius:9px;background:#0b0d0f;color:#77828b;display:grid;place-items:center;font-size:7px;font-weight:950;text-transform:uppercase;letter-spacing:.04em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.mission-state-pill{display:inline-flex;align-items:center;gap:5px;width:max-content;border-radius:999px;padding:4px 7px;background:#10161b;color:#9aa3aa;font-size:7px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+.mission-state-pill.current{background:#0f180a;color:#9ee878}
+.mission-state-pill.completed{background:#11170f;color:#7ec845}
+.mission-state-pill.preview{background:#13170f;color:#d4a017}
+.mission-state-pill.locked{background:#0c0e10;color:#77828b}
 .mission-unlock-board{display:grid;gap:10px}
 .mission-chain-strip{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;padding-bottom:3px}
-.mission-chain-node{flex:0 0 min(168px,58vw);scroll-snap-align:start;background:#070a0c;border:0;border-radius:11px;padding:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035);cursor:pointer}
+.mission-chain-node{position:relative;flex:0 0 min(176px,58vw);scroll-snap-align:start;background:#070a0c;border:0;border-radius:11px;padding:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035);cursor:pointer;text-align:left}
 .mission-chain-node:hover{background:#0b1208;box-shadow:inset 0 0 0 1px rgba(126,200,69,.18)}
 .mission-chain-node.current{box-shadow:inset 3px 0 0 rgba(126,200,69,.72),inset 0 0 0 1px rgba(126,200,69,.16)}
-.mission-chain-node.completed{opacity:.76}
-.mission-chain-node.locked{opacity:.52}
+.mission-chain-node.completed{opacity:.82}
+.mission-chain-node.preview{box-shadow:inset 0 0 0 1px rgba(212,160,23,.14)}
+.mission-chain-node.locked{opacity:.54;filter:saturate(.55);cursor:not-allowed}
+.mission-chain-node.locked:after{content:'LOCK';position:absolute;right:9px;bottom:8px;border-radius:999px;padding:3px 5px;background:#0d1013;color:#77828b;font-size:6px;font-weight:950;letter-spacing:.08em}
 .mission-chain-node-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .mission-chain-state{font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#7ec845}
 .mission-chain-order{min-width:22px;height:22px;border-radius:999px;display:grid;place-items:center;background:#10161b;color:#dfe7ee;font-size:9px;font-weight:900}
 .mission-chain-title{margin-top:8px;font-size:12px;font-weight:900;color:#f3f7f1}
 .mission-chain-meta{margin-top:3px;font-size:9px;line-height:1.35;color:#7f8a92}
 .mission-current-lock{background:#080c0e;border-radius:14px;padding:13px;box-shadow:inset 0 0 0 1px rgba(126,200,69,.12)}
+.mission-current-lock.deep{padding:14px;display:grid;gap:12px}
 .mission-current-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .mission-current-kicker{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#7ec845;font-weight:900}
 .mission-current-title{font-size:18px;font-weight:950;color:#f4f8f0;line-height:1.05;margin-top:4px}
@@ -686,6 +699,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mission-current-percent small{display:block;font-size:8px;color:#7f8a92;text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
 .mission-progress-rail{height:8px;border-radius:999px;background:#121820;overflow:hidden;margin-top:12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
 .mission-progress-fill{height:100%;width:var(--mission-progress,0%);background:linear-gradient(90deg,#4b7f2c,#7ec845);border-radius:inherit}
+.mission-active-map{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:9px}
+.mission-mini-card{background:#050708;border-radius:11px;padding:9px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
+.mission-mini-label{font-size:7px;color:#7ec845;text-transform:uppercase;letter-spacing:.08em;font-weight:950}
+.mission-mini-title{font-size:11px;color:#eef4ea;font-weight:900;margin-top:4px}
+.mission-mini-meta{font-size:9px;color:#87929a;line-height:1.4;margin-top:4px}
+.mission-current-tabs{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:1px}
+.mission-current-tab{border:0;border-radius:999px;background:#050708;color:#8d989f;font-size:8px;font-weight:950;text-transform:uppercase;letter-spacing:.07em;padding:7px 9px;cursor:pointer;white-space:nowrap}
+.mission-current-tab.active{background:#0f180a;color:#9ee878;box-shadow:inset 0 0 0 1px rgba(126,200,69,.2)}
+.mission-current-page{display:none;background:#050708;border-radius:11px;padding:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
+.mission-current-page.active{display:grid;gap:8px}
+.mission-deep-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mission-deep-item{background:#080c0e;border-radius:10px;padding:9px;min-height:72px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
+.mission-deep-item b{display:block;color:#eef4ea;font-size:10px;line-height:1.25}
+.mission-deep-item span{display:block;color:#87929a;font-size:9px;line-height:1.4;margin-top:5px}
+.mission-deep-kicker{font-size:7px;color:#7ec845;text-transform:uppercase;letter-spacing:.08em;font-weight:950;margin-bottom:4px}
 .mission-requirement-list{display:grid;gap:7px;margin-top:11px}
 .mission-requirement{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:8px;background:#050708;border-radius:10px;padding:8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
 .mission-requirement-mark{width:22px;height:22px;border-radius:999px;display:grid;place-items:center;background:#121820;color:#77828b;font-size:10px;font-weight:950}
@@ -706,6 +734,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:720px){
   .mission-action-board{grid-template-columns:1fr}
   .mission-story-grid,.mission-skill-grid,.mission-card-grid,.mission-stat-grid,.account-mission-home-grid{grid-template-columns:1fr}
+  .mission-active-map,.mission-deep-grid{grid-template-columns:1fr}
 }
 .auth-screen{position:fixed;inset:0;z-index:12000;background:radial-gradient(circle at top,#13200b 0%,#090a0b 42%,#040506 100%);display:none;align-items:center;justify-content:center;padding:22px}
 .auth-screen.active{display:flex}
@@ -5719,9 +5748,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-02 01:32 ET · OS v2_5 Phase 9N Mission Scoped Progress Repair';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9N Mission Scoped Progress Repair';
-var APP_CACHE_TOKEN='mmos-20260602-0132-v25-phase9n-mission-scoped-progress-repair';
+var APP_BUILD_STAMP='2026-06-02 01:46 ET · OS v2_5 Phase 9N Mission Depth UI';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9N Mission Depth UI';
+var APP_CACHE_TOKEN='mmos-20260602-0146-v25-phase9n-mission-depth-ui';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -21688,10 +21717,16 @@ function getPhase9NMissionUnlockUIResultV25(){
   var currentNode=!!document.querySelector('.mission-chain-node.current');
   var previewNode=!!document.querySelector('.mission-chain-node.preview');
   var catalogDetails=document.querySelectorAll('#mission-objective-list .mission-detail-card');
+  var currentDepthTabs=document.querySelectorAll('#mission-unlock-board .mission-current-tab');
+  var currentDepthPages=document.querySelectorAll('#mission-unlock-board .mission-current-page');
+  var lockedCards=document.querySelectorAll('#mission-objective-list .mission-detail-card.locked');
+  var previousCurrentMap=!!document.querySelector('#mission-unlock-board .mission-active-map');
+  var currentMissionDepthReady=currentDepthTabs.length>=4&&currentDepthPages.length>=4&&previousCurrentMap;
+  var lockedMissionStateReady=lockedCards.length>=1;
   var completionExecutionEnabled=false;
   var awardExecution=false;
   var notificationDispatch=false;
-  var ready=!!(buildOk&&phase9LReady&&missionScopedProgressReady&&overviewBoard&&missionBoard&&journeyBoard&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
+  var ready=!!(buildOk&&phase9LReady&&missionScopedProgressReady&&currentMissionDepthReady&&lockedMissionStateReady&&overviewBoard&&missionBoard&&journeyBoard&&currentLockReady&&chainNodes.length>=3&&requirementRows.length>=1&&rewardChips.length>=4&&currentNode&&previewNode&&catalogDetails.length>=12&&!completionExecutionEnabled&&!awardExecution&&!notificationDispatch);
   return {
     status:ready?'phase9n_mission_unlock_ui_ready':'phase9n_mission_unlock_ui_needs_review',
     mode:'phase9n_mission_unlock_ui_only',
@@ -21699,6 +21734,8 @@ function getPhase9NMissionUnlockUIResultV25(){
     build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
     phase9LContractReady:phase9LReady,
     missionScopedProgressReady:missionScopedProgressReady,
+    currentMissionDepthReady:currentMissionDepthReady,
+    lockedMissionStateReady:lockedMissionStateReady,
     currentMissionId:chain&&chain.current?chain.current.id:'',
     completedMissionIds:chain&&chain.completedMissionIds?chain.completedMissionIds:[],
     overviewBoardReady:overviewBoard,
@@ -21708,6 +21745,10 @@ function getPhase9NMissionUnlockUIResultV25(){
     chainNodeCount:chainNodes.length,
     requirementRowCount:requirementRows.length,
     rewardChipCount:rewardChips.length,
+    currentDepthTabCount:currentDepthTabs.length,
+    currentDepthPageCount:currentDepthPages.length,
+    lockedMissionCardCount:lockedCards.length,
+    previousCurrentMapReady:previousCurrentMap,
     currentNodeReady:currentNode,
     previewNodeReady:previewNode,
     catalogDetailCount:catalogDetails.length,
@@ -21728,6 +21769,8 @@ function getPhase9NMissionUnlockUIResultV25(){
       .concat(buildOk?[]:['Phase 9N build token'])
       .concat(phase9LReady?[]:['Phase 9L mission unlock contract'])
       .concat(missionScopedProgressReady?[]:['mission-scoped progress guard'])
+      .concat(currentMissionDepthReady?[]:['current mission depth tabs'])
+      .concat(lockedMissionStateReady?[]:['locked mission visual state'])
       .concat(overviewBoard?[]:['overview mission unlock board'])
       .concat(missionBoard?[]:['mission unlock board'])
       .concat(journeyBoard?[]:['journey mission chain'])
@@ -21772,6 +21815,8 @@ function formatPhase9NMissionUnlockUIV25(result){
     '- Mission unlock UI ready: '+(result.missionUnlockUIReady?'true':'false'),
     '- Phase 9L contract ready: '+(result.phase9LContractReady?'true':'false'),
     '- Mission-scoped progress ready: '+(result.missionScopedProgressReady?'true':'false'),
+    '- Current mission depth ready: '+(result.currentMissionDepthReady?'true':'false'),
+    '- Locked mission state ready: '+(result.lockedMissionStateReady?'true':'false'),
     '- Current mission ID: '+(result.currentMissionId||''),
     '- Completed mission IDs: '+((result.completedMissionIds||[]).join(', ')||'none'),
     '- Overview board ready: '+(result.overviewBoardReady?'true':'false'),
@@ -21781,6 +21826,9 @@ function formatPhase9NMissionUnlockUIV25(result){
     '- Chain node count: '+(result.chainNodeCount||0),
     '- Requirement row count: '+(result.requirementRowCount||0),
     '- Reward chip count: '+(result.rewardChipCount||0),
+    '- Current depth tab count: '+(result.currentDepthTabCount||0),
+    '- Current depth page count: '+(result.currentDepthPageCount||0),
+    '- Locked mission card count: '+(result.lockedMissionCardCount||0),
     '- Full catalog detail count: '+(result.catalogDetailCount||0),
     '- Completion execution enabled: '+(result.completionExecutionEnabled?'true':'false'),
     '- Award execution: '+(result.awardExecution?'true':'false'),
@@ -30965,11 +31013,88 @@ function missionRewardChipsV25(reward){
   }).join('')+'</div>';
 }
 
+function setMissionCurrentPageV25(tab){
+  tab=tab||'brief';
+  document.querySelectorAll('.mission-current-tab').forEach(function(btn){
+    btn.classList.toggle('active',btn.getAttribute('data-current-page')===tab);
+  });
+  document.querySelectorAll('.mission-current-page').forEach(function(page){
+    page.classList.toggle('active',page.getAttribute('data-current-page')===tab);
+  });
+}
+
+function missionStateLabelV25(state){
+  if(state==='completed')return 'Previous Mission';
+  if(state==='current'||state==='review')return 'Current Mission';
+  if(state==='preview')return 'Next Preview';
+  if(state==='locked')return 'Locked';
+  return state||'Mission';
+}
+
+function missionDeepActionPlanV25(mission,chain){
+  mission=mission||{};
+  var next=chain&&chain.next?chain.next:null;
+  var reqs=mission.requirements||[];
+  var firstReq=reqs[0]||{};
+  var secondReq=reqs[1]||{};
+  var focus=mission.focusLane||'Money Movement';
+  var title=mission.title||'Current Mission';
+  return {
+    brief:[
+      {kicker:'Mission read',title:title,copy:mission.summary||'Complete the tracked business actions to unlock the next lane.'},
+      {kicker:'Focus lane',title:focus,copy:'This is the main business skill being trained by the current mission.'},
+      {kicker:'Unlock path',title:next&&next.title?next.title:'Next lane hidden',copy:next&&next.summary?next.summary:'The next mission opens only after the current checklist clears.'},
+      {kicker:'Progress rule',title:'This mission only',copy:'Extra lifetime work does not auto-clear future missions. This checklist uses the current mission slice.'}
+    ],
+    checklist:[
+      {kicker:'Primary action',title:firstReq.label||'Complete the first tracked requirement',copy:'Log the action inside the normal business workflow, then refresh the Mission tab.'},
+      {kicker:'Second action',title:secondReq.label||'Complete the next tracked requirement',copy:'Each requirement belongs to this mission. Later missions start with their own slice.'},
+      {kicker:'Quality pass',title:'Confirm the signal is real',copy:'Only tracked business movement should count: outreach, reply, call, close, content proof, production, or revenue.'},
+      {kicker:'Unlock check',title:'Run Review unlock UI',copy:'Use the Mission receipt to confirm this mission is ready before the next lane opens.'}
+    ],
+    training:[
+      {kicker:'Drill 1',title:focus+' warm-up',copy:'Pick one action from this lane and complete it before switching lanes.'},
+      {kicker:'Drill 2',title:'Pipeline note',copy:'Log the result clearly enough that the next step is obvious tomorrow.'},
+      {kicker:'Drill 3',title:'Follow-through',copy:'If the action creates a reply, call, offer, proof item, or delivery move, log the next step too.'},
+      {kicker:'Drill 4',title:'End-of-day recap',copy:'Check the current mission percent and leave the next money move visible.'}
+    ],
+    rewards:[
+      {kicker:'XP preview',title:(mission.rewards&&mission.rewards.xpPreview?('+'+mission.rewards.xpPreview+' XP'):'Preview only'),copy:'XP stays preview-only until a later approved award gate.'},
+      {kicker:'Badge lane',title:(mission.rewards&&mission.rewards.badgePreview)||'Badge pending',copy:'Badge unlocks will be guarded against duplicates.'},
+      {kicker:'Milestone',title:(mission.rewards&&mission.rewards.milestonePreview)||'Milestone pending',copy:'Milestones fire from tracked mission completion, not manual claims.'},
+      {kicker:'Attributes',title:((mission.rewards&&mission.rewards.attributeKeys)||[]).join(', ')||'Pending',copy:'These skills get the strongest signal from this mission.'}
+    ]
+  };
+}
+
+function missionDeepItemsV25(items){
+  return '<div class="mission-deep-grid">'+(items||[]).map(function(item){
+    return '<div class="mission-deep-item"><div class="mission-deep-kicker">'+escapeHtml(item.kicker||'Mission')+'</div><b>'+escapeHtml(item.title||'Action')+'</b><span>'+escapeHtml(item.copy||'Keep the current mission moving from tracked action.')+'</span></div>';
+  }).join('')+'</div>';
+}
+
+function missionCurrentDepthPanelV25(mission,chain){
+  var plan=missionDeepActionPlanV25(mission,chain);
+  var tabs=[
+    {key:'brief',label:'Brief'},
+    {key:'checklist',label:'Checklist'},
+    {key:'training',label:'Training'},
+    {key:'rewards',label:'Rewards'}
+  ];
+  return '<div class="mission-current-tabs">'+tabs.map(function(tab,idx){
+      return '<button type="button" class="mission-current-tab '+(idx===0?'active':'')+'" data-current-page="'+escapeHtml(tab.key)+'" onclick="setMissionCurrentPageV25(\''+escapeHtml(tab.key)+'\')">'+escapeHtml(tab.label)+'</button>';
+    }).join('')+'</div>'
+    +tabs.map(function(tab,idx){
+      return '<div class="mission-current-page '+(idx===0?'active':'')+'" data-current-page="'+escapeHtml(tab.key)+'">'+missionDeepItemsV25(plan[tab.key])+'</div>';
+    }).join('');
+}
+
 function missionChainNodeV25(mission){
   mission=mission||{};
   var state=mission.state||'locked';
-  return '<button type="button" class="mission-chain-node '+escapeHtml(state)+'" onclick="setMissionSubTabV25(\'missions\')" aria-label="'+escapeHtml((mission.title||'Mission')+' '+state)+'">'
-    +'<div class="mission-chain-node-top"><div class="mission-chain-state">'+escapeHtml(state)+'</div><div class="mission-chain-order">'+escapeHtml(String(mission.order||''))+'</div></div>'
+  var disabled=state==='locked'?' disabled aria-disabled="true"':'';
+  return '<button type="button" class="mission-chain-node '+escapeHtml(state)+'" onclick="setMissionSubTabV25(\'missions\')" aria-label="'+escapeHtml((mission.title||'Mission')+' '+state)+'"'+disabled+'>'
+    +'<div class="mission-chain-node-top"><div class="mission-state-pill '+escapeHtml(state)+'">'+escapeHtml(missionStateLabelV25(state))+'</div><div class="mission-chain-order">'+escapeHtml(String(mission.order||''))+'</div></div>'
     +'<div class="mission-chain-title">'+escapeHtml(mission.title||'Money Mission')+'</div>'
     +'<div class="mission-chain-meta">'+escapeHtml((mission.focusLane||'Money Movement')+' · '+(mission.progress||0)+'% · '+(mission.summary||''))+'</div>'
     +'</button>';
@@ -30984,26 +31109,37 @@ function renderPhase9NMissionUnlockBoardV25(id,chain,compact){
   var strip=(chain.previous||[]).concat(current?[current]:[]).concat(next?[next]:[]).filter(Boolean);
   var requirements=(current.requirements||[]).map(missionRequirementRowV25).join('');
   var reward=missionRewardChipsV25(current.rewards||{});
+  var previous=(chain.previous||[]).length?(chain.previous||[])[(chain.previous||[]).length-1]:null;
+  var activeMap='<div class="mission-active-map">'
+    +'<div class="mission-mini-card"><div class="mission-mini-label">Previous mission</div><div class="mission-mini-title">'+escapeHtml(previous&&previous.title?previous.title:'No previous mission yet')+'</div><div class="mission-mini-meta">'+escapeHtml(previous&&previous.title?((previous.progress||99)+'% complete · '+(previous.focusLane||'Money Movement')):'The first completed mission will appear here.')+'</div></div>'
+    +'<div class="mission-mini-card"><div class="mission-mini-label">Current mission</div><div class="mission-mini-title">'+escapeHtml(current.title||'Current Mission')+'</div><div class="mission-mini-meta">'+escapeHtml((current.focusLane||'Money Movement')+' · '+progress+'% complete · complete this checklist before the next lane opens')+'</div></div>'
+    +'</div>';
   var nextCopy=next&&next.title
     ? '<div class="mission-next-preview"><div class="mission-next-preview-title">Next preview: '+escapeHtml(next.title)+'</div><div class="mission-next-preview-meta">'+escapeHtml((next.focusLane||'Next lane')+' · '+(next.summary||'Unlocks after the current mission is complete.'))+'</div></div>'
     : '<div class="mission-next-preview"><div class="mission-next-preview-title">Next preview locked</div><div class="mission-next-preview-meta">Keep building this mission. The next lane appears from tracked progress only.</div></div>';
   el.innerHTML=''
     +'<div class="mission-chain-strip">'+strip.map(missionChainNodeV25).join('')+'</div>'
-    +'<div class="mission-current-lock">'
-      +'<div class="mission-current-top"><div><div class="mission-current-kicker">'+escapeHtml((current.chapter||'Mission Arc')+' · '+(current.state||'current'))+'</div><div class="mission-current-title">'+escapeHtml(current.title||'Current Mission')+'</div><div class="mission-current-copy">'+escapeHtml(current.summary||'Complete the tracked checklist to unlock the next mission.')+'</div></div><div class="mission-current-percent">'+escapeHtml(String(progress))+'<small>complete</small></div></div>'
+    +'<div class="mission-current-lock deep">'
+      +activeMap
+      +'<div class="mission-current-top"><div><div class="mission-current-kicker">'+escapeHtml((current.chapter||'Mission Arc')+' · '+missionStateLabelV25(current.state||'current'))+'</div><div class="mission-current-title">'+escapeHtml(current.title||'Current Mission')+'</div><div class="mission-current-copy">'+escapeHtml(current.summary||'Complete the tracked checklist to unlock the next mission.')+'</div></div><div class="mission-current-percent">'+escapeHtml(String(progress))+'<small>complete</small></div></div>'
       +'<div class="mission-progress-rail"><div class="mission-progress-fill" style="--mission-progress:'+progress+'%"></div></div>'
-      +(compact?'':'<div class="mission-requirement-list">'+(requirements||'<div class="mission-empty-state">No requirements available yet.</div>')+'</div>'+reward)
+      +(compact?'':'<div class="mission-requirement-list">'+(requirements||'<div class="mission-empty-state">No requirements available yet.</div>')+'</div>'+missionCurrentDepthPanelV25(current,chain)+reward)
     +'</div>'
     +(compact?'':nextCopy);
 }
 
 function missionUnlockDetailCardV25(mission){
   mission=mission||{};
+  if(mission.state==='locked'){
+    return '<div class="mission-detail-card locked" aria-disabled="true"><div class="mission-detail-lock"><div class="mission-lock-icon">LOCK</div><div><div class="mission-detail-name">'+escapeHtml(mission.title||'Locked Mission')+'</div><div class="mission-detail-meta">'+escapeHtml('Locked · '+(mission.focusLane||'Money Movement')+' · complete earlier missions to access this lane.')+'</div></div></div></div>';
+  }
   var requirements=(mission.requirements||[]).map(missionRequirementRowV25).join('');
   var reward=missionRewardChipsV25(mission.rewards||{});
   var open=(mission.state==='current'||mission.state==='review')?' open':'';
-  return '<details class="mission-detail-card"'+open+'><summary><div class="mission-detail-mark">'+escapeHtml(String(mission.order||''))+'</div><div><div class="mission-detail-name">'+escapeHtml(mission.title||'Money Mission')+'</div><div class="mission-detail-meta">'+escapeHtml((mission.state||'locked')+' · '+(mission.focusLane||'Money Movement')+' · '+(mission.progress||0)+'% · '+(mission.summary||''))+'</div></div></summary><div class="mission-detail-body">'
+  var cls='mission-detail-card '+escapeHtml(mission.state||'locked');
+  return '<details class="'+cls+'"'+open+'><summary><div class="mission-detail-mark">'+escapeHtml(String(mission.order||''))+'</div><div><div class="mission-state-pill '+escapeHtml(mission.state||'locked')+'">'+escapeHtml(missionStateLabelV25(mission.state||'locked'))+'</div><div class="mission-detail-name">'+escapeHtml(mission.title||'Money Mission')+'</div><div class="mission-detail-meta">'+escapeHtml((mission.focusLane||'Money Movement')+' · '+(mission.progress||0)+'% · '+(mission.summary||''))+'</div></div></summary><div class="mission-detail-body">'
     +'<div class="mission-detail-row"><b>Mission lock</b><span>'+escapeHtml(mission.state==='current'?'This is the active mission. The next mission stays locked until the checklist is complete.':mission.state==='completed'?'Completed from tracked business action.':mission.state==='preview'?'Next mission preview. It opens after the current mission is complete.':'Locked behind earlier mission progress.')+'</span></div>'
+    +(mission.state==='current'||mission.state==='review'?missionCurrentDepthPanelV25(mission,{next:null}):'')
     +'<div class="mission-requirement-list">'+(requirements||'<div class="mission-empty-state">No requirements available yet.</div>')+'</div>'
     +reward
     +'</div></details>';
