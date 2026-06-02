@@ -3837,6 +3837,21 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="reset-status" id="phase9k-mission-status"></div>
         </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Mission Unlock Progression Contract</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Phase 9L scope</div><div class="settings-row-meta" id="phase9l-mission-scope">Define mission states, current mission lock, requirements, progress, rewards preview, and Level 48 baseline. No mission completion execution.</div></div><span class="settings-badge" id="phase9l-mission-scope-badge">Contract</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Operator baseline</div><div class="settings-row-meta" id="phase9l-mission-baseline">A1XX starts at Level 48 with a long tracked path to 99.</div></div><span class="settings-badge off" id="phase9l-mission-baseline-badge">48</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Mission chain</div><div class="settings-row-meta" id="phase9l-mission-chain">Previous, current, and next missions are previewed from real business-action data.</div></div><span class="settings-badge off" id="phase9l-mission-chain-badge">Chain</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta" id="phase9l-mission-blocked">No fake completion, skip path, writes, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.</div></div><span class="settings-badge warn" id="phase9l-mission-blocked-badge">Blocked</span></div>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn primary" onclick="runPhase9LMissionUnlockProgressionContractV25()">Review mission contract</button>
+            <button class="btn" onclick="setSettingsTab('account');setAccountSubTab('mission');setMissionSubTabV25('missions')">Open Missions</button>
+            <button class="btn" onclick="copyPhase9LMissionUnlockProgressionContractV25()">Copy Phase 9L</button>
+          </div>
+          <div class="reset-status" id="phase9l-mission-status"></div>
+        </div>
       </div>
       <div class="health-subpane" id="health-subpane-backups">
         <div class="settings-section">
@@ -5641,9 +5656,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 20:18 ET · OS v2_5 Phase 9K Mission Catalog Rules';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9K Mission Catalog Rules';
-var APP_CACHE_TOKEN='mmos-20260601-2018-v25-phase9k-mission-catalog-rules';
+var APP_BUILD_STAMP='2026-06-02 00:39 ET · OS v2_5 Phase 9L Mission Unlock Progression Contract';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9L Mission Unlock Progression Contract';
+var APP_CACHE_TOKEN='mmos-20260602-0039-v25-phase9l-mission-unlock-progression-contract';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8486,7 +8501,7 @@ function renderMasterConfigReadSkeletonStateV24(state){
 function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
   var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
   var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[defghijkl]/.test(APP_CACHE_TOKEN);
   var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
   var result={
     status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
@@ -17994,7 +18009,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[bcdefghijkl]/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -18014,7 +18029,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[abcdefghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[abcdefghijkl]/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -18327,7 +18342,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[bcdefghijkl]/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -18596,7 +18611,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[bcdefghijkl]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -18622,7 +18637,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[cdefghijkl]/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -18815,7 +18830,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[cdefghijkl]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -19090,7 +19105,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[defghijkl]/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -19269,7 +19284,7 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[defghijkl]/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
@@ -19285,7 +19300,7 @@ function phase9EFunctionContainsV25(fn,needle){
 
 function getPhase9ENotificationEventWiringResultV25(){
   var log=mcReadNotificationLogV10();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[efghijkl]/.test(APP_CACHE_TOKEN);
   var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
   var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
   var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
@@ -19479,7 +19494,7 @@ async function copyPhase9ENotificationEventWiringV25(){
 }
 
 function runPhase9ENotificationEventWiringQACheckV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[efghijkl]/.test(APP_CACHE_TOKEN);
   var result=getPhase9ENotificationEventWiringResultV25();
   if(buildOk&&result.notificationEventWiringReady){
     renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
@@ -19612,7 +19627,7 @@ function getPhase9FNotificationContractMapV25(){
 }
 
 function getPhase9FAccountMissionContractsResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[fghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[fghijkl]/.test(APP_CACHE_TOKEN);
   var phase9EReady=typeof runPhase9ENotificationEventWiringQACheckV25==='function'&&runPhase9ENotificationEventWiringQACheckV25().passed===true;
   var duplicateStatus=getAccountMissionContractDuplicateStatusV25();
   var notificationMap=getPhase9FNotificationContractMapV25();
@@ -19852,7 +19867,7 @@ function runPhase9FAccountMissionContractsQACheckV25(){
 var PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25='a1xx_phase9g_account_mission_tab_shell_v1';
 
 function getPhase9GAccountMissionTabShellResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[ghijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[ghijkl]/.test(APP_CACHE_TOKEN);
   var phase9FReady=typeof runPhase9FAccountMissionContractsQACheckV25==='function'&&runPhase9FAccountMissionContractsQACheckV25().passed===true;
   var missionButton=!!document.querySelector('[data-account-subtab="mission"]');
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20060,7 +20075,7 @@ function runPhase9GAccountMissionTabShellQACheckV25(){
 var PHASE9H_MISSION_UI_EXPANSION_KEY_V25='a1xx_phase9h_mission_ui_expansion_v1';
 
 function getPhase9HMissionUIExpansionResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[hijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[hijkl]/.test(APP_CACHE_TOKEN);
   var phase9GReady=typeof runPhase9GAccountMissionTabShellQACheckV25==='function'&&runPhase9GAccountMissionTabShellQACheckV25().passed===true;
   var missionPane=document.getElementById('account-subpane-mission');
   var tabs=document.querySelectorAll('[data-mission-subtab]');
@@ -20278,7 +20293,7 @@ function runPhase9HMissionUIExpansionQACheckV25(){
 var PHASE9I_MISSION_CAREER_POLISH_KEY_V25='a1xx_phase9i_mission_career_mode_polish_v1';
 
 function getPhase9IMissionCareerModePolishResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[ijk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[ijkl]/.test(APP_CACHE_TOKEN);
   var phase9HReady=typeof runPhase9HMissionUIExpansionQACheckV25==='function'&&runPhase9HMissionUIExpansionQACheckV25().passed===true;
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20529,7 +20544,7 @@ function runPhase9IMissionCareerModePolishQACheckV25(){
 
 function runPhase9JMissionRatingCalibrationQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[jk]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[jkl]/.test(APP_CACHE_TOKEN);
   var profileOvrReady=!!document.querySelector('#mission-panel-profile .rp-level #mission-operator-overall');
   var titleClean=!!document.querySelector('#mission-panel-profile .rp-label')&&!/A1XX Operator Profile/i.test((document.querySelector('#mission-panel-profile .rp-label')||{}).textContent||'');
   var oldOverallRemoved=!document.querySelector('#mission-panel-profile .mission-section-card #mission-operator-overall');
@@ -20752,7 +20767,7 @@ function getPhase9KTrophyClassCountsV25(){
 
 function getPhase9KMissionCatalogRulesResultV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9k/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9[kl]/.test(APP_CACHE_TOKEN);
   var phase9JReady=typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'&&runPhase9JMissionRatingCalibrationQACheckV25().passed===true;
   var duplicateStatus=getPhase9KDuplicateStatusV25();
   var classCounts=getPhase9KTrophyClassCountsV25();
@@ -20819,7 +20834,7 @@ function getPhase9KMissionCatalogRulesResultV25(){
       .concat(notificationMapReady?[]:['trophy/milestone/achievement notification wrappers'])
       .concat(sourceTrustReady?[]:['source trust requirements']),
     unsafeFields:[],
-    nextAllowedStepAfterPhase9K:ready?'phase9l_mission_overview_guide_voice_journey_map_ui':'phase9k_mission_catalog_rules_repair',
+    nextAllowedStepAfterPhase9K:ready?'phase9l_mission_unlock_progression_contract':'phase9k_mission_catalog_rules_repair',
     blockedActions:[
       'award execution',
       'mission ledger write',
@@ -20834,7 +20849,7 @@ function getPhase9KMissionCatalogRulesResultV25(){
       'second-device bootstrap execution'
     ],
     checkedAt:new Date().toISOString(),
-    message:ready?'Phase 9K Mission Catalog Rules are ready. Scoring, milestones, trophies, achievements, duplicate guards, and near-unlock previews are installed without award execution.':'Phase 9K Mission Catalog Rules need review before the Overview Journey Map UI.'
+    message:ready?'Phase 9K Mission Catalog Rules are ready. Scoring, milestones, trophies, achievements, duplicate guards, and near-unlock previews are installed without award execution.':'Phase 9K Mission Catalog Rules need review before the Mission Unlock Progression Contract.'
   };
 }
 
@@ -20970,6 +20985,558 @@ function runPhase9KMissionCatalogRulesQACheckV25(){
     return {passed:true,meta:'Phase 9K Mission Catalog Rules are installed · 50+ milestones · 30-40 trophies · achievement catalog · duplicate guards · no award execution.',failures:[]};
   }
   return {passed:false,meta:'Phase 9K Mission Catalog Rules need review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9K Mission Catalog Rules']};
+}
+
+var PHASE9L_MISSION_UNLOCK_CONTRACT_KEY_V25='a1xx_phase9l_mission_unlock_progression_contract_v1';
+var PHASE9L_OPERATOR_BASELINE_V25={
+  baselineLevel:48,
+  baselineSource:'A1XX approved baseline',
+  baselineReason:'Existing operator history and current OS foundation',
+  levelCap:99,
+  baselineAwardExecution:false
+};
+var PHASE9L_MISSION_STATES_V25=['locked','preview','current','completed','review','archived'];
+var PHASE9L_REQUIREMENT_SOURCE_TRUST_V25=['tracked','cached','partial','not_tracked','pending'];
+var PHASE9L_MISSION_ARCS_V25=[
+  'pipeline','signal','call_motion','offer','closing','proof','delivery','revenue','consistency','scale','legacy'
+];
+var PHASE9L_MISSION_CATALOG_V25=[
+  {
+    id:'mission_pipeline_first_touch',
+    order:1,
+    arc:'pipeline',
+    title:'First Pipeline Touch',
+    chapter:'Pipeline Arc',
+    focusLane:'Outreach',
+    summary:'Open the first visible path into the pipeline.',
+    requirements:[
+      {id:'dms_1',label:'Log 1 DM or outreach touch',metric:'dms',target:1,sourceTrust:'tracked'},
+      {id:'action_1',label:'Log 1 money-moving action',metric:'actionTotal',target:1,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:40,attributeKeys:['outreach','consistency'],badgePreview:'Pipeline Starter',milestonePreview:'First DM Sent',nextMissionId:'mission_pipeline_ten_touches'}
+  },
+  {
+    id:'mission_pipeline_ten_touches',
+    order:2,
+    arc:'pipeline',
+    title:'Pipeline Starter',
+    chapter:'Pipeline Arc',
+    focusLane:'Outreach',
+    summary:'Build the first real outreach block.',
+    requirements:[
+      {id:'dms_10',label:'Log 10 DMs or outreach touches',metric:'dms',target:10,sourceTrust:'tracked'},
+      {id:'action_10',label:'Stack 10 total business reps',metric:'actionTotal',target:10,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:100,attributeKeys:['outreach','consistency'],badgePreview:'Pipeline Starter',milestonePreview:'10 DM Day',nextMissionId:'mission_signal_first_reply'}
+  },
+  {
+    id:'mission_signal_first_reply',
+    order:3,
+    arc:'signal',
+    title:'Warm Signal',
+    chapter:'Signal Arc',
+    focusLane:'Follow-Up',
+    summary:'Turn pipeline activity into a real reply or lead signal.',
+    requirements:[
+      {id:'responses_1',label:'Log 1 reply, lead, or follow-up signal',metric:'responses',target:1,sourceTrust:'tracked'},
+      {id:'dms_25',label:'Reach 25 logged outreach touches',metric:'dms',target:25,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:140,attributeKeys:['followup','community'],badgePreview:'Follow-Up Builder',milestonePreview:'First Follow-Up Logged',nextMissionId:'mission_call_first_motion'}
+  },
+  {
+    id:'mission_call_first_motion',
+    order:4,
+    arc:'call_motion',
+    title:'Call Motion',
+    chapter:'Call Motion Arc',
+    focusLane:'Sales',
+    summary:'Move warm signal into a clear buying conversation.',
+    requirements:[
+      {id:'calls_1',label:'Log 1 sales call or booked call',metric:'calls',target:1,sourceTrust:'tracked'},
+      {id:'responses_3',label:'Log 3 reply or follow-up signals',metric:'responses',target:3,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:180,attributeKeys:['sales','followup'],badgePreview:'Call Motion',milestonePreview:'First Sales Call Logged',nextMissionId:'mission_offer_first_push'}
+  },
+  {
+    id:'mission_offer_first_push',
+    order:5,
+    arc:'offer',
+    title:'Offer Push',
+    chapter:'Offer Arc',
+    focusLane:'Sales',
+    summary:'Put a qualified conversation in front of a clear offer.',
+    requirements:[
+      {id:'calls_3',label:'Reach 3 logged sales calls',metric:'calls',target:3,sourceTrust:'tracked'},
+      {id:'responses_10',label:'Reach 10 reply or follow-up signals',metric:'responses',target:10,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:220,attributeKeys:['sales','closing'],badgePreview:'Offer Builder',milestonePreview:'First Offer Push',nextMissionId:'mission_close_first_win'}
+  },
+  {
+    id:'mission_close_first_win',
+    order:6,
+    arc:'closing',
+    title:'First Close',
+    chapter:'Closing Arc',
+    focusLane:'Closing',
+    summary:'Turn one offer path into a paid decision.',
+    requirements:[
+      {id:'closes_1',label:'Log 1 close',metric:'closes',target:1,sourceTrust:'tracked'},
+      {id:'revenue_1',label:'Log first tracked revenue',metric:'revenue',target:1,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:350,attributeKeys:['closing','finance'],trophyPreview:'First Close',milestonePreview:'First Revenue Logged',nextMissionId:'mission_proof_first_ship'}
+  },
+  {
+    id:'mission_proof_first_ship',
+    order:7,
+    arc:'proof',
+    title:'Proof Shipped',
+    chapter:'Proof Arc',
+    focusLane:'Content',
+    summary:'Make the work visible so the next deal has proof behind it.',
+    requirements:[
+      {id:'content_1',label:'Log 1 content or proof item',metric:'content',target:1,sourceTrust:'tracked'},
+      {id:'action_25',label:'Reach 25 total business reps',metric:'actionTotal',target:25,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:200,attributeKeys:['content','scripting'],badgePreview:'Proof Builder',milestonePreview:'First Proof Post Shipped',nextMissionId:'mission_delivery_first_push'}
+  },
+  {
+    id:'mission_delivery_first_push',
+    order:8,
+    arc:'delivery',
+    title:'Delivery Push',
+    chapter:'Delivery Arc',
+    focusLane:'Production',
+    summary:'Move production or delivery forward after the business signal.',
+    requirements:[
+      {id:'production_1',label:'Log 1 production or delivery move',metric:'productionMoves',target:1,sourceTrust:'tracked'},
+      {id:'content_3',label:'Reach 3 content/proof items',metric:'content',target:3,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:220,attributeKeys:['production','delivery'],badgePreview:'Production Finisher',milestonePreview:'First Delivery Push',nextMissionId:'mission_weekly_momentum'}
+  },
+  {
+    id:'mission_weekly_momentum',
+    order:9,
+    arc:'consistency',
+    title:'Weekly Momentum',
+    chapter:'Consistency Arc',
+    focusLane:'Consistency',
+    summary:'Make the week feel alive with balanced action.',
+    requirements:[
+      {id:'dms_100',label:'Reach 100 outreach touches',metric:'dms',target:100,sourceTrust:'tracked'},
+      {id:'calls_10',label:'Reach 10 sales calls',metric:'calls',target:10,sourceTrust:'tracked'},
+      {id:'content_10',label:'Reach 10 proof/content items',metric:'content',target:10,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:500,attributeKeys:['outreach','sales','content','consistency'],trophyPreview:'Weekly Target Hit',milestonePreview:'Weekly Momentum',nextMissionId:'mission_cycle_revenue_marker'}
+  },
+  {
+    id:'mission_cycle_revenue_marker',
+    order:10,
+    arc:'revenue',
+    title:'Cycle Money Marker',
+    chapter:'Revenue Arc',
+    focusLane:'Finance',
+    summary:'Push the cycle toward a meaningful tracked money marker.',
+    requirements:[
+      {id:'revenue_5000',label:'Reach $5,000 tracked revenue',metric:'revenue',target:5000,sourceTrust:'tracked'},
+      {id:'closes_5',label:'Reach 5 closes',metric:'closes',target:5,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:900,attributeKeys:['finance','closing'],trophyPreview:'5 Closes',milestonePreview:'$5K Revenue',nextMissionId:'mission_scale_pipeline'}
+  },
+  {
+    id:'mission_scale_pipeline',
+    order:11,
+    arc:'scale',
+    title:'Scale Pipeline',
+    chapter:'Scale Arc',
+    focusLane:'Outreach',
+    summary:'Turn the pipeline from early motion into a scaled operating rhythm.',
+    requirements:[
+      {id:'dms_1000',label:'Reach 1,000 outreach touches',metric:'dms',target:1000,sourceTrust:'tracked'},
+      {id:'calls_100',label:'Reach 100 sales calls',metric:'calls',target:100,sourceTrust:'tracked'},
+      {id:'closes_25',label:'Reach 25 closes',metric:'closes',target:25,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:1500,attributeKeys:['outreach','sales','closing'],trophyPreview:'1K Outreach',milestonePreview:'Scale Pipeline',nextMissionId:'mission_legacy_path_99'}
+  },
+  {
+    id:'mission_legacy_path_99',
+    order:12,
+    arc:'legacy',
+    title:'Path to 99',
+    chapter:'Legacy Arc',
+    focusLane:'Lifetime Operator',
+    summary:'The long road: balanced, verified progress across years of cycles.',
+    requirements:[
+      {id:'dms_10000',label:'Reach 10,000 outreach touches',metric:'dms',target:10000,sourceTrust:'tracked'},
+      {id:'closes_1000',label:'Reach 1,000 closes',metric:'closes',target:1000,sourceTrust:'tracked'},
+      {id:'revenue_1000000',label:'Reach $1M tracked revenue',metric:'revenue',target:1000000,sourceTrust:'tracked'},
+      {id:'action_16000',label:'Reach 16,000 total business reps',metric:'actionTotal',target:16000,sourceTrust:'tracked'}
+    ],
+    rewards:{xpPreview:5000,attributeKeys:['outreach','closing','finance','resilience'],trophyPreview:'Operator OVR 99',milestonePreview:'Legacy Path',nextMissionId:''}
+  }
+];
+
+function getPhase9LMissionMetricTotalsV25(stats){
+  stats=stats||getAccountMissionActionStatsV25();
+  return getMissionCareerTotalsV25(stats);
+}
+
+function getPhase9LMetricValueV25(requirement,totals){
+  totals=totals||getPhase9LMissionMetricTotalsV25();
+  return parseFloat(totals[(requirement||{}).metric])||0;
+}
+
+function getPhase9LRequirementProgressV25(requirement,totals){
+  requirement=requirement||{};
+  totals=totals||getPhase9LMissionMetricTotalsV25();
+  var value=getPhase9LMetricValueV25(requirement,totals);
+  var target=Math.max(1,parseFloat(requirement.target)||1);
+  var sourceTrust=PHASE9L_REQUIREMENT_SOURCE_TRUST_V25.indexOf(requirement.sourceTrust)>=0?requirement.sourceTrust:'pending';
+  var percent=Math.min(99,Math.max(0,Math.floor(Math.min(value/target,0.999)*100)));
+  var complete=value>=target;
+  var state=complete?'complete':value>0?'in_progress':sourceTrust==='tracked'?'pending':'not_tracked';
+  return Object.assign({},requirement,{
+    value:value,
+    target:target,
+    progress:complete?99:percent,
+    remaining:Math.max(0,Math.ceil(target-value)),
+    complete:complete,
+    state:state,
+    sourceTrust:sourceTrust
+  });
+}
+
+function getPhase9LMissionProgressV25(mission,totals){
+  mission=mission||{};
+  var requirements=(mission.requirements||[]).map(function(req){return getPhase9LRequirementProgressV25(req,totals);});
+  var completeCount=requirements.filter(function(req){return req.complete;}).length;
+  var allComplete=requirements.length>0&&completeCount===requirements.length;
+  var progress=requirements.length?Math.floor(requirements.reduce(function(sum,req){return sum+(req.progress||0);},0)/requirements.length):0;
+  return Object.assign({},mission,{
+    requirements:requirements,
+    completeCount:completeCount,
+    requirementCount:requirements.length,
+    progress:allComplete?99:Math.min(99,progress),
+    complete:allComplete,
+    completionExecution:false,
+    skipPathEnabled:false
+  });
+}
+
+function getPhase9LMissionChainV25(stats){
+  stats=stats||getAccountMissionActionStatsV25();
+  var totals=getPhase9LMissionMetricTotalsV25(stats);
+  var evaluated=PHASE9L_MISSION_CATALOG_V25.map(function(mission){return getPhase9LMissionProgressV25(mission,totals);});
+  var firstOpenIndex=evaluated.findIndex(function(mission){return !mission.complete;});
+  if(firstOpenIndex<0)firstOpenIndex=evaluated.length-1;
+  evaluated=evaluated.map(function(mission,idx){
+    var state='locked';
+    if(idx<firstOpenIndex)state='completed';
+    else if(idx===firstOpenIndex)state='current';
+    else if(idx===firstOpenIndex+1)state='preview';
+    else state='locked';
+    if(mission.complete&&idx===firstOpenIndex)state='review';
+    return Object.assign({},mission,{state:state});
+  });
+  var current=evaluated[firstOpenIndex]||evaluated[0]||null;
+  return {
+    missions:evaluated,
+    previous:evaluated.filter(function(mission){return mission.state==='completed'||mission.state==='archived';}).slice(-3),
+    current:current,
+    next:evaluated[firstOpenIndex+1]||null,
+    locked:evaluated.filter(function(mission){return mission.state==='locked';}),
+    totals:totals,
+    currentIndex:firstOpenIndex,
+    exactlyOneCurrent:evaluated.filter(function(mission){return mission.state==='current'||mission.state==='review';}).length===1
+  };
+}
+
+function phase9LRequirementSourceTrustReadyV25(){
+  return PHASE9L_MISSION_CATALOG_V25.every(function(mission){
+    return (mission.requirements||[]).length&&mission.requirements.every(function(req){
+      return req.id&&req.label&&req.metric&&req.target&&PHASE9L_REQUIREMENT_SOURCE_TRUST_V25.indexOf(req.sourceTrust)>=0;
+    });
+  });
+}
+
+function phase9LMissionStateModelReadyV25(){
+  return ['locked','preview','current','completed','review','archived'].every(function(state){
+    return PHASE9L_MISSION_STATES_V25.indexOf(state)>=0;
+  });
+}
+
+function getPhase9LMissionRewardPreviewV25(mission){
+  mission=mission||{};
+  var rewards=mission.rewards||{};
+  return {
+    xpPreview:parseFloat(rewards.xpPreview)||0,
+    attributeKeys:(rewards.attributeKeys||[]).slice(),
+    badgePreview:rewards.badgePreview||'',
+    trophyPreview:rewards.trophyPreview||'',
+    milestonePreview:rewards.milestonePreview||'',
+    nextMissionId:rewards.nextMissionId||'',
+    rewardExecution:false,
+    awardExecution:false,
+    notificationDispatch:false
+  };
+}
+
+function getPhase9LMissionUnlockProgressionContractResultV25(){
+  if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-202606\d{2}-\d{4}-v25-phase9l/.test(APP_CACHE_TOKEN);
+  var phase9KReady=typeof runPhase9KMissionCatalogRulesQACheckV25==='function'&&runPhase9KMissionCatalogRulesQACheckV25().passed===true;
+  var baseline=PHASE9L_OPERATOR_BASELINE_V25;
+  var baselineReady=baseline.baselineLevel===48&&baseline.levelCap===99&&baseline.baselineAwardExecution===false;
+  var missionPane=document.getElementById('account-subpane-mission');
+  var noRookieCopy=!missionPane||!/Level\s*[01]\b|Rookie|beginner/i.test(missionPane.textContent||'');
+  var statesReady=phase9LMissionStateModelReadyV25();
+  var arcsReady=PHASE9L_MISSION_ARCS_V25.length>=10&&PHASE9L_MISSION_CATALOG_V25.every(function(mission){return PHASE9L_MISSION_ARCS_V25.indexOf(mission.arc)>=0;});
+  var catalogReady=PHASE9L_MISSION_CATALOG_V25.length>=12&&PHASE9L_MISSION_CATALOG_V25.every(function(mission){return mission.id&&mission.order&&mission.title&&mission.chapter&&mission.focusLane&&mission.summary&&mission.rewards;});
+  var requirementsReady=phase9LRequirementSourceTrustReadyV25();
+  var chain=getPhase9LMissionChainV25(getAccountMissionActionStatsV25());
+  var chainReady=!!(chain.current&&chain.exactlyOneCurrent);
+  var rewardPreview=getPhase9LMissionRewardPreviewV25(chain.current||{});
+  var rewardsReady=rewardPreview.rewardExecution===false&&rewardPreview.awardExecution===false&&rewardPreview.notificationDispatch===false;
+  var noFakeCompletion=true;
+  var skipPathEnabled=false;
+  var protectedBlocked=true;
+  var ready=!!(buildOk&&phase9KReady&&baselineReady&&statesReady&&arcsReady&&catalogReady&&requirementsReady&&chainReady&&rewardsReady&&noFakeCompletion&&!skipPathEnabled&&protectedBlocked&&noRookieCopy);
+  return {
+    status:ready?'phase9l_mission_unlock_progression_contract_ready':'phase9l_mission_unlock_progression_contract_needs_review',
+    mode:'phase9l_mission_unlock_progression_contract_only',
+    missionUnlockProgressionContractReady:ready,
+    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
+    phase9KCatalogRulesReady:phase9KReady,
+    baselineLevel:baseline.baselineLevel,
+    baselineSource:baseline.baselineSource,
+    baselineReason:baseline.baselineReason,
+    levelCap:baseline.levelCap,
+    baselineAwardExecution:baseline.baselineAwardExecution,
+    noRookieCopy:noRookieCopy,
+    missionStateModel:PHASE9L_MISSION_STATES_V25.slice(),
+    missionArcCount:PHASE9L_MISSION_ARCS_V25.length,
+    missionCatalogCount:PHASE9L_MISSION_CATALOG_V25.length,
+    requirementCount:PHASE9L_MISSION_CATALOG_V25.reduce(function(total,mission){return total+(mission.requirements||[]).length;},0),
+    requirementSourceTrustReady:requirementsReady,
+    exactlyOneCurrentMission:chain.exactlyOneCurrent,
+    currentMission:chain.current,
+    previousMissions:chain.previous,
+    nextMission:chain.next,
+    lockedMissionCount:chain.locked.length,
+    rewardPreview:rewardPreview,
+    completionExecutionEnabled:false,
+    fakeCompletionEnabled:false,
+    skipPathEnabled:skipPathEnabled,
+    writeExecuted:false,
+    writesEnabled:false,
+    loginAnywhereActive:false,
+    authSyncWriteEnabled:false,
+    restoreExecutionEnabled:false,
+    tokenExport:false,
+    secretExport:false,
+    workerAuthEnabled:false,
+    automationActivationEnabled:false,
+    bootstrapExecutionEnabled:false,
+    contractItems:[
+      {key:'operator_baseline',status:baselineReady?'Ready':'Review',mode:'approved_baseline',label:'A1XX starts at Level 48 with level cap 99; baseline is not an award'},
+      {key:'mission_state_model',status:statesReady?'Ready':'Review',mode:'state_contract',label:'Mission states include locked, preview, current, completed, review, and archived'},
+      {key:'mission_catalog',status:catalogReady?'Ready':'Review',mode:'progression_contract',label:'Starter mission catalog is defined across long-term action arcs',value:String(PHASE9L_MISSION_CATALOG_V25.length)},
+      {key:'mission_arcs',status:arcsReady?'Ready':'Review',mode:'journey_contract',label:'Pipeline, signal, calls, offers, closing, proof, delivery, revenue, consistency, scale, and legacy arcs are mapped',value:String(PHASE9L_MISSION_ARCS_V25.length)},
+      {key:'requirement_model',status:requirementsReady?'Ready':'Review',mode:'checklist_contract',label:'Every mission requirement has metric, target, and source trust',value:String(PHASE9L_MISSION_CATALOG_V25.reduce(function(total,mission){return total+(mission.requirements||[]).length;},0))},
+      {key:'current_mission_lock',status:chainReady?'Ready':'Review',mode:'progression_lock',label:'Exactly one current mission is selected from tracked business-action progress'},
+      {key:'previous_current_next',status:(chain.current&&chain.next)?'Ready':'Review',mode:'chain_preview',label:'Previous, current, and next mission states are available for future UI'},
+      {key:'reward_preview_only',status:rewardsReady?'Ready':'Review',mode:'preview_only',label:'XP, attribute, badge, trophy, milestone, and next mission rewards are preview-only'},
+      {key:'no_skip_path',status:'Blocked',mode:'safety_boundary',label:'Mission skip path is not enabled'},
+      {key:'completion_execution_blocked',status:'Blocked',mode:'safety_boundary',label:'Mission completion, awards, notifications, writes, and restore actions do not execute in Phase 9L'},
+      {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, and bootstrap execution remain blocked'}
+    ],
+    missingGateItems:[]
+      .concat(buildOk?[]:['Phase 9L build token'])
+      .concat(phase9KReady?[]:['Phase 9K catalog rules receipt'])
+      .concat(baselineReady?[]:['Level 48 baseline contract'])
+      .concat(statesReady?[]:['mission state model'])
+      .concat(arcsReady?[]:['mission arcs'])
+      .concat(catalogReady?[]:['starter mission catalog'])
+      .concat(requirementsReady?[]:['requirement source trust'])
+      .concat(chainReady?[]:['current mission lock'])
+      .concat(rewardsReady?[]:['reward preview only']),
+    unsafeFields:[],
+    nextAllowedStepAfterPhase9L:ready?'phase9m_mission_unlock_ui':'phase9l_mission_unlock_progression_contract_repair',
+    blockedActions:[
+      'mission completion execution',
+      'mission skip path',
+      'award execution',
+      'mission ledger write',
+      'notification dispatch',
+      'live master config write',
+      'login-anywhere activation',
+      'auth sync write',
+      'restore execution',
+      'token export',
+      'secret export',
+      'worker auth',
+      'automation activation',
+      'second-device bootstrap execution'
+    ],
+    checkedAt:new Date().toISOString(),
+    message:ready?'Phase 9L Mission Unlock Progression Contract is ready. Level 48 baseline, mission states, current mission lock, requirements, source trust, chain preview, and rewards preview are installed without completion execution.':'Phase 9L Mission Unlock Progression Contract needs review before Mission Unlock UI.'
+  };
+}
+
+function formatPhase9LMissionUnlockProgressionContractV25(result){
+  result=result||getPhase9LMissionUnlockProgressionContractResultV25();
+  var items=result.contractItems||[];
+  var missing=result.missingGateItems||[];
+  var blocked=result.blockedActions||[];
+  var current=result.currentMission||{};
+  var previous=result.previousMissions||[];
+  var next=result.nextMission||{};
+  var rewards=result.rewardPreview||{};
+  var requirements=current.requirements||[];
+  return [
+    'Phase 9L mission unlock progression contract',
+    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
+    '',
+    'Contract mode',
+    '- Status: '+(result.status||'unknown'),
+    '- Mode: '+(result.mode||'unknown'),
+    '- Mission unlock progression contract ready: '+(result.missionUnlockProgressionContractReady?'true':'false'),
+    '- Phase 9K catalog rules ready: '+(result.phase9KCatalogRulesReady?'true':'false'),
+    '- Baseline level: '+(result.baselineLevel||''),
+    '- Baseline source: '+(result.baselineSource||''),
+    '- Baseline reason: '+(result.baselineReason||''),
+    '- Level cap: '+(result.levelCap||''),
+    '- Baseline award execution: '+(result.baselineAwardExecution?'true':'false'),
+    '- No Level 1/0 visible copy: '+(result.noRookieCopy?'true':'false'),
+    '- Mission states: '+(result.missionStateModel||[]).join(', '),
+    '- Mission arc count: '+(result.missionArcCount||0),
+    '- Mission catalog count: '+(result.missionCatalogCount||0),
+    '- Requirement count: '+(result.requirementCount||0),
+    '- Requirement source trust ready: '+(result.requirementSourceTrustReady?'true':'false'),
+    '- Exactly one current mission: '+(result.exactlyOneCurrentMission?'true':'false'),
+    '- Completion execution enabled: '+(result.completionExecutionEnabled?'true':'false'),
+    '- Fake completion enabled: '+(result.fakeCompletionEnabled?'true':'false'),
+    '- Skip path enabled: '+(result.skipPathEnabled?'true':'false'),
+    '- Write executed: '+(result.writeExecuted?'true':'false'),
+    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
+    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
+    '- Auth sync write enabled: '+(result.authSyncWriteEnabled?'true':'false'),
+    '- Secret export: '+(result.secretExport?'true':'false'),
+    '- Token export: '+(result.tokenExport?'true':'false'),
+    '- Restore execution enabled: '+(result.restoreExecutionEnabled?'true':'false'),
+    '- Worker auth enabled: '+(result.workerAuthEnabled?'true':'false'),
+    '- Automation activation enabled: '+(result.automationActivationEnabled?'true':'false'),
+    '- Bootstrap execution enabled: '+(result.bootstrapExecutionEnabled?'true':'false'),
+    '',
+    'Mission chain',
+    '- Previous missions: '+(previous.length?previous.map(function(m){return m.title+' ('+m.state+')';}).join(', '):'none yet'),
+    '- Current mission: '+(current.title||'')+' · '+(current.state||'')+' · '+(current.progress||0)+'%',
+    '- Next mission: '+(next.title?next.title+' · '+(next.state||''):'none returned'),
+    '- Locked mission count: '+(result.lockedMissionCount||0),
+    '',
+    'Current mission requirements',
+    requirements.length?requirements.map(function(req){return '- '+(req.label||req.id||'')+': '+(req.state||'')+' · '+(req.sourceTrust||'')+' · '+(req.progress||0)+'% · '+(req.remaining||0)+' remaining';}).join('\n'):'- none returned',
+    '',
+    'Reward preview',
+    '- XP preview: '+(rewards.xpPreview||0),
+    '- Attribute keys: '+((rewards.attributeKeys||[]).length?(rewards.attributeKeys||[]).join(', '):'none'),
+    '- Badge preview: '+(rewards.badgePreview||'none'),
+    '- Trophy preview: '+(rewards.trophyPreview||'none'),
+    '- Milestone preview: '+(rewards.milestonePreview||'none'),
+    '- Next mission ID: '+(rewards.nextMissionId||'none'),
+    '- Reward execution: '+(rewards.rewardExecution?'true':'false'),
+    '- Award execution: '+(rewards.awardExecution?'true':'false'),
+    '- Notification dispatch: '+(rewards.notificationDispatch?'true':'false'),
+    '',
+    'Contract items',
+    items.length?items.map(function(item){return '- '+(item.key||'')+': '+(item.status||'')+' · '+(item.mode||'')+' · '+(item.label||'')+(item.value?' · '+item.value:'');}).join('\n'):'- none returned',
+    '',
+    'Missing gate items',
+    missing.length?('- '+missing.join('\n- ')):'- none',
+    '',
+    'Unsafe fields',
+    (result.unsafeFields||[]).length?('- '+result.unsafeFields.join('\n- ')):'- none',
+    '',
+    'Next allowed step',
+    '- '+(result.nextAllowedStepAfterPhase9L||''),
+    '',
+    'Blocked actions',
+    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
+    '',
+    'Result',
+    result.message||''
+  ].join('\n');
+}
+
+function setPhase9LMissionUnlockProgressionContractStateV25(state){
+  window.__phase9LMissionUnlockProgressionContractV25=state;
+  try{localStorage.setItem(PHASE9L_MISSION_UNLOCK_CONTRACT_KEY_V25,JSON.stringify(state));}catch(e){}
+  return state;
+}
+
+function getPhase9LMissionUnlockProgressionContractStateV25(){
+  try{return JSON.parse(localStorage.getItem(PHASE9L_MISSION_UNLOCK_CONTRACT_KEY_V25)||'null')||null;}catch(e){return null;}
+}
+
+function renderPhase9LMissionUnlockProgressionContractStateV25(state){
+  state=state||window.__phase9LMissionUnlockProgressionContractV25||getPhase9LMissionUnlockProgressionContractStateV25()||{};
+  var result=state.result||state||{};
+  var ready=result.missionUnlockProgressionContractReady===true;
+  var current=result.currentMission||{};
+  setTextV24('phase9l-mission-baseline',ready?'Level 48 baseline is active · path to 99 stays tracked and hard.':'Level 48 baseline needs review.');
+  setTextV24('phase9l-mission-chain',ready?'Current mission: '+(current.title||'Money Mission')+' · '+(current.progress||0)+'% · next preview ready.':'Mission chain needs review.');
+  setTextV24('phase9l-mission-blocked','No fake completion, skip path, writes, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.');
+  setBadge('phase9l-mission-scope-badge',ready?'Ready':'Contract',ready?'':'warn');
+  setBadge('phase9l-mission-baseline-badge',ready?'Level 48':'Review',ready?'':'warn');
+  setBadge('phase9l-mission-chain-badge',ready?'Chain':'Review',ready?'':'warn');
+  setBadge('phase9l-mission-blocked-badge','Blocked','warn');
+}
+
+function runPhase9LMissionUnlockProgressionContractV25(){
+  var result=getPhase9LMissionUnlockProgressionContractResultV25();
+  var state={
+    checkedAt:new Date().toISOString(),
+    passed:result.missionUnlockProgressionContractReady===true,
+    result:result,
+    previewText:formatPhase9LMissionUnlockProgressionContractV25(result)
+  };
+  setPhase9LMissionUnlockProgressionContractStateV25(state);
+  renderPhase9LMissionUnlockProgressionContractStateV25(state);
+  var status=document.getElementById('phase9l-mission-status');
+  if(status){
+    status.className='reset-status '+(state.passed?'ok':'warn');
+    status.textContent=state.passed?'Mission unlock progression contract is ready.':'Mission unlock progression contract needs review.';
+  }
+  return {passed:state.passed,meta:state.passed?'Phase 9L Mission Unlock Progression Contract is ready · Level 48 baseline · mission state model · current lock · source-trusted requirements · rewards preview only.':'Phase 9L Mission Unlock Progression Contract needs review.',failures:state.passed?[]:['Phase 9L Mission Unlock Progression Contract']};
+}
+
+async function copyPhase9LMissionUnlockProgressionContractV25(){
+  var state=window.__phase9LMissionUnlockProgressionContractV25||getPhase9LMissionUnlockProgressionContractStateV25();
+  if(!state||!state.previewText){
+    runPhase9LMissionUnlockProgressionContractV25();
+    state=window.__phase9LMissionUnlockProgressionContractV25||getPhase9LMissionUnlockProgressionContractStateV25();
+  }
+  var status=document.getElementById('phase9l-mission-status');
+  try{
+    await navigator.clipboard.writeText(state&&state.previewText||'');
+    if(status){
+      status.className='reset-status ok';
+      status.textContent='Phase 9L receipt copied.';
+    }
+  }catch(err){
+    if(status){
+      status.className='reset-status warn';
+      status.textContent='Copy blocked by browser. Select the Mission Unlock Progression Contract receipt manually.';
+    }
+  }
+}
+
+function runPhase9LMissionUnlockProgressionContractQACheckV25(){
+  var result=getPhase9LMissionUnlockProgressionContractResultV25();
+  if(result.missionUnlockProgressionContractReady){
+    renderPhase9LMissionUnlockProgressionContractStateV25({result:result,previewText:formatPhase9LMissionUnlockProgressionContractV25(result)});
+    return {passed:true,meta:'Phase 9L Mission Unlock Progression Contract is installed · Level 48 baseline · mission states · current mission lock · source-trusted requirements · rewards preview only.',failures:[]};
+  }
+  return {passed:false,meta:'Phase 9L Mission Unlock Progression Contract needs review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9L Mission Unlock Progression Contract']};
 }
 
 function getSetupPointerRowsV23(){
@@ -24163,7 +24730,7 @@ async function runHealthLiveQACheckV22(){
   var statusBadge=document.getElementById('settings-live-qa-status-badge');
   if(summary)summary.textContent='Running Live QA...';
   [badge,statusBadge].forEach(function(el){if(el){el.textContent='Running';el.className='settings-badge warn';}});
-  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config skeleton, Phase 8G master config preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, Phase 9A v2_5 baseline closeout, Phase 9B multi-device command center, Phase 9C second-device focus mode, Phase 9D notification hub shell, Phase 9E notification event wiring, Phase 9F Account Mission contracts, Phase 9G Account Mission tab shell, Phase 9H Mission UI expansion, Phase 9I Mission Career Mode Polish, Phase 9J Mission Rating Calibration, bridge, self-hardening, drift, and route smoke checks...'}]);
+  renderHealthLiveQARowsV22([{name:'Live QA',passed:true,meta:'Running storage, backup archive, cloud registry QA gate, safe write readiness, Phase 7B skeleton, Phase 7C flow, Phase 7D preview, Phase 7E B3, Phase 7F endpoint review, Phase 7G pointer write gate, Phase 7H closeout, Phase 8A auth readiness, Phase 8B auth source snapshot, Phase 8C auth target review, Phase 8D master config read plan, Phase 8E new-device rehearsal, Phase 8F master config skeleton, Phase 8G master config preflight, Phase 8H master config page review, Phase 8I master config locator review, Phase 8J master config endpoint contract review, Phase 8K master config safe read preview, Phase 8L master config real read gate review, Phase 8M first real master config read receipt, Phase 8N master config package normalization, Phase 8O safe pointer gap review, Phase 8P safe pointer gap fill plan, Phase 8Q safe pointer gap fill preview, Phase 8R safe pointer gap B3 confirmation, Phase 8S safe pointer gap write endpoint review, Phase 8T exact write preflight, Phase 8U exact write receipt, Phase 8V post-write readback closeout, Phase 8W second-device bootstrap preview plan, Phase 8X second-device bootstrap dry-run preview, Phase 8Y second-device restore boundary review, Phase 8Z second-device restore source preview, Phase 8AA second-device restore source selection review, Phase 8AB second-device restore integrity preview, Phase 8AC second-device restore execution boundary review, Phase 8AD second-device restore execution endpoint review, Phase 8AE second-device restore execution preflight review, Phase 8AF/8AG second-device restore execution B3/final gate review, Phase 8AH second-device restore execution actual run approval, Phase 8AI second-device restore execution endpoint activation review, Phase 8AJ second-device restore execution final pre-execution preflight, Phase 8AL second-device restore execution run gate, Phase 9A v2_5 baseline closeout, Phase 9B multi-device command center, Phase 9C second-device focus mode, Phase 9D notification hub shell, Phase 9E notification event wiring, Phase 9F Account Mission contracts, Phase 9G Account Mission tab shell, Phase 9H Mission UI expansion, Phase 9I Mission Career Mode Polish, Phase 9J Mission Rating Calibration, Phase 9K Mission Catalog Rules, Phase 9L Mission Unlock Progression Contract, bridge, self-hardening, drift, and route smoke checks...'}]);
   var rows=[];
   function add(name,result){
     var normalized=normalizeHealthLiveQAResultV22(result);
@@ -24227,6 +24794,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9I Mission Career Mode Polish',typeof runPhase9IMissionCareerModePolishQACheckV25==='function'?runPhase9IMissionCareerModePolishQACheckV25():{passed:false,meta:'Missing Phase 9I Mission Career Mode Polish check'});}catch(e){add('Phase 9I Mission Career Mode Polish',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9J Mission Rating Calibration',typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'?runPhase9JMissionRatingCalibrationQACheckV25():{passed:false,meta:'Missing Phase 9J Mission Rating Calibration check'});}catch(e){add('Phase 9J Mission Rating Calibration',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9L Mission Unlock Progression Contract',typeof runPhase9LMissionUnlockProgressionContractQACheckV25==='function'?runPhase9LMissionUnlockProgressionContractQACheckV25():{passed:false,meta:'Missing Phase 9L Mission Unlock Progression Contract check'});}catch(e){add('Phase 9L Mission Unlock Progression Contract',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -52090,7 +52658,7 @@ function init(){
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
   safeRender('system health',function(){renderSystemHealth();});
-  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();renderPhase9ENotificationEventWiringStateV25();renderPhase9FAccountMissionContractsStateV25();renderPhase9GAccountMissionTabShellStateV25();renderPhase9HMissionUIExpansionStateV25();renderPhase9KMissionCatalogRulesStateV25();});
+  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();renderPhase9ENotificationEventWiringStateV25();renderPhase9FAccountMissionContractsStateV25();renderPhase9GAccountMissionTabShellStateV25();renderPhase9HMissionUIExpansionStateV25();renderPhase9KMissionCatalogRulesStateV25();renderPhase9LMissionUnlockProgressionContractStateV25();});
   safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);renderMissionJourney();});
   safeRender('auto backup',function(){startAutoBackup();});
