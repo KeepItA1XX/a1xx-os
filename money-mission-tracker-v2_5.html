@@ -3822,6 +3822,21 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
           </div>
           <div class="reset-status" id="phase9i-mission-status"></div>
         </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Mission Catalog Rules</div>
+          <div class="settings-list">
+            <div class="settings-row"><div><div class="settings-row-name">Phase 9K scope</div><div class="settings-row-meta" id="phase9k-mission-scope">Install scoring, milestone, trophy, achievement, near-unlock, and duplicate-guard rules. No award execution.</div></div><span class="settings-badge" id="phase9k-mission-scope-badge">Catalog</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Catalogs</div><div class="settings-row-meta" id="phase9k-mission-catalog">Milestone, trophy, and achievement catalogs load from verified business-action rules only.</div></div><span class="settings-badge off" id="phase9k-mission-catalog-badge">Rules</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Near unlocks</div><div class="settings-row-meta" id="phase9k-mission-near">Preview-only nearest unlocks are available for Mission Overview and Notification Hub.</div></div><span class="settings-badge off" id="phase9k-mission-near-badge">Preview</span></div>
+            <div class="settings-row"><div><div class="settings-row-name">Protected boundary</div><div class="settings-row-meta" id="phase9k-mission-blocked">No fake awards, writes, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.</div></div><span class="settings-badge warn" id="phase9k-mission-blocked-badge">Blocked</span></div>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn primary" onclick="runPhase9KMissionCatalogRulesV25()">Refresh catalog rules</button>
+            <button class="btn" onclick="setSettingsTab('account');setAccountSubTab('mission');setMissionSubTabV25('badges')">Open Badges</button>
+            <button class="btn" onclick="copyPhase9KMissionCatalogRulesV25()">Copy Phase 9K</button>
+          </div>
+          <div class="reset-status" id="phase9k-mission-status"></div>
+        </div>
       </div>
       <div class="health-subpane" id="health-subpane-backups">
         <div class="settings-section">
@@ -5626,9 +5641,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{
 ══════════════════════════════════════════════════════════ */
 var APP_VERSION='v2.5 Alpha';
 var APP_BUILD_FILE='money-mission-tracker-v2_5.html';
-var APP_BUILD_STAMP='2026-06-01 19:50 ET · OS v2_5 Phase 9J Mission Scoring Curve Hardening';
-var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9J Mission Scoring Curve Hardening';
-var APP_CACHE_TOKEN='mmos-20260601-1950-v25-phase9j-mission-scoring-curve-hardening';
+var APP_BUILD_STAMP='2026-06-01 20:18 ET · OS v2_5 Phase 9K Mission Catalog Rules';
+var APP_BRAIN_BUILD='Sheets v1.1 verified · OS v2_5 Phase 9K Mission Catalog Rules';
+var APP_CACHE_TOKEN='mmos-20260601-2018-v25-phase9k-mission-catalog-rules';
 var STORE='a1xx_v8';
 var SHEETS_KEY='a1xx_sheets_url_v1';
 var DEVICE_PROFILE_KEY='a1xx_device_profile_v23';
@@ -8471,7 +8486,7 @@ function renderMasterConfigReadSkeletonStateV24(state){
 function getMasterConfigReadSkeletonTimeoutSupersedeV25(error){
   var backup=typeof getPhase9ABackupSnapshotV25==='function'?getPhase9ABackupSnapshotV25():{};
   var baseline=typeof getPhase9BPortableBaselineV25==='function'?getPhase9BPortableBaselineV25(backup):null;
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defghijk]/.test(APP_CACHE_TOKEN);
   var accepted=!!(buildOk&&baseline&&baseline.accepted===true);
   var result={
     status:accepted?'master_config_read_skeleton_superseded_by_phase9_baseline':'master_config_read_skeleton_timeout_needs_review',
@@ -17979,7 +17994,7 @@ function getPhase9BPortableBaselineV25(backup){
   backup=backup||getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefghijk]/.test(APP_CACHE_TOKEN);
   var backupOk=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   return {
     accepted:!!(versionOk&&fileOk&&buildOk&&backupOk),
@@ -17999,7 +18014,7 @@ function buildPhase9ABaselineCloseoutResultV25(){
   var backup=getPhase9ABackupSnapshotV25();
   var versionOk=typeof APP_VERSION!=='undefined'&&APP_VERSION==='v2.5 Alpha';
   var fileOk=typeof APP_BUILD_FILE!=='undefined'&&APP_BUILD_FILE==='money-mission-tracker-v2_5.html';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[abcdefghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[abcdefghijk]/.test(APP_CACHE_TOKEN);
   var restoreReceiptOk=!!(restoreState&&restoreState.passed===true&&restoreState.result&&restoreState.result.readbackVerified===true);
   var portableBaseline=getPhase9BPortableBaselineV25(backup);
   var restoreOk=!!(restoreReceiptOk||portableBaseline.accepted);
@@ -18312,7 +18327,7 @@ function buildPhase9BMultiDeviceCommandCenterResultV25(){
   var registry=getPhase9BRegistrySnapshotV25();
   var backup=getPhase9ABackupSnapshotV25();
   var receipts=getPhase9BReceiptSummaryV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefghijk]/.test(APP_CACHE_TOKEN);
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var restoreReady=receipts.restoreStateAccepted===true;
   var phase9aReady=receipts.phase9aReady===true;
@@ -18581,7 +18596,7 @@ function runPhase9BMultiDeviceCommandCenterQACheckV25(){
     && typeof rebuildPhase9BReceiptChainV25==='function'
     && typeof buildPhase9BMultiDeviceCommandCenterResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[bcdefghijk]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25();
     if(state)renderPhase9BMultiDeviceCommandCenterStateV25(state);
@@ -18607,7 +18622,7 @@ function buildPhase9CSecondDeviceFocusModeResultV25(){
   var commandState=window.__phase9BMultiDeviceCommandCenterV25||getPhase9BStoredStateV25()||null;
   var commandResult=commandState&&commandState.result?commandState.result:buildPhase9BMultiDeviceCommandCenterResultV25();
   var backup=getPhase9ABackupSnapshotV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefghijk]/.test(APP_CACHE_TOKEN);
   var commandReady=commandResult&&commandResult.commandCenterReady===true;
   var backupReady=!!(backup.backupMarker&&backup.driveFileId&&backup.backupRow);
   var focusReady=!!(buildOk&&commandReady&&backupReady);
@@ -18800,7 +18815,7 @@ function runPhase9CSecondDeviceFocusModeQACheckV25(){
     && typeof runPhase9CSecondDeviceFocusModeV25==='function'
     && typeof buildPhase9CSecondDeviceFocusModeResultV25==='function'
   );
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[cdefghijk]/.test(APP_CACHE_TOKEN);
   if(hasUi&&buildOk){
     var state=window.__phase9CSecondDeviceFocusModeV25||getPhase9CStoredStateV25();
     if(state)renderPhase9CSecondDeviceFocusModeStateV25(state);
@@ -19075,7 +19090,7 @@ function getPhase9DNotificationHubResultV25(){
   var unread=log.filter(function(item){return !item.read&&!item.archived;}).length;
   var categories={};
   log.forEach(function(item){categories[item.category]=(categories[item.category]||0)+1;});
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defghijk]/.test(APP_CACHE_TOKEN);
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyTrophyV10==='function';
   var ready=!!(buildOk&&hasUi&&hasApi);
@@ -19254,7 +19269,7 @@ async function copyPhase9DNotificationHubShellV25(){
 function runPhase9DNotificationHubShellQACheckV25(){
   var hasUi=!!(document.getElementById('mc-notify-bell')&&document.getElementById('mc-notify-panel')&&document.getElementById('mc-toast-stack'));
   var hasApi=typeof mcNotifyV10==='function'&&typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[defghijk]/.test(APP_CACHE_TOKEN);
   if(hasUi&&hasApi&&buildOk){
     renderPhase9DNotificationHubStateV25();
     return {passed:true,meta:'Phase 9D notification hub shell is installed · bell, panel, toasts, local log, and gamification wrappers ready.',failures:[]};
@@ -19270,7 +19285,7 @@ function phase9EFunctionContainsV25(fn,needle){
 
 function getPhase9ENotificationEventWiringResultV25(){
   var log=mcReadNotificationLogV10();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efghijk]/.test(APP_CACHE_TOKEN);
   var hubReady=runPhase9DNotificationHubShellQACheckV25().passed===true;
   var backupWired=phase9EFunctionContainsV25(sendBackup,'mcNotifySyncV10')&&phase9EFunctionContainsV25(sendBackup,'mcNotifyWarningV10');
   var liveQaWired=phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifySuccessV10')&&phase9EFunctionContainsV25(runHealthLiveQACheckV22,'mcNotifyWarningV10');
@@ -19464,7 +19479,7 @@ async function copyPhase9ENotificationEventWiringV25(){
 }
 
 function runPhase9ENotificationEventWiringQACheckV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[efghijk]/.test(APP_CACHE_TOKEN);
   var result=getPhase9ENotificationEventWiringResultV25();
   if(buildOk&&result.notificationEventWiringReady){
     renderPhase9ENotificationEventWiringStateV25({result:result,previewText:formatPhase9ENotificationEventWiringV25(result)});
@@ -19597,7 +19612,7 @@ function getPhase9FNotificationContractMapV25(){
 }
 
 function getPhase9FAccountMissionContractsResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[fghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[fghijk]/.test(APP_CACHE_TOKEN);
   var phase9EReady=typeof runPhase9ENotificationEventWiringQACheckV25==='function'&&runPhase9ENotificationEventWiringQACheckV25().passed===true;
   var duplicateStatus=getAccountMissionContractDuplicateStatusV25();
   var notificationMap=getPhase9FNotificationContractMapV25();
@@ -19837,7 +19852,7 @@ function runPhase9FAccountMissionContractsQACheckV25(){
 var PHASE9G_ACCOUNT_MISSION_TAB_SHELL_KEY_V25='a1xx_phase9g_account_mission_tab_shell_v1';
 
 function getPhase9GAccountMissionTabShellResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[ghij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[ghijk]/.test(APP_CACHE_TOKEN);
   var phase9FReady=typeof runPhase9FAccountMissionContractsQACheckV25==='function'&&runPhase9FAccountMissionContractsQACheckV25().passed===true;
   var missionButton=!!document.querySelector('[data-account-subtab="mission"]');
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20045,7 +20060,7 @@ function runPhase9GAccountMissionTabShellQACheckV25(){
 var PHASE9H_MISSION_UI_EXPANSION_KEY_V25='a1xx_phase9h_mission_ui_expansion_v1';
 
 function getPhase9HMissionUIExpansionResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[hij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[hijk]/.test(APP_CACHE_TOKEN);
   var phase9GReady=typeof runPhase9GAccountMissionTabShellQACheckV25==='function'&&runPhase9GAccountMissionTabShellQACheckV25().passed===true;
   var missionPane=document.getElementById('account-subpane-mission');
   var tabs=document.querySelectorAll('[data-mission-subtab]');
@@ -20263,7 +20278,7 @@ function runPhase9HMissionUIExpansionQACheckV25(){
 var PHASE9I_MISSION_CAREER_POLISH_KEY_V25='a1xx_phase9i_mission_career_mode_polish_v1';
 
 function getPhase9IMissionCareerModePolishResultV25(){
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[ij]/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[ijk]/.test(APP_CACHE_TOKEN);
   var phase9HReady=typeof runPhase9HMissionUIExpansionQACheckV25==='function'&&runPhase9HMissionUIExpansionQACheckV25().passed===true;
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
   var missionPane=document.getElementById('account-subpane-mission');
@@ -20514,7 +20529,7 @@ function runPhase9IMissionCareerModePolishQACheckV25(){
 
 function runPhase9JMissionRatingCalibrationQACheckV25(){
   if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
-  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9j/.test(APP_CACHE_TOKEN);
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9[jk]/.test(APP_CACHE_TOKEN);
   var profileOvrReady=!!document.querySelector('#mission-panel-profile .rp-level #mission-operator-overall');
   var titleClean=!!document.querySelector('#mission-panel-profile .rp-label')&&!/A1XX Operator Profile/i.test((document.querySelector('#mission-panel-profile .rp-label')||{}).textContent||'');
   var oldOverallRemoved=!document.querySelector('#mission-panel-profile .mission-section-card #mission-operator-overall');
@@ -20545,6 +20560,416 @@ function runPhase9JMissionRatingCalibrationQACheckV25(){
       .concat(ratingCardsReady?[]:['Attribute rating cards'])
       .concat(ovrCapped?[]:['OVR 99 cap'])
   };
+}
+
+var PHASE9K_MISSION_CATALOG_RULES_KEY_V25='a1xx_phase9k_mission_catalog_rules_v1';
+var MISSION_AWARD_DIFFICULTY_CLASSES_V25=['quick','hard','really_hard','almost_impossible'];
+var MISSION_ACHIEVEMENT_CATALOG_V25=[
+  {id:'ach_first_dm',label:'First DM Sent',attribute:'outreach',metric:'dms',target:1,timeScope:'lifetime',sourceTrust:'tracked',points:25},
+  {id:'ach_first_reply',label:'First Reply Logged',attribute:'followup',metric:'responses',target:1,timeScope:'lifetime',sourceTrust:'tracked',points:25},
+  {id:'ach_first_call',label:'First Sales Call Logged',attribute:'sales',metric:'calls',target:1,timeScope:'lifetime',sourceTrust:'tracked',points:40},
+  {id:'ach_first_close',label:'First Close Logged',attribute:'closing',metric:'closes',target:1,timeScope:'lifetime',sourceTrust:'tracked',points:100},
+  {id:'ach_first_revenue',label:'First Revenue Logged',attribute:'finance',metric:'revenue',target:1,timeScope:'lifetime',sourceTrust:'tracked',points:100},
+  {id:'ach_first_content',label:'First Content Logged',attribute:'content',metric:'content',target:1,timeScope:'lifetime',sourceTrust:'tracked',points:35},
+  {id:'ach_first_production',label:'First Production Move',attribute:'production',metric:'productionMoves',target:1,timeScope:'lifetime',sourceTrust:'tracked',points:35},
+  {id:'ach_first_system_green',label:'First Clean System Rhythm',attribute:'systems',metric:'systemMoves',target:1,timeScope:'weekly',sourceTrust:'tracked',points:35},
+  {id:'ach_first_weekly_pulse',label:'First Weekly Pulse',attribute:'consistency',metric:'actionTotal',target:10,timeScope:'weekly',sourceTrust:'tracked',points:50},
+  {id:'ach_first_pipeline_day',label:'First Pipeline Day',attribute:'outreach',metric:'dms',target:10,timeScope:'weekly',sourceTrust:'tracked',points:50},
+  {id:'ach_first_offer_push',label:'First Offer Push',attribute:'sales',metric:'calls',target:3,timeScope:'weekly',sourceTrust:'partial',points:50},
+  {id:'ach_first_recovery_rep',label:'First Recovery Rep',attribute:'resilience',metric:'actionTotal',target:1,timeScope:'weekly',sourceTrust:'tracked',points:25}
+];
+var MISSION_MILESTONE_CATALOG_V25=[
+  {id:'ms_dm_100',label:'100 DMs',attribute:'outreach',metric:'dms',target:100,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_dm_500',label:'500 DMs',attribute:'outreach',metric:'dms',target:500,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_dm_1000',label:'1,000 DMs',attribute:'outreach',metric:'dms',target:1000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_dm_2500',label:'2,500 DMs',attribute:'outreach',metric:'dms',target:2500,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_dm_5000',label:'5,000 DMs',attribute:'outreach',metric:'dms',target:5000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_dm_10000',label:'10,000 DMs',attribute:'outreach',metric:'dms',target:10000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_reply_25',label:'25 Replies',attribute:'followup',metric:'responses',target:25,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_reply_100',label:'100 Replies',attribute:'followup',metric:'responses',target:100,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_reply_500',label:'500 Replies',attribute:'followup',metric:'responses',target:500,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_reply_1000',label:'1,000 Replies',attribute:'followup',metric:'responses',target:1000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_reply_3000',label:'3,000 Replies',attribute:'followup',metric:'responses',target:3000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_call_10',label:'10 Calls',attribute:'sales',metric:'calls',target:10,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_call_50',label:'50 Calls',attribute:'sales',metric:'calls',target:50,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_call_100',label:'100 Calls',attribute:'sales',metric:'calls',target:100,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_call_250',label:'250 Calls',attribute:'sales',metric:'calls',target:250,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_call_500',label:'500 Calls',attribute:'sales',metric:'calls',target:500,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_call_1000',label:'1,000 Calls',attribute:'sales',metric:'calls',target:1000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_close_5',label:'5 Closes',attribute:'closing',metric:'closes',target:5,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_close_10',label:'10 Closes',attribute:'closing',metric:'closes',target:10,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_close_25',label:'25 Closes',attribute:'closing',metric:'closes',target:25,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_close_50',label:'50 Closes',attribute:'closing',metric:'closes',target:50,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_close_100',label:'100 Closes',attribute:'closing',metric:'closes',target:100,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_close_250',label:'250 Closes',attribute:'closing',metric:'closes',target:250,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_close_500',label:'500 Closes',attribute:'closing',metric:'closes',target:500,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_close_1000',label:'1,000 Closes',attribute:'closing',metric:'closes',target:1000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_revenue_1000',label:'$1K Logged',attribute:'finance',metric:'revenue',target:1000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_revenue_5000',label:'$5K Logged',attribute:'finance',metric:'revenue',target:5000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_revenue_10000',label:'$10K Logged',attribute:'finance',metric:'revenue',target:10000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_revenue_25000',label:'$25K Logged',attribute:'finance',metric:'revenue',target:25000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_revenue_50000',label:'$50K Logged',attribute:'finance',metric:'revenue',target:50000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_revenue_100000',label:'$100K Logged',attribute:'finance',metric:'revenue',target:100000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_revenue_250000',label:'$250K Logged',attribute:'finance',metric:'revenue',target:250000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_revenue_500000',label:'$500K Logged',attribute:'finance',metric:'revenue',target:500000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_revenue_1000000',label:'$1M Logged',attribute:'finance',metric:'revenue',target:1000000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_content_10',label:'10 Content Reps',attribute:'content',metric:'content',target:10,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_content_50',label:'50 Content Reps',attribute:'content',metric:'content',target:50,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_content_100',label:'100 Content Reps',attribute:'content',metric:'content',target:100,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_content_365',label:'365 Content Reps',attribute:'content',metric:'content',target:365,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_content_1000',label:'1,000 Content Reps',attribute:'content',metric:'content',target:1000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_production_25',label:'25 Production Moves',attribute:'production',metric:'productionMoves',target:25,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_production_100',label:'100 Production Moves',attribute:'production',metric:'productionMoves',target:100,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_production_500',label:'500 Production Moves',attribute:'production',metric:'productionMoves',target:500,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_production_1000',label:'1,000 Production Moves',attribute:'production',metric:'productionMoves',target:1000,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_weekly_100_reps',label:'100 Weekly Reps',attribute:'consistency',metric:'actionTotal',target:100,timeScope:'weekly',sourceTrust:'tracked'},
+  {id:'ms_weekly_250_reps',label:'250 Weekly Reps',attribute:'consistency',metric:'actionTotal',target:250,timeScope:'weekly',sourceTrust:'tracked'},
+  {id:'ms_weekly_500_reps',label:'500 Weekly Reps',attribute:'consistency',metric:'actionTotal',target:500,timeScope:'weekly',sourceTrust:'tracked'},
+  {id:'ms_weekly_10_calls',label:'10 Calls This Week',attribute:'sales',metric:'calls',target:10,timeScope:'weekly',sourceTrust:'tracked'},
+  {id:'ms_weekly_3_closes',label:'3 Closes This Week',attribute:'closing',metric:'closes',target:3,timeScope:'weekly',sourceTrust:'tracked'},
+  {id:'ms_weekly_5_content',label:'5 Content Reps This Week',attribute:'content',metric:'content',target:5,timeScope:'weekly',sourceTrust:'tracked'},
+  {id:'ms_system_25',label:'25 System Reps',attribute:'systems',metric:'systemMoves',target:25,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_system_100',label:'100 System Reps',attribute:'systems',metric:'systemMoves',target:100,timeScope:'lifetime',sourceTrust:'tracked'},
+  {id:'ms_resilience_1000',label:'1,000 Total Reps',attribute:'resilience',metric:'actionTotal',target:1000,timeScope:'lifetime',sourceTrust:'tracked'}
+];
+var MISSION_TROPHY_CATALOG_V25=[
+  {id:'tr_first_touch',label:'First Touch',class:'quick',symbol:'FT',attribute:'outreach',metric:'dms',target:1,timeScope:'lifetime',nearAt:0.9,copy:'The first touch starts the pipeline.'},
+  {id:'tr_pipeline_day',label:'Pipeline Day',class:'quick',symbol:'PD',attribute:'outreach',metric:'dms',target:10,timeScope:'weekly',nearAt:0.7,copy:'A real outreach block is on the board.'},
+  {id:'tr_first_signal',label:'First Signal',class:'quick',symbol:'FS',attribute:'followup',metric:'responses',target:1,timeScope:'lifetime',nearAt:0.9,copy:'Signal becomes something when you move it.'},
+  {id:'tr_first_call',label:'First Call Motion',class:'quick',symbol:'FC',attribute:'sales',metric:'calls',target:1,timeScope:'lifetime',nearAt:0.9,copy:'The sales lane is open.'},
+  {id:'tr_first_close',label:'First Close',class:'quick',symbol:'C1',attribute:'closing',metric:'closes',target:1,timeScope:'lifetime',nearAt:0.9,copy:'Opened the account. Now stack it.'},
+  {id:'tr_first_proof',label:'Proof Shipped',class:'quick',symbol:'PX',attribute:'content',metric:'content',target:1,timeScope:'lifetime',nearAt:0.9,copy:'Proof beats private planning.'},
+  {id:'tr_first_delivery',label:'Delivery Move',class:'quick',symbol:'DV',attribute:'delivery',metric:'productionMoves',target:1,timeScope:'lifetime',nearAt:0.9,copy:'The work moved closer to done.'},
+  {id:'tr_weekly_pulse',label:'Weekly Pulse',class:'quick',symbol:'WP',attribute:'consistency',metric:'actionTotal',target:25,timeScope:'weekly',nearAt:0.75,copy:'The week has a pulse.'},
+  {id:'tr_dm_500',label:'500 Touches',class:'hard',symbol:'D5',attribute:'outreach',metric:'dms',target:500,timeScope:'lifetime',nearAt:0.85,copy:'Outreach is becoming a repeatable lane.'},
+  {id:'tr_dm_1000',label:'1K Outreach',class:'hard',symbol:'1K',attribute:'outreach',metric:'dms',target:1000,timeScope:'lifetime',nearAt:0.85,copy:'The pipeline is no longer theoretical.'},
+  {id:'tr_reply_100',label:'100 Signals',class:'hard',symbol:'RS',attribute:'followup',metric:'responses',target:100,timeScope:'lifetime',nearAt:0.85,copy:'Signal only matters when it is followed.'},
+  {id:'tr_call_50',label:'50 Sales Calls',class:'hard',symbol:'S5',attribute:'sales',metric:'calls',target:50,timeScope:'lifetime',nearAt:0.85,copy:'The phone lane has reps behind it.'},
+  {id:'tr_close_10',label:'10 Closes',class:'hard',symbol:'10',attribute:'closing',metric:'closes',target:10,timeScope:'lifetime',nearAt:0.85,copy:'The close is becoming a pattern.'},
+  {id:'tr_revenue_10k',label:'$10K Logged',class:'hard',symbol:'10K',attribute:'finance',metric:'revenue',target:10000,timeScope:'lifetime',nearAt:0.85,copy:'Money movement has a record.'},
+  {id:'tr_content_100',label:'100 Proof Reps',class:'hard',symbol:'P1',attribute:'content',metric:'content',target:100,timeScope:'lifetime',nearAt:0.85,copy:'Proof is compounding.'},
+  {id:'tr_weekly_250',label:'250-Rep Week',class:'hard',symbol:'250',attribute:'consistency',metric:'actionTotal',target:250,timeScope:'weekly',nearAt:0.85,copy:'A serious week of movement.'},
+  {id:'tr_dm_5000',label:'5K Outreach',class:'really_hard',symbol:'5K',attribute:'outreach',metric:'dms',target:5000,timeScope:'lifetime',nearAt:0.9,copy:'This is a career-level pipeline engine.'},
+  {id:'tr_call_250',label:'250 Sales Calls',class:'really_hard',symbol:'250',attribute:'sales',metric:'calls',target:250,timeScope:'lifetime',nearAt:0.9,copy:'Sales reps have become identity.'},
+  {id:'tr_close_50',label:'50 Closes',class:'really_hard',symbol:'50',attribute:'closing',metric:'closes',target:50,timeScope:'lifetime',nearAt:0.9,copy:'A closer record is forming.'},
+  {id:'tr_close_100',label:'100 Closes',class:'really_hard',symbol:'100',attribute:'closing',metric:'closes',target:100,timeScope:'lifetime',nearAt:0.9,copy:'The decision lane has history.'},
+  {id:'tr_revenue_50k',label:'$50K Logged',class:'really_hard',symbol:'50K',attribute:'finance',metric:'revenue',target:50000,timeScope:'lifetime',nearAt:0.9,copy:'Revenue is no longer a side note.'},
+  {id:'tr_revenue_100k',label:'$100K Logged',class:'really_hard',symbol:'100K',attribute:'finance',metric:'revenue',target:100000,timeScope:'lifetime',nearAt:0.9,copy:'A six-figure mission record.'},
+  {id:'tr_content_365',label:'365 Proof Reps',class:'really_hard',symbol:'365',attribute:'content',metric:'content',target:365,timeScope:'lifetime',nearAt:0.9,copy:'A proof habit survived the calendar.'},
+  {id:'tr_production_500',label:'500 Production Moves',class:'really_hard',symbol:'P5',attribute:'production',metric:'productionMoves',target:500,timeScope:'lifetime',nearAt:0.9,copy:'Delivery has real depth.'},
+  {id:'tr_dm_10000',label:'10K Outreach Legacy',class:'almost_impossible',symbol:'10K',attribute:'outreach',metric:'dms',target:10000,timeScope:'lifetime',nearAt:0.95,copy:'The pipeline engine reached legacy volume.'},
+  {id:'tr_call_1000',label:'1K Sales Calls',class:'almost_impossible',symbol:'1KS',attribute:'sales',metric:'calls',target:1000,timeScope:'lifetime',nearAt:0.95,copy:'A thousand buying conversations.'},
+  {id:'tr_close_500',label:'500 Closes',class:'almost_impossible',symbol:'500',attribute:'closing',metric:'closes',target:500,timeScope:'lifetime',nearAt:0.95,copy:'The close record is elite.'},
+  {id:'tr_close_1000',label:'1K Closes',class:'almost_impossible',symbol:'1KC',attribute:'closing',metric:'closes',target:1000,timeScope:'lifetime',nearAt:0.95,copy:'A long-game closer milestone.'},
+  {id:'tr_revenue_1m',label:'$1M Logged',class:'almost_impossible',symbol:'1M',attribute:'finance',metric:'revenue',target:1000000,timeScope:'lifetime',nearAt:0.95,copy:'The mission crossed a legacy money marker.'},
+  {id:'tr_content_1000',label:'1K Proof Reps',class:'almost_impossible',symbol:'1KP',attribute:'content',metric:'content',target:1000,timeScope:'lifetime',nearAt:0.95,copy:'A proof machine was built.'},
+  {id:'tr_production_1000',label:'1K Production Moves',class:'almost_impossible',symbol:'1KD',attribute:'production',metric:'productionMoves',target:1000,timeScope:'lifetime',nearAt:0.95,copy:'Delivery discipline became infrastructure.'},
+  {id:'tr_resilience_16000',label:'16K Rep Resilience',class:'almost_impossible',symbol:'16K',attribute:'resilience',metric:'actionTotal',target:16000,timeScope:'lifetime',nearAt:0.95,copy:'The operator kept returning to the mission.'}
+];
+
+function getMissionWeeklyMetricSnapshotV25(stats){
+  stats=stats||getAccountMissionActionStatsV25();
+  return {
+    revenue:stats.revenue||0,
+    dms:stats.dms||0,
+    responses:stats.responses||0,
+    calls:stats.calls||0,
+    closes:stats.closes||0,
+    content:stats.content||0,
+    productionMoves:(stats.beats||0)+(stats.soundee||0)+(stats.activeAssets||0),
+    focusMoves:(stats.weeklyStreak||0)+(stats.contentStreak||0),
+    consistencyMoves:(stats.weeklyStreak||0)+(stats.closeStreak||0)+(stats.contentStreak||0),
+    systemMoves:(stats.weeklyStreak||0)+((window.__lastHealthLiveQAV22&&window.__lastHealthLiveQAV22.passed)?1:0)+((window.__lastBackupArchiveStatusV22&&window.__lastBackupArchiveStatusV22.marker)?1:0),
+    actionTotal:stats.actionTotal||0
+  };
+}
+
+function getPhase9KCatalogRulesV25(){
+  return {
+    achievements:MISSION_ACHIEVEMENT_CATALOG_V25.slice(),
+    milestones:MISSION_MILESTONE_CATALOG_V25.slice(),
+    trophies:MISSION_TROPHY_CATALOG_V25.slice()
+  };
+}
+
+function getPhase9KCombinedAwardsV25(){
+  return MISSION_ACHIEVEMENT_CATALOG_V25.map(function(item){return Object.assign({type:'achievement',difficulty:'quick',nearAt:0.85,notification:'achievement'},item);})
+    .concat(MISSION_MILESTONE_CATALOG_V25.map(function(item){return Object.assign({type:'milestone',difficulty:'milestone',nearAt:0.85,notification:'milestone',points:75},item);}))
+    .concat(MISSION_TROPHY_CATALOG_V25.map(function(item){return Object.assign({type:'trophy',difficulty:item.class,sourceTrust:'tracked',notification:'trophy',points:item.class==='quick'?100:item.class==='hard'?300:item.class==='really_hard'?750:1500},item);}));
+}
+
+function getPhase9KDuplicateStatusV25(){
+  var ids={};
+  var dupes=[];
+  getPhase9KCombinedAwardsV25().forEach(function(item){
+    if(ids[item.id])dupes.push(item.id);
+    ids[item.id]=true;
+  });
+  return {duplicateIds:dupes,uniqueCount:Object.keys(ids).length};
+}
+
+function getPhase9KMetricValueV25(rule,stats){
+  stats=stats||getAccountMissionActionStatsV25();
+  var metric=rule&&rule.metric;
+  var totals=rule&&rule.timeScope==='weekly'?getMissionWeeklyMetricSnapshotV25(stats):getMissionCareerTotalsV25(stats);
+  return parseFloat((totals||{})[metric])||0;
+}
+
+function getPhase9KRulePreviewV25(rule,stats){
+  var value=getPhase9KMetricValueV25(rule,stats);
+  var target=Math.max(1,parseFloat(rule&&rule.target)||1);
+  var progress=Math.min(99,Math.max(0,Math.floor(Math.min(value/target,0.999)*100)));
+  var nearAt=parseFloat(rule&&rule.nearAt)||0.85;
+  var state=value>=target?'ready_for_review':value>=target*nearAt?'near_unlock':value>0?'in_progress':'locked';
+  return Object.assign({},rule,{
+    value:value,
+    progress:progress,
+    remaining:Math.max(0,Math.ceil(target-value)),
+    previewState:state,
+    awardExecution:false,
+    duplicateGuardKey:'mission_award_'+(rule&&rule.id||'unknown')
+  });
+}
+
+function getPhase9KNearUnlockPreviewsV25(stats,limit){
+  var previews=getPhase9KCombinedAwardsV25().map(function(rule){return getPhase9KRulePreviewV25(rule,stats);});
+  return previews.filter(function(item){return item.previewState==='near_unlock'||item.previewState==='ready_for_review'||item.previewState==='in_progress';})
+    .sort(function(a,b){
+      var stateRank={ready_for_review:0,near_unlock:1,in_progress:2,locked:3};
+      var rankDiff=(stateRank[a.previewState]||9)-(stateRank[b.previewState]||9);
+      if(rankDiff)return rankDiff;
+      return (b.progress||0)-(a.progress||0);
+    })
+    .slice(0,limit||5);
+}
+
+function getPhase9KTrophyClassCountsV25(){
+  return MISSION_TROPHY_CATALOG_V25.reduce(function(acc,item){
+    acc[item.class]=(acc[item.class]||0)+1;
+    return acc;
+  },{});
+}
+
+function getPhase9KMissionCatalogRulesResultV25(){
+  if(typeof renderAccountMissionProfileV25==='function')renderAccountMissionProfileV25();
+  var buildOk=typeof APP_CACHE_TOKEN!=='undefined'&&/^mmos-20260601-\d{4}-v25-phase9k/.test(APP_CACHE_TOKEN);
+  var phase9JReady=typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'&&runPhase9JMissionRatingCalibrationQACheckV25().passed===true;
+  var duplicateStatus=getPhase9KDuplicateStatusV25();
+  var classCounts=getPhase9KTrophyClassCountsV25();
+  var achievementReady=MISSION_ACHIEVEMENT_CATALOG_V25.length>=12&&MISSION_ACHIEVEMENT_CATALOG_V25.every(function(item){return item.id&&item.label&&item.attribute&&item.metric&&item.target;});
+  var milestoneReady=MISSION_MILESTONE_CATALOG_V25.length>=50&&MISSION_MILESTONE_CATALOG_V25.every(function(item){return item.id&&item.label&&item.attribute&&item.metric&&item.target;});
+  var trophyReady=MISSION_TROPHY_CATALOG_V25.length>=30&&MISSION_TROPHY_CATALOG_V25.length<=40&&MISSION_TROPHY_CATALOG_V25.every(function(item){return item.id&&item.label&&MISSION_AWARD_DIFFICULTY_CLASSES_V25.indexOf(item.class)>=0&&item.symbol&&item.metric&&item.target&&item.duplicateGuardKey!=='';});
+  var classesReady=MISSION_AWARD_DIFFICULTY_CLASSES_V25.every(function(cls){return (classCounts[cls]||0)>0;});
+  var duplicateGuardReady=duplicateStatus.duplicateIds.length===0&&typeof getPhase9KRulePreviewV25==='function'&&typeof getPhase9KNearUnlockPreviewsV25==='function';
+  var nearPreview=getPhase9KNearUnlockPreviewsV25(getAccountMissionActionStatsV25(),5);
+  var noAwardExecution=true;
+  var notificationMapReady=typeof mcNotifyAchievementV10==='function'&&typeof mcNotifyMilestoneV10==='function'&&typeof mcNotifyTrophyV10==='function';
+  var sourceTrustReady=getPhase9KCombinedAwardsV25().every(function(item){return ACCOUNT_MISSION_SOURCE_TRUST_V25.indexOf(item.sourceTrust||'tracked')>=0;});
+  var protectedBlocked=true;
+  var ready=!!(buildOk&&phase9JReady&&achievementReady&&milestoneReady&&trophyReady&&classesReady&&duplicateGuardReady&&noAwardExecution&&notificationMapReady&&sourceTrustReady&&protectedBlocked);
+  return {
+    status:ready?'phase9k_mission_catalog_rules_ready':'phase9k_mission_catalog_rules_needs_review',
+    mode:'phase9k_mission_scoring_catalog_duplicate_guard_rules',
+    missionCatalogRulesReady:ready,
+    phase9JRatingCalibrationReady:phase9JReady,
+    build:typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'',
+    achievementCatalogCount:MISSION_ACHIEVEMENT_CATALOG_V25.length,
+    milestoneCatalogCount:MISSION_MILESTONE_CATALOG_V25.length,
+    trophyCatalogCount:MISSION_TROPHY_CATALOG_V25.length,
+    totalAwardRuleCount:duplicateStatus.uniqueCount,
+    trophyClassCounts:classCounts,
+    duplicateAwardIds:duplicateStatus.duplicateIds,
+    duplicateGuardReady:duplicateGuardReady,
+    nearUnlockPreviewReady:typeof getPhase9KNearUnlockPreviewsV25==='function',
+    nearUnlockPreviews:nearPreview,
+    noAwardExecution:noAwardExecution,
+    autoAwardExecutionEnabled:false,
+    fakeAwardsEnabled:false,
+    notificationMapReady:notificationMapReady,
+    sourceTrustReady:sourceTrustReady,
+    writeExecuted:false,
+    writesEnabled:false,
+    loginAnywhereActive:false,
+    authSyncWriteEnabled:false,
+    restoreExecutionEnabled:false,
+    tokenExport:false,
+    secretExport:false,
+    workerAuthEnabled:false,
+    automationActivationEnabled:false,
+    bootstrapExecutionEnabled:false,
+    catalogItems:[
+      {key:'achievement_catalog',status:achievementReady?'Ready':'Review',mode:'catalog_rules',label:'Achievement catalog is installed for verified first wins and early movement',value:String(MISSION_ACHIEVEMENT_CATALOG_V25.length)},
+      {key:'milestone_catalog',status:milestoneReady?'Ready':'Review',mode:'catalog_rules',label:'Milestone catalog includes about 50 time, volume, revenue, weekly, cycle, and lifetime markers',value:String(MISSION_MILESTONE_CATALOG_V25.length)},
+      {key:'trophy_catalog',status:trophyReady?'Ready':'Review',mode:'catalog_rules',label:'Trophy catalog includes quick, hard, really hard, and almost impossible classes',value:String(MISSION_TROPHY_CATALOG_V25.length)},
+      {key:'difficulty_classes',status:classesReady?'Ready':'Review',mode:'progression_curve',label:'Quick, hard, really hard, and almost impossible trophy classes are represented'},
+      {key:'duplicate_guard',status:duplicateGuardReady?'Ready':'Review',mode:'safety_boundary',label:'Award IDs and duplicate guard keys are unique before any future execution path'},
+      {key:'near_unlock_preview',status:nearPreview.length||typeof getPhase9KNearUnlockPreviewsV25==='function'?'Ready':'Review',mode:'preview_only',label:'Nearest unlock preview can feed Overview and Notification Hub without awarding'},
+      {key:'notification_event_map',status:notificationMapReady?'Ready':'Review',mode:'notification_contract',label:'Achievement, milestone, and trophy notification wrappers are available for later verified dispatch'},
+      {key:'award_execution_blocked',status:'Blocked',mode:'safety_boundary',label:'No awards, trophies, milestones, notifications, writes, or restore actions execute in Phase 9K'},
+      {key:'protected_actions_locked',status:'Blocked',mode:'safety_boundary',label:'Login-anywhere, auth sync, restore execution, workers, automations, token export, secret export, and bootstrap execution remain blocked'}
+    ],
+    missingGateItems:[]
+      .concat(buildOk?[]:['Phase 9K build token'])
+      .concat(phase9JReady?[]:['Phase 9J Mission Rating Calibration receipt'])
+      .concat(achievementReady?[]:['achievement catalog'])
+      .concat(milestoneReady?[]:['50 milestone rules'])
+      .concat(trophyReady?[]:['30-40 trophy rules'])
+      .concat(classesReady?[]:['all trophy difficulty classes'])
+      .concat(duplicateGuardReady?[]:['unique duplicate guard keys'])
+      .concat(notificationMapReady?[]:['trophy/milestone/achievement notification wrappers'])
+      .concat(sourceTrustReady?[]:['source trust requirements']),
+    unsafeFields:[],
+    nextAllowedStepAfterPhase9K:ready?'phase9l_mission_overview_guide_voice_journey_map_ui':'phase9k_mission_catalog_rules_repair',
+    blockedActions:[
+      'award execution',
+      'mission ledger write',
+      'live master config write',
+      'login-anywhere activation',
+      'auth sync write',
+      'restore execution',
+      'token export',
+      'secret export',
+      'worker auth',
+      'automation activation',
+      'second-device bootstrap execution'
+    ],
+    checkedAt:new Date().toISOString(),
+    message:ready?'Phase 9K Mission Catalog Rules are ready. Scoring, milestones, trophies, achievements, duplicate guards, and near-unlock previews are installed without award execution.':'Phase 9K Mission Catalog Rules need review before the Overview Journey Map UI.'
+  };
+}
+
+function formatPhase9KMissionCatalogRulesV25(result){
+  result=result||getPhase9KMissionCatalogRulesResultV25();
+  var items=result.catalogItems||[];
+  var missing=result.missingGateItems||[];
+  var blocked=result.blockedActions||[];
+  var classCounts=result.trophyClassCounts||{};
+  var near=result.nearUnlockPreviews||[];
+  return [
+    'Phase 9K mission scoring catalog rules',
+    'Build: '+(result.build||(typeof APP_CACHE_TOKEN!=='undefined'?APP_CACHE_TOKEN:'unknown')),
+    '',
+    'Catalog mode',
+    '- Status: '+(result.status||'unknown'),
+    '- Mode: '+(result.mode||'unknown'),
+    '- Mission catalog rules ready: '+(result.missionCatalogRulesReady?'true':'false'),
+    '- Phase 9J rating calibration ready: '+(result.phase9JRatingCalibrationReady?'true':'false'),
+    '- Achievement catalog count: '+(result.achievementCatalogCount||0),
+    '- Milestone catalog count: '+(result.milestoneCatalogCount||0),
+    '- Trophy catalog count: '+(result.trophyCatalogCount||0),
+    '- Total award rule count: '+(result.totalAwardRuleCount||0),
+    '- Trophy classes: quick '+(classCounts.quick||0)+', hard '+(classCounts.hard||0)+', really_hard '+(classCounts.really_hard||0)+', almost_impossible '+(classCounts.almost_impossible||0),
+    '- Duplicate guard ready: '+(result.duplicateGuardReady?'true':'false'),
+    '- Duplicate award IDs: '+((result.duplicateAwardIds||[]).length?(result.duplicateAwardIds||[]).join(', '):'none'),
+    '- Near unlock preview ready: '+(result.nearUnlockPreviewReady?'true':'false'),
+    '- No award execution: '+(result.noAwardExecution?'true':'false'),
+    '- Auto award execution enabled: '+(result.autoAwardExecutionEnabled?'true':'false'),
+    '- Fake awards enabled: '+(result.fakeAwardsEnabled?'true':'false'),
+    '- Notification map ready: '+(result.notificationMapReady?'true':'false'),
+    '- Source trust ready: '+(result.sourceTrustReady?'true':'false'),
+    '- Write executed: '+(result.writeExecuted?'true':'false'),
+    '- Writes enabled: '+(result.writesEnabled?'true':'false'),
+    '- Login-anywhere active: '+(result.loginAnywhereActive?'true':'false'),
+    '- Auth sync write enabled: '+(result.authSyncWriteEnabled?'true':'false'),
+    '- Secret export: '+(result.secretExport?'true':'false'),
+    '- Token export: '+(result.tokenExport?'true':'false'),
+    '- Restore execution enabled: '+(result.restoreExecutionEnabled?'true':'false'),
+    '- Worker auth enabled: '+(result.workerAuthEnabled?'true':'false'),
+    '- Automation activation enabled: '+(result.automationActivationEnabled?'true':'false'),
+    '- Bootstrap execution enabled: '+(result.bootstrapExecutionEnabled?'true':'false'),
+    '',
+    'Catalog items',
+    items.length?items.map(function(item){return '- '+(item.key||'')+': '+(item.status||'')+' · '+(item.mode||'')+' · '+(item.label||'')+(item.value?' · '+item.value:'');}).join('\n'):'- none returned',
+    '',
+    'Near unlock preview',
+    near.length?near.map(function(item){return '- '+(item.label||item.id||'')+': '+(item.previewState||'')+' · '+(item.attribute||'')+' · '+(item.progress||0)+'% · '+(item.remaining||0)+' remaining · execution false';}).join('\n'):'- none returned',
+    '',
+    'Missing gate items',
+    missing.length?('- '+missing.join('\n- ')):'- none',
+    '',
+    'Unsafe fields',
+    (result.unsafeFields||[]).length?('- '+result.unsafeFields.join('\n- ')):'- none',
+    '',
+    'Next allowed step',
+    '- '+(result.nextAllowedStepAfterPhase9K||''),
+    '',
+    'Blocked actions',
+    blocked.length?('- '+blocked.join('\n- ')):'- none returned',
+    '',
+    'Result',
+    result.message||''
+  ].join('\n');
+}
+
+function setPhase9KMissionCatalogRulesStateV25(state){
+  window.__phase9KMissionCatalogRulesV25=state;
+  try{localStorage.setItem(PHASE9K_MISSION_CATALOG_RULES_KEY_V25,JSON.stringify(state));}catch(e){}
+  return state;
+}
+
+function getPhase9KMissionCatalogRulesStateV25(){
+  try{return JSON.parse(localStorage.getItem(PHASE9K_MISSION_CATALOG_RULES_KEY_V25)||'null')||null;}catch(e){return null;}
+}
+
+function renderPhase9KMissionCatalogRulesStateV25(state){
+  state=state||window.__phase9KMissionCatalogRulesV25||getPhase9KMissionCatalogRulesStateV25()||{};
+  var result=state.result||state||{};
+  var ready=result.missionCatalogRulesReady===true;
+  setTextV24('phase9k-mission-catalog',ready?'Catalogs ready: '+(result.milestoneCatalogCount||0)+' milestones, '+(result.trophyCatalogCount||0)+' trophies, '+(result.achievementCatalogCount||0)+' achievements.':'Catalog rules need review.');
+  setTextV24('phase9k-mission-near',ready?'Near-unlock preview is ready for Overview and Notification Hub · no award execution.':'Near-unlock preview needs review.');
+  setTextV24('phase9k-mission-blocked','No fake awards, writes, login-anywhere, restore execution, workers, automations, token export, secret export, or bootstrap execution.');
+  setBadge('phase9k-mission-scope-badge',ready?'Ready':'Catalog',ready?'':'warn');
+  setBadge('phase9k-mission-catalog-badge',ready?'Rules':'Review',ready?'':'warn');
+  setBadge('phase9k-mission-near-badge',ready?'Preview':'Review',ready?'':'warn');
+  setBadge('phase9k-mission-blocked-badge','Blocked','warn');
+}
+
+function runPhase9KMissionCatalogRulesV25(){
+  var result=getPhase9KMissionCatalogRulesResultV25();
+  var state={
+    checkedAt:new Date().toISOString(),
+    passed:result.missionCatalogRulesReady===true,
+    result:result,
+    previewText:formatPhase9KMissionCatalogRulesV25(result)
+  };
+  setPhase9KMissionCatalogRulesStateV25(state);
+  renderPhase9KMissionCatalogRulesStateV25(state);
+  var status=document.getElementById('phase9k-mission-status');
+  if(status){
+    status.className='reset-status '+(state.passed?'ok':'warn');
+    status.textContent=state.passed?'Mission catalog rules are ready.':'Mission catalog rules need review.';
+  }
+  return {passed:state.passed,meta:state.passed?'Phase 9K Mission Catalog Rules are ready · scoring catalog · milestones/trophies/achievements · duplicate guards · no award execution.':'Phase 9K Mission Catalog Rules need review.',failures:state.passed?[]:['Phase 9K Mission Catalog Rules']};
+}
+
+async function copyPhase9KMissionCatalogRulesV25(){
+  var state=window.__phase9KMissionCatalogRulesV25||getPhase9KMissionCatalogRulesStateV25();
+  if(!state||!state.previewText){
+    runPhase9KMissionCatalogRulesV25();
+    state=window.__phase9KMissionCatalogRulesV25||getPhase9KMissionCatalogRulesStateV25();
+  }
+  var status=document.getElementById('phase9k-mission-status');
+  try{
+    await navigator.clipboard.writeText(state&&state.previewText||'');
+    if(status){
+      status.className='reset-status ok';
+      status.textContent='Phase 9K receipt copied.';
+    }
+  }catch(err){
+    if(status){
+      status.className='reset-status warn';
+      status.textContent='Copy blocked by browser. Select the Mission Catalog Rules receipt manually.';
+    }
+  }
+}
+
+function runPhase9KMissionCatalogRulesQACheckV25(){
+  var result=getPhase9KMissionCatalogRulesResultV25();
+  if(result.missionCatalogRulesReady){
+    renderPhase9KMissionCatalogRulesStateV25({result:result,previewText:formatPhase9KMissionCatalogRulesV25(result)});
+    return {passed:true,meta:'Phase 9K Mission Catalog Rules are installed · 50+ milestones · 30-40 trophies · achievement catalog · duplicate guards · no award execution.',failures:[]};
+  }
+  return {passed:false,meta:'Phase 9K Mission Catalog Rules need review.',failures:result.missingGateItems&&result.missingGateItems.length?result.missingGateItems:['Phase 9K Mission Catalog Rules']};
 }
 
 function getSetupPointerRowsV23(){
@@ -23801,6 +24226,7 @@ async function runHealthLiveQACheckV22(){
   try{add('Phase 9H Mission UI Expansion',typeof runPhase9HMissionUIExpansionQACheckV25==='function'?runPhase9HMissionUIExpansionQACheckV25():{passed:false,meta:'Missing Phase 9H Mission UI expansion check'});}catch(e){add('Phase 9H Mission UI Expansion',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9I Mission Career Mode Polish',typeof runPhase9IMissionCareerModePolishQACheckV25==='function'?runPhase9IMissionCareerModePolishQACheckV25():{passed:false,meta:'Missing Phase 9I Mission Career Mode Polish check'});}catch(e){add('Phase 9I Mission Career Mode Polish',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Phase 9J Mission Rating Calibration',typeof runPhase9JMissionRatingCalibrationQACheckV25==='function'?runPhase9JMissionRatingCalibrationQACheckV25():{passed:false,meta:'Missing Phase 9J Mission Rating Calibration check'});}catch(e){add('Phase 9J Mission Rating Calibration',{passed:false,meta:e&&e.message?e.message:String(e)});}
+  try{add('Phase 9K Mission Catalog Rules',typeof runPhase9KMissionCatalogRulesQACheckV25==='function'?runPhase9KMissionCatalogRulesQACheckV25():{passed:false,meta:'Missing Phase 9K Mission Catalog Rules check'});}catch(e){add('Phase 9K Mission Catalog Rules',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Bridge Probe Logic',typeof runBridgeEndpointProbeSelfCheckV22==='function'?runBridgeEndpointProbeSelfCheckV22():{passed:false,meta:'Missing bridge probe self-check'});}catch(e){add('Bridge Probe Logic',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Self-Hardening',typeof runSelfHardeningPhase1SelfCheckV10==='function'?runSelfHardeningPhase1SelfCheckV10():{passed:false,meta:'Missing self-hardening check'});}catch(e){add('Self-Hardening',{passed:false,meta:e&&e.message?e.message:String(e)});}
   try{add('Drift Watch',typeof runDriftWatchSelfCheckV10==='function'?runDriftWatchSelfCheckV10():{passed:false,meta:'Missing drift watch check'});}catch(e){add('Drift Watch',{passed:false,meta:e&&e.message?e.message:String(e)});}
@@ -51664,7 +52090,7 @@ function init(){
   var streak=getStore(STREAK_KEY)||{count:0};
   document.getElementById('streak-n').textContent=streak.count||0;
   safeRender('system health',function(){renderSystemHealth();});
-  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();renderPhase9ENotificationEventWiringStateV25();renderPhase9FAccountMissionContractsStateV25();renderPhase9GAccountMissionTabShellStateV25();renderPhase9HMissionUIExpansionStateV25();});
+  safeRender('notification hub',function(){mcInitNotificationHubV10();renderPhase9DNotificationHubStateV25();renderPhase9ENotificationEventWiringStateV25();renderPhase9FAccountMissionContractsStateV25();renderPhase9GAccountMissionTabShellStateV25();renderPhase9HMissionUIExpansionStateV25();renderPhase9KMissionCatalogRulesStateV25();});
   safeRender('initial day type',function(){initDayType(window.__calEvents||[]);});
   safeRender('initial daily campaign',function(){renderDailyCoach([],[]);renderMissionJourney();});
   safeRender('auto backup',function(){startAutoBackup();});
