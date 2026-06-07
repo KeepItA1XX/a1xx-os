@@ -79,6 +79,7 @@ var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
 var OS_REGISTRY_SUMMARY_BUILD_V20 = 'mmos-20260601-1546-v25-phase9f-account-mission-contracts';
 var PHASE25_NOTION_READ_RELAY_BUILD_V25 = 'mmos-20260607-phase25-apps-script-read-relay-stub';
+var PHASE26_NOTION_LIVE_READ_PROBE_BUILD_V25 = 'mmos-20260607-phase26-gated-live-read-probe';
 var PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25 = '11161152-81da-80da-891f-000b711d93d8';
 var PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25 = '37761152-81da-81fa-98b3-000cedc52d4f';
 var PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25 = 'f32424f4-9966-4aaf-a387-ff985f4be95e';
@@ -318,6 +319,7 @@ function doGet(e) {
     if (e.parameter.action === 'os_registry_records')  return getOsRegistryRecordsV20(e);
     if (e.parameter.action === 'get_os_registry_records_v1') return getOsRegistryRecordsV20(e);
     if (e.parameter.action === 'phase25_notion_read_relay_stub') return getPhase25NotionReadRelayStubV25(e.parameter);
+    if (e.parameter.action === 'phase26_notion_live_read_probe') return getPhase26NotionLiveReadProbeV25(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_preflight') return getMasterConfigReadPreflightV20(e.parameter);
@@ -8608,6 +8610,133 @@ function getPhase25NotionReadRelayProtectedBoundaryV25() {
   return {
     notionLiveRead: false,
     notionWrite: false,
+    sheetsWrite: false,
+    driveWrite: false,
+    appWrite: false,
+    xpAwardWrite: false,
+    missionCompletionWrite: false,
+    awardExecution: false,
+    notificationDispatch: false,
+    automationActivation: false,
+    workerActivation: false,
+    autonomousAction: false,
+    playerConsumptionEnabled: false
+  };
+}
+
+function getPhase26NotionLiveReadProbeV25(p) {
+  p = p || {};
+  var packetKey = String(p.packetKey || p.packet_key || '').trim();
+  var packet = getPhase25NotionReadRelayPacketV25(packetKey);
+  var developerProbe = String(p.developerProbe || p.developer_probe || '') === '1';
+  var liveProbe = String(p.liveProbe || p.live_probe || '') === '1';
+  if (!packet) {
+    return jsonResponseV20({
+      status: 'review',
+      ok: false,
+      build: PHASE26_NOTION_LIVE_READ_PROBE_BUILD_V25,
+      phase: '26B',
+      mode: 'gated_live_read_probe',
+      code: 'unknown_packet',
+      requestedPacketKey: packetKey || '(missing)',
+      allowedPacketKeys: getPhase25NotionReadRelayPacketCatalogV25().map(function(item) { return item.packetKey; }),
+      rows: [],
+      rowCount: 0,
+      protectedBoundary: getPhase26NotionLiveReadProbeBoundaryV25(false)
+    });
+  }
+  if (!developerProbe || !liveProbe) {
+    return jsonResponseV20({
+      status: 'hold',
+      ok: true,
+      build: PHASE26_NOTION_LIVE_READ_PROBE_BUILD_V25,
+      phase: '26B',
+      mode: 'gated_live_read_probe',
+      code: 'probe_gate_closed',
+      packetKey: packet.packetKey,
+      sourceKey: packet.sourceKey,
+      sourceLabel: packet.sourceLabel,
+      viewKey: packet.viewKey,
+      viewLabel: packet.viewLabel,
+      rows: [],
+      rowCount: 0,
+      message: 'Developer probe requires developerProbe=1 and liveProbe=1.',
+      protectedBoundary: getPhase26NotionLiveReadProbeBoundaryV25(false)
+    });
+  }
+  var requestedLimit = Number(p.limit || 2);
+  var limit = Math.min(Math.max(isNaN(requestedLimit) ? 2 : requestedLimit, 1), 3);
+  var read = readPhase26NotionProbeRowsV25(packet, limit);
+  return jsonResponseV20({
+    status: read.ok ? 'ok' : 'review',
+    ok: read.ok === true,
+    build: PHASE26_NOTION_LIVE_READ_PROBE_BUILD_V25,
+    phase: '26B',
+    mode: 'gated_live_read_probe',
+    packetKey: packet.packetKey,
+    sourceKey: packet.sourceKey,
+    sourceLabel: packet.sourceLabel,
+    sourceId: packet.sourceId,
+    viewKey: packet.viewKey,
+    viewLabel: packet.viewLabel,
+    viewId: packet.viewId,
+    limit: limit,
+    rows: read.rows || [],
+    rowCount: read.rows ? read.rows.length : 0,
+    hasMore: read.hasMore === true,
+    code: read.code || '',
+    error: read.error || '',
+    readAt: new Date().toISOString(),
+    protectedBoundary: getPhase26NotionLiveReadProbeBoundaryV25(true)
+  });
+}
+
+function readPhase26NotionProbeRowsV25(packet, limit) {
+  try {
+    var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
+    if (!secret) return { ok: false, code: 'missing_secret', error: 'NOTION_SECRET not set.', rows: [] };
+    var payload = { page_size: limit };
+    var result = notionQuery(packet.sourceId, payload);
+    if (result.code >= 400) {
+      return { ok: false, code: String(result.code), error: cellTextV20(result.text || '', 500), rows: [] };
+    }
+    var parsed = JSON.parse(result.text || '{}');
+    var rows = (parsed.results || []).slice(0, limit).map(function(page) {
+      return compactPhase26NotionProbePageV25(page);
+    });
+    return { ok: true, code: String(result.code || 200), rows: rows, hasMore: parsed.has_more === true };
+  } catch (err) {
+    return { ok: false, code: 'exception', error: err.toString(), rows: [] };
+  }
+}
+
+function compactPhase26NotionProbePageV25(page) {
+  page = page || {};
+  var props = page.properties || {};
+  var fields = {};
+  var count = 0;
+  for (var key in props) {
+    if (!props.hasOwnProperty(key) || count >= 8) continue;
+    var value = readNotionAnyPropertyV20(props[key]);
+    if (!value) continue;
+    fields[key] = cellTextV20(value, 180);
+    count++;
+  }
+  return {
+    id: page.id || '',
+    title: readNotionRegistryTitleV20(props) || 'Untitled',
+    url: page.url || '',
+    fields: fields,
+    createdTime: page.created_time || '',
+    lastEditedAt: page.last_edited_time || ''
+  };
+}
+
+function getPhase26NotionLiveReadProbeBoundaryV25(probeRequested) {
+  return {
+    developerOnly: true,
+    readProbeRequested: probeRequested === true,
+    writeEnabled: false,
     sheetsWrite: false,
     driveWrite: false,
     appWrite: false,
