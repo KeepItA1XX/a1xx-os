@@ -81,6 +81,7 @@ var OS_REGISTRY_SUMMARY_BUILD_V20 = 'mmos-20260601-1546-v25-phase9f-account-miss
 var PHASE25_NOTION_READ_RELAY_BUILD_V25 = 'mmos-20260607-phase25-apps-script-read-relay-stub';
 var PHASE26_NOTION_LIVE_READ_PROBE_BUILD_V25 = 'mmos-20260607-phase26-gated-live-read-probe';
 var PHASE27_NOTION_PACKET_NORMALIZATION_BUILD_V25 = 'mmos-20260607-phase27-packet-normalization-stale-contract';
+var PHASE28_NOTION_PACKET_QA_BUILD_V25 = 'mmos-20260607-phase28-packet-readback-qa-source-trust';
 var PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25 = '11161152-81da-80da-891f-000b711d93d8';
 var PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25 = '37761152-81da-81fa-98b3-000cedc52d4f';
 var PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25 = 'f32424f4-9966-4aaf-a387-ff985f4be95e';
@@ -322,6 +323,7 @@ function doGet(e) {
     if (e.parameter.action === 'phase25_notion_read_relay_stub') return getPhase25NotionReadRelayStubV25(e.parameter);
     if (e.parameter.action === 'phase26_notion_live_read_probe') return getPhase26NotionLiveReadProbeV25(e.parameter);
     if (e.parameter.action === 'phase27_normalized_packet_preview') return getPhase27NormalizedPacketPreviewV25(e.parameter);
+    if (e.parameter.action === 'phase28_packet_readback_qa') return getPhase28PacketReadbackQAV25(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_preflight') return getMasterConfigReadPreflightV20(e.parameter);
@@ -8896,6 +8898,155 @@ function getPhase27PacketNormalizationBoundaryV25() {
   return {
     developerOnly: true,
     normalizedShapeReady: true,
+    playerConsumptionEnabled: false,
+    writeEnabled: false,
+    notionWrite: false,
+    sheetsWrite: false,
+    driveWrite: false,
+    appWrite: false,
+    xpAwardWrite: false,
+    missionCompletionWrite: false,
+    awardExecution: false,
+    notificationDispatch: false,
+    automationActivation: false,
+    workerActivation: false,
+    autonomousAction: false
+  };
+}
+
+function getPhase28PacketReadbackQAV25(p) {
+  p = p || {};
+  var packetKey = String(p.packetKey || p.packet_key || '').trim();
+  var catalog = getPhase25NotionReadRelayPacketCatalogV25();
+  var rows = catalog.map(function(packet) {
+    var normalized = makePhase27NormalizedPacketV25({
+      packet: packet,
+      status: 'blocked',
+      code: 'qa_matrix_gate_closed',
+      rows: [],
+      warnings: ['Phase 28 QA matrix preview. Developer probe gate is closed.'],
+      limit: 0
+    });
+    if (packetKey && packet.packetKey === packetKey && String(p.developerProbe || p.developer_probe || '') === '1' && String(p.liveProbe || p.live_probe || '') === '1') {
+      var probeLimit = Math.min(Math.max(Number(p.limit || 2), 1), 3);
+      var read = readPhase26NotionProbeRowsV25(packet, probeLimit);
+      normalized = makePhase27NormalizedPacketV25({
+        packet: packet,
+        status: read.ok ? ((read.rows || []).length ? 'ok' : 'empty') : 'error',
+        code: read.code || '',
+        rows: read.rows || [],
+        error: read.error || '',
+        hasMore: read.hasMore === true,
+        limit: probeLimit
+      });
+    }
+    return makePhase28PacketReadbackRowV25(packet, normalized);
+  });
+  var issueCount = rows.reduce(function(total, row) { return total + row.issueCount; }, 0);
+  return jsonResponseV20({
+    status: issueCount ? 'review' : 'ok',
+    ok: true,
+    build: PHASE28_NOTION_PACKET_QA_BUILD_V25,
+    phase: '28B',
+    mode: 'packet_readback_qa_developer_only',
+    packetCount: rows.length,
+    matrix: rows,
+    trustRules: getPhase28SourceTrustRulesV25(),
+    requiredFields: getPhase28RequiredFieldsV25(),
+    errorCases: getPhase28ErrorCaseCatalogV25(),
+    issueCount: issueCount,
+    playerConsumptionEnabled: false,
+    protectedBoundary: getPhase28PacketQABoundaryV25()
+  });
+}
+
+function makePhase28PacketReadbackRowV25(packet, normalized) {
+  var qa = checkPhase28NormalizedPacketShapeV25(normalized);
+  var trust = getPhase28SourceTrustV25(normalized, qa);
+  return {
+    packetKey: packet.packetKey || '',
+    sourceKey: packet.sourceKey || '',
+    sourceLabel: packet.sourceLabel || '',
+    viewKey: packet.viewKey || '',
+    viewLabel: packet.viewLabel || '',
+    status: normalized.status || '',
+    freshness: normalized.freshness || '',
+    rowCount: normalized.rowCount || 0,
+    fallbackState: normalized.fallback && normalized.fallback.state ? normalized.fallback.state : '',
+    warnings: normalized.warnings || [],
+    playerSafe: normalized.playerSafe || 'shape_only',
+    trust: trust,
+    sourceConfirmed: !!(packet.sourceId && normalized.source && normalized.source.id === packet.sourceId),
+    viewConfirmed: !!(packet.viewId && normalized.view && normalized.view.id === packet.viewId),
+    issueCount: qa.issueCount,
+    issues: qa.issues
+  };
+}
+
+function getPhase28SourceTrustRulesV25() {
+  return [
+    { key: 'verified', meaning: 'Canonical source and view are expected, packet shape is clean, and fresh rows exist.' },
+    { key: 'limited', meaning: 'Source is valid, but the packet is empty or aging.' },
+    { key: 'stale', meaning: 'Packet is old and should not support player UI yet.' },
+    { key: 'blocked', meaning: 'Developer probe gate is closed.' },
+    { key: 'review', meaning: 'Unknown packet, mismatch, error, unsafe shape, or malformed row needs review.' }
+  ];
+}
+
+function getPhase28SourceTrustV25(packet, qa) {
+  if (!packet || qa.issueCount) return 'review';
+  if (packet.status === 'error') return 'review';
+  if (packet.freshness === 'blocked') return 'blocked';
+  if (packet.freshness === 'stale') return 'stale';
+  if (packet.freshness === 'empty' || packet.freshness === 'aging') return 'limited';
+  if (packet.freshness === 'fresh' && packet.rowCount > 0) return 'verified';
+  return 'review';
+}
+
+function getPhase28RequiredFieldsV25() {
+  return {
+    packet: ['packetKey', 'source', 'view', 'rows', 'rowCount', 'lastReadAt', 'freshness', 'status', 'warnings', 'fallback', 'playerSafe'],
+    row: ['id', 'title', 'status', 'date', 'type', 'priority', 'summary', 'url', 'lastEditedAt']
+  };
+}
+
+function checkPhase28NormalizedPacketShapeV25(packet) {
+  packet = packet || {};
+  var required = getPhase28RequiredFieldsV25();
+  var issues = [];
+  required.packet.forEach(function(field) {
+    if (!packet.hasOwnProperty(field)) issues.push('missing packet field: ' + field);
+  });
+  if (!Array.isArray(packet.rows)) issues.push('rows is not an array');
+  (packet.rows || []).forEach(function(row, index) {
+    required.row.forEach(function(field) {
+      if (!row.hasOwnProperty(field)) issues.push('row ' + (index + 1) + ' missing field: ' + field);
+    });
+  });
+  if (packet.playerConsumptionEnabled === true) issues.push('player consumption unexpectedly enabled');
+  return { ok: issues.length === 0, issueCount: issues.length, issues: issues };
+}
+
+function getPhase28ErrorCaseCatalogV25() {
+  return [
+    { key: 'unknown_packet', expected: 'review', fallback: 'This source needs review before it can support the app.' },
+    { key: 'source_mismatch', expected: 'review', fallback: 'This source needs review before it can support the app.' },
+    { key: 'view_mismatch', expected: 'review', fallback: 'This source needs review before it can support the app.' },
+    { key: 'empty_rows', expected: 'limited', fallback: 'Nothing is queued here right now.' },
+    { key: 'stale_rows', expected: 'stale', fallback: 'This packet is old. Refresh it before using it.' },
+    { key: 'missing_secret', expected: 'review', fallback: 'This source needs review before it can support the app.' },
+    { key: 'notion_error', expected: 'review', fallback: 'This source needs review before it can support the app.' },
+    { key: 'malformed_row_shape', expected: 'review', fallback: 'This source needs review before it can support the app.' }
+  ];
+}
+
+function getPhase28PacketQABoundaryV25() {
+  return {
+    developerOnly: true,
+    matrixReady: true,
+    trustRulesReady: true,
+    packetShapeQAReady: true,
+    errorCaseQAReady: true,
     playerConsumptionEnabled: false,
     writeEnabled: false,
     notionWrite: false,
