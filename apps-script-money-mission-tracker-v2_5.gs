@@ -78,6 +78,16 @@ var TARGET_SPREADSHEET_PROPERTY = 'A1XX_SPREADSHEET_ID';
 var MC_SKILLS_LIBRARY_FOLDER = 'MC Skills Library';
 var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
 var OS_REGISTRY_SUMMARY_BUILD_V20 = 'mmos-20260601-1546-v25-phase9f-account-mission-contracts';
+var PHASE25_NOTION_READ_RELAY_BUILD_V25 = 'mmos-20260607-phase25-apps-script-read-relay-stub';
+var PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25 = '11161152-81da-80da-891f-000b711d93d8';
+var PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25 = '37761152-81da-81fa-98b3-000cedc52d4f';
+var PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25 = 'f32424f4-9966-4aaf-a387-ff985f4be95e';
+var PHASE25_NOTION_LIVE_EVENTS_VIEW_IDS_V25 = {
+  upcoming_events: 'b5d5adeb-306a-4293-a7f2-8dca0f10ec21',
+  events_by_campaign: '8d9b8d77-e7e1-4a35-b22f-1d47f3a99ffa',
+  events_by_mission: 'a6ceba1a-56d1-44a2-902b-0f51f78d6e2f',
+  followup_required_events: '4f329ddc-ad6b-4d05-944a-b171bfd9822f'
+};
 
 var WEEKLY_HEADERS = [
   'Timestamp','Save Date','Cycle #','Cycle Name','Cycle Dates','Cycle Target ($)',
@@ -307,6 +317,7 @@ function doGet(e) {
     if (e.parameter.action === 'get_os_registry_summary_v1') return getOsRegistrySummaryV20(e);
     if (e.parameter.action === 'os_registry_records')  return getOsRegistryRecordsV20(e);
     if (e.parameter.action === 'get_os_registry_records_v1') return getOsRegistryRecordsV20(e);
+    if (e.parameter.action === 'phase25_notion_read_relay_stub') return getPhase25NotionReadRelayStubV25(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_preflight') return getMasterConfigReadPreflightV20(e.parameter);
@@ -8423,6 +8434,192 @@ function readVaultFileV20(e) {
   } catch (err) {
     return jsonResponseV20({ status: 'error', ok: false, kind: 'vault_file', message: err.toString() });
   }
+}
+
+function getPhase25NotionReadRelayPacketCatalogV25() {
+  return [
+    {
+      packetKey: 'today_money_moves',
+      sourceKey: 'task_master',
+      sourceLabel: 'Task (Master)',
+      sourceId: PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25,
+      viewKey: 'app_read_moves',
+      viewLabel: 'App Read Moves',
+      viewId: PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25,
+      defaultLimit: 6,
+      maxRows: 12,
+      purpose: 'Today money moves and next clean actions.'
+    },
+    {
+      packetKey: 'mission_task_context',
+      sourceKey: 'task_master',
+      sourceLabel: 'Task (Master)',
+      sourceId: PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25,
+      viewKey: 'app_read_moves',
+      viewLabel: 'App Read Moves',
+      viewId: PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25,
+      defaultLimit: 10,
+      maxRows: 20,
+      purpose: 'Current mission task context and move planning.'
+    },
+    {
+      packetKey: 'upcoming_events',
+      sourceKey: 'live_events',
+      sourceLabel: 'Live Events & Streams',
+      sourceId: PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25,
+      viewKey: 'upcoming_events',
+      viewLabel: 'Upcoming Events',
+      viewId: PHASE25_NOTION_LIVE_EVENTS_VIEW_IDS_V25.upcoming_events,
+      defaultLimit: 8,
+      maxRows: 20,
+      purpose: 'Upcoming events and stream schedule context.'
+    },
+    {
+      packetKey: 'campaign_events',
+      sourceKey: 'live_events',
+      sourceLabel: 'Live Events & Streams',
+      sourceId: PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25,
+      viewKey: 'events_by_campaign',
+      viewLabel: 'Events by Campaign',
+      viewId: PHASE25_NOTION_LIVE_EVENTS_VIEW_IDS_V25.events_by_campaign,
+      defaultLimit: 8,
+      maxRows: 20,
+      purpose: 'Campaign-linked event planning context.'
+    },
+    {
+      packetKey: 'mission_events',
+      sourceKey: 'live_events',
+      sourceLabel: 'Live Events & Streams',
+      sourceId: PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25,
+      viewKey: 'events_by_mission',
+      viewLabel: 'Events by Mission',
+      viewId: PHASE25_NOTION_LIVE_EVENTS_VIEW_IDS_V25.events_by_mission,
+      defaultLimit: 8,
+      maxRows: 20,
+      purpose: 'Mission-linked event and stream context.'
+    },
+    {
+      packetKey: 'followup_event_alerts',
+      sourceKey: 'live_events',
+      sourceLabel: 'Live Events & Streams',
+      sourceId: PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25,
+      viewKey: 'followup_required_events',
+      viewLabel: 'Follow-Up Required Events',
+      viewId: PHASE25_NOTION_LIVE_EVENTS_VIEW_IDS_V25.followup_required_events,
+      defaultLimit: 8,
+      maxRows: 20,
+      purpose: 'Follow-up-needed event context.'
+    }
+  ];
+}
+
+function getPhase25NotionReadRelayPacketV25(packetKey) {
+  var normalized = String(packetKey || '').trim();
+  var catalog = getPhase25NotionReadRelayPacketCatalogV25();
+  for (var i = 0; i < catalog.length; i++) {
+    if (catalog[i].packetKey === normalized) return catalog[i];
+  }
+  return null;
+}
+
+function getPhase25NotionReadRelayStubV25(p) {
+  p = p || {};
+  var packetKey = String(p.packetKey || p.packet_key || '').trim();
+  var packet = getPhase25NotionReadRelayPacketV25(packetKey);
+  var requestedSourceKey = String(p.sourceKey || p.source_key || '').trim();
+  var requestedViewKey = String(p.viewKey || p.view_key || '').trim();
+  if (!packet) {
+    return jsonResponseV20({
+      status: 'review',
+      ok: false,
+      build: PHASE25_NOTION_READ_RELAY_BUILD_V25,
+      phase: '25B',
+      mode: 'apps_script_read_relay_stub_only',
+      dryRun: true,
+      code: 'unknown_packet',
+      requestedPacketKey: packetKey || '(missing)',
+      allowedPacketKeys: getPhase25NotionReadRelayPacketCatalogV25().map(function(item) { return item.packetKey; }),
+      rows: [],
+      rowCount: 0,
+      protectedBoundary: getPhase25NotionReadRelayProtectedBoundaryV25()
+    });
+  }
+  if (requestedSourceKey && requestedSourceKey !== packet.sourceKey) {
+    return jsonResponseV20({
+      status: 'review',
+      ok: false,
+      build: PHASE25_NOTION_READ_RELAY_BUILD_V25,
+      phase: '25B',
+      mode: 'apps_script_read_relay_stub_only',
+      dryRun: true,
+      code: 'source_mismatch',
+      packetKey: packet.packetKey,
+      expectedSourceKey: packet.sourceKey,
+      requestedSourceKey: requestedSourceKey,
+      rows: [],
+      rowCount: 0,
+      protectedBoundary: getPhase25NotionReadRelayProtectedBoundaryV25()
+    });
+  }
+  if (requestedViewKey && requestedViewKey !== packet.viewKey) {
+    return jsonResponseV20({
+      status: 'review',
+      ok: false,
+      build: PHASE25_NOTION_READ_RELAY_BUILD_V25,
+      phase: '25B',
+      mode: 'apps_script_read_relay_stub_only',
+      dryRun: true,
+      code: 'view_mismatch',
+      packetKey: packet.packetKey,
+      expectedViewKey: packet.viewKey,
+      requestedViewKey: requestedViewKey,
+      rows: [],
+      rowCount: 0,
+      protectedBoundary: getPhase25NotionReadRelayProtectedBoundaryV25()
+    });
+  }
+  var requestedLimit = Number(p.limit || packet.defaultLimit || 8);
+  var limit = Math.min(Math.max(isNaN(requestedLimit) ? packet.defaultLimit : requestedLimit, 1), packet.maxRows);
+  return jsonResponseV20({
+    status: 'ok',
+    ok: true,
+    build: PHASE25_NOTION_READ_RELAY_BUILD_V25,
+    phase: '25B',
+    mode: 'apps_script_read_relay_stub_only',
+    dryRun: true,
+    packetKey: packet.packetKey,
+    sourceKey: packet.sourceKey,
+    sourceLabel: packet.sourceLabel,
+    sourceId: packet.sourceId,
+    viewKey: packet.viewKey,
+    viewLabel: packet.viewLabel,
+    viewId: packet.viewId,
+    limit: limit,
+    rows: [],
+    rowCount: 0,
+    readAt: new Date().toISOString(),
+    purpose: packet.purpose,
+    warnings: ['Stub only. No live Notion rows were read in Phase 25.'],
+    protectedBoundary: getPhase25NotionReadRelayProtectedBoundaryV25()
+  });
+}
+
+function getPhase25NotionReadRelayProtectedBoundaryV25() {
+  return {
+    notionLiveRead: false,
+    notionWrite: false,
+    sheetsWrite: false,
+    driveWrite: false,
+    appWrite: false,
+    xpAwardWrite: false,
+    missionCompletionWrite: false,
+    awardExecution: false,
+    notificationDispatch: false,
+    automationActivation: false,
+    workerActivation: false,
+    autonomousAction: false,
+    playerConsumptionEnabled: false
+  };
 }
 
 function ok(msg) { return ContentService.createTextOutput(JSON.stringify({ status: 'ok', message: msg })).setMimeType(ContentService.MimeType.JSON); }
