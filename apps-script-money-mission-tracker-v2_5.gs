@@ -80,6 +80,7 @@ var MC_MEMORY_VAULT_FOLDER = 'MC Memory Vault';
 var OS_REGISTRY_SUMMARY_BUILD_V20 = 'mmos-20260601-1546-v25-phase9f-account-mission-contracts';
 var PHASE25_NOTION_READ_RELAY_BUILD_V25 = 'mmos-20260607-phase25-apps-script-read-relay-stub';
 var PHASE26_NOTION_LIVE_READ_PROBE_BUILD_V25 = 'mmos-20260607-phase26-gated-live-read-probe';
+var PHASE27_NOTION_PACKET_NORMALIZATION_BUILD_V25 = 'mmos-20260607-phase27-packet-normalization-stale-contract';
 var PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25 = '11161152-81da-80da-891f-000b711d93d8';
 var PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25 = '37761152-81da-81fa-98b3-000cedc52d4f';
 var PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25 = 'f32424f4-9966-4aaf-a387-ff985f4be95e';
@@ -320,6 +321,7 @@ function doGet(e) {
     if (e.parameter.action === 'get_os_registry_records_v1') return getOsRegistryRecordsV20(e);
     if (e.parameter.action === 'phase25_notion_read_relay_stub') return getPhase25NotionReadRelayStubV25(e.parameter);
     if (e.parameter.action === 'phase26_notion_live_read_probe') return getPhase26NotionLiveReadProbeV25(e.parameter);
+    if (e.parameter.action === 'phase27_normalized_packet_preview') return getPhase27NormalizedPacketPreviewV25(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_preflight') return getMasterConfigReadPreflightV20(e.parameter);
@@ -8748,6 +8750,165 @@ function getPhase26NotionLiveReadProbeBoundaryV25(probeRequested) {
     workerActivation: false,
     autonomousAction: false,
     playerConsumptionEnabled: false
+  };
+}
+
+function getPhase27NormalizedPacketPreviewV25(p) {
+  p = p || {};
+  var packetKey = String(p.packetKey || p.packet_key || '').trim();
+  var packet = getPhase25NotionReadRelayPacketV25(packetKey);
+  if (!packet) {
+    return jsonResponseV20(makePhase27NormalizedPacketV25({
+      packet: null,
+      status: 'error',
+      code: 'unknown_packet',
+      rows: [],
+      error: 'Unknown packet key.',
+      warnings: ['Packet key is not in the Phase 25 allowlist.']
+    }));
+  }
+  var developerProbe = String(p.developerProbe || p.developer_probe || '') === '1';
+  var liveProbe = String(p.liveProbe || p.live_probe || '') === '1';
+  var requestedLimit = Number(p.limit || 2);
+  var limit = Math.min(Math.max(isNaN(requestedLimit) ? 2 : requestedLimit, 1), 3);
+  if (!developerProbe || !liveProbe) {
+    return jsonResponseV20(makePhase27NormalizedPacketV25({
+      packet: packet,
+      status: 'blocked',
+      code: 'probe_gate_closed',
+      rows: [],
+      warnings: ['Developer live-read probe gate is closed.'],
+      limit: limit
+    }));
+  }
+  var read = readPhase26NotionProbeRowsV25(packet, limit);
+  var status = read.ok ? ((read.rows || []).length ? 'ok' : 'empty') : 'error';
+  return jsonResponseV20(makePhase27NormalizedPacketV25({
+    packet: packet,
+    status: status,
+    code: read.code || '',
+    rows: read.rows || [],
+    error: read.error || '',
+    hasMore: read.hasMore === true,
+    limit: limit
+  }));
+}
+
+function makePhase27NormalizedPacketV25(config) {
+  config = config || {};
+  var packet = config.packet || {};
+  var now = new Date().toISOString();
+  var rows = (config.rows || []).map(function(row) {
+    return normalizePhase27PacketRowV25(row);
+  });
+  var packetStatus = config.status || 'blocked';
+  var freshness = getPhase27PacketFreshnessV25(packetStatus, now, rows.length);
+  var fallback = getPhase27PacketFallbackV25(packetStatus, freshness, rows.length);
+  return {
+    status: packetStatus,
+    ok: packetStatus === 'ok' || packetStatus === 'empty' || packetStatus === 'blocked',
+    build: PHASE27_NOTION_PACKET_NORMALIZATION_BUILD_V25,
+    phase: '27B',
+    mode: 'normalized_packet_preview_developer_only',
+    packetKey: packet.packetKey || '',
+    source: {
+      key: packet.sourceKey || '',
+      label: packet.sourceLabel || '',
+      id: packet.sourceId || ''
+    },
+    view: {
+      key: packet.viewKey || '',
+      label: packet.viewLabel || '',
+      id: packet.viewId || ''
+    },
+    rows: rows,
+    rowCount: rows.length,
+    hasMore: config.hasMore === true,
+    limit: config.limit || 0,
+    lastReadAt: now,
+    freshness: freshness,
+    warnings: (config.warnings || []).concat(getPhase27PacketWarningsV25(packetStatus, freshness, rows.length)),
+    fallback: fallback,
+    playerSafe: 'shape_only',
+    playerConsumptionEnabled: false,
+    code: config.code || '',
+    error: config.error || '',
+    protectedBoundary: getPhase27PacketNormalizationBoundaryV25()
+  };
+}
+
+function normalizePhase27PacketRowV25(row) {
+  row = row || {};
+  var fields = row.fields || {};
+  return {
+    id: row.id || '',
+    title: row.title || firstPhase27FieldValueV25(fields, ['Name', 'Task Name', 'Event Name', 'Title']) || 'Untitled',
+    status: firstPhase27FieldValueV25(fields, ['Status', 'Ready To', 'Stage']) || '',
+    date: firstPhase27FieldValueV25(fields, ['Date', 'Due Date', 'Start Date', 'Follow Up Date']) || '',
+    type: firstPhase27FieldValueV25(fields, ['Type', 'Object Type', 'Source Type', 'Category']) || '',
+    priority: firstPhase27FieldValueV25(fields, ['Priority', 'Impact', 'Context Weight']) || '',
+    summary: firstPhase27FieldValueV25(fields, ['Summary', 'Short Summary', 'Description', 'Notes', 'Purpose']) || '',
+    url: row.url || '',
+    lastEditedAt: row.lastEditedAt || row.last_edited_time || ''
+  };
+}
+
+function firstPhase27FieldValueV25(fields, keys) {
+  fields = fields || {};
+  for (var i = 0; i < keys.length; i++) {
+    if (fields[keys[i]]) return cellTextV20(fields[keys[i]], 220);
+  }
+  return '';
+}
+
+function getPhase27PacketFreshnessV25(status, lastReadAt, rowCount) {
+  if (status === 'blocked') return 'blocked';
+  if (status === 'error') return 'error';
+  if (rowCount === 0) return 'empty';
+  var ageMs = new Date().getTime() - new Date(lastReadAt).getTime();
+  var ageMinutes = isNaN(ageMs) ? 9999 : Math.max(0, Math.round(ageMs / 60000));
+  if (ageMinutes <= 15) return 'fresh';
+  if (ageMinutes <= 60) return 'aging';
+  return 'stale';
+}
+
+function getPhase27PacketWarningsV25(status, freshness, rowCount) {
+  var warnings = [];
+  if (status === 'blocked') warnings.push('Probe gate is closed.');
+  if (status === 'error') warnings.push('Source needs developer review.');
+  if (freshness === 'empty') warnings.push('No rows returned for this packet.');
+  if (freshness === 'aging') warnings.push('Packet should be refreshed soon.');
+  if (freshness === 'stale') warnings.push('Packet is stale and should not be used for player UI.');
+  if (rowCount > 3) warnings.push('Packet exceeded the Phase 27 row cap.');
+  return warnings;
+}
+
+function getPhase27PacketFallbackV25(status, freshness, rowCount) {
+  if (status === 'blocked') return { state: 'blocked', copy: 'This source is waiting for a developer read check.' };
+  if (status === 'error') return { state: 'error', copy: 'This source needs review before it can support the app.' };
+  if (freshness === 'empty' || rowCount === 0) return { state: 'empty', copy: 'Nothing is queued here right now.' };
+  if (freshness === 'stale') return { state: 'stale', copy: 'This packet is old. Refresh it before using it.' };
+  if (freshness === 'aging') return { state: 'aging', copy: 'This packet is usable, but close to needing a refresh.' };
+  return { state: 'fresh', copy: 'Fresh packet ready for developer review.' };
+}
+
+function getPhase27PacketNormalizationBoundaryV25() {
+  return {
+    developerOnly: true,
+    normalizedShapeReady: true,
+    playerConsumptionEnabled: false,
+    writeEnabled: false,
+    notionWrite: false,
+    sheetsWrite: false,
+    driveWrite: false,
+    appWrite: false,
+    xpAwardWrite: false,
+    missionCompletionWrite: false,
+    awardExecution: false,
+    notificationDispatch: false,
+    automationActivation: false,
+    workerActivation: false,
+    autonomousAction: false
   };
 }
 
