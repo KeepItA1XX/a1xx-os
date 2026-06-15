@@ -6,9 +6,9 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 64 candidate
-- Current pass type: performance architecture / archive execution planning
-- Origin: Phase 63 Performance Hardening closeout
+- Current phase: Phase 65 Weight Control Follow-Through
+- Current pass type: runtime module boundary planning
+- Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
 ## Performance Rules
@@ -113,9 +113,11 @@ The live file should not keep growing a giant cache-token string forever.
 
 Move historical receipt and old QA weight out of the live runtime path while preserving archive/reference access.
 
-### Phase 65: Runtime Module Boundary Plan
+### Phase 65: Weight Control Follow-Through
 
-Plan the move from one giant HTML file toward smaller module-style boundaries without breaking Apps Script deployment.
+Map live runtime boundaries, module candidates, cache ownership, and approval rules before moving any code out of the single-file app.
+
+Current reference: `docs/phase65-runtime-module-boundary-scope-map.md`
 
 ### Phase 66: Background Hydration Layer
 
@@ -145,4 +147,3 @@ Every performance-sensitive pass should verify:
 ## Standing Boundary
 
 This plan does not authorize mission completion writes, XP award writes, notification dispatch, app writes, restore execution, worker auth, automations, token export, or secret export.
-
