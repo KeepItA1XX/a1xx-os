@@ -7,8 +7,8 @@ This committed manifest is the durable reference path for Phase 64 archive clean
 ## Current Phase
 
 - Phase: 64
-- Pass: 1W
-- Type: durable docs manifest + developer Mission receipt dry-run approval gate
+- Pass: 1X
+- Type: durable docs manifest + developer Mission receipt dry-run local arm preview
 - Live app: `money-mission-tracker-v2_5.html`
 - App weight plan: `docs/app-weight-control-system-v1.md`
 
@@ -25,15 +25,16 @@ This committed manifest is the durable reference path for Phase 64 archive clean
 | Developer Mission receipt dry-run plan | `docs/phase64-developer-mission-receipt-dry-run-plan.md` | none | Dry run is plan-only; file move, pointer shell creation, and execution remain blocked. |
 | Developer Mission receipt dry-run preflight | `docs/phase64-developer-mission-receipt-dry-run-preflight.md` | none | Dry run is preflighted; simulation, file move, pointer shell creation, and execution remain blocked. |
 | Developer Mission receipt dry-run approval gate | `docs/phase64-developer-mission-receipt-dry-run-approval-gate.md` | none | A1XX approval is required before dry-run simulation; dry-run arm and execution remain blocked. |
+| Developer Mission receipt dry-run local arm preview | `docs/phase64-developer-mission-receipt-dry-run-local-arm-preview.md` | none | Dry-run local arm is preview-only; approval storage, simulation, and execution remain blocked. |
 | Fast QA compact boundary | `money-mission-tracker-v2_5.html` | `live_fast_qa` | Keep the compact Fast QA row live. Do not move it into ignored archive files. |
 | App weight plan | `docs/app-weight-control-system-v1.md` | none | Keep the long-term weight-control policy committed. |
 
 ## Boundaries
 
 - Historical QA pointer move executed in Pass 1O and closed out in Pass 1P.
-- Developer Mission receipt cleanup was planned in Pass 1Q, preflighted in Pass 1R, approval-gated in Pass 1S, local-arm previewed in Pass 1T, dry-run planned in Pass 1U, dry-run preflighted in Pass 1V, and dry-run approval-gated in Pass 1W; no developer receipt move is executed.
-- No live function name is removed in Pass 1W.
-- No file is deleted in Pass 1W.
+- Developer Mission receipt cleanup was planned in Pass 1Q, preflighted in Pass 1R, approval-gated in Pass 1S, local-arm previewed in Pass 1T, dry-run planned in Pass 1U, dry-run preflighted in Pass 1V, dry-run approval-gated in Pass 1W, and dry-run local-arm previewed in Pass 1X; no developer receipt move is executed.
+- No live function name is removed in Pass 1X.
+- No file is deleted in Pass 1X.
 - Local runtime archive files remain ignored.
 - Fast QA must not require ignored archive files.
 - Player UI remains unchanged.
@@ -41,6 +42,6 @@ This committed manifest is the durable reference path for Phase 64 archive clean
 
 ## Next Allowed Step
 
-`phase64_pass1x_developer_mission_receipt_dry_run_local_arm_preview`
+`phase64_pass1y_developer_mission_receipt_dry_run_final_review`
 
-The next pass may preview a local arm state for the dry-run simulation. It must still avoid deletion, keep developer-only receipts out of player-facing UI, and must not execute a move unless A1XX explicitly approves execution.
+The next pass may add a final review for the dry-run simulation path. It must still avoid deletion, keep developer-only receipts out of player-facing UI, and must not execute a move unless A1XX explicitly approves execution.
