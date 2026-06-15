@@ -7,8 +7,8 @@ This committed manifest is the durable reference path for Phase 64 archive clean
 ## Current Phase
 
 - Phase: 64
-- Pass: 1P
-- Type: durable docs manifest + historical QA post-move closeout
+- Pass: 1Q
+- Type: durable docs manifest + developer Mission receipt move plan
 - Live app: `money-mission-tracker-v2_5.html`
 - App weight plan: `docs/app-weight-control-system-v1.md`
 
@@ -25,8 +25,9 @@ This committed manifest is the durable reference path for Phase 64 archive clean
 ## Boundaries
 
 - Historical QA pointer move executed in Pass 1O and closed out in Pass 1P.
-- No live function name is removed in Pass 1P.
-- No file is deleted in Pass 1P.
+- Developer Mission receipt cleanup is planned in Pass 1Q; no developer receipt move is executed.
+- No live function name is removed in Pass 1Q.
+- No file is deleted in Pass 1Q.
 - Local runtime archive files remain ignored.
 - Fast QA must not require ignored archive files.
 - Player UI remains unchanged.
@@ -34,6 +35,6 @@ This committed manifest is the durable reference path for Phase 64 archive clean
 
 ## Next Allowed Step
 
-`phase64_pass1q_developer_mission_receipt_move_plan`
+`phase64_pass1r_developer_mission_receipt_move_preflight`
 
-The next pass may plan the developer Mission receipt cleanup path. It should still avoid deletion and must keep developer-only receipts out of player-facing UI.
+The next pass may inspect the exact developer receipt source blocks and decide whether a pointer-only cleanup is safe. It should still avoid deletion and must keep developer-only receipts out of player-facing UI.
