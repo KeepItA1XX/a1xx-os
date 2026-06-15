@@ -117,7 +117,11 @@ Move historical receipt and old QA weight out of the live runtime path while pre
 
 Map live runtime boundaries, module candidates, cache ownership, and approval rules before moving any code out of the single-file app.
 
-Current reference: `docs/phase65-runtime-module-boundary-scope-map.md`
+Current references:
+
+- `docs/phase65-runtime-module-boundary-scope-map.md`
+- `docs/phase65-live-boundary-inventory.md`
+- `docs/phase65-module-candidate-map.md`
 
 ### Phase 66: Background Hydration Layer
 
