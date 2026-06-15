@@ -7,8 +7,8 @@ This committed manifest is the durable reference path for Phase 64 archive clean
 ## Current Phase
 
 - Phase: 64
-- Pass: 1H
-- Type: durable docs manifest
+- Pass: 1O
+- Type: durable docs manifest + historical QA pointer move executed
 - Live app: `money-mission-tracker-v2_5.html`
 - App weight plan: `docs/app-weight-control-system-v1.md`
 
@@ -17,16 +17,16 @@ This committed manifest is the durable reference path for Phase 64 archive clean
 | Reference | Durable path | Local-only path | Policy |
 | --- | --- | --- | --- |
 | Historical phase receipts | `docs/phase64-receipt-archive-reference-manifest.md` | `Archives/runtime_weight_archive/phase64_receipt_archive_execution_candidate/historical_phase_receipts.md` | Use this committed docs manifest as the future live pointer. |
-| Historical QA receipts | `docs/phase64-receipt-archive-reference-manifest.md` | `Archives/runtime_weight_archive/phase64_receipt_archive_execution_candidate/historical_qa_receipts.md` | Use this committed docs manifest as the future live pointer. |
+| Historical QA receipts | `docs/phase64-receipt-archive-reference-manifest.md` | `Archives/runtime_weight_archive/phase64_receipt_archive_execution_candidate/historical_qa_receipts.md` | Live Deep QA now uses this committed docs manifest as its compact pointer. |
 | Developer Mission receipts | `docs/phase64-receipt-archive-reference-manifest.md` | `Archives/runtime_weight_archive/phase64_receipt_archive_execution_candidate/developer_mission_receipts.md` | Use this committed docs manifest as the future live pointer. |
 | Fast QA compact boundary | `money-mission-tracker-v2_5.html` | `live_fast_qa` | Keep the compact Fast QA row live. Do not move it into ignored archive files. |
 | App weight plan | `docs/app-weight-control-system-v1.md` | none | Keep the long-term weight-control policy committed. |
 
 ## Boundaries
 
-- No archive move is executed in Pass 1H.
-- No live function is removed in Pass 1H.
-- No file is deleted in Pass 1H.
+- Historical QA pointer move executed in Pass 1O.
+- No live function name is removed in Pass 1O.
+- No file is deleted in Pass 1O.
 - Local runtime archive files remain ignored.
 - Fast QA must not require ignored archive files.
 - Player UI remains unchanged.
@@ -34,6 +34,6 @@ This committed manifest is the durable reference path for Phase 64 archive clean
 
 ## Next Allowed Step
 
-`phase64_pass1i_live_weight_move_scope`
+`phase64_pass1p_historical_qa_post_move_closeout`
 
-The next pass may define the exact old receipt groups eligible for a future live-weight move. It should still avoid deleting files or enabling protected execution.
+The next pass should close out the historical QA pointer move, verify Fast QA remains compact, and decide whether another receipt group should use the same no-delete pointer strategy later.
