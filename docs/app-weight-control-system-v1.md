@@ -136,6 +136,7 @@ Add a formal background preload system for nearby tabs, Notion packets, and cach
 Current references:
 
 - `docs/phase66-hydration-scope-map.md`
+- `docs/phase66-idle-queue-contract.md`
 
 ### Phase 67: Virtualized Shelves
 
