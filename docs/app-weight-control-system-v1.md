@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 65 Weight Control Follow-Through
-- Current pass type: phase closeout QA
+- Current phase: Phase 66 Background Hydration Layer
+- Current pass type: background hydration planning
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -132,6 +132,10 @@ Current references:
 ### Phase 66: Background Hydration Layer
 
 Add a formal background preload system for nearby tabs, Notion packets, and cached gameplay summaries.
+
+Current references:
+
+- `docs/phase66-hydration-scope-map.md`
 
 ### Phase 67: Virtualized Shelves
 
