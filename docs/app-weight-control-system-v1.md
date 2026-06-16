@@ -7,7 +7,7 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 ## Current Phase Anchor
 
 - Current phase: Phase 68 Build Manifest Replacement
-- Current pass type: next phase ready / not started
+- Current pass type: manifest schema scope / planning only
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -158,6 +158,10 @@ Current references:
 ### Phase 68: Build Manifest Replacement
 
 Replace the giant cache-token history with a compact manifest and archive pointer.
+
+Current references:
+
+- `docs/phase68-build-manifest-schema-scope.md`
 
 ## QA Expectations
 
