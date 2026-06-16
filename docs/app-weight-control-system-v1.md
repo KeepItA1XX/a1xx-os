@@ -125,6 +125,7 @@ Current references:
 - `docs/phase65-lazy-load-dependency-map.md`
 - `docs/phase65-cache-ownership-map.md`
 - `docs/phase65-build-manifest-compaction-plan.md`
+- `docs/phase65-developer-receipt-archive-pointer-plan.md`
 
 ### Phase 66: Background Hydration Layer
 
