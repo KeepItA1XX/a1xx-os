@@ -7,7 +7,7 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 ## Current Phase Anchor
 
 - Current phase: Phase 65 Weight Control Follow-Through
-- Current pass type: runtime module boundary planning
+- Current pass type: phase closeout QA
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -127,6 +127,7 @@ Current references:
 - `docs/phase65-build-manifest-compaction-plan.md`
 - `docs/phase65-developer-receipt-archive-pointer-plan.md`
 - `docs/phase65-fast-qa-manifest-pointer-plan.md`
+- `docs/phase65-phase-closeout-qa.md`
 
 ### Phase 66: Background Hydration Layer
 
