@@ -164,6 +164,7 @@ Current references:
 - `docs/phase68-build-manifest-schema-scope.md`
 - `docs/phase68-shadow-manifest-contract.md`
 - `docs/phase68-manifest-readback-qa.md`
+- `docs/phase68-cache-token-cutover-plan.md`
 
 ## QA Expectations
 
