@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 66 Background Hydration Layer
-- Current pass type: phase closeout QA / planning-only closeout
+- Current phase: Phase 67 Virtualized Shelves
+- Current pass type: virtualization scope map / planning only
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -145,6 +145,10 @@ Current references:
 ### Phase 67: Virtualized Shelves
 
 Apply virtualization or page-window rendering to badges, trophies, resources, mission catalogs, and long roadmap shelves.
+
+Current references:
+
+- `docs/phase67-shelf-virtualization-scope-map.md`
 
 ### Phase 68: Build Manifest Replacement
 
