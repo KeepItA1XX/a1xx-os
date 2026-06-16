@@ -7,7 +7,7 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 ## Current Phase Anchor
 
 - Current phase: Phase 67 Virtualized Shelves
-- Current pass type: selected detail cache contract / planning only
+- Current pass type: window runtime preflight / planning only
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -152,6 +152,7 @@ Current references:
 - `docs/phase67-shelf-window-contract.md`
 - `docs/phase67-shelf-adapter-stubs.md`
 - `docs/phase67-selected-detail-cache-contract.md`
+- `docs/phase67-window-runtime-preflight.md`
 
 ### Phase 68: Build Manifest Replacement
 
