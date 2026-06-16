@@ -162,6 +162,7 @@ Replace the giant cache-token history with a compact manifest and archive pointe
 Current references:
 
 - `docs/phase68-build-manifest-schema-scope.md`
+- `docs/phase68-shadow-manifest-contract.md`
 
 ## QA Expectations
 
