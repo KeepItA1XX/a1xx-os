@@ -122,6 +122,8 @@ Current references:
 - `docs/phase65-runtime-module-boundary-scope-map.md`
 - `docs/phase65-live-boundary-inventory.md`
 - `docs/phase65-module-candidate-map.md`
+- `docs/phase65-lazy-load-dependency-map.md`
+- `docs/phase65-cache-ownership-map.md`
 
 ### Phase 66: Background Hydration Layer
 
