@@ -126,6 +126,7 @@ Current references:
 - `docs/phase65-cache-ownership-map.md`
 - `docs/phase65-build-manifest-compaction-plan.md`
 - `docs/phase65-developer-receipt-archive-pointer-plan.md`
+- `docs/phase65-fast-qa-manifest-pointer-plan.md`
 
 ### Phase 66: Background Hydration Layer
 
