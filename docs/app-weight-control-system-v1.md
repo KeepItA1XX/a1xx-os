@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 70 Runtime or Cleanup Execution Gate
-- Current pass type: execution gate closeout / runtime and cleanup still blocked
+- Current phase: Phase 71 Developer-Only Manifest Runtime Probe
+- Current pass type: developer-only manifest probe closeout / runtime still blocked
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -196,6 +196,20 @@ Current references:
 - `docs/phase70-phase-closeout-qa.md`
 
 Phase 70 remains gate-only. It does not activate the manifest runtime, compact history, remove cache-token history, move archives, or change player UI.
+
+### Phase 71: Developer-Only Manifest Runtime Probe
+
+Run the approved developer-only manifest probe path without player UI consumption, token removal, cleanup execution, or app writes.
+
+Current references:
+
+- `docs/phase71-approved-probe-path.md`
+- `docs/phase71-developer-probe-contract.md`
+- `docs/phase71-manifest-identity-readback.md`
+- `docs/phase71-fallback-rollback-guard.md`
+- `docs/phase71-phase-closeout-qa.md`
+
+Phase 71 reads the shadow manifest for developer verification only. It does not activate the manifest runtime, replace `APP_CACHE_TOKEN`, compact history, remove token history, move archives, or change player UI.
 
 ## QA Expectations
 
