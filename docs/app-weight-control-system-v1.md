@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 73 Controlled Runtime Probe Approval Gate
-- Current pass type: approval-gate contract closeout / runtime still blocked
+- Current phase: Phase 74 Controlled Runtime Probe Local Arm Preview
+- Current pass type: local arm preview closeout / probe still blocked
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -239,6 +239,21 @@ Current references:
 - `docs/phase73-phase-closeout-qa.md`
 
 Phase 73 is gate-only. It does not arm or execute a controlled probe, activate the manifest runtime, consume manifest data in player UI, remove token history, move archives, write app data, or clean up live code.
+
+### Phase 74: Controlled Runtime Probe Local Arm Preview
+
+Install the local-arm preview contract for a future controlled runtime probe without arming or executing the probe.
+
+Current references:
+
+- `docs/phase74-local-arm-preview-scope.md`
+- `docs/phase74-single-use-arm-record.md`
+- `docs/phase74-probe-preflight-checklist.md`
+- `docs/phase74-arm-hold-state.md`
+- `docs/phase74-stop-rollback-confirmation.md`
+- `docs/phase74-phase-closeout-qa.md`
+
+Phase 74 is local-preview only. It does not arm or execute a controlled probe, activate the manifest runtime, consume manifest data in player UI, persist an arm record, remove token history, move archives, write app data, dispatch notifications, or clean up live code.
 
 ## QA Expectations
 
