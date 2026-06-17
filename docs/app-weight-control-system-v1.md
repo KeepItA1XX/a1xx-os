@@ -168,6 +168,14 @@ Current references:
 - `docs/phase68-manifest-runtime-preflight.md`
 - `docs/phase68-manifest-replacement-closeout.md`
 
+### Phase 69: Manifest Runtime or Cleanup Planning
+
+Select the safe next path after the manifest replacement closeout: runtime activation planning, legacy token cleanup planning, or historical receipt archive planning.
+
+Current references:
+
+- `docs/phase69-manifest-runtime-cleanup-scope.md`
+
 ## QA Expectations
 
 Every performance-sensitive pass should verify:
