@@ -300,6 +300,21 @@ Current references:
 
 Phase 77 is approval-gate only. It defines the approval packet, single-use activation limits, rollback stop requirements, and player UI release boundary for a future activation phase. It does not approve or execute runtime activation, execute a real controlled probe, consume manifest data in player UI, persist runtime data, remove token history, move archives, write app data, dispatch notifications, or clean up live code.
 
+### Phase 78: Controlled Runtime Activation
+
+Activate the compact build manifest only inside the developer runtime/readback lane while keeping player UI, app writes, rewards, notifications, cleanup, and token removal blocked.
+
+Current references:
+
+- `docs/phase78-controlled-runtime-activation-scope.md`
+- `docs/phase78-activation-arm-contract.md`
+- `docs/phase78-developer-runtime-switch.md`
+- `docs/phase78-fallback-monitor.md`
+- `docs/phase78-runtime-result-readback.md`
+- `docs/phase78-phase-closeout-qa.md`
+
+Phase 78 completes the controlled developer-runtime activation. The compact manifest is now readable as the active developer runtime pointer, `APP_CACHE_TOKEN` remains the fallback, and player-facing manifest consumption is still blocked until a later separately approved release phase.
+
 ## QA Expectations
 
 Every performance-sensitive pass should verify:
