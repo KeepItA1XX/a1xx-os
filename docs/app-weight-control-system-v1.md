@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 68 Build Manifest Replacement
-- Current pass type: manifest schema scope / planning only
+- Current phase: Phase 70 Runtime or Cleanup Execution Gate
+- Current pass type: execution gate closeout / runtime and cleanup still blocked
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -182,6 +182,20 @@ Current references:
 - `docs/phase69-token-history-compaction-preflight.md`
 - `docs/phase69-runtime-switch-candidate.md`
 - `docs/phase69-phase-closeout-qa.md`
+
+### Phase 70: Runtime or Cleanup Execution Gate
+
+Install the approval gate that must be satisfied before any future manifest runtime activation or token-history cleanup can execute.
+
+Current references:
+
+- `docs/phase70-execution-gate-scope.md`
+- `docs/phase70-runtime-activation-approval-checklist.md`
+- `docs/phase70-cleanup-execution-approval-checklist.md`
+- `docs/phase70-rollback-stop-conditions.md`
+- `docs/phase70-phase-closeout-qa.md`
+
+Phase 70 remains gate-only. It does not activate the manifest runtime, compact history, remove cache-token history, move archives, or change player UI.
 
 ## QA Expectations
 
