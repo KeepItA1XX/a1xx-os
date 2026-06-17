@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 74 Controlled Runtime Probe Local Arm Preview
-- Current pass type: local arm preview closeout / probe still blocked
+- Current phase: Phase 75 Controlled Runtime Probe Dry-Run Simulation
+- Current pass type: dry-run simulation closeout / runtime still blocked
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -254,6 +254,21 @@ Current references:
 - `docs/phase74-phase-closeout-qa.md`
 
 Phase 74 is local-preview only. It does not arm or execute a controlled probe, activate the manifest runtime, consume manifest data in player UI, persist an arm record, remove token history, move archives, write app data, dispatch notifications, or clean up live code.
+
+### Phase 75: Controlled Runtime Probe Dry-Run Simulation
+
+Run the approved developer-only dry-run simulation against the shadow manifest and protected-boundary stop rules.
+
+Current references:
+
+- `docs/phase75-dry-run-simulation-scope.md`
+- `docs/phase75-simulation-harness-contract.md`
+- `docs/phase75-manifest-readback-dry-run.md`
+- `docs/phase75-protected-boundary-stop-test.md`
+- `docs/phase75-dry-run-result-packet.md`
+- `docs/phase75-phase-closeout-qa.md`
+
+Phase 75 is a developer-only dry run. It simulates manifest readback and boundary stops in memory, then records a result packet. It does not activate runtime, execute a real controlled probe, consume manifest data in player UI, persist dry-run data, remove token history, move archives, write app data, dispatch notifications, or clean up live code.
 
 ## QA Expectations
 
