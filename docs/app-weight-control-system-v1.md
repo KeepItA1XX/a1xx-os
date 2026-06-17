@@ -315,6 +315,21 @@ Current references:
 
 Phase 78 completes the controlled developer-runtime activation. The compact manifest is now readable as the active developer runtime pointer, `APP_CACHE_TOKEN` remains the fallback, and player-facing manifest consumption is still blocked until a later separately approved release phase.
 
+### Phase 79: Developer Runtime Stability Monitor
+
+Monitor the controlled developer-runtime manifest path after activation before any player-facing release.
+
+Current references:
+
+- `docs/phase79-stability-monitor-scope.md`
+- `docs/phase79-runtime-sample-snapshot.md`
+- `docs/phase79-fallback-stability-watch.md`
+- `docs/phase79-fast-qa-stability-guard.md`
+- `docs/phase79-player-release-hold-review.md`
+- `docs/phase79-phase-closeout-qa.md`
+
+Phase 79 confirms the developer runtime path remains stable across local readback samples, fallback checks, Fast QA wiring, and release-hold review. It does not release player UI manifest consumption, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
+
 ## QA Expectations
 
 Every performance-sensitive pass should verify:
