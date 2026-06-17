@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 71 Developer-Only Manifest Runtime Probe
-- Current pass type: developer-only manifest probe closeout / runtime still blocked
+- Current phase: Phase 72 Developer Manifest Probe Result Review
+- Current pass type: probe result review closeout / runtime still blocked
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -210,6 +210,20 @@ Current references:
 - `docs/phase71-phase-closeout-qa.md`
 
 Phase 71 reads the shadow manifest for developer verification only. It does not activate the manifest runtime, replace `APP_CACHE_TOKEN`, compact history, remove token history, move archives, or change player UI.
+
+### Phase 72: Developer Manifest Probe Result Review
+
+Review the developer-only manifest probe result and prepare the next safe gate without activating runtime behavior.
+
+Current references:
+
+- `docs/phase72-probe-result-snapshot.md`
+- `docs/phase72-probe-result-interpretation.md`
+- `docs/phase72-runtime-readiness-review.md`
+- `docs/phase72-next-path-recommendation.md`
+- `docs/phase72-phase-closeout-qa.md`
+
+Phase 72 is review-only. It keeps `APP_CACHE_TOKEN` as the active fallback and does not activate the manifest runtime, consume manifest data in player UI, remove token history, move archives, write app data, or clean up live code.
 
 ## QA Expectations
 
