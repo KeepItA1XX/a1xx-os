@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 76 Runtime Probe Review Gate
-- Current pass type: review gate closeout / runtime still blocked
+- Current phase: Phase 77 Runtime Activation Approval Gate
+- Current pass type: activation approval gate closeout / runtime still blocked
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -284,6 +284,21 @@ Current references:
 - `docs/phase76-phase-closeout-qa.md`
 
 Phase 76 is review-gate only. It reviews the developer-only dry-run result, keeps player UI consumption blocked, documents the decision matrix, and records the approval requirements for a future activation gate. It does not activate runtime, execute a real controlled probe, consume manifest data in player UI, persist runtime data, remove token history, move archives, write app data, dispatch notifications, or clean up live code.
+
+### Phase 77: Runtime Activation Approval Gate
+
+Install the activation approval gate that must exist before any future controlled runtime activation.
+
+Current references:
+
+- `docs/phase77-activation-approval-gate-scope.md`
+- `docs/phase77-approval-packet-contract.md`
+- `docs/phase77-single-use-activation-limits.md`
+- `docs/phase77-rollback-stop-requirements.md`
+- `docs/phase77-player-ui-release-boundary.md`
+- `docs/phase77-phase-closeout-qa.md`
+
+Phase 77 is approval-gate only. It defines the approval packet, single-use activation limits, rollback stop requirements, and player UI release boundary for a future activation phase. It does not approve or execute runtime activation, execute a real controlled probe, consume manifest data in player UI, persist runtime data, remove token history, move archives, write app data, dispatch notifications, or clean up live code.
 
 ## QA Expectations
 
