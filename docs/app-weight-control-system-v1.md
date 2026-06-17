@@ -390,6 +390,21 @@ Current references:
 
 Phase 83 confirms the player manifest consumption arm preview, single-use arm preview, consumption readiness preview, stop rollback guard, and no-execution receipt. It does not arm player manifest consumption, consume manifest data in player UI, enable app reads, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
 
+### Phase 84: Player Manifest Consumption Approval Capture Gate
+
+Create the approval-capture gate for future player manifest consumption while keeping the approval uncaptured, the arm blocked, and player consumption disabled.
+
+Current references:
+
+- `docs/phase84-capture-gate-scope.md`
+- `docs/phase84-capture-criteria-checklist.md`
+- `docs/phase84-local-capture-preview.md`
+- `docs/phase84-arm-decision-boundary.md`
+- `docs/phase84-no-execution-receipt.md`
+- `docs/phase84-phase-closeout-qa.md`
+
+Phase 84 confirms the player manifest consumption approval-capture gate, capture criteria checklist, local capture preview, arm decision boundary, and no-execution receipt. It does not save approval capture, arm player manifest consumption, consume manifest data in player UI, enable app reads, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
+
 ## QA Expectations
 
 Every performance-sensitive pass should verify:
