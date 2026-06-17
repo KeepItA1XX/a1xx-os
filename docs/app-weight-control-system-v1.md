@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 75 Controlled Runtime Probe Dry-Run Simulation
-- Current pass type: dry-run simulation closeout / runtime still blocked
+- Current phase: Phase 76 Runtime Probe Review Gate
+- Current pass type: review gate closeout / runtime still blocked
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -269,6 +269,21 @@ Current references:
 - `docs/phase75-phase-closeout-qa.md`
 
 Phase 75 is a developer-only dry run. It simulates manifest readback and boundary stops in memory, then records a result packet. It does not activate runtime, execute a real controlled probe, consume manifest data in player UI, persist dry-run data, remove token history, move archives, write app data, dispatch notifications, or clean up live code.
+
+### Phase 76: Runtime Probe Review Gate
+
+Review the Phase 75 dry-run result and define the exact gates required before any future runtime activation.
+
+Current references:
+
+- `docs/phase76-review-gate-scope.md`
+- `docs/phase76-dry-run-result-review.md`
+- `docs/phase76-runtime-readiness-decision-matrix.md`
+- `docs/phase76-player-ui-consumption-gate.md`
+- `docs/phase76-activation-approval-requirements.md`
+- `docs/phase76-phase-closeout-qa.md`
+
+Phase 76 is review-gate only. It reviews the developer-only dry-run result, keeps player UI consumption blocked, documents the decision matrix, and records the approval requirements for a future activation gate. It does not activate runtime, execute a real controlled probe, consume manifest data in player UI, persist runtime data, remove token history, move archives, write app data, dispatch notifications, or clean up live code.
 
 ## QA Expectations
 
