@@ -330,6 +330,21 @@ Current references:
 
 Phase 79 confirms the developer runtime path remains stable across local readback samples, fallback checks, Fast QA wiring, and release-hold review. It does not release player UI manifest consumption, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
 
+### Phase 80: Developer Runtime Observation Readback
+
+Observe the controlled developer-runtime manifest over a bounded developer readback window before any player-facing release decision.
+
+Current references:
+
+- `docs/phase80-observation-scope.md`
+- `docs/phase80-readback-window-contract.md`
+- `docs/phase80-observation-snapshot-rows.md`
+- `docs/phase80-drift-watch-guard.md`
+- `docs/phase80-release-readiness-hold.md`
+- `docs/phase80-phase-closeout-qa.md`
+
+Phase 80 confirms the controlled developer-runtime path can be observed through stable manifest readbacks, bounded observation rows, drift watch, and release-hold review. It does not release player UI manifest consumption, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
+
 ## QA Expectations
 
 Every performance-sensitive pass should verify:
