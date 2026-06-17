@@ -360,6 +360,21 @@ Current references:
 
 Phase 81 confirms the developer-runtime manifest has a release-candidate gate, criteria matrix, player release boundary review, rollback stop guard, and approval packet preview. It does not capture release approval, consume manifest data in player UI, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
 
+### Phase 82: Player Manifest Consumption Approval Gate
+
+Create the approval gate for future player manifest consumption while keeping consumption disabled.
+
+Current references:
+
+- `docs/phase82-approval-scope.md`
+- `docs/phase82-approval-criteria.md`
+- `docs/phase82-player-consumption-boundary.md`
+- `docs/phase82-approval-hold-packet.md`
+- `docs/phase82-no-execution-receipt.md`
+- `docs/phase82-phase-closeout-qa.md`
+
+Phase 82 confirms the player manifest consumption approval gate, approval criteria, player consumption boundary, approval hold packet, and no-execution receipt. It does not approve player manifest consumption, consume manifest data in player UI, enable app reads, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
+
 ## QA Expectations
 
 Every performance-sensitive pass should verify:
