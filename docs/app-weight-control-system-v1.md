@@ -166,6 +166,7 @@ Current references:
 - `docs/phase68-manifest-readback-qa.md`
 - `docs/phase68-cache-token-cutover-plan.md`
 - `docs/phase68-manifest-runtime-preflight.md`
+- `docs/phase68-manifest-replacement-closeout.md`
 
 ## QA Expectations
 
