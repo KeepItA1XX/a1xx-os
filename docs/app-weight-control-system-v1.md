@@ -175,6 +175,7 @@ Select the safe next path after the manifest replacement closeout: runtime activ
 Current references:
 
 - `docs/phase69-manifest-runtime-cleanup-scope.md`
+- `docs/phase69-path-selection-contract.md`
 
 ## QA Expectations
 
