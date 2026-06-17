@@ -345,6 +345,21 @@ Current references:
 
 Phase 80 confirms the controlled developer-runtime path can be observed through stable manifest readbacks, bounded observation rows, drift watch, and release-hold review. It does not release player UI manifest consumption, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
 
+### Phase 81: Developer Runtime Release Candidate Gate
+
+Prepare the controlled developer-runtime manifest as a release candidate without releasing it to player UI.
+
+Current references:
+
+- `docs/phase81-release-candidate-scope.md`
+- `docs/phase81-candidate-criteria-matrix.md`
+- `docs/phase81-player-release-boundary-review.md`
+- `docs/phase81-rollback-stop-guard.md`
+- `docs/phase81-approval-packet-preview.md`
+- `docs/phase81-phase-closeout-qa.md`
+
+Phase 81 confirms the developer-runtime manifest has a release-candidate gate, criteria matrix, player release boundary review, rollback stop guard, and approval packet preview. It does not capture release approval, consume manifest data in player UI, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
+
 ## QA Expectations
 
 Every performance-sensitive pass should verify:
