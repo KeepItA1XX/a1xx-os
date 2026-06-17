@@ -179,6 +179,9 @@ Current references:
 - `docs/phase69-legacy-cleanup-contract.md`
 - `docs/phase69-cleanup-group-preflight.md`
 - `docs/phase69-token-history-archive-pointer.md`
+- `docs/phase69-token-history-compaction-preflight.md`
+- `docs/phase69-runtime-switch-candidate.md`
+- `docs/phase69-phase-closeout-qa.md`
 
 ## QA Expectations
 
