@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 72 Developer Manifest Probe Result Review
-- Current pass type: probe result review closeout / runtime still blocked
+- Current phase: Phase 73 Controlled Runtime Probe Approval Gate
+- Current pass type: approval-gate contract closeout / runtime still blocked
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -224,6 +224,21 @@ Current references:
 - `docs/phase72-phase-closeout-qa.md`
 
 Phase 72 is review-only. It keeps `APP_CACHE_TOKEN` as the active fallback and does not activate the manifest runtime, consume manifest data in player UI, remove token history, move archives, write app data, or clean up live code.
+
+### Phase 73: Controlled Runtime Probe Approval Gate
+
+Install the approval gate required before any controlled runtime probe can be prepared.
+
+Current references:
+
+- `docs/phase73-approval-gate-scope.md`
+- `docs/phase73-approval-receipt-contract.md`
+- `docs/phase73-controlled-probe-limits.md`
+- `docs/phase73-probe-hold-state.md`
+- `docs/phase73-rollback-stop-rules.md`
+- `docs/phase73-phase-closeout-qa.md`
+
+Phase 73 is gate-only. It does not arm or execute a controlled probe, activate the manifest runtime, consume manifest data in player UI, remove token history, move archives, write app data, or clean up live code.
 
 ## QA Expectations
 
