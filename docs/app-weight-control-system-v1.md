@@ -176,6 +176,7 @@ Current references:
 
 - `docs/phase69-manifest-runtime-cleanup-scope.md`
 - `docs/phase69-path-selection-contract.md`
+- `docs/phase69-legacy-cleanup-contract.md`
 
 ## QA Expectations
 
