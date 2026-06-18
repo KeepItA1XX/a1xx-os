@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 94 Time Ledger Write Approval Gate
-- Current pass type: approval-gate build / no time-write execution
+- Current phase: Phase 95 Time Ledger Local Write Preview
+- Current pass type: local-only preview / no real write execution
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -217,6 +217,26 @@ Current references:
 - `docs/phase94-phase-closeout-qa.md`
 
 Phase 94 remains gate-only. It does not write time rows, enable Sheets writes, enable Notion writes, change player UI, complete missions, award XP, dispatch notifications, activate workers, run automations, execute restore paths, export tokens, or export secrets.
+
+### Phase 95: Time Ledger Local Write Preview
+
+Preview the local time-session packet that Start, Pause, Save Checkpoint, and Debrief would eventually create without saving it anywhere.
+
+Current references:
+
+- `docs/phase95-phase-scope-backup.md`
+- `docs/phase95-local-time-packet-shape.md`
+- `docs/phase95-button-intent-map.md`
+- `docs/phase95-no-persist-boundary.md`
+- `docs/phase95-developer-preview-readback.md`
+- `docs/phase95-player-copy-guard.md`
+- `docs/phase95-duplicate-session-preview-guard.md`
+- `docs/phase95-fast-qa-gate.md`
+- `docs/phase95-protected-boundary-scan.md`
+- `docs/phase95-docs-roadmap-receipts.md`
+- `docs/phase95-phase-closeout-qa.md`
+
+Phase 95 remains preview-only. It does not save local drafts, write browser storage, write time rows, enable Sheets writes, enable Notion writes, change player UI, complete missions, award XP, dispatch notifications, activate workers, run automations, execute restore paths, export tokens, or export secrets.
 
 ### Phase 71: Developer-Only Manifest Runtime Probe
 
