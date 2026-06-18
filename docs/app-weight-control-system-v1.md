@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 87 First Live Player Data Surfaces
-- Current pass type: first narrow player-facing read-only surface / Overview Today only
+- Current phase: Phase 89 Profile Momentum Surface Readiness
+- Current pass type: second player surface readiness / controlled read-only expansion
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -455,6 +455,48 @@ Current references:
 - `docs/phase87-phase-closeout-qa.md`
 
 Phase 87 confirms the first live player data surface, source eligibility gate, player-safe adapter, fallback states, performance guard, developer readback boundary, Fast QA row, and receipt docs. It does not enable broad app reads, additional player surfaces, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
+
+### Phase 88: Overview Today Surface Polish + Second Surface Readiness
+
+Polish the first live player surface before expanding the live-read footprint. `Account > Mission > Overview > Today` remains the only active player read surface. Phase 88 improves copy, row compactness, fallback states, and no-crowd guardrails while mapping `Profile Momentum` as the next candidate only.
+
+Current references:
+
+- `docs/phase88-phase-scope-backup.md`
+- `docs/phase88-overview-today-surface-audit.md`
+- `docs/phase88-player-copy-polish.md`
+- `docs/phase88-compact-live-row-design.md`
+- `docs/phase88-freshness-fallback-ux.md`
+- `docs/phase88-no-crowd-guard.md`
+- `docs/phase88-performance-guard.md`
+- `docs/phase88-second-surface-candidate-map.md`
+- `docs/phase88-developer-readback.md`
+- `docs/phase88-fast-qa-gate.md`
+- `docs/phase88-docs-roadmap-receipts.md`
+- `docs/phase88-phase-closeout-qa.md`
+
+Phase 88 confirms the polished Today packet, player-safe copy, max-three-row design, clean empty/stale states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and next-surface candidate map. It does not activate a second player surface, enable broad app reads, enable app writes, execute rewards, dispatch notifications, remove cache-token fallback, move archives, or activate workers/automations.
+
+### Phase 89: Profile Momentum Surface Readiness
+
+Prepare `Account > Mission > Profile > Momentum` as the second narrow player-facing read-only data surface. Overview Today remains the first player surface, and Profile Momentum becomes the next compact read that summarizes today, current mission, rewards, and journey position without crowding the Profile tab.
+
+Current references:
+
+- `docs/phase89-phase-scope-backup.md`
+- `docs/phase89-profile-momentum-surface-audit.md`
+- `docs/phase89-momentum-packet-contract.md`
+- `docs/phase89-player-safe-copy.md`
+- `docs/phase89-compact-visual-layout.md`
+- `docs/phase89-fresh-empty-waiting-states.md`
+- `docs/phase89-no-crowd-guard.md`
+- `docs/phase89-performance-guard.md`
+- `docs/phase89-developer-readback.md`
+- `docs/phase89-fast-qa-gate.md`
+- `docs/phase89-docs-roadmap-receipts.md`
+- `docs/phase89-phase-closeout-qa.md`
+
+Phase 89 confirms the Profile Momentum packet, four-row cap, player-safe copy, compact layout, clean empty states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and docs receipts. It activates only the second narrow read-only player surface and does not enable broad app reads, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
 
 ## QA Expectations
 
