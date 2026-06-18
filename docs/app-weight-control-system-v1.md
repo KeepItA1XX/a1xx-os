@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 95 Time Ledger Local Write Preview
-- Current pass type: local-only preview / no real write execution
+- Current phase: Phase 96 Time Ledger Local Draft State
+- Current pass type: local in-memory draft / no external write execution
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -237,6 +237,25 @@ Current references:
 - `docs/phase95-phase-closeout-qa.md`
 
 Phase 95 remains preview-only. It does not save local drafts, write browser storage, write time rows, enable Sheets writes, enable Notion writes, change player UI, complete missions, award XP, dispatch notifications, activate workers, run automations, execute restore paths, export tokens, or export secrets.
+
+### Phase 96: Time Ledger Local Draft State
+
+Add a safe in-memory local draft layer behind Start, Pause, Save Checkpoint, and Debrief so the app can show the current run state without writing to Notion, Sheets, Drive, or app ledgers.
+
+Current references:
+
+- `docs/phase96-phase-scope-backup.md`
+- `docs/phase96-local-draft-state-contract.md`
+- `docs/phase96-start-pause-save-debrief-behavior.md`
+- `docs/phase96-duplicate-draft-guard.md`
+- `docs/phase96-compact-player-status.md`
+- `docs/phase96-developer-readback.md`
+- `docs/phase96-fast-qa-gate.md`
+- `docs/phase96-protected-boundary-scan.md`
+- `docs/phase96-docs-roadmap-receipts.md`
+- `docs/phase96-phase-closeout-qa.md`
+
+Phase 96 uses the existing Mission Active control hint for compact player feedback. It does not add a new card, save time rows, enable Sheets writes, enable Notion writes, complete missions, award XP, dispatch notifications, activate workers, run automations, execute restore paths, export tokens, or export secrets.
 
 ### Phase 71: Developer-Only Manifest Runtime Probe
 
