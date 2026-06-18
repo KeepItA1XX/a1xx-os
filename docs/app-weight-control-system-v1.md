@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 96 Time Ledger Local Draft State
-- Current pass type: local in-memory draft / no external write execution
+- Current phase: Phase 97 Time Ledger Manual Save Review
+- Current pass type: local manual review / no external write execution
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -256,6 +256,25 @@ Current references:
 - `docs/phase96-phase-closeout-qa.md`
 
 Phase 96 uses the existing Mission Active control hint for compact player feedback. It does not add a new card, save time rows, enable Sheets writes, enable Notion writes, complete missions, award XP, dispatch notifications, activate workers, run automations, execute restore paths, export tokens, or export secrets.
+
+### Phase 97: Time Ledger Manual Save Review
+
+Add a compact local review layer after the Phase 96 in-memory draft so Save Checkpoint and Debrief can prepare a player-safe review packet before any future time save.
+
+Current references:
+
+- `docs/phase97-phase-scope-backup.md`
+- `docs/phase97-manual-review-packet-contract.md`
+- `docs/phase97-save-review-trigger.md`
+- `docs/phase97-compact-player-review-surface.md`
+- `docs/phase97-edit-confirm-cancel-states.md`
+- `docs/phase97-developer-readback.md`
+- `docs/phase97-fast-qa-gate.md`
+- `docs/phase97-protected-boundary-scan.md`
+- `docs/phase97-docs-roadmap-receipts.md`
+- `docs/phase97-phase-closeout-qa.md`
+
+Phase 97 uses a hidden compact review strip under the existing Mission Active controls. It appears only after a local Save/Debrief review trigger and supports Edit, Looks Good, and Cancel as local-only choices. It does not save time rows, enable Sheets writes, enable Notion writes, complete missions, award XP, dispatch notifications, activate workers, run automations, execute restore paths, export tokens, or export secrets.
 
 ### Phase 71: Developer-Only Manifest Runtime Probe
 
