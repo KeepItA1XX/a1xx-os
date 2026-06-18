@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 91 Journey Road Surface Readiness
-- Current pass type: fourth player surface readiness / Journey Road controlled read-only expansion
+- Current phase: Phase 92 Mission Command Context Surface Readiness
+- Current pass type: fifth player surface readiness / Mission Command context controlled read-only expansion
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -539,6 +539,27 @@ Current references:
 - `docs/phase91-phase-closeout-qa.md`
 
 Phase 91 confirms the Journey Road packet, four-row cap, player-safe copy, compact road layout, clean empty states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and docs receipts. It activates only the fourth narrow read-only player surface and does not enable broad app reads, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
+
+### Phase 92: Mission Command Context Surface Readiness
+
+Prepare `Mission Command` as the fifth narrow player-facing read-only data surface. Overview Today remains the first player surface, Profile Momentum remains the second, Mission Active remains the third, Journey Road remains the fourth, and Mission Command Context becomes the compact guide context read that summarizes the current move, focus lane, reward preview, and next road marker without turning the chat area into a dashboard.
+
+Current references:
+
+- `docs/phase92-phase-scope-backup.md`
+- `docs/phase92-command-context-surface-audit.md`
+- `docs/phase92-command-context-packet-contract.md`
+- `docs/phase92-player-safe-guide-copy.md`
+- `docs/phase92-compact-guide-layout.md`
+- `docs/phase92-fresh-empty-waiting-states.md`
+- `docs/phase92-no-crowd-guard.md`
+- `docs/phase92-performance-guard.md`
+- `docs/phase92-developer-readback.md`
+- `docs/phase92-fast-qa-gate.md`
+- `docs/phase92-docs-roadmap-receipts.md`
+- `docs/phase92-phase-closeout-qa.md`
+
+Phase 92 confirms the Mission Command Context packet, four-row cap, player-safe guide copy, compact guide layout, clean empty states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and docs receipts. It activates only the fifth narrow read-only player surface and does not enable broad app reads, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
 
 ## QA Expectations
 
