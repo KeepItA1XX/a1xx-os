@@ -420,6 +420,23 @@ Current references:
 
 Phase 85 confirms the local arm preview scope, single-use local arm packet, capture hold boundary, player consumption hold, and no-execution receipt. It does not save a local arm, arm runtime consumption, consume manifest data in player UI, enable app reads, execute app writes, remove cache-token fallback, move archives, dispatch notifications, or activate workers/automations.
 
+### Phase 86: Player Manifest Consumption Release System
+
+Install the complete player manifest consumption release system so the app can move toward first live read-only player surfaces without treating small passes as phases.
+
+Current references:
+
+- `docs/phase86-release-system-scope.md`
+- `docs/phase86-arm-review-gate.md`
+- `docs/phase86-approval-carry-forward.md`
+- `docs/phase86-controlled-readonly-release-packet.md`
+- `docs/phase86-player-surface-release-hold.md`
+- `docs/phase86-release-stability-monitor.md`
+- `docs/phase86-no-write-execution-receipt.md`
+- `docs/phase86-phase-closeout-qa.md`
+
+Phase 86 confirms the release system scope, arm review gate, A1XX approval carry-forward, controlled read-only release packet, player surface release hold, stability monitor, and no-write execution receipt. It does not activate broad app reads, choose the first live player surface, enable app writes, execute rewards, dispatch notifications, remove cache-token fallback, move archives, or activate workers/automations.
+
 ## QA Expectations
 
 Every performance-sensitive pass should verify:
