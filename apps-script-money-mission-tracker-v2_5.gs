@@ -66,6 +66,7 @@ var SHEET_MISSION_EVENTS = 'Mission Command Events';
 var SHEET_OS_PROFILE_INDEX = 'OS Profile Index';
 var SHEET_OS_DEVICE_REGISTRY = 'OS Device Registry';
 var SHEET_OS_SETUP_POINTERS = 'OS Setup Pointer Index';
+var SHEET_TIME_SESSIONS_LEDGER = 'Time Sessions Ledger';
 
 var NOTION_CONTENT_DB    = '1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18: was incorrectly set to the data source ID (...8188...). Notion /v1/databases/{id}/query expects the DATABASE ID (URL slug). Parent database "Master Beat Catalog" lives at notion.so/1a76115281da8199a5dffc423d447f31. */
@@ -165,6 +166,13 @@ var OS_DEVICE_REGISTRY_HEADERS = [
 var OS_SETUP_POINTER_HEADERS = [
   'Pointer Key','Pointer Label','Pointer Type','Pointer Value','Updated At',
   'Updated By Device ID','Status','Notes'
+];
+
+var TIME_SESSIONS_LEDGER_HEADERS_V25 = [
+  'Saved At','Idempotency Key','Review ID','Mission ID','Mission','Lane',
+  'Action Type','Action Label','Status','Decision','Start Time ET','End Time ET',
+  'Duration Minutes','Checkpoints','Debriefs','Proof','Result','Source Build',
+  'Write Scope','Notion Status','Notion Page ID','Notion URL','Write Status'
 ];
 
 function getMoneyMissionSpreadsheet() {
@@ -324,6 +332,7 @@ function doGet(e) {
     if (e.parameter.action === 'phase26_notion_live_read_probe') return getPhase26NotionLiveReadProbeV25(e.parameter);
     if (e.parameter.action === 'phase27_normalized_packet_preview') return getPhase27NormalizedPacketPreviewV25(e.parameter);
     if (e.parameter.action === 'phase28_packet_readback_qa') return getPhase28PacketReadbackQAV25(e.parameter);
+    if (e.parameter.action === 'time_ledger_save_reviewed_session') return writeTimeLedgerReviewedSessionV25(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_preflight') return getMasterConfigReadPreflightV20(e.parameter);
@@ -804,6 +813,264 @@ function notionTitle(text) {
 
 function notionText(text) {
   return { rich_text: String(text || '') ? [{ text: { content: String(text || '') } }] : [] };
+}
+
+function timeLedgerTextV25(value, fallback) {
+  value = String(value === undefined || value === null ? '' : value).trim();
+  return value || String(fallback || '');
+}
+
+function timeLedgerNumberV25(value) {
+  var n = parseFloat(value);
+  return isNaN(n) ? 0 : n;
+}
+
+function timeLedgerNowEtV25() {
+  return Utilities.formatDate(new Date(), 'America/New_York', "yyyy-MM-dd'T'HH:mm:ss");
+}
+
+function parseTimeLedgerPayloadV25(raw) {
+  if (!raw) throw new Error('Missing reviewed time payload.');
+  if (typeof raw === 'object') return raw;
+  return JSON.parse(String(raw || '{}'));
+}
+
+function sanitizeTimeLedgerReviewedPayloadV25(raw) {
+  var payload = parseTimeLedgerPayloadV25(raw);
+  var start = timeLedgerTextV25(payload.startTimeEt, timeLedgerNowEtV25());
+  var end = timeLedgerTextV25(payload.endTimeEt, start);
+  var key = timeLedgerTextV25(payload.idempotencyKey, [
+    payload.reviewId || 'time_review',
+    payload.missionId || 'mission',
+    start,
+    end,
+    payload.actionType || 'save'
+  ].join('_')).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 160);
+  return {
+    approvalText: timeLedgerTextV25(payload.approvalText),
+    writeScope: timeLedgerTextV25(payload.writeScope),
+    sourceBuild: timeLedgerTextV25(payload.sourceBuild),
+    idempotencyKey: key,
+    reviewId: timeLedgerTextV25(payload.reviewId, key),
+    packetKey: timeLedgerTextV25(payload.packetKey, 'time_ledger_reviewed_session'),
+    missionId: timeLedgerTextV25(payload.missionId, 'current_mission'),
+    missionTitle: timeLedgerTextV25(payload.missionTitle, 'Current Mission'),
+    lane: timeLedgerTextV25(payload.lane, 'Follow-Up'),
+    actionType: timeLedgerTextV25(payload.actionType, 'save'),
+    actionLabel: timeLedgerTextV25(payload.actionLabel, 'Time review'),
+    status: timeLedgerTextV25(payload.status, 'review_confirmed'),
+    decision: timeLedgerTextV25(payload.decision, 'looks_good'),
+    startTimeEt: start,
+    endTimeEt: end,
+    elapsedMinutes: timeLedgerNumberV25(payload.elapsedMinutes),
+    checkpointCount: timeLedgerNumberV25(payload.checkpointCount),
+    debriefCount: timeLedgerNumberV25(payload.debriefCount),
+    proof: timeLedgerTextV25(payload.proof),
+    result: timeLedgerTextV25(payload.result),
+    requestedAtEt: timeLedgerTextV25(payload.requestedAtEt, timeLedgerNowEtV25())
+  };
+}
+
+function validateTimeLedgerReviewedPayloadV25(data) {
+  var failures = [];
+  if (data.approvalText !== 'A1XX APPROVED TIME LEDGER SAVE') failures.push('approval');
+  if (data.writeScope !== 'time_ledger_reviewed_session_only') failures.push('scope');
+  if (data.decision !== 'looks_good') failures.push('decision');
+  if (data.status !== 'review_confirmed') failures.push('status');
+  if (!data.idempotencyKey) failures.push('idempotency');
+  if (!data.missionId || !data.missionTitle) failures.push('mission');
+  if (data.elapsedMinutes < 0) failures.push('duration');
+  return failures;
+}
+
+function getTimeLedgerSheetV25() {
+  var ss = getMoneyMissionSpreadsheet();
+  return getOrCreateSheet(ss, SHEET_TIME_SESSIONS_LEDGER, TIME_SESSIONS_LEDGER_HEADERS_V25, { matchPrefix: true });
+}
+
+function findTimeLedgerRowByKeyV25(sheet, key) {
+  var last = sheet.getLastRow();
+  if (!key || last < 2) return 0;
+  var values = sheet.getRange(2, 2, last - 1, 1).getValues();
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][0] || '') === key) return i + 2;
+  }
+  return 0;
+}
+
+function appendTimeLedgerReviewedSheetRowV25(data, notion) {
+  var sheet = getTimeLedgerSheetV25();
+  var existingRow = findTimeLedgerRowByKeyV25(sheet, data.idempotencyKey);
+  if (existingRow) {
+    return { status: 'duplicate', row: existingRow, sheet: SHEET_TIME_SESSIONS_LEDGER };
+  }
+  var row = [
+    timeLedgerNowEtV25(),
+    data.idempotencyKey,
+    data.reviewId,
+    data.missionId,
+    data.missionTitle,
+    data.lane,
+    data.actionType,
+    data.actionLabel,
+    data.status,
+    data.decision,
+    data.startTimeEt,
+    data.endTimeEt,
+    data.elapsedMinutes,
+    data.checkpointCount,
+    data.debriefCount,
+    data.proof,
+    data.result,
+    data.sourceBuild,
+    data.writeScope,
+    notion && notion.status ? notion.status : 'pending',
+    notion && notion.pageId ? notion.pageId : '',
+    notion && notion.url ? notion.url : '',
+    'saved'
+  ];
+  sheet.appendRow(row);
+  formatSheet(sheet);
+  return { status: 'ok', row: sheet.getLastRow(), sheet: SHEET_TIME_SESSIONS_LEDGER };
+}
+
+function getTimeLedgerNotionDatabaseIdV25() {
+  var props = PropertiesService.getScriptProperties();
+  return String(
+    props.getProperty('NOTION_TIME_SESSIONS_DB') ||
+    props.getProperty('NOTION_TIME_SESSIONS_DB_ID') ||
+    props.getProperty('NOTION_TIME_BLOCKS_DB') ||
+    ''
+  ).trim();
+}
+
+function getNotionDatabaseSchemaV25(databaseId) {
+  if (!databaseId) return null;
+  var result = notionRequest('get', 'https://api.notion.com/v1/databases/' + databaseId);
+  if (result.code >= 400) {
+    logActivity('Time ledger Notion schema read failed - code: ' + result.code + ' - ' + result.text);
+    return null;
+  }
+  var parsed = JSON.parse(result.text || '{}');
+  return parsed.properties || null;
+}
+
+function firstNotionPropertyNameV25(schema, names) {
+  if (!schema) return '';
+  for (var i = 0; i < names.length; i++) {
+    if (schema[names[i]]) return names[i];
+  }
+  return '';
+}
+
+function notionTitlePropertyNameV25(schema) {
+  if (!schema) return 'Name';
+  var keys = Object.keys(schema);
+  for (var i = 0; i < keys.length; i++) {
+    if (schema[keys[i]] && schema[keys[i]].type === 'title') return keys[i];
+  }
+  return 'Name';
+}
+
+function setNotionSafePropertyV25(properties, schema, names, value) {
+  var name = firstNotionPropertyNameV25(schema, names);
+  if (!name) return;
+  var type = schema[name] && schema[name].type;
+  if (type === 'number') properties[name] = { number: timeLedgerNumberV25(value) };
+  else if (type === 'checkbox') properties[name] = { checkbox: !!value };
+  else if (type === 'date') properties[name] = { date: { start: String(value || '').slice(0, 10) || Utilities.formatDate(new Date(), 'America/New_York', 'yyyy-MM-dd') } };
+  else if (type === 'select') properties[name] = { select: { name: timeLedgerTextV25(value, 'Logged') } };
+  else if (type === 'status') properties[name] = { status: { name: timeLedgerTextV25(value, 'Logged') } };
+  else properties[name] = notionText(value);
+}
+
+function buildNotionTimeLedgerPropertiesV25(data, schema) {
+  var properties = {};
+  properties[notionTitlePropertyNameV25(schema)] = notionTitle(data.missionTitle + ' - ' + data.actionLabel);
+  setNotionSafePropertyV25(properties, schema, ['Date', 'Session Date', 'Work Date'], data.startTimeEt);
+  setNotionSafePropertyV25(properties, schema, ['Start Time', 'Start Time ET', 'Started At'], data.startTimeEt);
+  setNotionSafePropertyV25(properties, schema, ['End Time', 'End Time ET', 'Ended At'], data.endTimeEt);
+  setNotionSafePropertyV25(properties, schema, ['Duration Minutes', 'Minutes', 'Time Minutes'], data.elapsedMinutes);
+  setNotionSafePropertyV25(properties, schema, ['Mission', 'Mission Title'], data.missionTitle);
+  setNotionSafePropertyV25(properties, schema, ['Mission ID'], data.missionId);
+  setNotionSafePropertyV25(properties, schema, ['Lane', 'Batch Lane', 'Focus Lane'], data.lane);
+  setNotionSafePropertyV25(properties, schema, ['Action Type', 'Action'], data.actionType);
+  setNotionSafePropertyV25(properties, schema, ['Status', 'Session Status'], 'Logged');
+  setNotionSafePropertyV25(properties, schema, ['Review ID'], data.reviewId);
+  setNotionSafePropertyV25(properties, schema, ['Idempotency Key', 'Idempotency'], data.idempotencyKey);
+  setNotionSafePropertyV25(properties, schema, ['Source Build'], data.sourceBuild);
+  setNotionSafePropertyV25(properties, schema, ['Proof'], data.proof);
+  setNotionSafePropertyV25(properties, schema, ['Result', 'Result To Log'], data.result);
+  setNotionSafePropertyV25(properties, schema, ['App Write Eligible'], true);
+  return properties;
+}
+
+function writeNotionTimeLedgerReviewedSessionV25(data) {
+  var databaseId = getTimeLedgerNotionDatabaseIdV25();
+  if (!databaseId) return { status: 'skipped_missing_db', code: 0 };
+  try {
+    var schema = getNotionDatabaseSchemaV25(databaseId);
+    if (!schema) return { status: 'review', code: 0, message: 'schema unavailable' };
+    var properties = buildNotionTimeLedgerPropertiesV25(data, schema);
+    var result = notionRequest('post', 'https://api.notion.com/v1/pages', {
+      parent: { database_id: databaseId },
+      properties: properties
+    });
+    var parsed = {};
+    try { parsed = JSON.parse(result.text || '{}'); } catch (err) {}
+    return {
+      status: result.code < 400 ? 'ok' : 'review',
+      code: result.code,
+      pageId: parsed.id || '',
+      url: parsed.url || ''
+    };
+  } catch (err) {
+    logActivity('Time ledger Notion save ERROR: ' + err.toString());
+    return { status: 'review', message: err.toString() };
+  }
+}
+
+function writeTimeLedgerReviewedSessionV25(params) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(8000);
+    var data = sanitizeTimeLedgerReviewedPayloadV25(params && params.payload);
+    var failures = validateTimeLedgerReviewedPayloadV25(data);
+    if (failures.length) {
+      return jsonResponseV20({ status: 'review', ok: false, writeExecuted: false, failures: failures });
+    }
+    var sheet = getTimeLedgerSheetV25();
+    var existingRow = findTimeLedgerRowByKeyV25(sheet, data.idempotencyKey);
+    if (existingRow) {
+      return jsonResponseV20({
+        status: 'ok',
+        ok: true,
+        writeExecuted: false,
+        duplicate: true,
+        sheets: { status: 'duplicate', row: existingRow, sheet: SHEET_TIME_SESSIONS_LEDGER },
+        notion: { status: 'skipped_duplicate' },
+        protected: { missionCompletion: false, xp: false, notification: false, automation: false, restore: false, tokenExport: false, secretExport: false }
+      });
+    }
+    var notion = writeNotionTimeLedgerReviewedSessionV25(data);
+    var sheets = appendTimeLedgerReviewedSheetRowV25(data, notion);
+    logActivity('Time ledger reviewed session saved - ' + data.idempotencyKey + ' - row ' + sheets.row);
+    return jsonResponseV20({
+      status: 'ok',
+      ok: true,
+      writeExecuted: true,
+      duplicate: false,
+      sheets: sheets,
+      notion: notion,
+      idempotencyKey: data.idempotencyKey,
+      protected: { missionCompletion: false, xp: false, notification: false, automation: false, restore: false, tokenExport: false, secretExport: false }
+    });
+  } catch (err) {
+    logActivity('Time ledger reviewed session ERROR: ' + err.toString());
+    return jsonResponseV20({ status: 'review', ok: false, writeExecuted: false, message: err.toString() });
+  } finally {
+    try { lock.releaseLock(); } catch (releaseErr) {}
+  }
 }
 
 function normalizeDailyDayType(value) {

@@ -6,8 +6,9 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 97 Time Ledger Manual Save Review
-- Current pass type: local manual review / no external write execution
+- Current phase: Time Tracking + Time Ledger Runtime Foundation
+- Current pass: Pass 1K Notion + Sheets Save Closeout
+- Current pass type: approved reviewed time save / Notion + Sheets writes enabled
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -275,6 +276,16 @@ Current references:
 - `docs/phase97-phase-closeout-qa.md`
 
 Phase 97 uses a hidden compact review strip under the existing Mission Active controls. It appears only after a local Save/Debrief review trigger and supports Edit, Looks Good, and Cancel as local-only choices. It does not save time rows, enable Sheets writes, enable Notion writes, complete missions, award XP, dispatch notifications, activate workers, run automations, execute restore paths, export tokens, or export secrets.
+
+### Time Tracking + Time Ledger Runtime Foundation
+
+Pass 1K closes out the larger time-ledger runtime foundation by turning the compact review strip into an approved save path. A reviewed time block can save only after A1XX clicks `Looks Good`.
+
+Current references:
+
+- `docs/time-ledger-runtime-foundation-save-closeout.md`
+
+This save path is intentionally narrow. It can write a reviewed time-session row to the `Time Sessions Ledger` Sheet and can create a matching Notion time-session page when the `NOTION_TIME_SESSIONS_DB` or `NOTION_TIME_SESSIONS_DB_ID` script property is configured. Duplicate saves are guarded by an idempotency key. It does not complete missions, award XP, send notifications, activate workers, run automations, execute restore paths, export tokens, export secrets, or write any unrelated app data.
 
 ### Phase 71: Developer-Only Manifest Runtime Probe
 
