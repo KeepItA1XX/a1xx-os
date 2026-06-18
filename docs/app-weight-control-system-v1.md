@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 90 Mission Active Surface Readiness
-- Current pass type: third player surface readiness / Mission Active controlled read-only expansion
+- Current phase: Phase 91 Journey Road Surface Readiness
+- Current pass type: fourth player surface readiness / Journey Road controlled read-only expansion
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -518,6 +518,27 @@ Current references:
 - `docs/phase90-phase-closeout-qa.md`
 
 Phase 90 confirms the Mission Active packet, four-row cap, player-safe copy, compact control layout, clean empty states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and docs receipts. It activates only the third narrow read-only player surface and does not enable broad app reads, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
+
+### Phase 91: Journey Road Surface Readiness
+
+Prepare `Account > Mission > Journey` as the fourth narrow player-facing read-only data surface. Overview Today remains the first player surface, Profile Momentum remains the second, Mission Active remains the third, and Journey Road becomes the compact broad-road read that summarizes the $1M road, current mission, current checkpoint, and next road marker without crowding the Journey tab.
+
+Current references:
+
+- `docs/phase91-phase-scope-backup.md`
+- `docs/phase91-journey-road-surface-audit.md`
+- `docs/phase91-journey-road-packet-contract.md`
+- `docs/phase91-player-safe-copy.md`
+- `docs/phase91-compact-road-layout.md`
+- `docs/phase91-fresh-empty-waiting-states.md`
+- `docs/phase91-no-crowd-guard.md`
+- `docs/phase91-performance-guard.md`
+- `docs/phase91-developer-readback.md`
+- `docs/phase91-fast-qa-gate.md`
+- `docs/phase91-docs-roadmap-receipts.md`
+- `docs/phase91-phase-closeout-qa.md`
+
+Phase 91 confirms the Journey Road packet, four-row cap, player-safe copy, compact road layout, clean empty states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and docs receipts. It activates only the fourth narrow read-only player surface and does not enable broad app reads, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
 
 ## QA Expectations
 
