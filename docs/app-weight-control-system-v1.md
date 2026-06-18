@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 93 Timer Runtime Cards Surface Readiness
-- Current pass type: sixth player surface readiness / timer and work-session context controlled read-only expansion
+- Current phase: Phase 94 Time Ledger Write Approval Gate
+- Current pass type: approval-gate build / no time-write execution
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -196,6 +196,27 @@ Current references:
 - `docs/phase70-phase-closeout-qa.md`
 
 Phase 70 remains gate-only. It does not activate the manifest runtime, compact history, remove cache-token history, move archives, or change player UI.
+
+### Phase 94: Time Ledger Write Approval Gate
+
+Install the approval gate required before any future Start, Pause, Save Checkpoint, or Debrief time-session write can happen.
+
+Current references:
+
+- `docs/phase94-phase-scope-backup.md`
+- `docs/phase94-time-source-ownership-map.md`
+- `docs/phase94-time-ledger-row-contract.md`
+- `docs/phase94-approval-criteria-checklist.md`
+- `docs/phase94-button-write-boundary.md`
+- `docs/phase94-duplicate-bad-session-guard.md`
+- `docs/phase94-player-safe-approval-copy.md`
+- `docs/phase94-developer-readback.md`
+- `docs/phase94-fast-qa-gate.md`
+- `docs/phase94-protected-boundary-scan.md`
+- `docs/phase94-docs-roadmap-receipts.md`
+- `docs/phase94-phase-closeout-qa.md`
+
+Phase 94 remains gate-only. It does not write time rows, enable Sheets writes, enable Notion writes, change player UI, complete missions, award XP, dispatch notifications, activate workers, run automations, execute restore paths, export tokens, or export secrets.
 
 ### Phase 71: Developer-Only Manifest Runtime Probe
 
