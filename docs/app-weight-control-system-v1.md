@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 77 Runtime Activation Approval Gate
-- Current pass type: activation approval gate closeout / runtime still blocked
+- Current phase: Phase 87 First Live Player Data Surfaces
+- Current pass type: first narrow player-facing read-only surface / Overview Today only
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -436,6 +436,25 @@ Current references:
 - `docs/phase86-phase-closeout-qa.md`
 
 Phase 86 confirms the release system scope, arm review gate, A1XX approval carry-forward, controlled read-only release packet, player surface release hold, stability monitor, and no-write execution receipt. It does not activate broad app reads, choose the first live player surface, enable app writes, execute rewards, dispatch notifications, remove cache-token fallback, move archives, or activate workers/automations.
+
+### Phase 87: First Live Player Data Surfaces
+
+Activate the first narrow player-facing read-only data surface without opening broad app reads or adding new clutter to the player UI. The selected surface is `Account > Mission > Overview > Today`, using the `today_money_moves` packet only.
+
+Current references:
+
+- `docs/phase87-surface-selection-contract.md`
+- `docs/phase87-source-eligibility-gate.md`
+- `docs/phase87-player-data-adapter.md`
+- `docs/phase87-overview-today-live-surface.md`
+- `docs/phase87-empty-stale-blocked-states.md`
+- `docs/phase87-performance-guard.md`
+- `docs/phase87-developer-readback-only.md`
+- `docs/phase87-fast-qa-gate.md`
+- `docs/phase87-docs-roadmap-receipts.md`
+- `docs/phase87-phase-closeout-qa.md`
+
+Phase 87 confirms the first live player data surface, source eligibility gate, player-safe adapter, fallback states, performance guard, developer readback boundary, Fast QA row, and receipt docs. It does not enable broad app reads, additional player surfaces, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
 
 ## QA Expectations
 
