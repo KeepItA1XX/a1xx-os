@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 89 Profile Momentum Surface Readiness
-- Current pass type: second player surface readiness / controlled read-only expansion
+- Current phase: Phase 90 Mission Active Surface Readiness
+- Current pass type: third player surface readiness / Mission Active controlled read-only expansion
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -497,6 +497,27 @@ Current references:
 - `docs/phase89-phase-closeout-qa.md`
 
 Phase 89 confirms the Profile Momentum packet, four-row cap, player-safe copy, compact layout, clean empty states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and docs receipts. It activates only the second narrow read-only player surface and does not enable broad app reads, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
+
+### Phase 90: Mission Active Surface Readiness
+
+Prepare `Account > Mission > Missions > Active` as the third narrow player-facing read-only data surface. Overview Today remains the first player surface, Profile Momentum remains the second, and Mission Active becomes the compact current-run read that summarizes the goal, next move, run controls, and nearby reward path without crowding the Active tab.
+
+Current references:
+
+- `docs/phase90-phase-scope-backup.md`
+- `docs/phase90-mission-active-surface-audit.md`
+- `docs/phase90-mission-active-packet-contract.md`
+- `docs/phase90-player-safe-copy.md`
+- `docs/phase90-compact-control-layout.md`
+- `docs/phase90-fresh-empty-waiting-states.md`
+- `docs/phase90-no-crowd-guard.md`
+- `docs/phase90-performance-guard.md`
+- `docs/phase90-developer-readback.md`
+- `docs/phase90-fast-qa-gate.md`
+- `docs/phase90-docs-roadmap-receipts.md`
+- `docs/phase90-phase-closeout-qa.md`
+
+Phase 90 confirms the Mission Active packet, four-row cap, player-safe copy, compact control layout, clean empty states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and docs receipts. It activates only the third narrow read-only player surface and does not enable broad app reads, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
 
 ## QA Expectations
 
