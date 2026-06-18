@@ -6,8 +6,8 @@ This plan exists so Money Mission OS can keep growing without becoming slow, blo
 
 ## Current Phase Anchor
 
-- Current phase: Phase 92 Mission Command Context Surface Readiness
-- Current pass type: fifth player surface readiness / Mission Command context controlled read-only expansion
+- Current phase: Phase 93 Timer Runtime Cards Surface Readiness
+- Current pass type: sixth player surface readiness / timer and work-session context controlled read-only expansion
 - Origin: Phase 64 Receipt Archive Candidate closeout
 - Primary file currently protected: `money-mission-tracker-v2_5.html`
 
@@ -560,6 +560,27 @@ Current references:
 - `docs/phase92-phase-closeout-qa.md`
 
 Phase 92 confirms the Mission Command Context packet, four-row cap, player-safe guide copy, compact guide layout, clean empty states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and docs receipts. It activates only the fifth narrow read-only player surface and does not enable broad app reads, app writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
+
+### Phase 93: Timer Runtime Cards Surface Readiness
+
+Prepare `Account > Mission > Missions > Active` to show compact timer/work-block context as the sixth narrow player-facing read-only data surface. Overview Today remains the first player surface, Profile Momentum remains the second, Mission Active remains the third, Journey Road remains the fourth, Mission Command Context remains the fifth, and Timer Runtime Cards becomes the compact time/work-block read that summarizes the current block, focus lane, today time state, and Rule of 300 readiness without adding a standalone time dashboard.
+
+Current references:
+
+- `docs/phase93-phase-scope-backup.md`
+- `docs/phase93-timer-surface-audit.md`
+- `docs/phase93-timer-runtime-packet-contract.md`
+- `docs/phase93-player-safe-time-copy.md`
+- `docs/phase93-compact-timer-layout.md`
+- `docs/phase93-fresh-empty-waiting-states.md`
+- `docs/phase93-no-crowd-guard.md`
+- `docs/phase93-performance-guard.md`
+- `docs/phase93-developer-readback.md`
+- `docs/phase93-fast-qa-gate.md`
+- `docs/phase93-docs-roadmap-receipts.md`
+- `docs/phase93-phase-closeout-qa.md`
+
+Phase 93 confirms the Timer Runtime packet, four-row cap, player-safe time copy, compact timer layout, clean empty states, no-crowd guard, bounded render guard, developer-only readback, compact Fast QA row, and docs receipts. It activates only the sixth narrow read-only player surface and does not enable broad app reads, app writes, time ledger writes, timer ledger writes, mission completion writes, XP awards, notification dispatch, cache-token removal, archive moves, restore execution, workers, automations, token export, or secret export.
 
 ## QA Expectations
 
