@@ -85,6 +85,7 @@ var PHASE27_NOTION_PACKET_NORMALIZATION_BUILD_V25 = 'mmos-20260607-phase27-packe
 var PHASE28_NOTION_PACKET_QA_BUILD_V25 = 'mmos-20260607-phase28-packet-readback-qa-source-trust';
 var PHASE101_MISSION_OS_CONTEXT_BUILD_V25 = 'mmos-20260619-phase101-mission-os-context-contract';
 var PHASE102_MISSION_OS_CONTEXT_LIVE_PROBE_BUILD_V25 = 'mmos-20260619-phase102-mission-os-context-live-read-probe';
+var PHASE102_CURRENT_OPERATING_STATE_API_ID_V25 = 'b83e9a0438f44f3d87833ddf4791c842';
 var PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25 = '11161152-81da-80da-891f-000b711d93d8';
 var PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25 = '37761152-81da-81fa-98b3-000cedc52d4f';
 var PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25 = 'f32424f4-9966-4aaf-a387-ff985f4be95e';
@@ -8728,6 +8729,9 @@ function getPhase101MissionOsContextSourceMapV25() {
       assetsDriveIndex: 'collection://df392cb7-f0b5-441b-a4bd-38ee4d48b3ee',
       liveEventsStreams: 'collection://f32424f4-9966-4aaf-a387-ff985f4be95e'
     },
+    apiIds: {
+      currentOperatingState: PHASE102_CURRENT_OPERATING_STATE_API_ID_V25
+    },
     fields: {
       currentOperatingState: ['State Name','Status','Week Of','Active Cycle','Active Campaign','Active Mission Attempt','Active Batch Lane','Today Priority','Current Offer','Current CTA','Allowed Work','Parked Work','Urgent Exceptions','Result To Log','Approval Focus','Source Freshness'],
       taskMaster: ['Name','Status','App Read Eligible','Batch Lane','Move Type','Campaign','Mission Attempt','Result Needed','Result Logged','Rep Count','Rule of 300 Eligible','Estimated Minutes','Actual Minutes','Due date','Priority','Area'],
@@ -8866,7 +8870,7 @@ function readPhase102CurrentOperatingStateProbeV25(limit) {
     var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
     if (!secret) return { ok: false, code: 'missing_secret', error: 'NOTION_SECRET not set.', rows: [], rowCount: 0 };
     var sourceMap = getPhase101MissionOsContextSourceMapV25();
-    var sourceId = String(sourceMap.sourceIds.currentOperatingState || '').replace(/^collection:\/\//, '');
+    var sourceId = String((sourceMap.apiIds && sourceMap.apiIds.currentOperatingState) || sourceMap.sourceIds.currentOperatingState || '').replace(/^collection:\/\//, '');
     if (!sourceId) return { ok: false, code: 'missing_source', error: 'Current Operating State source is missing.', rows: [], rowCount: 0 };
     var rowLimit = Math.min(Math.max(Number(limit || 1), 1), 1);
     var result = notionQuery(sourceId, { page_size: rowLimit }, 'phase102_current_operating_state_probe');
