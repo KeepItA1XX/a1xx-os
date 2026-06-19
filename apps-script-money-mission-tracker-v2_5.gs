@@ -86,6 +86,7 @@ var PHASE28_NOTION_PACKET_QA_BUILD_V25 = 'mmos-20260607-phase28-packet-readback-
 var PHASE101_MISSION_OS_CONTEXT_BUILD_V25 = 'mmos-20260619-phase101-mission-os-context-contract';
 var PHASE102_MISSION_OS_CONTEXT_LIVE_PROBE_BUILD_V25 = 'mmos-20260619-phase102-mission-os-context-live-read-probe';
 var PHASE102_CURRENT_OPERATING_STATE_API_ID_V25 = 'b83e9a0438f44f3d87833ddf4791c842';
+var PHASE103_MISSION_OS_CONTEXT_NORMALIZATION_BUILD_V25 = 'mmos-20260619-phase103-mission-os-context-normalization';
 var PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25 = '11161152-81da-80da-891f-000b711d93d8';
 var PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25 = '37761152-81da-81fa-98b3-000cedc52d4f';
 var PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25 = 'f32424f4-9966-4aaf-a387-ff985f4be95e';
@@ -8918,6 +8919,124 @@ function compactPhase102CurrentOperatingStatePageV25(page) {
   };
 }
 
+function phase103ClipMissionTextV25(value, max) {
+  max = Math.max(Number(max || 120), 40);
+  var text = cellTextV20(value || '', max).replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  if (text.length <= max) return text;
+  return text.slice(0, Math.max(max - 1, 20)).replace(/\s+\S*$/, '').trim() + '…';
+}
+
+function phase103CleanWeekLabelV25(value) {
+  var text = phase103ClipMissionTextV25(value, 40);
+  return text ? 'Week of ' + text : 'Current week';
+}
+
+function phase103LaneInstructionV25(lane) {
+  var clean = String(lane || '').toLowerCase();
+  if (clean === 'outreach') return 'Protect the outreach lane. Keep the next move tied to approved conversations and log the result.';
+  if (clean === 'music') return 'Protect the music block. Finish one clear creative move before switching lanes.';
+  if (clean === 'content') return 'Protect the content lane. Create the next visible proof piece and keep the CTA clean.';
+  if (clean === 'fulfillment') return 'Protect delivery. Move the paid work forward and save proof before changing context.';
+  if (clean === 'proof') return 'Protect proof. Capture what moved and turn the result into something visible.';
+  if (clean === 'admin') return 'Protect the cleanup lane. Clear the blocker without drifting into a new project.';
+  if (clean === 'recalibration') return 'Protect recalibration. Review the road, reset the next move, and restart clean.';
+  return 'Protect one lane. Keep the next move clean and log what happened.';
+}
+
+function getPhase103MissionOsContextFallbackCopyV25(freshness) {
+  var state = String(freshness || '').toLowerCase();
+  var map = {
+    fresh: 'Today’s operating context is ready.',
+    aging: 'Today’s context is available, but it may need a quick refresh soon.',
+    stale: 'This context is old enough to review before trusting it.',
+    empty: 'No current operating row is available yet.',
+    blocked: 'The operating context is blocked until the source is available.',
+    error: 'The operating context needs review before player use.',
+    waiting: 'The operating context shape is ready and waiting for a live read.'
+  };
+  return {
+    freshness: state || 'waiting',
+    playerLine: map[state] || map.waiting,
+    emptyLine: 'Set the current operating state in Notion to unlock a cleaner read.',
+    blockedLine: 'Keep working from the local mission state until this source is refreshed.'
+  };
+}
+
+function getPhase103MissionOsContextConsumerPermissionsV25() {
+  return {
+    overview: ['weekLabel','activeLane','todayFocusShort','offerShort','ctaShort','resultTargetShort','freshness'],
+    brief: ['weekLabel','todayFocusShort','approvalNeededShort','allowedWorkShort','freshness'],
+    outreach: ['activeLane','ctaShort','resultTargetShort','laneInstruction','freshness'],
+    music: ['activeLane','todayFocusShort','allowedWorkShort','parkedWorkShort','freshness'],
+    manager: ['approvalNeededShort','urgentExceptionsShort','parkedWorkShort','resultTargetShort','freshness'],
+    missions: ['activeLane','todayFocusShort','resultTargetShort','freshness'],
+    command: ['activeLane','todayFocusShort','ctaShort','resultTargetShort','laneInstruction','approvalNeededShort'],
+    profile: ['activeLane','freshness'],
+    badges: ['freshness'],
+    journey: ['weekLabel','activeLane','freshness']
+  };
+}
+
+function normalizePhase103MissionOsCurrentStateV25(row, freshness) {
+  row = row || {};
+  var activeLane = phase103ClipMissionTextV25(row.activeBatchLane || '', 32) || 'Not set';
+  var fresh = String(freshness || row.sourceFreshness || 'waiting').toLowerCase();
+  return {
+    weekLabel: phase103CleanWeekLabelV25(row.weekOf || ''),
+    stateTitle: phase103ClipMissionTextV25(row.title || 'Current Operating State', 80),
+    status: phase103ClipMissionTextV25(row.status || 'Pending', 40),
+    freshness: fresh,
+    activeLane: activeLane,
+    todayFocus: row.todayPriority || '',
+    todayFocusShort: phase103ClipMissionTextV25(row.todayPriority || '', 120) || 'Choose one clean move for today.',
+    currentOffer: row.currentOffer || '',
+    offerShort: phase103ClipMissionTextV25(row.currentOffer || '', 90) || 'Current offer not set.',
+    currentCTA: row.currentCTA || '',
+    ctaShort: phase103ClipMissionTextV25(row.currentCTA || '', 90) || 'Current CTA not set.',
+    allowedWork: row.allowedWork || '',
+    allowedWorkShort: phase103ClipMissionTextV25(row.allowedWork || '', 110) || 'Allowed work not set.',
+    parkedWork: row.parkedWork || '',
+    parkedWorkShort: phase103ClipMissionTextV25(row.parkedWork || '', 110) || 'No parked work listed.',
+    urgentExceptions: row.urgentExceptions || '',
+    urgentExceptionsShort: phase103ClipMissionTextV25(row.urgentExceptions || '', 100) || 'No urgent exceptions listed.',
+    resultToLog: row.resultToLog || '',
+    resultTargetShort: phase103ClipMissionTextV25(row.resultToLog || '', 110) || 'Log the result that proves the move counted.',
+    approvalFocus: row.approvalFocus || '',
+    approvalNeededShort: phase103ClipMissionTextV25(row.approvalFocus || '', 110) || 'No approval focus listed.',
+    laneInstruction: phase103LaneInstructionV25(activeLane),
+    sourceUrl: row.url || '',
+    lastEditedAt: row.lastEditedAt || ''
+  };
+}
+
+function getPhase103MissionOsContextNormalizedLayerV25(packet) {
+  packet = packet || {};
+  var rawFresh = packet.sourceFreshness && packet.sourceFreshness.overall ? packet.sourceFreshness.overall : 'waiting';
+  var normalized = normalizePhase103MissionOsCurrentStateV25(packet.currentState || {}, rawFresh);
+  var fallbackCopy = getPhase103MissionOsContextFallbackCopyV25(normalized.freshness);
+  return {
+    build: PHASE103_MISSION_OS_CONTEXT_NORMALIZATION_BUILD_V25,
+    normalizedAt: new Date().toISOString(),
+    source: 'Current Operating State',
+    normalizedContext: normalized,
+    playerSafeCopy: {
+      headline: fallbackCopy.playerLine,
+      todayFocus: normalized.todayFocusShort,
+      lane: normalized.activeLane,
+      laneInstruction: normalized.laneInstruction,
+      offer: normalized.offerShort,
+      cta: normalized.ctaShort,
+      resultTarget: normalized.resultTargetShort,
+      approval: normalized.approvalNeededShort,
+      fallback: fallbackCopy
+    },
+    consumerPermissions: getPhase103MissionOsContextConsumerPermissionsV25(),
+    rawPlayerSurfaceBlocked: true,
+    playerConsumptionEnabled: false
+  };
+}
+
 function getPhase102MissionOsContextLiveProbePacketV25(p) {
   p = p || {};
   var read = readPhase102CurrentOperatingStateProbeV25(1);
@@ -8950,7 +9069,13 @@ function getPhase102MissionOsContextLiveProbePacketV25(p) {
   };
   packet.warnings = read.ok ? [] : [{ type: 'live_read_probe', message: read.error || 'Live read did not complete.' }];
   packet.protectedBoundary = getPhase102MissionOsContextLiveProbeBoundaryV25();
-  packet.nextAllowedStep = 'phase103_mission_os_context_packet_normalization';
+  var normalizedLayer = getPhase103MissionOsContextNormalizedLayerV25(packet);
+  packet.build = PHASE103_MISSION_OS_CONTEXT_NORMALIZATION_BUILD_V25;
+  packet.normalizedContext = normalizedLayer.normalizedContext;
+  packet.playerSafeCopy = normalizedLayer.playerSafeCopy;
+  packet.consumerPermissions = normalizedLayer.consumerPermissions;
+  packet.rawPlayerSurfaceBlocked = true;
+  packet.nextAllowedStep = 'phase104_controlled_app_read_preview';
   return packet;
 }
 
