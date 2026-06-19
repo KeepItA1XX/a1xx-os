@@ -83,6 +83,7 @@ var PHASE25_NOTION_READ_RELAY_BUILD_V25 = 'mmos-20260607-phase25-apps-script-rea
 var PHASE26_NOTION_LIVE_READ_PROBE_BUILD_V25 = 'mmos-20260607-phase26-gated-live-read-probe';
 var PHASE27_NOTION_PACKET_NORMALIZATION_BUILD_V25 = 'mmos-20260607-phase27-packet-normalization-stale-contract';
 var PHASE28_NOTION_PACKET_QA_BUILD_V25 = 'mmos-20260607-phase28-packet-readback-qa-source-trust';
+var PHASE101_MISSION_OS_CONTEXT_BUILD_V25 = 'mmos-20260619-phase101-mission-os-context-contract';
 var PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25 = '11161152-81da-80da-891f-000b711d93d8';
 var PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25 = '37761152-81da-81fa-98b3-000cedc52d4f';
 var PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25 = 'f32424f4-9966-4aaf-a387-ff985f4be95e';
@@ -332,6 +333,7 @@ function doGet(e) {
     if (e.parameter.action === 'phase26_notion_live_read_probe') return getPhase26NotionLiveReadProbeV25(e.parameter);
     if (e.parameter.action === 'phase27_normalized_packet_preview') return getPhase27NormalizedPacketPreviewV25(e.parameter);
     if (e.parameter.action === 'phase28_packet_readback_qa') return getPhase28PacketReadbackQAV25(e.parameter);
+    if (e.parameter.action === 'mission_os_context') return getPhase101MissionOsContextV25(e.parameter);
     if (e.parameter.action === 'time_ledger_save_reviewed_session') return writeTimeLedgerReviewedSessionV25(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV20(e.parameter);
@@ -8706,6 +8708,137 @@ function readVaultFileV20(e) {
     return jsonResponseV20(makeDriveReadPayloadV20('vault_file', source));
   } catch (err) {
     return jsonResponseV20({ status: 'error', ok: false, kind: 'vault_file', message: err.toString() });
+  }
+}
+
+function getPhase101MissionOsContextSourceMapV25() {
+  return {
+    build: PHASE101_MISSION_OS_CONTEXT_BUILD_V25,
+    timezone: 'America/New_York',
+    sourceIds: {
+      currentOperatingState: 'collection://3e651779-c5a1-43b0-a52d-c2b3056263a6',
+      taskMaster: 'collection://11161152-81da-80da-891f-000b711d93d8',
+      campaigns: 'collection://3dac644d-ada6-46ce-b34b-e025fbcf1746',
+      missionAttempts: 'collection://5c02c36e-fe2a-4de9-be2c-d7c2c29e803f',
+      agentOutputArchives: 'collection://c6337637-98eb-47ea-8396-982e72f2637d',
+      scheduleBlocks: 'collection://eda14da4-2cbc-46fa-8f4e-4b1cfd6924ec',
+      scriptOutlineDrafts: 'collection://25e8d3bc-9355-4ba0-8444-c9dd909e9485',
+      contentDrafts: 'collection://1a061152-81da-8109-8a75-000b421df0bf',
+      assetsDriveIndex: 'collection://df392cb7-f0b5-441b-a4bd-38ee4d48b3ee',
+      liveEventsStreams: 'collection://f32424f4-9966-4aaf-a387-ff985f4be95e'
+    },
+    fields: {
+      currentOperatingState: ['State Name','Status','Week Of','Active Cycle','Active Campaign','Active Mission Attempt','Active Batch Lane','Today Priority','Current Offer','Current CTA','Allowed Work','Parked Work','Urgent Exceptions','Result To Log','Approval Focus','Source Freshness'],
+      taskMaster: ['Name','Status','App Read Eligible','Batch Lane','Move Type','Campaign','Mission Attempt','Result Needed','Result Logged','Rep Count','Rule of 300 Eligible','Estimated Minutes','Actual Minutes','Due date','Priority','Area'],
+      campaigns: ['Campaign Name','Status','App Read Eligible','Primary Offer','Primary Batch Lane','Active Batch Lane','Batch Lane Type','Allowed Work','Parked Work','Urgent Exceptions','Batch Mission Set','Batch Result To Log','Rule of 300 Target','Rule of 300 Progress %','Weekly Time Goal','Total Focused Minutes'],
+      missionAttempts: ['Attempt Name','Attempt Status','App Read Eligible','Completion %','Current Phase','Current Next Move','Current Batch Move','Batch Lane','Batch Lane Type','Mission Set','Allowed Work','Parked Work','Result To Log','Lock-In Default Lane','Batch Carry Forward','Score','Proof Captured','Focused Minutes'],
+      agentOutputs: ['Output Name','Output Type','Status','Approval Needed','Next Action','Summary','Week Of','Output Date','Agent','Related Cycle','Related Campaign'],
+      scheduleBlocks: ['Block Name','Status','Approval Needed','Calendar Event Created','Block Date','Block Type','Start Time','End Time','Time Zone','Goal','Recommended Focus','Related Campaign','Related Content','Related CRM Lead','Related Event','Related Agent Output'],
+      scriptOutlines: ['Script Name','Status','Approval Needed','Week Of','Output Date','Format','Lane','Campaign','Money Mission Cycle','CTA','Training Notes','A1XX Feedback'],
+      contentDrafts: ['Title','Campaign','Mission Attempt','Money Mission Cycle','Ready To','Phase','Format','Platform','Related Assets','Related Project','Publish Date','Production Date','Status']
+    },
+    futureConsumers: {
+      overview: ['today','thisWeek','mission','journey','rewards','sourceFreshness'],
+      profile: ['activeCampaign','activeBatchLane','scoreboard','time','rewards'],
+      badges: ['rewardOpportunities','missionAchievements','levelBadges'],
+      missions: ['activeMission','missionAttempt','resources','steps','handoff'],
+      journey: ['activeCycle','activeCampaign','milestones','revenueRoad'],
+      command: ['currentMission','currentMove','focusLane','allowedWork','parkedWork','resultToLog'],
+      brief: ['currentState','agentOutputs','scheduleBlocks','approvalFocus'],
+      outreach: ['todayMoves','crm','sales','activeMission','followUps'],
+      music: ['activeBatchLane','projects','fulfillment','content','assets'],
+      manager: ['approvals','scheduleBlocks','projects','warnings','missingContext']
+    }
+  };
+}
+
+function getPhase101MissionOsContextBoundaryV25() {
+  return {
+    readOnly: true,
+    contractOnly: true,
+    playerConsumptionEnabled: false,
+    appWrite: false,
+    notionWrite: false,
+    sheetsWrite: false,
+    missionCompletionWrite: false,
+    xpAwardWrite: false,
+    awardExecution: false,
+    notificationDispatch: false,
+    ledgerWrite: false,
+    restoreExecutionEnabled: false,
+    workerAuth: false,
+    automationActivation: false,
+    tokenExport: false,
+    secretExport: false,
+    bootstrapExecution: false
+  };
+}
+
+function getPhase101MissionOsContextEmptyPacketV25(reason) {
+  var sourceMap = getPhase101MissionOsContextSourceMapV25();
+  return {
+    ok: true,
+    packetKey: 'mission_os_context',
+    version: 'v1',
+    build: PHASE101_MISSION_OS_CONTEXT_BUILD_V25,
+    status: 'contract_ready',
+    reason: reason || 'live_read_deferred_to_next_gate',
+    generatedAt: new Date().toISOString(),
+    timezone: 'America/New_York',
+    readOnly: true,
+    playerSafe: true,
+    sourceMap: sourceMap,
+    sourceFreshness: {
+      overall: 'waiting',
+      language: 'The read-only context shape is ready. Live Notion rows are deferred to the controlled read phase.'
+    },
+    currentState: null,
+    activeCycle: null,
+    activeCampaign: null,
+    activeBatchLane: null,
+    activeMission: null,
+    todayMoves: [],
+    thisWeekMoves: [],
+    scheduleBlocks: [],
+    content: [],
+    scripts: [],
+    sales: [],
+    crm: [],
+    projects: [],
+    fulfillment: [],
+    events: [],
+    resources: [],
+    approvals: [],
+    agentOutputs: [],
+    scoreboard: {
+      ruleOf300: null,
+      focusedMinutes: null,
+      badges: null,
+      trophies: null,
+      missions: null
+    },
+    debrief: null,
+    links: [],
+    warnings: [],
+    cardConsumers: sourceMap.futureConsumers,
+    protectedBoundary: getPhase101MissionOsContextBoundaryV25(),
+    nextAllowedStep: 'phase102_controlled_mission_os_context_live_read_probe'
+  };
+}
+
+function getPhase101MissionOsContextV25(p) {
+  try {
+    return jsonResponseV20(getPhase101MissionOsContextEmptyPacketV25('phase101_endpoint_contract_ready'));
+  } catch (err) {
+    return jsonResponseV20({
+      ok: false,
+      packetKey: 'mission_os_context',
+      status: 'error',
+      readOnly: true,
+      playerSafe: true,
+      message: err.toString(),
+      protectedBoundary: getPhase101MissionOsContextBoundaryV25()
+    });
   }
 }
 
