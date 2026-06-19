@@ -8921,7 +8921,7 @@ function compactPhase102CurrentOperatingStatePageV25(page) {
 
 function phase103ClipMissionTextV25(value, max) {
   max = Math.max(Number(max || 120), 40);
-  var text = cellTextV20(value || '', max).replace(/\s+/g, ' ').trim();
+  var text = cellTextV20(value || '', 1000).replace(/\s+/g, ' ').trim();
   if (!text) return '';
   if (text.length <= max) return text;
   return text.slice(0, Math.max(max - 1, 20)).replace(/\s+\S*$/, '').trim() + '…';
