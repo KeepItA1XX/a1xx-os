@@ -84,6 +84,7 @@ var PHASE26_NOTION_LIVE_READ_PROBE_BUILD_V25 = 'mmos-20260607-phase26-gated-live
 var PHASE27_NOTION_PACKET_NORMALIZATION_BUILD_V25 = 'mmos-20260607-phase27-packet-normalization-stale-contract';
 var PHASE28_NOTION_PACKET_QA_BUILD_V25 = 'mmos-20260607-phase28-packet-readback-qa-source-trust';
 var PHASE101_MISSION_OS_CONTEXT_BUILD_V25 = 'mmos-20260619-phase101-mission-os-context-contract';
+var PHASE102_MISSION_OS_CONTEXT_LIVE_PROBE_BUILD_V25 = 'mmos-20260619-phase102-mission-os-context-live-read-probe';
 var PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25 = '11161152-81da-80da-891f-000b711d93d8';
 var PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25 = '37761152-81da-81fa-98b3-000cedc52d4f';
 var PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25 = 'f32424f4-9966-4aaf-a387-ff985f4be95e';
@@ -8828,6 +8829,13 @@ function getPhase101MissionOsContextEmptyPacketV25(reason) {
 
 function getPhase101MissionOsContextV25(p) {
   try {
+    p = p || {};
+    var developerProbe = String(p.developerProbe || p.developer_probe || '') === '1';
+    var liveProbe = String(p.liveProbe || p.live_probe || '') === '1';
+    var mode = String(p.mode || '').trim();
+    if ((developerProbe && liveProbe) || mode === 'live_probe') {
+      return jsonResponseV20(getPhase102MissionOsContextLiveProbePacketV25(p));
+    }
     return jsonResponseV20(getPhase101MissionOsContextEmptyPacketV25('phase101_endpoint_contract_ready'));
   } catch (err) {
     return jsonResponseV20({
@@ -8840,6 +8848,106 @@ function getPhase101MissionOsContextV25(p) {
       protectedBoundary: getPhase101MissionOsContextBoundaryV25()
     });
   }
+}
+
+function getPhase102MissionOsContextLiveProbeBoundaryV25() {
+  var boundary = getPhase101MissionOsContextBoundaryV25();
+  boundary.contractOnly = false;
+  boundary.liveReadProbeOnly = true;
+  boundary.playerConsumptionEnabled = false;
+  boundary.appWrite = false;
+  boundary.notionWrite = false;
+  boundary.sheetsWrite = false;
+  return boundary;
+}
+
+function readPhase102CurrentOperatingStateProbeV25(limit) {
+  try {
+    var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
+    if (!secret) return { ok: false, code: 'missing_secret', error: 'NOTION_SECRET not set.', rows: [], rowCount: 0 };
+    var sourceMap = getPhase101MissionOsContextSourceMapV25();
+    var sourceId = String(sourceMap.sourceIds.currentOperatingState || '').replace(/^collection:\/\//, '');
+    if (!sourceId) return { ok: false, code: 'missing_source', error: 'Current Operating State source is missing.', rows: [], rowCount: 0 };
+    var rowLimit = Math.min(Math.max(Number(limit || 1), 1), 1);
+    var result = notionQuery(sourceId, { page_size: rowLimit }, 'phase102_current_operating_state_probe');
+    if (result.code >= 400) {
+      return { ok: false, code: String(result.code), error: cellTextV20(result.text || '', 500), rows: [], rowCount: 0 };
+    }
+    var parsed = JSON.parse(result.text || '{}');
+    var rows = (parsed.results || []).slice(0, rowLimit).map(function(page) {
+      return compactPhase102CurrentOperatingStatePageV25(page);
+    });
+    return { ok: true, code: String(result.code || 200), rows: rows, rowCount: rows.length, hasMore: parsed.has_more === true };
+  } catch (err) {
+    return { ok: false, code: 'exception', error: err.toString(), rows: [], rowCount: 0 };
+  }
+}
+
+function readPhase102PropV25(props, name) {
+  try {
+    return cellTextV20(readNotionAnyPropertyV20(props[name]), 260);
+  } catch (err) {
+    return '';
+  }
+}
+
+function compactPhase102CurrentOperatingStatePageV25(page) {
+  page = page || {};
+  var props = page.properties || {};
+  return {
+    id: page.id || '',
+    title: readPhase102PropV25(props, 'State Name') || readNotionRegistryTitleV20(props) || 'Current Operating State',
+    status: readPhase102PropV25(props, 'Status'),
+    weekOf: readPhase102PropV25(props, 'Week Of'),
+    todayPriority: readPhase102PropV25(props, 'Today Priority'),
+    currentOffer: readPhase102PropV25(props, 'Current Offer'),
+    currentCTA: readPhase102PropV25(props, 'Current CTA'),
+    activeBatchLane: readPhase102PropV25(props, 'Active Batch Lane'),
+    allowedWork: readPhase102PropV25(props, 'Allowed Work'),
+    parkedWork: readPhase102PropV25(props, 'Parked Work'),
+    urgentExceptions: readPhase102PropV25(props, 'Urgent Exceptions'),
+    resultToLog: readPhase102PropV25(props, 'Result To Log'),
+    approvalFocus: readPhase102PropV25(props, 'Approval Focus'),
+    sourceFreshness: readPhase102PropV25(props, 'Source Freshness'),
+    url: page.url || '',
+    lastEditedAt: page.last_edited_time || ''
+  };
+}
+
+function getPhase102MissionOsContextLiveProbePacketV25(p) {
+  p = p || {};
+  var read = readPhase102CurrentOperatingStateProbeV25(1);
+  var packet = getPhase101MissionOsContextEmptyPacketV25(read.ok ? 'phase102_live_probe_ok' : 'phase102_live_probe_review');
+  packet.ok = read.ok === true;
+  packet.build = PHASE102_MISSION_OS_CONTEXT_LIVE_PROBE_BUILD_V25;
+  packet.status = read.ok ? 'live_probe_ok' : 'live_probe_review';
+  packet.mode = 'controlled_live_read_probe';
+  packet.liveReadProbe = true;
+  packet.playerConsumptionEnabled = false;
+  packet.readAt = new Date().toISOString();
+  packet.currentState = read.rows && read.rows.length ? read.rows[0] : null;
+  packet.currentStateRows = read.rows || [];
+  packet.rowCount = read.rowCount || 0;
+  packet.sourceFreshness = read.ok ? {
+    overall: read.rowCount ? 'fresh' : 'empty',
+    language: read.rowCount ? 'Current Operating State returned one safe read row.' : 'Current Operating State responded but did not return a row.'
+  } : {
+    overall: 'error',
+    language: 'Current Operating State live read needs review before player use.'
+  };
+  packet.probe = {
+    sourceKey: 'currentOperatingState',
+    sourceLabel: 'Current Operating State',
+    limit: 1,
+    ok: read.ok === true,
+    code: read.code || '',
+    error: read.error || '',
+    hasMore: read.hasMore === true
+  };
+  packet.warnings = read.ok ? [] : [{ type: 'live_read_probe', message: read.error || 'Live read did not complete.' }];
+  packet.protectedBoundary = getPhase102MissionOsContextLiveProbeBoundaryV25();
+  packet.nextAllowedStep = 'phase103_mission_os_context_packet_normalization';
+  return packet;
 }
 
 function getPhase25NotionReadRelayPacketCatalogV25() {
