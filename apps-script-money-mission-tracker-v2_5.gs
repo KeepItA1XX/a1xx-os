@@ -5,6 +5,9 @@
 //   - Added action=mission_command_voice_probe for Phase 133 Stage 40
 //     Pass 40E backend relay support. The endpoint calls ElevenLabs only from
 //     Apps Script Properties and returns audioBase64/mimeType to the app.
+//   - Added Pass 40G player-safe ElevenLabs HTTP reason readback so the app
+//     can distinguish setup, quota, model, request, and provider failures
+//     without exposing raw provider responses.
 //   - No secret export, token export, startup voice, autoplay, mission
 //     completion, XP award, notification dispatch, worker, or automation
 //     behavior is enabled.
@@ -449,23 +452,42 @@ function getMissionCommandVoiceProbeV25(params) {
       use_speaker_boost: true
     }
   };
-  var response = UrlFetchApp.fetch(url, {
-    method: 'post',
-    contentType: 'application/json',
-    headers: {
-      'xi-api-key': apiKey,
-      'Accept': 'audio/mpeg'
-    },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  });
-  var code = response.getResponseCode();
-  if (code < 200 || code >= 300) {
+  var response;
+  try {
+    response = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        'xi-api-key': apiKey,
+        'Accept': 'audio/mpeg'
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  } catch (err) {
     return voiceProbeJsonV25({
       ok: false,
       status: 'error',
-      message: 'Voice relay could not create audio. Check ElevenLabs settings.',
+      message: 'Voice relay could not reach provider.',
+      voiceErrorCode: 'voice_relay_fetch_error',
+      voiceErrorHint: 'Check Apps Script authorization, deployment access, and external fetch access.',
+      audioBase64: '',
+      mimeType: '',
+      appWrite: false,
+      tokenExport: false,
+      secretExport: false
+    });
+  }
+  var code = response.getResponseCode();
+  if (code < 200 || code >= 300) {
+    var voiceError = getMissionCommandVoiceHttpErrorV25(code, response.getContentText());
+    return voiceProbeJsonV25({
+      ok: false,
+      status: 'error',
+      message: voiceError.message,
       httpStatus: code,
+      voiceErrorCode: voiceError.code,
+      voiceErrorHint: voiceError.hint,
       audioBase64: '',
       mimeType: '',
       appWrite: false,
@@ -504,6 +526,57 @@ function getMissionCommandVoiceProbeV25(params) {
     tokenExport: false,
     secretExport: false
   });
+}
+
+function getMissionCommandVoiceHttpErrorV25(code, bodyText) {
+  var body = String(bodyText || '').slice(0, 1200).toLowerCase();
+  if (code === 401 || code === 403 || /invalid api key|unauthorized|forbidden|xi-api-key|api key/.test(body)) {
+    return {
+      code: 'voice_key_rejected',
+      message: 'Voice key rejected.',
+      hint: 'Check ELEVENLABS_API_KEY in Apps Script Properties.'
+    };
+  }
+  if (code === 404 || /voice.*not.*found|voice_not_found|voice id|not found/.test(body)) {
+    return {
+      code: 'voice_id_not_found',
+      message: 'Voice ID not found.',
+      hint: 'Check ELEVENLABS_VOICE_ID in Apps Script Properties.'
+    };
+  }
+  if (code === 429 || /rate limit|too many requests|quota|credits|subscription|character/.test(body)) {
+    return {
+      code: 'voice_quota_or_plan',
+      message: 'Voice quota or plan needs attention.',
+      hint: 'Check ElevenLabs quota, credits, rate limits, or plan access.'
+    };
+  }
+  if (/model|model_id|unsupported model/.test(body)) {
+    return {
+      code: 'voice_model_error',
+      message: 'Voice model needs attention.',
+      hint: 'Check ELEVENLABS_MODEL_ID or leave it blank for the default model.'
+    };
+  }
+  if (code === 400 || code === 422 || /invalid|validation|voice_settings|text|request/.test(body)) {
+    return {
+      code: 'voice_request_invalid',
+      message: 'Voice request needs attention.',
+      hint: 'Check the voice request shape and selected voice settings.'
+    };
+  }
+  if (code >= 500) {
+    return {
+      code: 'voice_provider_unavailable',
+      message: 'Voice provider is busy.',
+      hint: 'Try again after the provider is available.'
+    };
+  }
+  return {
+    code: 'voice_relay_http_error',
+    message: 'Voice relay could not create audio.',
+    hint: 'Check ElevenLabs settings and deployment.'
+  };
 }
 
 function sanitizeMissionCommandVoiceTextV25(value) {
