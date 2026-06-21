@@ -1,6 +1,13 @@
 // ============================================================
 // A1XX Money Mission Tracker — Google Apps Script Backend
 // Version 2.5
+// Changes in 2.5 (2026-06-21):
+//   - Added action=mission_command_voice_probe for Phase 133 Stage 40
+//     Pass 40E backend relay support. The endpoint calls ElevenLabs only from
+//     Apps Script Properties and returns audioBase64/mimeType to the app.
+//   - No secret export, token export, startup voice, autoplay, mission
+//     completion, XP award, notification dispatch, worker, or automation
+//     behavior is enabled.
 // Changes in 2.5 (2026-06-01):
 //   - Promoted the Apps Script backend identity to v2_5 for the OS v2_5
 //     Phase 9F Account Mission Contracts build line.
@@ -337,6 +344,7 @@ function doGet(e) {
     if (e.parameter.action === 'phase27_normalized_packet_preview') return getPhase27NormalizedPacketPreviewV25(e.parameter);
     if (e.parameter.action === 'phase28_packet_readback_qa') return getPhase28PacketReadbackQAV25(e.parameter);
     if (e.parameter.action === 'mission_os_context') return getPhase101MissionOsContextV25(e.parameter);
+    if (e.parameter.action === 'mission_command_voice_probe') return getMissionCommandVoiceProbeV25(e.parameter);
     if (e.parameter.action === 'time_ledger_save_reviewed_session') return writeTimeLedgerReviewedSessionV25(e.parameter);
     if (e.parameter.action === 'drive_file_index_pointer_write_skeleton') return getDriveFileIndexPointerWriteSkeletonV20(e.parameter);
     if (e.parameter.action === 'master_config_read_skeleton') return getMasterConfigReadSkeletonV20(e.parameter);
@@ -382,6 +390,136 @@ function doGet(e) {
     logActivity('GET ERROR: ' + err.toString());
     return error(err.toString());
   }
+}
+
+function getMissionCommandVoiceProbeV25(params) {
+  params = params || {};
+  var text = sanitizeMissionCommandVoiceTextV25(params.text || '');
+  if (!text) {
+    return voiceProbeJsonV25({
+      ok: false,
+      status: 'blocked',
+      message: 'No speakable Mission Command text was provided.',
+      audioBase64: '',
+      mimeType: '',
+      appWrite: false,
+      tokenExport: false,
+      secretExport: false
+    });
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var apiKey = String(props.getProperty('ELEVENLABS_API_KEY') || '').trim();
+  var voiceId = String(props.getProperty('ELEVENLABS_VOICE_ID') || '').trim();
+  var modelId = String(props.getProperty('ELEVENLABS_MODEL_ID') || 'eleven_multilingual_v2').trim();
+
+  if (!apiKey) {
+    return voiceProbeJsonV25({
+      ok: false,
+      status: 'blocked',
+      message: 'Voice key is not configured in Apps Script.',
+      audioBase64: '',
+      mimeType: '',
+      appWrite: false,
+      tokenExport: false,
+      secretExport: false
+    });
+  }
+  if (!voiceId) {
+    return voiceProbeJsonV25({
+      ok: false,
+      status: 'blocked',
+      message: 'Voice ID is not configured in Apps Script.',
+      audioBase64: '',
+      mimeType: '',
+      appWrite: false,
+      tokenExport: false,
+      secretExport: false
+    });
+  }
+
+  var url = 'https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voiceId);
+  var payload = {
+    text: text,
+    model_id: modelId,
+    voice_settings: {
+      stability: 0.44,
+      similarity_boost: 0.78,
+      style: 0.18,
+      use_speaker_boost: true
+    }
+  };
+  var response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      'xi-api-key': apiKey,
+      'Accept': 'audio/mpeg'
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  var code = response.getResponseCode();
+  if (code < 200 || code >= 300) {
+    return voiceProbeJsonV25({
+      ok: false,
+      status: 'error',
+      message: 'Voice relay could not create audio. Check ElevenLabs settings.',
+      httpStatus: code,
+      audioBase64: '',
+      mimeType: '',
+      appWrite: false,
+      tokenExport: false,
+      secretExport: false
+    });
+  }
+
+  var bytes = response.getBlob().getBytes();
+  if (!bytes || !bytes.length) {
+    return voiceProbeJsonV25({
+      ok: false,
+      status: 'missing_audio',
+      message: 'Voice relay answered, but no audio was returned.',
+      audioBase64: '',
+      mimeType: '',
+      appWrite: false,
+      tokenExport: false,
+      secretExport: false
+    });
+  }
+
+  return voiceProbeJsonV25({
+    ok: true,
+    status: 'ready',
+    provider: 'elevenlabs',
+    relay: 'apps_script',
+    action: 'mission_command_voice_probe',
+    firstBubbleOnly: true,
+    sanitizedTextOnly: true,
+    audioBase64: Utilities.base64Encode(bytes),
+    mimeType: 'audio/mpeg',
+    durationMs: 0,
+    message: 'Voice ready.',
+    appWrite: false,
+    tokenExport: false,
+    secretExport: false
+  });
+}
+
+function sanitizeMissionCommandVoiceTextV25(value) {
+  var text = String(value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/\b(api\s*key|secret|token|bearer|authorization|webhook|localStorage|sessionStorage|raw json|raw id|Notion ID)\b\s*[:=-]?\s*/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (text.length > 900) text = text.slice(0, 900).trim();
+  return text;
+}
+
+function voiceProbeJsonV25(payload) {
+  return ContentService.createTextOutput(JSON.stringify(payload || {}))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function handleLogChange(data) {
