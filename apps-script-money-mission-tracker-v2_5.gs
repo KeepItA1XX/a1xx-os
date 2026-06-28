@@ -259,6 +259,10 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: chatRow }))
         .setMimeType(ContentService.MimeType.JSON);
     }
+    if (data.type === 'mission_llm_chat') {
+      var llmResult = getMissionCommandLlmChatV1(data);
+      return missionLlmJsonV1(llmResult);
+    }
     if (data.type === 'mission_chat_session_sync') {
       var sessionRow = saveMissionChatSession(data);
       logActivity('Mission Command session sync — ' + (data.project || 'No project') + ' — ' + String(data.title || data.sessionId || 'chat').slice(0, 80));
@@ -393,6 +397,219 @@ function doGet(e) {
     logActivity('GET ERROR: ' + err.toString());
     return error(err.toString());
   }
+}
+
+function getMissionCommandLlmChatV1(data) {
+  var started = Date.now();
+  data = data || {};
+  var question = sanitizeMissionCommandLlmTextV1(data.question || '', 700);
+  var contextPacket = sanitizeMissionCommandLlmContextV1(data.contextPacket || {});
+  var props = PropertiesService.getScriptProperties();
+  var apiKey = String(props.getProperty('NVIDIA_API_KEY') || '').trim();
+  var model = String(props.getProperty('NVIDIA_LLM_MODEL') || 'z-ai/glm-5.1').trim();
+  var baseUrl = String(props.getProperty('NVIDIA_LLM_BASE_URL') || 'https://integrate.api.nvidia.com/v1/chat/completions').trim();
+
+  if (!question) {
+    return missionLlmContractV1({
+      ok: false,
+      status: 'blocked',
+      model: model,
+      fallbackReason: 'missing_question',
+      latencyMs: Date.now() - started
+    });
+  }
+  if (!apiKey) {
+    return missionLlmContractV1({
+      ok: false,
+      status: 'blocked',
+      model: model,
+      fallbackReason: 'missing_nvidia_api_key',
+      latencyMs: Date.now() - started
+    });
+  }
+
+  var systemPrompt = [
+    'You are Mission Command inside Money Mission OS for A1XX.',
+    'Advisor Only mode: write the main conversational answer only.',
+    'Be direct, useful, A1XX-specific, and action-oriented.',
+    'Use only the context packet provided. Never claim live data unless it is in the packet.',
+    'Never say an action was completed, saved, synced, logged, paid, booked, shipped, awarded, or approved unless the packet says so.',
+    'Never expose implementation details, raw JSON, secrets, debug traces, endpoint names, internal IDs, tokens, keys, storage names, or provider details.',
+    'Do not create buttons, HTML, markdown tables, code, tool calls, automations, XP awards, mission completion, or write actions.',
+    'If the data is missing, say what is missing and give the safest next move.'
+  ].join(' ');
+
+  var payload = {
+    model: model,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: [
+          'User question: ' + question,
+          'Safe context packet: ' + JSON.stringify(contextPacket)
+        ].join('\n')
+      }
+    ],
+    temperature: 0.35,
+    top_p: 0.9,
+    max_tokens: 420,
+    stream: false
+  };
+
+  var response;
+  try {
+    response = UrlFetchApp.fetch(baseUrl, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + apiKey,
+        Accept: 'application/json'
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  } catch (err) {
+    return missionLlmContractV1({
+      ok: false,
+      status: 'error',
+      model: model,
+      fallbackReason: 'provider_fetch_error',
+      latencyMs: Date.now() - started
+    });
+  }
+
+  var code = response.getResponseCode();
+  var body = response.getContentText() || '';
+  if (code < 200 || code >= 300) {
+    return missionLlmContractV1({
+      ok: false,
+      status: 'error',
+      model: model,
+      httpStatus: code,
+      fallbackReason: getMissionCommandLlmHttpReasonV1(code, body),
+      latencyMs: Date.now() - started
+    });
+  }
+
+  var parsed;
+  try {
+    parsed = JSON.parse(body);
+  } catch (parseErr) {
+    return missionLlmContractV1({
+      ok: false,
+      status: 'error',
+      model: model,
+      fallbackReason: 'provider_bad_json',
+      latencyMs: Date.now() - started
+    });
+  }
+
+  var answer = parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].message
+    ? parsed.choices[0].message.content
+    : '';
+  if (missionCommandLlmTextIsUnsafeV1(answer)) {
+    return missionLlmContractV1({
+      ok: false,
+      status: 'blocked',
+      model: model,
+      fallbackReason: 'unsafe_answer_blocked',
+      latencyMs: Date.now() - started
+    });
+  }
+  answer = sanitizeMissionCommandLlmTextV1(answer, 1200);
+  if (!answer) {
+    return missionLlmContractV1({
+      ok: false,
+      status: 'empty',
+      model: model,
+      fallbackReason: 'provider_empty_answer',
+      latencyMs: Date.now() - started
+    });
+  }
+
+  return missionLlmContractV1({
+    ok: true,
+    status: 'ready',
+    model: model,
+    mode: 'advisor_only',
+    answerText: answer,
+    latencyMs: Date.now() - started
+  });
+}
+
+function sanitizeMissionCommandLlmTextV1(value, maxLen) {
+  var text = String(value || '')
+    .replace(/<\s*script\b[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/\b(api\s*key|secret|token|bearer|authorization|webhook|localStorage|sessionStorage|raw json|raw id|Notion ID|endpoint)\b\s*[:=-]?\s*/gi, ' ')
+    .replace(/\s+\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  maxLen = Number(maxLen) || 900;
+  if (text.length > maxLen) text = text.slice(0, maxLen).trim();
+  return text;
+}
+
+function sanitizeMissionCommandLlmContextV1(value) {
+  var json = '';
+  try {
+    json = JSON.stringify(value || {});
+  } catch (err) {
+    json = '{}';
+  }
+  json = json
+    .replace(/https?:\/\/\S+/g, '[link removed]')
+    .replace(/\b(api[_ -]?key|secret|token|bearer|authorization|webhook|password|oauth|private[_ -]?key)\b/gi, '[protected]')
+    .slice(0, 5000);
+  try {
+    return JSON.parse(json);
+  } catch (parseErr) {
+    return { status: 'context_sanitized', summary: sanitizeMissionCommandLlmTextV1(json, 1000) };
+  }
+}
+
+function missionCommandLlmTextIsUnsafeV1(text) {
+  return /\b(api[_ -]?key|secret|bearer|authorization|webhook|localStorage|sessionStorage|raw json|raw id|Notion ID|endpoint|integrate\.api|UrlFetchApp|PropertiesService|ScriptProperties)\b/i.test(String(text || ''));
+}
+
+function getMissionCommandLlmHttpReasonV1(code, bodyText) {
+  var body = String(bodyText || '').slice(0, 1200).toLowerCase();
+  if (code === 401 || code === 403 || /invalid.*key|unauthorized|forbidden|api key/.test(body)) return 'provider_key_rejected';
+  if (code === 404 || /model.*not.*found|not found/.test(body)) return 'provider_model_not_found';
+  if (code === 408 || code === 504 || /timeout|timed out/.test(body)) return 'provider_timeout';
+  if (code === 429 || /rate limit|quota|too many/.test(body)) return 'provider_rate_limited';
+  return 'provider_http_' + code;
+}
+
+function missionLlmContractV1(payload) {
+  payload = payload || {};
+  return {
+    ok: payload.ok === true,
+    status: payload.status || (payload.ok === true ? 'ready' : 'blocked'),
+    provider: 'nvidia',
+    relay: 'apps_script',
+    action: 'mission_llm_chat',
+    model: payload.model || 'z-ai/glm-5.1',
+    mode: payload.mode || 'advisor_only',
+    answerText: payload.answerText || '',
+    fallbackReason: payload.fallbackReason || '',
+    httpStatus: payload.httpStatus || 0,
+    latencyMs: payload.latencyMs || 0,
+    appWrite: false,
+    tokenExport: false,
+    secretExport: false,
+    missionCompletion: false,
+    xpAward: false,
+    automation: false
+  };
+}
+
+function missionLlmJsonV1(payload) {
+  return ContentService.createTextOutput(JSON.stringify(payload || {}))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function getMissionCommandVoiceProbeV25(params) {
