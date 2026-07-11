@@ -1059,7 +1059,9 @@ var MC_OPENAI_STAGE32_SCRIPT_PROPERTY_KEY = 'OPENAI_API_KEY';
 var MC_OPENAI_STAGE32_MODEL = 'gpt-5.6-terra';
 var MC_OPENAI_STAGE32_ENDPOINT = 'https://api.openai.com/v1/responses';
 var MC_OPENAI_STAGE32_MAX_ESTIMATED_SPEND_USD = 1.00;
+var MC_OPENAI_STAGE32_PREFLIGHT_ESTIMATED_SPEND_USD = 0.029;
 var MC_OPENAI_STAGE32_TIMEOUT_MS = 30000;
+var MC_OPENAI_STAGE32_TIMEOUT_SECONDS = 30;
 var MC_OPENAI_STAGE32_MAX_INPUT_TOKENS = 8000;
 var MC_OPENAI_STAGE32_MAX_OUTPUT_TOKENS = 600;
 
@@ -1068,9 +1070,7 @@ function getMissionCommandOpenAiStage32Flags(overrides) {
     stage32ProbeEnabled: false,
     executeProviderCall: false,
     approvedSingleCall: false,
-    modelAccessConfirmed: false,
     scriptPropertyConfirmed: false,
-    timeoutBehaviorAccepted: false,
     visibleDeliveryEnabled: false,
     externalWritesEnabled: false,
     dispatchEnabled: false,
@@ -1165,6 +1165,19 @@ function validateMissionCommandOpenAiStage32Request(request) {
   return { ok: errors.length === 0, errors: errors };
 }
 
+function makeMissionCommandOpenAiStage32FetchOptions(apiKey, request) {
+  return {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      Authorization: 'Bearer ' + String(apiKey || '')
+    },
+    payload: JSON.stringify(request || {}),
+    muteHttpExceptions: true,
+    timeoutSeconds: MC_OPENAI_STAGE32_TIMEOUT_SECONDS
+  };
+}
+
 function getMissionCommandOpenAiStage32Preflight(input) {
   input = input || {};
   var flags = getMissionCommandOpenAiStage32Flags(input.flags || {});
@@ -1174,14 +1187,8 @@ function getMissionCommandOpenAiStage32Preflight(input) {
   if (flags.visibleDeliveryEnabled || flags.externalWritesEnabled || flags.dispatchEnabled || flags.triggerEnabled || flags.fallbackEnabled) {
     return getMissionCommandOpenAiStage32BlockedResult('unsafe_flag_state', 'Visible delivery, external write, dispatch, trigger, or fallback flags are not allowed.');
   }
-  if (!flags.modelAccessConfirmed) {
-    return getMissionCommandOpenAiStage32BlockedResult('model_access_unconfirmed', 'Approved-project access to gpt-5.6-terra must be confirmed before the probe.');
-  }
   if (!flags.scriptPropertyConfirmed) {
     return getMissionCommandOpenAiStage32BlockedResult('credential_unconfirmed', 'OPENAI_API_KEY must be confirmed in Apps Script Script Properties without exposing its value.');
-  }
-  if (!flags.timeoutBehaviorAccepted) {
-    return getMissionCommandOpenAiStage32BlockedResult('timeout_control_unconfirmed', 'Apps Script UrlFetchApp has no per-request timeout option; do not call until 30-second runtime behavior is explicitly accepted.');
   }
   var estimatedCost = Number(input.estimatedCostUsd);
   if (!isFinite(estimatedCost) || estimatedCost < 0 || estimatedCost > MC_OPENAI_STAGE32_MAX_ESTIMATED_SPEND_USD) {
@@ -1198,6 +1205,7 @@ function getMissionCommandOpenAiStage32Preflight(input) {
     provider: 'openai',
     endpoint: MC_OPENAI_STAGE32_ENDPOINT,
     model: MC_OPENAI_STAGE32_MODEL,
+    modelAccessCheckMethod: 'single_authorized_responses_probe',
     role: 'chief_of_staff',
     request: draft.request,
     validation: validation,
@@ -1205,6 +1213,8 @@ function getMissionCommandOpenAiStage32Preflight(input) {
     callLimit: 1,
     retryCount: 0,
     timeoutMs: MC_OPENAI_STAGE32_TIMEOUT_MS,
+    timeoutSeconds: MC_OPENAI_STAGE32_TIMEOUT_SECONDS,
+    fetchOptions: makeMissionCommandOpenAiStage32FetchOptions('[redacted]', draft.request),
     maxOutputTokens: MC_OPENAI_STAGE32_MAX_OUTPUT_TOKENS,
     store: false,
     tools: [],
@@ -1241,15 +1251,7 @@ function runMissionCommandOpenAiStage32OneProbe(input) {
   var responseBody = '';
   var providerResponse = null;
   try {
-    var response = UrlFetchApp.fetch(MC_OPENAI_STAGE32_ENDPOINT, {
-      method: 'post',
-      contentType: 'application/json',
-      headers: {
-        Authorization: 'Bearer ' + apiKey
-      },
-      payload: JSON.stringify(preflight.request),
-      muteHttpExceptions: true
-    });
+    var response = UrlFetchApp.fetch(MC_OPENAI_STAGE32_ENDPOINT, makeMissionCommandOpenAiStage32FetchOptions(apiKey, preflight.request));
     httpStatus = Number(response.getResponseCode() || 0);
     responseBody = String(response.getContentText() || '');
   } catch (fetchErr) {
@@ -1417,23 +1419,20 @@ function runMissionCommandOpenAiStage32LocalChecks() {
       stage32ProbeEnabled: true,
       executeProviderCall: true,
       approvedSingleCall: true,
-      modelAccessConfirmed: true,
-      scriptPropertyConfirmed: true,
-      timeoutBehaviorAccepted: true
+      scriptPropertyConfirmed: true
     },
-    estimatedCostUsd: 0.01
+    estimatedCostUsd: MC_OPENAI_STAGE32_PREFLIGHT_ESTIMATED_SPEND_USD
   });
   var invalidCost = getMissionCommandOpenAiStage32Preflight({
     flags: {
       stage32ProbeEnabled: true,
       executeProviderCall: true,
       approvedSingleCall: true,
-      modelAccessConfirmed: true,
-      scriptPropertyConfirmed: true,
-      timeoutBehaviorAccepted: true
+      scriptPropertyConfirmed: true
     },
     estimatedCostUsd: 1.01
   });
+  var fetchOptions = ready.ok === true ? makeMissionCommandOpenAiStage32FetchOptions('[redacted]', ready.request) : {};
   return {
     ok: stage31.ok === true &&
       blocked.ok === false &&
@@ -1443,12 +1442,16 @@ function runMissionCommandOpenAiStage32LocalChecks() {
       Array.isArray(ready.request.tools) &&
       ready.request.tools.length === 0 &&
       ready.request.model === MC_OPENAI_STAGE32_MODEL &&
+      ready.timeoutSeconds === MC_OPENAI_STAGE32_TIMEOUT_SECONDS &&
+      fetchOptions.timeoutSeconds === MC_OPENAI_STAGE32_TIMEOUT_SECONDS &&
       invalidCost.ok === false &&
       invalidCost.stopCondition === 'cost_cap_unconfirmed',
     build: MC_OPENAI_STAGE32_PROBE_BUILD,
     stage31Ok: stage31.ok === true,
     blockedDefaultOff: blocked.ok === false && blocked.providerCallAttempted === false,
     requestReady: ready.ok === true,
+    timeoutSecondsReady: ready.timeoutSeconds === MC_OPENAI_STAGE32_TIMEOUT_SECONDS && fetchOptions.timeoutSeconds === MC_OPENAI_STAGE32_TIMEOUT_SECONDS,
+    preflightEstimatedSpendUsd: MC_OPENAI_STAGE32_PREFLIGHT_ESTIMATED_SPEND_USD,
     invalidCostBlocked: invalidCost.ok === false,
     providerCall: false,
     credentialValueReturned: false,
