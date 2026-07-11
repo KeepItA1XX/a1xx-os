@@ -1465,6 +1465,582 @@ function runMissionCommandOpenAiStage32LocalChecks() {
   };
 }
 
+// ── MISSION COMMAND STAGE 3.3 AGENT RESPONSE CAPTURE ────────
+// Temporary manual capture lane only. No trigger, Sheet write, visible delivery,
+// dispatch, Team Chat/Notion write, fallback model, or stored raw response.
+var MC_OPENAI_STAGE33_CAPTURE_BUILD = 'mmos-20260711-stage3-3-agent-response-capture';
+var MC_OPENAI_STAGE33_LOG_PREFIX = 'MC_STAGE33_CAPTURE_SAFE ';
+var MC_OPENAI_STAGE33_MODEL = 'gpt-5.6-terra';
+var MC_OPENAI_STAGE33_MAX_ESTIMATED_SPEND_USD = 0.10;
+var MC_OPENAI_STAGE33_PREFLIGHT_ESTIMATED_SPEND_USD = 0.0235;
+var MC_OPENAI_STAGE33_TIMEOUT_SECONDS = 30;
+var MC_OPENAI_STAGE33_MAX_INPUT_TOKENS_PER_ROLE = 2000;
+var MC_OPENAI_STAGE33_MAX_OUTPUT_TOKENS_PER_ROLE = 450;
+var MC_OPENAI_STAGE33_ROLE_ORDER = ['executive_assistant', 'chief_of_staff'];
+
+function getMissionCommandOpenAiStage33Flags(overrides) {
+  var flags = {
+    stage33CaptureEnabled: false,
+    executeProviderCalls: false,
+    approvedManualRun: false,
+    scriptPropertyConfirmed: false,
+    visibleDeliveryEnabled: false,
+    externalWritesEnabled: false,
+    dispatchEnabled: false,
+    triggerEnabled: false,
+    fallbackEnabled: false
+  };
+  overrides = overrides || {};
+  Object.keys(flags).forEach(function(key) {
+    flags[key] = overrides[key] === true;
+  });
+  return flags;
+}
+
+function getMissionCommandOpenAiStage33Fixture() {
+  return {
+    fixture_id: 'mc_stage33_capture_v1',
+    fixture_type: 'synthetic_safe_context',
+    surface: 'Mission Command',
+    known_state: [
+      'One output draft is waiting for A1XX review',
+      'One client deliverable is waiting on a missing reference file',
+      'One content draft was returned by a specialist and has not been reviewed',
+      'No dispatch, send, publish, delivery, billing, or external write is allowed'
+    ],
+    source_labels: [
+      'synthetic_fixture:output_review',
+      'synthetic_fixture:client_project',
+      'synthetic_fixture:agent_return'
+    ]
+  };
+}
+
+function getMissionCommandOpenAiStage33RolePrompt(role) {
+  if (role === 'executive_assistant') {
+    return [
+      'Create one hidden Executive Assistant candidate for A1XX.',
+      'Lead with the highest-leverage A1XX action.',
+      'Use firm Executive Accountability tone.',
+      'Explain what matters and the smallest next move.',
+      'Ask at most one useful question.',
+      'Avoid team-internal detail unless it changes what A1XX should do.',
+      'Never claim dispatch, source access, completion, visible delivery, or external action.',
+      'Return should_deliver:false.'
+    ].join(' ');
+  }
+  if (role === 'chief_of_staff') {
+    return [
+      'Create one hidden Chief of Staff candidate for A1XX.',
+      'Summarize team and work movement, ownership, blockers, and review needs.',
+      'Identify what should escalate to the Executive Assistant.',
+      'Do not duplicate the Executive Assistant wording.',
+      'Preserve lane boundaries and one-writer production rules.',
+      'Never claim dispatch, source access, completion, visible delivery, or external action.',
+      'Return should_deliver:false.'
+    ].join(' ');
+  }
+  return '';
+}
+
+function makeMissionCommandOpenAiStage33Request(role) {
+  var fixture = getMissionCommandOpenAiStage33Fixture();
+  return makeMissionCommandOpenAiShadowRequestDraftV31({
+    role: role,
+    registry: { model: MC_OPENAI_STAGE33_MODEL },
+    prompt: getMissionCommandOpenAiStage33RolePrompt(role),
+    safeContext: fixture,
+    safetyIdentifierSeed: 'a1xx-primary-' + role + '-stage33',
+    depth: 'standard',
+    maxOutputTokens: MC_OPENAI_STAGE33_MAX_OUTPUT_TOKENS_PER_ROLE
+  });
+}
+
+function validateMissionCommandOpenAiStage33Request(role, request) {
+  var base = validateMissionCommandOpenAiShadowRequestV31(request);
+  var errors = base.errors.slice();
+  role = normalizeMissionCommandOpenAiRoleV31(role);
+  if (MC_OPENAI_STAGE33_ROLE_ORDER.indexOf(role) === -1) errors.push('invalid stage 3.3 role');
+  if (request.model !== MC_OPENAI_STAGE33_MODEL) errors.push('model must be ' + MC_OPENAI_STAGE33_MODEL);
+  if (request.max_output_tokens > MC_OPENAI_STAGE33_MAX_OUTPUT_TOKENS_PER_ROLE) errors.push('max output tokens exceed stage 3.3 cap');
+  if (JSON.stringify(request).length > MC_OPENAI_STAGE33_MAX_INPUT_TOKENS_PER_ROLE * 5) errors.push('request payload exceeds conservative input-size cap');
+  if (request.parallel_tool_calls || request.tool_choice) errors.push('tool selection fields must be absent');
+  return { ok: errors.length === 0, errors: errors };
+}
+
+function makeMissionCommandOpenAiStage33FetchOptions(apiKey, request) {
+  return {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      Authorization: 'Bearer ' + String(apiKey || '')
+    },
+    payload: JSON.stringify(request || {}),
+    muteHttpExceptions: true,
+    timeoutSeconds: MC_OPENAI_STAGE33_TIMEOUT_SECONDS
+  };
+}
+
+function getMissionCommandOpenAiStage33Preflight(input) {
+  input = input || {};
+  var flags = getMissionCommandOpenAiStage33Flags(input.flags || {});
+  if (!flags.stage33CaptureEnabled || !flags.executeProviderCalls || !flags.approvedManualRun) {
+    return makeMissionCommandOpenAiStage33SafeCapture('blocked', [], {
+      stopCondition: 'capture_not_authorized',
+      safeDetail: 'Stage 3.3 capture flags are default-off unless explicit manual-run authorization is passed.',
+      estimatedCost: 0
+    });
+  }
+  if (flags.visibleDeliveryEnabled || flags.externalWritesEnabled || flags.dispatchEnabled || flags.triggerEnabled || flags.fallbackEnabled) {
+    return makeMissionCommandOpenAiStage33SafeCapture('blocked', [], {
+      stopCondition: 'unsafe_flag_state',
+      safeDetail: 'Visible delivery, external write, dispatch, trigger, or fallback flags are not allowed.',
+      estimatedCost: 0
+    });
+  }
+  if (!flags.scriptPropertyConfirmed) {
+    return makeMissionCommandOpenAiStage33SafeCapture('blocked', [], {
+      stopCondition: 'credential_unconfirmed',
+      safeDetail: 'OPENAI_API_KEY must be confirmed in Apps Script Script Properties without exposing its value.',
+      estimatedCost: 0
+    });
+  }
+  var estimatedCost = Number(input.estimatedCostUsd);
+  if (!isFinite(estimatedCost) || estimatedCost < 0 || estimatedCost > MC_OPENAI_STAGE33_MAX_ESTIMATED_SPEND_USD) {
+    return makeMissionCommandOpenAiStage33SafeCapture('blocked', [], {
+      stopCondition: 'cost_cap_unconfirmed',
+      safeDetail: 'Estimated capture cost must be numeric and <= $0.10.',
+      estimatedCost: Math.max(0, estimatedCost || 0)
+    });
+  }
+  var requests = [];
+  var errors = [];
+  MC_OPENAI_STAGE33_ROLE_ORDER.forEach(function(role) {
+    var draft = makeMissionCommandOpenAiStage33Request(role);
+    if (!draft.ok) {
+      errors.push(role + ':' + draft.error);
+      return;
+    }
+    var validation = validateMissionCommandOpenAiStage33Request(role, draft.request);
+    if (!validation.ok) {
+      errors.push(role + ':' + validation.errors.join('; '));
+      return;
+    }
+    requests.push({ role: role, request: draft.request, validation: validation });
+  });
+  if (errors.length) {
+    return makeMissionCommandOpenAiStage33SafeCapture('blocked', [], {
+      stopCondition: 'request_contract_invalid',
+      safeDetail: errors.join(' | '),
+      estimatedCost: estimatedCost
+    });
+  }
+  return {
+    ok: true,
+    status: 'preflight_ready',
+    stage: '3.3',
+    build: MC_OPENAI_STAGE33_CAPTURE_BUILD,
+    provider: 'openai',
+    endpoint: MC_OPENAI_STAGE32_ENDPOINT,
+    model: MC_OPENAI_STAGE33_MODEL,
+    fixture: getMissionCommandOpenAiStage33Fixture(),
+    requests: requests,
+    callLimit: 2,
+    retryCount: 0,
+    fallbackUsed: false,
+    timeoutSeconds: MC_OPENAI_STAGE33_TIMEOUT_SECONDS,
+    maxInputTokensPerRole: MC_OPENAI_STAGE33_MAX_INPUT_TOKENS_PER_ROLE,
+    maxOutputTokensPerRole: MC_OPENAI_STAGE33_MAX_OUTPUT_TOKENS_PER_ROLE,
+    estimatedCostUsd: estimatedCost,
+    fetchOptions: makeMissionCommandOpenAiStage33FetchOptions('[redacted]', requests[0].request),
+    store: false,
+    tools: [],
+    rawPromptStored: false,
+    rawResponseStored: false,
+    credentialReturned: false,
+    visibleDelivery: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function runMissionCommandOpenAiStage33CaptureBothRoles(input) {
+  input = input || {};
+  var preflight = getMissionCommandOpenAiStage33Preflight(input);
+  if (!preflight.ok) return preflight;
+
+  var apiKey = '';
+  try {
+    apiKey = String(PropertiesService.getScriptProperties().getProperty(MC_OPENAI_STAGE32_SCRIPT_PROPERTY_KEY) || '').trim();
+  } catch (err) {
+    return makeMissionCommandOpenAiStage33SafeCapture('blocked', [], {
+      stopCondition: 'credential_read_failed',
+      safeDetail: 'Script Properties could not be read safely.',
+      estimatedCost: preflight.estimatedCostUsd
+    });
+  }
+  if (!apiKey) {
+    return makeMissionCommandOpenAiStage33SafeCapture('blocked', [], {
+      stopCondition: 'credential_unavailable',
+      safeDetail: 'OPENAI_API_KEY is absent from Apps Script Script Properties.',
+      estimatedCost: preflight.estimatedCostUsd
+    });
+  }
+
+  var roleResults = [];
+  preflight.requests.forEach(function(entry, index) {
+    if (index >= 2) return;
+    roleResults.push(runMissionCommandOpenAiStage33OneRole(entry.role, entry.request, apiKey, preflight.estimatedCostUsd / 2));
+  });
+  return makeMissionCommandOpenAiStage33SafeCapture('capture_complete', roleResults, {
+    stopCondition: 'manual_capture_complete',
+    estimatedCost: preflight.estimatedCostUsd
+  });
+}
+
+function runMissionCommandOpenAiStage33OneRole(role, request, apiKey, estimatedCost) {
+  var started = Date.now();
+  var httpStatus = 0;
+  var providerResponse = null;
+  try {
+    var response = UrlFetchApp.fetch(MC_OPENAI_STAGE32_ENDPOINT, makeMissionCommandOpenAiStage33FetchOptions(apiKey, request));
+    httpStatus = Number(response.getResponseCode() || 0);
+    providerResponse = parseMissionCommandOpenAiStage33JsonObject(response.getContentText());
+  } catch (fetchErr) {
+    return makeMissionCommandOpenAiStage33RoleResult(role, null, {
+      status: 'provider_fetch_failed',
+      httpStatus: httpStatus,
+      latencyMs: Date.now() - started,
+      estimatedCost: estimatedCost,
+      stopCondition: 'provider_fetch_failed'
+    });
+  }
+  if (httpStatus < 200 || httpStatus >= 300) {
+    return makeMissionCommandOpenAiStage33RoleResult(role, providerResponse, {
+      status: httpStatus === 404 ? 'model_unavailable' : 'provider_http_' + httpStatus,
+      httpStatus: httpStatus,
+      latencyMs: Date.now() - started,
+      estimatedCost: estimatedCost,
+      stopCondition: httpStatus === 404 ? 'model_unavailable' : 'provider_http_' + httpStatus
+    });
+  }
+  var parsed = parseMissionCommandOpenAiStage33StructuredCandidate(providerResponse, role);
+  return makeMissionCommandOpenAiStage33RoleResult(role, providerResponse, {
+    status: parsed.ok ? 'capture_valid' : 'structured_output_invalid',
+    httpStatus: httpStatus,
+    latencyMs: Date.now() - started,
+    estimatedCost: estimatedCost,
+    structuredOutputValid: parsed.ok,
+    candidate: parsed.candidate,
+    validationErrors: parsed.errors,
+    stopCondition: parsed.ok ? 'role_capture_complete' : 'structured_output_invalid'
+  });
+}
+
+function parseMissionCommandOpenAiStage33JsonObject(text) {
+  try {
+    return JSON.parse(String(text || '{}'));
+  } catch (err) {
+    return null;
+  }
+}
+
+function getMissionCommandOpenAiStage33OutputText(providerResponse) {
+  providerResponse = providerResponse || {};
+  var outputText = '';
+  if (typeof providerResponse.output_text === 'string') {
+    outputText = providerResponse.output_text;
+  } else if (Array.isArray(providerResponse.output)) {
+    providerResponse.output.forEach(function(item) {
+      if (item && Array.isArray(item.content)) {
+        item.content.forEach(function(content) {
+          if (content && typeof content.text === 'string') outputText += content.text;
+        });
+      }
+    });
+  }
+  return outputText;
+}
+
+function parseMissionCommandOpenAiStage33StructuredCandidate(providerResponse, role) {
+  var parsed = null;
+  try {
+    parsed = JSON.parse(getMissionCommandOpenAiStage33OutputText(providerResponse) || '{}');
+  } catch (err) {
+    parsed = null;
+  }
+  return validateMissionCommandOpenAiStage33Candidate(parsed, role);
+}
+
+function validateMissionCommandOpenAiStage33Candidate(candidate, role) {
+  var errors = [];
+  candidate = candidate || {};
+  var required = getMissionCommandOpenAiHiddenCandidateSchemaV31().required || [];
+  required.forEach(function(field) {
+    if (!Object.prototype.hasOwnProperty.call(candidate, field)) errors.push('missing ' + field);
+  });
+  if (candidate.role !== role) errors.push('role must be ' + role);
+  if (candidate.should_deliver !== false) errors.push('should_deliver must be false');
+  if (!Array.isArray(candidate.source_labels)) errors.push('source_labels must be an array');
+  return {
+    ok: errors.length === 0,
+    errors: errors,
+    candidate: errors.length === 0 ? sanitizeMissionCommandOpenAiStage33Candidate(candidate) : null
+  };
+}
+
+function sanitizeMissionCommandOpenAiStage33Candidate(candidate) {
+  candidate = candidate || {};
+  return {
+    role: normalizeMissionCommandOpenAiRoleV31(candidate.role),
+    message_type: sanitizeMissionCommandOpenAiShadowTextV31(candidate.message_type, 80),
+    priority: sanitizeMissionCommandOpenAiShadowTextV31(candidate.priority, 40),
+    title: sanitizeMissionCommandOpenAiShadowTextV31(candidate.title, 140),
+    body: sanitizeMissionCommandOpenAiShadowTextV31(candidate.body, 900),
+    why_it_matters: sanitizeMissionCommandOpenAiShadowTextV31(candidate.why_it_matters, 500),
+    next_move: sanitizeMissionCommandOpenAiShadowTextV31(candidate.next_move, 360),
+    question: sanitizeMissionCommandOpenAiShadowTextV31(candidate.question, 240),
+    source_labels: (Array.isArray(candidate.source_labels) ? candidate.source_labels : []).slice(0, 8).map(function(label) {
+      return sanitizeMissionCommandOpenAiShadowTextV31(label, 90);
+    }),
+    grounding_state: sanitizeMissionCommandOpenAiShadowTextV31(candidate.grounding_state, 80),
+    confidence: Math.max(0, Math.min(1, Number(candidate.confidence || 0))),
+    should_deliver: false,
+    blocked_reason: sanitizeMissionCommandOpenAiShadowTextV31(candidate.blocked_reason, 240)
+  };
+}
+
+function makeMissionCommandOpenAiStage33RoleResult(role, providerResponse, meta) {
+  meta = meta || {};
+  var receipt = makeMissionCommandOpenAiShadowReceiptV31(providerResponse || {}, {
+    role: role,
+    model: MC_OPENAI_STAGE33_MODEL,
+    status: meta.status || 'role_result',
+    latencyMs: meta.latencyMs || 0,
+    retryCount: 0,
+    estimatedCost: meta.estimatedCost || 0,
+    fallbackReason: ''
+  });
+  return {
+    role: role,
+    status: sanitizeMissionCommandOpenAiShadowTextV31(meta.status || 'role_result', 80),
+    httpStatus: safeMissionCommandOpenAiNumberV31(meta.httpStatus),
+    stopCondition: sanitizeMissionCommandOpenAiShadowTextV31(meta.stopCondition || meta.status || '', 120),
+    structuredOutputValid: meta.structuredOutputValid === true,
+    candidate: meta.structuredOutputValid === true ? meta.candidate : null,
+    validationErrors: (meta.validationErrors || []).slice(0, 6).map(function(error) {
+      return sanitizeMissionCommandOpenAiShadowTextV31(error, 120);
+    }),
+    latencyMs: receipt.latencyMs,
+    inputTokens: receipt.inputTokens,
+    cachedInputTokens: receipt.cachedInputTokens,
+    outputTokens: receipt.outputTokens,
+    reasoningTokens: receipt.reasoningTokens,
+    estimatedCost: Math.max(0, Number(meta.estimatedCost || 0)),
+    retryCount: 0,
+    fallbackUsed: false,
+    rawPromptStored: false,
+    rawResponseStored: false,
+    credentialReturned: false,
+    visibleDelivery: false,
+    externalWrite: false
+  };
+}
+
+function makeMissionCommandOpenAiStage33SafeCapture(status, roleResults, meta) {
+  meta = meta || {};
+  var fixture = getMissionCommandOpenAiStage33Fixture();
+  roleResults = roleResults || [];
+  return {
+    ok: status === 'capture_complete' && roleResults.length === 2 && roleResults.every(function(result) { return result.structuredOutputValid === true; }),
+    stage: '3.3',
+    build: MC_OPENAI_STAGE33_CAPTURE_BUILD,
+    timestamp: new Date().toISOString(),
+    provider: 'openai',
+    endpoint: 'responses_api',
+    model: MC_OPENAI_STAGE33_MODEL,
+    fixtureId: fixture.fixture_id,
+    fixtureType: fixture.fixture_type,
+    syntheticFixture: true,
+    status: sanitizeMissionCommandOpenAiShadowTextV31(status || 'blocked', 80),
+    stopCondition: sanitizeMissionCommandOpenAiShadowTextV31(meta.stopCondition || status || '', 120),
+    safeDetail: sanitizeMissionCommandOpenAiShadowTextV31(meta.safeDetail || '', 240),
+    roles: roleResults,
+    attemptedCallCount: roleResults.length,
+    maxCallCount: 2,
+    retryCount: 0,
+    fallbackUsed: false,
+    timeoutSeconds: MC_OPENAI_STAGE33_TIMEOUT_SECONDS,
+    estimatedCost: Math.max(0, Number(meta.estimatedCost || 0)),
+    maxEstimatedSpendUsd: MC_OPENAI_STAGE33_MAX_ESTIMATED_SPEND_USD,
+    rawPromptStored: false,
+    rawResponseStored: false,
+    credentialReturned: false,
+    visibleDelivery: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function runMissionCommandOpenAiStage33CaptureBothRolesOnce() {
+  var capture = runMissionCommandOpenAiStage33CaptureBothRoles({
+    flags: {
+      stage33CaptureEnabled: true,
+      executeProviderCalls: true,
+      approvedManualRun: true,
+      scriptPropertyConfirmed: true,
+      visibleDeliveryEnabled: false,
+      externalWritesEnabled: false,
+      dispatchEnabled: false,
+      triggerEnabled: false,
+      fallbackEnabled: false
+    },
+    estimatedCostUsd: MC_OPENAI_STAGE33_PREFLIGHT_ESTIMATED_SPEND_USD
+  });
+  Logger.log(MC_OPENAI_STAGE33_LOG_PREFIX + JSON.stringify(capture));
+  return capture;
+}
+
+function runMissionCommandOpenAiStage33LocalChecks() {
+  var stage31 = runMissionCommandOpenAiShadowFoundationChecksV31();
+  var stage32 = runMissionCommandOpenAiStage32LocalChecks();
+  var fixture = getMissionCommandOpenAiStage33Fixture();
+  var blocked = getMissionCommandOpenAiStage33Preflight({
+    flags: {},
+    estimatedCostUsd: MC_OPENAI_STAGE33_PREFLIGHT_ESTIMATED_SPEND_USD
+  });
+  var ready = getMissionCommandOpenAiStage33Preflight({
+    flags: {
+      stage33CaptureEnabled: true,
+      executeProviderCalls: true,
+      approvedManualRun: true,
+      scriptPropertyConfirmed: true
+    },
+    estimatedCostUsd: MC_OPENAI_STAGE33_PREFLIGHT_ESTIMATED_SPEND_USD
+  });
+  var invalidCost = getMissionCommandOpenAiStage33Preflight({
+    flags: {
+      stage33CaptureEnabled: true,
+      executeProviderCalls: true,
+      approvedManualRun: true,
+      scriptPropertyConfirmed: true
+    },
+    estimatedCostUsd: 0.11
+  });
+  var promptsDistinct = getMissionCommandOpenAiStage33RolePrompt('executive_assistant') !== getMissionCommandOpenAiStage33RolePrompt('chief_of_staff');
+  var requestsReady = ready.ok === true && ready.requests.length === 2 && ready.requests.every(function(entry) {
+    return entry.request.store === false &&
+      Array.isArray(entry.request.tools) &&
+      entry.request.tools.length === 0 &&
+      !entry.request.previous_response_id &&
+      !entry.request.conversation &&
+      entry.request.text.format.strict === true &&
+      entry.request.max_output_tokens <= MC_OPENAI_STAGE33_MAX_OUTPUT_TOKENS_PER_ROLE;
+  });
+  var redactedFetch = ready.ok === true ? makeMissionCommandOpenAiStage33FetchOptions('[redacted]', ready.requests[0].request) : {};
+  var fakeCapture = makeMissionCommandOpenAiStage33SafeCapture('capture_complete', [
+    makeMissionCommandOpenAiStage33RoleResult('executive_assistant', { usage: { input_tokens: 100, output_tokens: 40 } }, {
+      status: 'capture_valid',
+      httpStatus: 200,
+      structuredOutputValid: true,
+      candidate: sanitizeMissionCommandOpenAiStage33Candidate({
+        role: 'executive_assistant',
+        message_type: 'brief',
+        priority: 'high',
+        title: 'Review the blocked output first',
+        body: 'One output draft is waiting for review and blocks the next move.',
+        why_it_matters: 'This is the highest-leverage item in the synthetic fixture.',
+        next_move: 'Review the output draft before opening the client deliverable.',
+        question: '',
+        source_labels: ['synthetic_fixture:output_review'],
+        grounding_state: 'sourced',
+        confidence: 0.82,
+        should_deliver: false,
+        blocked_reason: ''
+      }),
+      estimatedCost: 0.01
+    }),
+    makeMissionCommandOpenAiStage33RoleResult('chief_of_staff', { usage: { input_tokens: 100, output_tokens: 40 } }, {
+      status: 'capture_valid',
+      httpStatus: 200,
+      structuredOutputValid: true,
+      candidate: sanitizeMissionCommandOpenAiStage33Candidate({
+        role: 'chief_of_staff',
+        message_type: 'coordination',
+        priority: 'normal',
+        title: 'Three synthetic work items need review order',
+        body: 'The fixture has one output review, one missing client reference, and one returned content draft.',
+        why_it_matters: 'Ownership and review order should be clear before any visible runtime stage.',
+        next_move: 'Escalate the output review to Executive Assistant and keep the missing reference parked.',
+        question: '',
+        source_labels: ['synthetic_fixture:client_project', 'synthetic_fixture:agent_return'],
+        grounding_state: 'sourced',
+        confidence: 0.8,
+        should_deliver: false,
+        blocked_reason: ''
+      }),
+      estimatedCost: 0.01
+    })
+  ], { stopCondition: 'local_safe_capture_fixture', estimatedCost: 0.02 });
+  var safeLog = MC_OPENAI_STAGE33_LOG_PREFIX + JSON.stringify(fakeCapture);
+  return {
+    ok: stage31.ok === true &&
+      stage32.ok === true &&
+      blocked.ok === false &&
+      blocked.status === 'blocked' &&
+      ready.ok === true &&
+      requestsReady === true &&
+      ready.callLimit === 2 &&
+      ready.retryCount === 0 &&
+      ready.fallbackUsed === false &&
+      ready.timeoutSeconds === MC_OPENAI_STAGE33_TIMEOUT_SECONDS &&
+      ready.estimatedCostUsd <= MC_OPENAI_STAGE33_MAX_ESTIMATED_SPEND_USD &&
+      invalidCost.ok === false &&
+      invalidCost.stopCondition === 'cost_cap_unconfirmed' &&
+      fixture.fixture_id === 'mc_stage33_capture_v1' &&
+      fixture.fixture_type === 'synthetic_safe_context' &&
+      promptsDistinct === true &&
+      redactedFetch.timeoutSeconds === MC_OPENAI_STAGE33_TIMEOUT_SECONDS &&
+      redactedFetch.headers.Authorization === 'Bearer [redacted]' &&
+      safeLog.indexOf(MC_OPENAI_STAGE33_LOG_PREFIX) === 0 &&
+      safeLog.indexOf('Bearer ') === -1 &&
+      safeLog.indexOf('OPENAI_API_KEY') === -1 &&
+      safeLog.indexOf('raw_provider') === -1 &&
+      safeLog.indexOf('previous_response_id') === -1,
+    build: MC_OPENAI_STAGE33_CAPTURE_BUILD,
+    stage31Ok: stage31.ok === true,
+    stage32ClosedDefaultOff: stage32.ok === true && stage32.blockedDefaultOff === true,
+    blockedDefaultOff: blocked.ok === false && blocked.attemptedCallCount === 0,
+    requestReady: ready.ok === true,
+    fixtureStaticSynthetic: fixture.fixture_id === 'mc_stage33_capture_v1' && fixture.fixture_type === 'synthetic_safe_context',
+    promptsDistinct: promptsDistinct,
+    callLimit: ready.callLimit,
+    retryCount: ready.retryCount,
+    fallbackUsed: ready.fallbackUsed,
+    timeoutSecondsReady: ready.timeoutSeconds === MC_OPENAI_STAGE33_TIMEOUT_SECONDS && redactedFetch.timeoutSeconds === MC_OPENAI_STAGE33_TIMEOUT_SECONDS,
+    preflightEstimatedSpendUsd: MC_OPENAI_STAGE33_PREFLIGHT_ESTIMATED_SPEND_USD,
+    costCapBlocked: invalidCost.ok === false,
+    safeLogPrefixReady: safeLog.indexOf(MC_OPENAI_STAGE33_LOG_PREFIX) === 0,
+    providerCall: false,
+    credentialValueReturned: false,
+    scriptPropertiesChanged: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
 function getMissionCommandVoiceProbeV25(params) {
   params = params || {};
   var text = sanitizeMissionCommandVoiceTextV25(params.text || '');
