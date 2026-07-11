@@ -1,12 +1,12 @@
 # MC_EXEC_01 implementation package
 
-This is the finished, code-native Mission Command Executive Chip for the top-right corner of the terminal view.
+This is the finished, code-native Mission Command Executive Chip that stands on the terminal divider near the right side of the terminal view.
 
 ## Visual lock
 
 - 32×32 integer-pixel master
 - Flat single-color mark
-- Green token: `#72F59A`
+- Green token: `#78B85F`
 - Wide command-chip/key silhouette with top processor notch
 - `>` eye and `_` cursor expression
 - Side contacts and two bottom landing contacts
@@ -16,8 +16,8 @@ This is the finished, code-native Mission Command Executive Chip for the top-rig
 
 1. Copy this folder to `assets/mission-command/mc-exec-01/`.
 2. Load `mc-exec-01.css` once.
-3. Add the contents of `mc-exec-01-inline.html` inside the terminal root.
-4. Ensure the terminal root has class `mc-terminal`.
+3. Add the contents of `mc-exec-01-inline.html` inside the positioned terminal divider host.
+4. Ensure the terminal root has class `mc-terminal` and the divider host has enough height for the fixed mark bounds.
 5. Change `data-state` on `.mc-exec` to drive behavior.
 
 Supported states: `idle`, `listening`, `thinking`, `typing`, `dispatching`, `success`, `alert`, `error`, `offline`, `disabled`.
@@ -37,10 +37,12 @@ The seat is decorative and pointer-transparent. Keep existing status text for ac
 
 ## Placement
 
-- Desktop: 32 px, 12 px from top, 14 px from right
-- Narrow screens: 24 px, 10 px from top/right
+- Desktop: 32 px, near the divider's right side
+- Narrow screens: 24 px in the same divider-anchored position
+- Align the seat bottom to the divider host's padding edge so both feet rest directly above the border without covering it
+- Keep the full character above the divider line
 - Fixed layout box prevents terminal content shift
-- If terminal controls already occupy the top-right, move the seat left while preserving at least 10 px clearance; do not move it into the scrollable transcript
+- If terminal controls occupy the right side, move the seat left only enough to preserve at least 10 px clearance
 
 ## Build boundary
 
