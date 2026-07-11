@@ -612,6 +612,445 @@ function missionLlmJsonV1(payload) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// ── MISSION COMMAND PHASE 3.1 OPENAI SHADOW FOUNDATION ─────
+// Foundation-only helpers. No credentials, provider fetch, Sheet writes,
+// trigger installation, visible delivery, dispatch, or external writes.
+var MC_OPENAI_SHADOW_FOUNDATION_BUILD_V31 = 'mmos-20260711-phase3-1-openai-shadow-foundation';
+
+function getMissionCommandOpenAiShadowFlagsV31(overrides) {
+  var flags = {
+    openaiAdapterEnabled: false,
+    openaiProbeEnabled: false,
+    runtimeShadowEnabled: false,
+    shadowTriggerEnabled: false,
+    visibleDeliveryEnabled: false,
+    externalWritesEnabled: false,
+    dispatchEnabled: false
+  };
+  overrides = overrides || {};
+  Object.keys(flags).forEach(function(key) {
+    flags[key] = overrides[key] === true;
+  });
+  return flags;
+}
+
+function getMissionCommandOpenAiShadowBlockedContractV31(reason, detail) {
+  return {
+    ok: false,
+    status: 'blocked',
+    build: MC_OPENAI_SHADOW_FOUNDATION_BUILD_V31,
+    provider: 'openai',
+    apiSurface: 'responses_api',
+    fallbackReason: reason || 'feature_disabled',
+    safeDetail: detail || '',
+    request: null,
+    receipt: makeMissionCommandOpenAiShadowReceiptV31(null, {
+      status: 'blocked',
+      fallbackReason: reason || 'feature_disabled'
+    }),
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    providerCall: false,
+    providerSwitch: false,
+    externalWrite: false,
+    dispatch: false
+  };
+}
+
+function normalizeMissionCommandOpenAiRoleV31(role) {
+  var key = String(role || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (key === 'chief_of_staff' || key === 'chief') return 'chief_of_staff';
+  if (key === 'executive_assistant' || key === 'assistant' || key === 'ea') return 'executive_assistant';
+  return '';
+}
+
+function getMissionCommandOpenAiRolePromptV31(role) {
+  var normalized = normalizeMissionCommandOpenAiRoleV31(role);
+  var shared = [
+    'You are Mission Command inside Money Mission OS for A1XX.',
+    'Use only the safe context packet provided.',
+    'Distinguish sourced facts from inference.',
+    'Never claim a write, send, dispatch, approval, completion, external action, or runtime change.',
+    'Never expose credentials, raw private payloads, implementation details, internal IDs, endpoint names, storage names, provider response bodies, or debug traces.',
+    'Return only a hidden candidate that matches the required schema.'
+  ].join(' ');
+  if (normalized === 'executive_assistant') {
+    return shared + ' Role: Executive Assistant. Focus on what needs A1XX now, why it matters, the smallest useful next move, and whether one direct question is required.';
+  }
+  if (normalized === 'chief_of_staff') {
+    return shared + ' Role: Chief of Staff. Focus on what changed across workstreams, what is blocked, who owns the next move, and what gate or dependency comes next.';
+  }
+  return '';
+}
+
+function getMissionCommandOpenAiHiddenCandidateSchemaV31() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'role',
+      'message_type',
+      'priority',
+      'title',
+      'body',
+      'why_it_matters',
+      'next_move',
+      'question',
+      'source_labels',
+      'grounding_state',
+      'confidence',
+      'should_deliver',
+      'blocked_reason'
+    ],
+    properties: {
+      role: { type: 'string', enum: ['executive_assistant', 'chief_of_staff'] },
+      message_type: { type: 'string' },
+      priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'] },
+      title: { type: 'string' },
+      body: { type: 'string' },
+      why_it_matters: { type: 'string' },
+      next_move: { type: 'string' },
+      question: { type: 'string' },
+      source_labels: { type: 'array', items: { type: 'string' } },
+      grounding_state: { type: 'string', enum: ['sourced', 'inferred', 'insufficient_context'] },
+      confidence: { type: 'number' },
+      should_deliver: { type: 'boolean' },
+      blocked_reason: { type: 'string' }
+    }
+  };
+}
+
+function sanitizeMissionCommandOpenAiShadowTextV31(value, maxLen) {
+  var text = String(value || '')
+    .replace(/<\s*script\b[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/\b(api\s*key|secret|token|bearer|authorization|webhook|password|oauth|private[_ -]?key|raw json|raw id|endpoint)\b\s*[:=-]?\s*/gi, ' ')
+    .replace(/\s+\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  maxLen = Number(maxLen) || 900;
+  if (text.length > maxLen) text = text.slice(0, maxLen).trim();
+  return text;
+}
+
+function sanitizeMissionCommandOpenAiShadowContextV31(value) {
+  var json = '';
+  try {
+    json = JSON.stringify(value || {});
+  } catch (err) {
+    json = '{}';
+  }
+  json = json
+    .replace(/https?:\/\/\S+/g, '[link removed]')
+    .replace(/\b(api[_ -]?key|secret|token|bearer|authorization|webhook|password|oauth|private[_ -]?key)\b/gi, '[protected]')
+    .slice(0, 8000);
+  try {
+    return JSON.parse(json);
+  } catch (parseErr) {
+    return { status: 'context_sanitized', summary: sanitizeMissionCommandOpenAiShadowTextV31(json, 1000) };
+  }
+}
+
+function makeMissionCommandOpenAiSafetyIdentifierV31(seed) {
+  var safeSeed = sanitizeMissionCommandOpenAiShadowTextV31(seed || 'a1xx-primary', 64) || 'a1xx-primary';
+  var hash = 0;
+  for (var i = 0; i < safeSeed.length; i++) {
+    hash = ((hash << 5) - hash) + safeSeed.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return 'mc_' + Math.abs(hash).toString(36);
+}
+
+function getMissionCommandOpenAiRegistryModelV31(registry) {
+  registry = registry || {};
+  var model = String(registry.model || registry.model_key || registry.modelKey || '').trim();
+  if (!model || /^(auto|default|current|registry_configured_current_model)$/i.test(model)) return '';
+  return model;
+}
+
+function makeMissionCommandOpenAiShadowRequestDraftV31(input) {
+  input = input || {};
+  var role = normalizeMissionCommandOpenAiRoleV31(input.role);
+  var model = getMissionCommandOpenAiRegistryModelV31(input.registry || {});
+  var rolePrompt = getMissionCommandOpenAiRolePromptV31(role);
+  var userPrompt = sanitizeMissionCommandOpenAiShadowTextV31(input.prompt || input.candidatePrompt || '', 1200);
+  var safeContext = sanitizeMissionCommandOpenAiShadowContextV31(input.safeContext || input.contextPacket || {});
+  var safetyIdentifier = makeMissionCommandOpenAiSafetyIdentifierV31(input.safetyIdentifierSeed || input.profileId || 'a1xx-primary');
+
+  if (!role) return { ok: false, error: 'invalid_role', request: null };
+  if (!model) return { ok: false, error: 'missing_registry_model', request: null };
+  if (!userPrompt) return { ok: false, error: 'missing_prompt', request: null };
+
+  return {
+    ok: true,
+    error: '',
+    request: {
+      model: model,
+      store: false,
+      input: [
+        { role: 'system', content: rolePrompt },
+        {
+          role: 'user',
+          content: [
+            'Hidden candidate request: ' + userPrompt,
+            'Safe context packet: ' + JSON.stringify(safeContext)
+          ].join('\n')
+        }
+      ],
+      reasoning: { effort: getMissionCommandOpenAiReasoningEffortV31(input.depth || 'standard') },
+      max_output_tokens: Math.min(Math.max(Number(input.maxOutputTokens || 600), 120), 600),
+      tools: [],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'mission_command_hidden_candidate_v1',
+          strict: true,
+          schema: getMissionCommandOpenAiHiddenCandidateSchemaV31()
+        }
+      },
+      safety_identifier: safetyIdentifier
+    }
+  };
+}
+
+function getMissionCommandOpenAiReasoningEffortV31(depth) {
+  var key = String(depth || '').toLowerCase();
+  if (key === 'brief') return 'low';
+  if (key === 'deep' || key === 'audit') return 'high';
+  return 'medium';
+}
+
+function prepareMissionCommandOpenAiShadowRequestV31(input) {
+  input = input || {};
+  var flags = getMissionCommandOpenAiShadowFlagsV31(input.flags || {});
+  if (!flags.openaiAdapterEnabled || !flags.runtimeShadowEnabled) {
+    return getMissionCommandOpenAiShadowBlockedContractV31('feature_disabled', 'OpenAI shadow adapter and runtime flags default off.');
+  }
+  if (flags.visibleDeliveryEnabled || flags.externalWritesEnabled || flags.dispatchEnabled || flags.openaiProbeEnabled || flags.shadowTriggerEnabled) {
+    return getMissionCommandOpenAiShadowBlockedContractV31('unsafe_flag_state', 'Live, probe, trigger, visible, external write, or dispatch flag is not allowed in Stage 3.1.');
+  }
+  var draft = makeMissionCommandOpenAiShadowRequestDraftV31(input);
+  if (!draft.ok) return getMissionCommandOpenAiShadowBlockedContractV31(draft.error, 'Request draft failed closed.');
+  var validation = validateMissionCommandOpenAiShadowRequestV31(draft.request);
+  if (!validation.ok) return getMissionCommandOpenAiShadowBlockedContractV31('request_contract_invalid', validation.errors.join('; '));
+  return {
+    ok: true,
+    status: 'prepared_local_only',
+    build: MC_OPENAI_SHADOW_FOUNDATION_BUILD_V31,
+    provider: 'openai',
+    apiSurface: 'responses_api',
+    request: draft.request,
+    validation: validation,
+    providerCall: false,
+    providerSwitch: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    externalWrite: false,
+    dispatch: false
+  };
+}
+
+function validateMissionCommandOpenAiShadowRequestV31(request) {
+  var errors = [];
+  request = request || {};
+  if (!request.model) errors.push('missing model');
+  if (request.store !== false) errors.push('store must be false');
+  if (request.previous_response_id) errors.push('previous_response_id must be absent');
+  if (request.conversation) errors.push('provider conversation must be absent');
+  if (!Array.isArray(request.tools) || request.tools.length !== 0) errors.push('provider tools must be an empty array');
+  if (!request.text || !request.text.format || request.text.format.type !== 'json_schema') errors.push('structured json_schema output required');
+  if (!request.text || !request.text.format || request.text.format.strict !== true) errors.push('strict structured output required');
+  if (!request.safety_identifier || /@|\.com|phone|email|a1xxoffice/i.test(String(request.safety_identifier))) errors.push('privacy-preserving safety identifier required');
+  return { ok: errors.length === 0, errors: errors };
+}
+
+function makeMissionCommandOpenAiShadowReceiptV31(providerResponse, meta) {
+  providerResponse = providerResponse || {};
+  meta = meta || {};
+  var usage = providerResponse.usage || {};
+  var inputDetails = usage.input_tokens_details || usage.prompt_tokens_details || {};
+  var outputDetails = usage.output_tokens_details || usage.completion_tokens_details || {};
+  return {
+    build: MC_OPENAI_SHADOW_FOUNDATION_BUILD_V31,
+    provider: 'openai',
+    apiSurface: 'responses_api',
+    role: normalizeMissionCommandOpenAiRoleV31(meta.role) || '',
+    model: sanitizeMissionCommandOpenAiShadowTextV31(meta.model || providerResponse.model || '', 120),
+    status: sanitizeMissionCommandOpenAiShadowTextV31(meta.status || providerResponse.status || 'local_only', 80),
+    latencyMs: Math.max(0, Number(meta.latencyMs || 0)),
+    inputTokens: safeMissionCommandOpenAiNumberV31(usage.input_tokens || usage.prompt_tokens),
+    cachedInputTokens: safeMissionCommandOpenAiNumberV31(inputDetails.cached_tokens),
+    cacheWriteTokens: safeMissionCommandOpenAiNumberV31(inputDetails.cache_write_tokens),
+    outputTokens: safeMissionCommandOpenAiNumberV31(usage.output_tokens || usage.completion_tokens),
+    reasoningTokens: safeMissionCommandOpenAiNumberV31(outputDetails.reasoning_tokens || usage.reasoning_tokens),
+    retryCount: safeMissionCommandOpenAiNumberV31(meta.retryCount),
+    estimatedCost: Math.max(0, Number(meta.estimatedCost || 0)),
+    fallbackReason: sanitizeMissionCommandOpenAiShadowTextV31(meta.fallbackReason || '', 120),
+    rawPromptStored: false,
+    rawResponseStored: false,
+    credentialStored: false,
+    providerCall: false,
+    providerSwitch: false,
+    externalWrite: false
+  };
+}
+
+function safeMissionCommandOpenAiNumberV31(value) {
+  var number = Number(value || 0);
+  if (!isFinite(number) || number < 0) return 0;
+  return Math.floor(number);
+}
+
+function getMissionCommandOpenAiNoProviderSwitchFallbackV31(reason) {
+  return {
+    ok: false,
+    status: 'template_fallback',
+    provider: 'openai',
+    providerSwitch: false,
+    fallbackReason: sanitizeMissionCommandOpenAiShadowTextV31(reason || 'provider_unavailable', 120),
+    hiddenCandidate: {
+      role: 'executive_assistant',
+      message_type: 'fallback',
+      priority: 'normal',
+      title: 'Mission Command needs review',
+      body: 'The shadow model lane is unavailable, so Mission Command used a deterministic fallback.',
+      why_it_matters: 'No provider switch or live action was taken.',
+      next_move: 'Review the redacted runtime receipt before approving the next stage.',
+      question: '',
+      source_labels: ['deterministic_fallback'],
+      grounding_state: 'insufficient_context',
+      confidence: 0,
+      should_deliver: false,
+      blocked_reason: sanitizeMissionCommandOpenAiShadowTextV31(reason || 'provider_unavailable', 120)
+    },
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    externalWrite: false,
+    dispatch: false
+  };
+}
+
+function getMissionCommandOpenAiShadowFoundationFixturesV31() {
+  return [
+    {
+      id: 'flags_default_off',
+      run: function() {
+        var flags = getMissionCommandOpenAiShadowFlagsV31();
+        return flags.openaiAdapterEnabled === false &&
+          flags.openaiProbeEnabled === false &&
+          flags.runtimeShadowEnabled === false &&
+          flags.shadowTriggerEnabled === false &&
+          flags.visibleDeliveryEnabled === false &&
+          flags.externalWritesEnabled === false &&
+          flags.dispatchEnabled === false;
+      }
+    },
+    {
+      id: 'flag_off_blocks_provider_path',
+      run: function() {
+        var result = prepareMissionCommandOpenAiShadowRequestV31({
+          role: 'executive_assistant',
+          registry: { model: 'registry-test-model' },
+          prompt: 'Prepare a hidden candidate.',
+          safeContext: { source_labels: ['fixture'] }
+        });
+        return result.ok === false && result.providerCall === false && result.fallbackReason === 'feature_disabled';
+      }
+    },
+    {
+      id: 'request_contract_local_only',
+      run: function() {
+        var draft = makeMissionCommandOpenAiShadowRequestDraftV31({
+          role: 'chief_of_staff',
+          registry: { model: 'registry-test-model' },
+          prompt: 'Prepare a hidden coordination candidate.',
+          safeContext: { status_counts: { blocked: 1 }, source_labels: ['fixture'] },
+          safetyIdentifierSeed: 'a1xx-primary'
+        });
+        return draft.ok === true && validateMissionCommandOpenAiShadowRequestV31(draft.request).ok === true &&
+          draft.request.store === false && draft.request.tools.length === 0 && !draft.request.previous_response_id;
+      }
+    },
+    {
+      id: 'missing_registry_model_fails_closed',
+      run: function() {
+        var draft = makeMissionCommandOpenAiShadowRequestDraftV31({
+          role: 'executive_assistant',
+          registry: {},
+          prompt: 'Prepare a hidden candidate.',
+          safeContext: {}
+        });
+        return draft.ok === false && draft.error === 'missing_registry_model';
+      }
+    },
+    {
+      id: 'receipt_redaction',
+      run: function() {
+        var receipt = makeMissionCommandOpenAiShadowReceiptV31({
+          model: 'registry-test-model',
+          usage: {
+            input_tokens: 100,
+            input_tokens_details: { cached_tokens: 40, cache_write_tokens: 10 },
+            output_tokens: 20,
+            output_tokens_details: { reasoning_tokens: 5 }
+          }
+        }, { role: 'executive_assistant', status: 'ok' });
+        return receipt.inputTokens === 100 && receipt.cachedInputTokens === 40 &&
+          receipt.cacheWriteTokens === 10 && receipt.outputTokens === 20 &&
+          receipt.reasoningTokens === 5 && receipt.rawPromptStored === false &&
+          receipt.rawResponseStored === false && receipt.credentialStored === false;
+      }
+    },
+    {
+      id: 'no_provider_switch_fallback',
+      run: function() {
+        var fallback = getMissionCommandOpenAiNoProviderSwitchFallbackV31('provider_failure');
+        return fallback.status === 'template_fallback' && fallback.providerSwitch === false &&
+          fallback.hiddenCandidate.should_deliver === false;
+      }
+    }
+  ];
+}
+
+function runMissionCommandOpenAiShadowFoundationChecksV31() {
+  var fixtures = getMissionCommandOpenAiShadowFoundationFixturesV31();
+  var results = fixtures.map(function(fixture) {
+    var passed = false;
+    var error = '';
+    try {
+      passed = fixture.run() === true;
+    } catch (err) {
+      error = String(err && err.message ? err.message : err);
+    }
+    return { id: fixture.id, passed: passed, error: error };
+  });
+  var failed = results.filter(function(result) { return result.passed !== true; });
+  return {
+    ok: failed.length === 0,
+    build: MC_OPENAI_SHADOW_FOUNDATION_BUILD_V31,
+    fixtureCount: results.length,
+    failedCount: failed.length,
+    results: results,
+    providerCall: false,
+    credentialAccess: false,
+    scriptPropertiesChanged: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
 function getMissionCommandVoiceProbeV25(params) {
   params = params || {};
   var text = sanitizeMissionCommandVoiceTextV25(params.text || '');
