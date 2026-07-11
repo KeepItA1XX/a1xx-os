@@ -1051,6 +1051,417 @@ function runMissionCommandOpenAiShadowFoundationChecksV31() {
   };
 }
 
+// ── MISSION COMMAND STAGE 3.2 OPENAI SINGLE PROBE ───────────
+// Bounded one-probe helper only. No trigger, Sheet write, visible delivery,
+// dispatch, Team Chat/Notion write, fallback model, or stored raw response.
+var MC_OPENAI_STAGE32_PROBE_BUILD = 'mmos-20260711-stage3-2-openai-single-probe';
+var MC_OPENAI_STAGE32_SCRIPT_PROPERTY_KEY = 'OPENAI_API_KEY';
+var MC_OPENAI_STAGE32_MODEL = 'gpt-5.6-terra';
+var MC_OPENAI_STAGE32_ENDPOINT = 'https://api.openai.com/v1/responses';
+var MC_OPENAI_STAGE32_MAX_ESTIMATED_SPEND_USD = 1.00;
+var MC_OPENAI_STAGE32_TIMEOUT_MS = 30000;
+var MC_OPENAI_STAGE32_MAX_INPUT_TOKENS = 8000;
+var MC_OPENAI_STAGE32_MAX_OUTPUT_TOKENS = 600;
+
+function getMissionCommandOpenAiStage32Flags(overrides) {
+  var flags = {
+    stage32ProbeEnabled: false,
+    executeProviderCall: false,
+    approvedSingleCall: false,
+    modelAccessConfirmed: false,
+    scriptPropertyConfirmed: false,
+    timeoutBehaviorAccepted: false,
+    visibleDeliveryEnabled: false,
+    externalWritesEnabled: false,
+    dispatchEnabled: false,
+    triggerEnabled: false,
+    fallbackEnabled: false
+  };
+  overrides = overrides || {};
+  Object.keys(flags).forEach(function(key) {
+    flags[key] = overrides[key] === true;
+  });
+  return flags;
+}
+
+function getMissionCommandOpenAiStage32BlockedResult(reason, detail, meta) {
+  meta = meta || {};
+  return {
+    ok: false,
+    status: 'blocked',
+    build: MC_OPENAI_STAGE32_PROBE_BUILD,
+    provider: 'openai',
+    model: MC_OPENAI_STAGE32_MODEL,
+    role: 'chief_of_staff',
+    stopCondition: sanitizeMissionCommandOpenAiShadowTextV31(reason || 'preflight_blocked', 120),
+    safeDetail: sanitizeMissionCommandOpenAiShadowTextV31(detail || '', 240),
+    providerCallAttempted: false,
+    retryCount: 0,
+    timeoutMs: MC_OPENAI_STAGE32_TIMEOUT_MS,
+    maxEstimatedSpendUsd: MC_OPENAI_STAGE32_MAX_ESTIMATED_SPEND_USD,
+    receipt: makeMissionCommandOpenAiStage32RedactedReceipt(null, {
+      status: 'blocked',
+      stopCondition: reason || 'preflight_blocked',
+      estimatedCost: meta.estimatedCost || 0,
+      structuredOutputValid: false,
+      latencyMs: 0
+    }),
+    rawPromptStored: false,
+    rawResponseStored: false,
+    credentialStored: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function getMissionCommandOpenAiStage32FixedFixture() {
+  return {
+    role: 'chief_of_staff',
+    request_type: 'shadow_candidate_probe',
+    safe_context: {
+      date: '2026-07-11',
+      surface: 'Mission Command',
+      active_goal: 'Parallel Mission Command readiness while Project Desk build continues',
+      known_state: [
+        'Stage 3.1 OpenAI shadow foundation is complete and inert',
+        'Stage 3.2 is approved for exactly one bounded provider probe',
+        'Build Agent 2 is active only on the separate Project Desk production lane',
+        'No visible runtime delivery or dispatch is allowed'
+      ],
+      source_labels: [
+        'Stage 3.1 local closeout',
+        'Mission Command parallel work plan',
+        'Phase 2 contracts'
+      ]
+    },
+    operator_prompt: 'Create one hidden Chief of Staff candidate for A1XX. It must be concise, sourced, non-dispatching, and must not claim any visible action occurred.'
+  };
+}
+
+function makeMissionCommandOpenAiStage32Request() {
+  var fixture = getMissionCommandOpenAiStage32FixedFixture();
+  return makeMissionCommandOpenAiShadowRequestDraftV31({
+    role: fixture.role,
+    registry: { model: MC_OPENAI_STAGE32_MODEL },
+    prompt: fixture.operator_prompt,
+    safeContext: fixture.safe_context,
+    safetyIdentifierSeed: 'a1xx-primary',
+    depth: 'standard',
+    maxOutputTokens: MC_OPENAI_STAGE32_MAX_OUTPUT_TOKENS
+  });
+}
+
+function validateMissionCommandOpenAiStage32Request(request) {
+  var base = validateMissionCommandOpenAiShadowRequestV31(request);
+  var errors = base.errors.slice();
+  if (request.model !== MC_OPENAI_STAGE32_MODEL) errors.push('model must be ' + MC_OPENAI_STAGE32_MODEL);
+  if (request.max_output_tokens > MC_OPENAI_STAGE32_MAX_OUTPUT_TOKENS) errors.push('max output tokens exceed cap');
+  if (JSON.stringify(request).length > MC_OPENAI_STAGE32_MAX_INPUT_TOKENS * 5) errors.push('request payload exceeds conservative input-size cap');
+  if (request.parallel_tool_calls || request.tool_choice) errors.push('tool selection fields must be absent');
+  return { ok: errors.length === 0, errors: errors };
+}
+
+function getMissionCommandOpenAiStage32Preflight(input) {
+  input = input || {};
+  var flags = getMissionCommandOpenAiStage32Flags(input.flags || {});
+  if (!flags.stage32ProbeEnabled || !flags.executeProviderCall || !flags.approvedSingleCall) {
+    return getMissionCommandOpenAiStage32BlockedResult('probe_not_authorized', 'Stage 3.2 probe flags are default-off unless explicit one-call authorization is passed.');
+  }
+  if (flags.visibleDeliveryEnabled || flags.externalWritesEnabled || flags.dispatchEnabled || flags.triggerEnabled || flags.fallbackEnabled) {
+    return getMissionCommandOpenAiStage32BlockedResult('unsafe_flag_state', 'Visible delivery, external write, dispatch, trigger, or fallback flags are not allowed.');
+  }
+  if (!flags.modelAccessConfirmed) {
+    return getMissionCommandOpenAiStage32BlockedResult('model_access_unconfirmed', 'Approved-project access to gpt-5.6-terra must be confirmed before the probe.');
+  }
+  if (!flags.scriptPropertyConfirmed) {
+    return getMissionCommandOpenAiStage32BlockedResult('credential_unconfirmed', 'OPENAI_API_KEY must be confirmed in Apps Script Script Properties without exposing its value.');
+  }
+  if (!flags.timeoutBehaviorAccepted) {
+    return getMissionCommandOpenAiStage32BlockedResult('timeout_control_unconfirmed', 'Apps Script UrlFetchApp has no per-request timeout option; do not call until 30-second runtime behavior is explicitly accepted.');
+  }
+  var estimatedCost = Number(input.estimatedCostUsd);
+  if (!isFinite(estimatedCost) || estimatedCost < 0 || estimatedCost > MC_OPENAI_STAGE32_MAX_ESTIMATED_SPEND_USD) {
+    return getMissionCommandOpenAiStage32BlockedResult('cost_cap_unconfirmed', 'Estimated probe cost must be numeric and <= $1.00.', { estimatedCost: estimatedCost });
+  }
+  var draft = makeMissionCommandOpenAiStage32Request();
+  if (!draft.ok) return getMissionCommandOpenAiStage32BlockedResult(draft.error, 'Stage 3.2 request draft failed closed.');
+  var validation = validateMissionCommandOpenAiStage32Request(draft.request);
+  if (!validation.ok) return getMissionCommandOpenAiStage32BlockedResult('request_contract_invalid', validation.errors.join('; '), { estimatedCost: estimatedCost });
+  return {
+    ok: true,
+    status: 'preflight_ready',
+    build: MC_OPENAI_STAGE32_PROBE_BUILD,
+    provider: 'openai',
+    endpoint: MC_OPENAI_STAGE32_ENDPOINT,
+    model: MC_OPENAI_STAGE32_MODEL,
+    role: 'chief_of_staff',
+    request: draft.request,
+    validation: validation,
+    estimatedCostUsd: estimatedCost,
+    callLimit: 1,
+    retryCount: 0,
+    timeoutMs: MC_OPENAI_STAGE32_TIMEOUT_MS,
+    maxOutputTokens: MC_OPENAI_STAGE32_MAX_OUTPUT_TOKENS,
+    store: false,
+    tools: [],
+    rawPromptStored: false,
+    rawResponseStored: false,
+    credentialStored: false,
+    providerSwitch: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function runMissionCommandOpenAiStage32OneProbe(input) {
+  input = input || {};
+  var preflight = getMissionCommandOpenAiStage32Preflight(input);
+  if (!preflight.ok) return preflight;
+
+  var apiKey = '';
+  try {
+    apiKey = String(PropertiesService.getScriptProperties().getProperty(MC_OPENAI_STAGE32_SCRIPT_PROPERTY_KEY) || '').trim();
+  } catch (err) {
+    return getMissionCommandOpenAiStage32BlockedResult('credential_read_failed', 'Script Properties could not be read safely.', { estimatedCost: preflight.estimatedCostUsd });
+  }
+  if (!apiKey) {
+    return getMissionCommandOpenAiStage32BlockedResult('credential_unavailable', 'OPENAI_API_KEY is absent from Apps Script Script Properties.', { estimatedCost: preflight.estimatedCostUsd });
+  }
+
+  var started = Date.now();
+  var httpStatus = 0;
+  var responseBody = '';
+  var providerResponse = null;
+  try {
+    var response = UrlFetchApp.fetch(MC_OPENAI_STAGE32_ENDPOINT, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + apiKey
+      },
+      payload: JSON.stringify(preflight.request),
+      muteHttpExceptions: true
+    });
+    httpStatus = Number(response.getResponseCode() || 0);
+    responseBody = String(response.getContentText() || '');
+  } catch (fetchErr) {
+    return makeMissionCommandOpenAiStage32ProviderResult(null, {
+      status: 'provider_fetch_failed',
+      httpStatus: 0,
+      latencyMs: Date.now() - started,
+      estimatedCost: preflight.estimatedCostUsd,
+      stopCondition: 'provider_fetch_failed'
+    });
+  }
+
+  try {
+    providerResponse = JSON.parse(responseBody || '{}');
+  } catch (parseErr) {
+    providerResponse = null;
+  }
+
+  if (httpStatus === 404) {
+    return makeMissionCommandOpenAiStage32ProviderResult(providerResponse, {
+      status: 'model_unavailable',
+      httpStatus: httpStatus,
+      latencyMs: Date.now() - started,
+      estimatedCost: preflight.estimatedCostUsd,
+      stopCondition: 'model_unavailable'
+    });
+  }
+  if (httpStatus < 200 || httpStatus >= 300) {
+    return makeMissionCommandOpenAiStage32ProviderResult(providerResponse, {
+      status: 'provider_http_' + httpStatus,
+      httpStatus: httpStatus,
+      latencyMs: Date.now() - started,
+      estimatedCost: preflight.estimatedCostUsd,
+      stopCondition: 'provider_http_' + httpStatus
+    });
+  }
+
+  var parsed = parseMissionCommandOpenAiStage32StructuredCandidate(providerResponse);
+  return makeMissionCommandOpenAiStage32ProviderResult(providerResponse, {
+    status: parsed.ok ? 'probe_complete' : 'structured_output_invalid',
+    httpStatus: httpStatus,
+    latencyMs: Date.now() - started,
+    estimatedCost: preflight.estimatedCostUsd,
+    structuredOutputValid: parsed.ok,
+    stopCondition: parsed.ok ? 'single_call_complete' : 'structured_output_invalid'
+  });
+}
+
+function parseMissionCommandOpenAiStage32StructuredCandidate(providerResponse) {
+  providerResponse = providerResponse || {};
+  var outputText = '';
+  if (typeof providerResponse.output_text === 'string') {
+    outputText = providerResponse.output_text;
+  } else if (Array.isArray(providerResponse.output)) {
+    providerResponse.output.forEach(function(item) {
+      if (item && Array.isArray(item.content)) {
+        item.content.forEach(function(content) {
+          if (content && typeof content.text === 'string') outputText += content.text;
+        });
+      }
+    });
+  }
+  var parsed = null;
+  try {
+    parsed = JSON.parse(outputText || '{}');
+  } catch (err) {
+    parsed = null;
+  }
+  return validateMissionCommandOpenAiStage32Candidate(parsed);
+}
+
+function validateMissionCommandOpenAiStage32Candidate(candidate) {
+  var errors = [];
+  candidate = candidate || {};
+  var required = getMissionCommandOpenAiHiddenCandidateSchemaV31().required || [];
+  required.forEach(function(field) {
+    if (!Object.prototype.hasOwnProperty.call(candidate, field)) errors.push('missing ' + field);
+  });
+  if (candidate.role !== 'chief_of_staff') errors.push('role must be chief_of_staff');
+  if (candidate.should_deliver !== false) errors.push('should_deliver must be false for the probe');
+  if (!Array.isArray(candidate.source_labels)) errors.push('source_labels must be an array');
+  return { ok: errors.length === 0, errors: errors };
+}
+
+function makeMissionCommandOpenAiStage32ProviderResult(providerResponse, meta) {
+  meta = meta || {};
+  return {
+    ok: meta.status === 'probe_complete',
+    status: sanitizeMissionCommandOpenAiShadowTextV31(meta.status || 'provider_result', 80),
+    build: MC_OPENAI_STAGE32_PROBE_BUILD,
+    provider: 'openai',
+    model: MC_OPENAI_STAGE32_MODEL,
+    role: 'chief_of_staff',
+    httpStatus: safeMissionCommandOpenAiNumberV31(meta.httpStatus),
+    providerCallAttempted: true,
+    callCount: 1,
+    retryCount: 0,
+    latencyMs: Math.max(0, Number(meta.latencyMs || 0)),
+    timeoutMs: MC_OPENAI_STAGE32_TIMEOUT_MS,
+    stopCondition: sanitizeMissionCommandOpenAiShadowTextV31(meta.stopCondition || meta.status || '', 120),
+    structuredOutputValid: meta.structuredOutputValid === true,
+    receipt: makeMissionCommandOpenAiStage32RedactedReceipt(providerResponse, meta),
+    rawPromptStored: false,
+    rawResponseStored: false,
+    hiddenCandidateStored: false,
+    credentialStored: false,
+    providerSwitch: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function makeMissionCommandOpenAiStage32RedactedReceipt(providerResponse, meta) {
+  var base = makeMissionCommandOpenAiShadowReceiptV31(providerResponse || {}, {
+    role: 'chief_of_staff',
+    model: MC_OPENAI_STAGE32_MODEL,
+    status: meta.status || 'blocked',
+    latencyMs: meta.latencyMs || 0,
+    retryCount: 0,
+    estimatedCost: meta.estimatedCost || 0,
+    fallbackReason: ''
+  });
+  return {
+    stage: '3.2',
+    build: MC_OPENAI_STAGE32_PROBE_BUILD,
+    timestamp: new Date().toISOString(),
+    provider: 'openai',
+    model: MC_OPENAI_STAGE32_MODEL,
+    role: 'chief_of_staff',
+    requestContractVersion: 'mission_command_openai_stage32_v1',
+    status: base.status,
+    stopCondition: sanitizeMissionCommandOpenAiShadowTextV31(meta.stopCondition || meta.status || '', 120),
+    latencyMs: base.latencyMs,
+    timeoutMs: MC_OPENAI_STAGE32_TIMEOUT_MS,
+    retryCount: 0,
+    inputTokens: base.inputTokens,
+    cachedInputTokens: base.cachedInputTokens,
+    cacheWriteTokens: base.cacheWriteTokens,
+    outputTokens: base.outputTokens,
+    reasoningTokens: base.reasoningTokens,
+    estimatedCost: base.estimatedCost,
+    fallbackUsed: false,
+    fallbackReason: '',
+    safetyIdentifierHash: makeMissionCommandOpenAiSafetyIdentifierV31('a1xx-primary'),
+    structuredOutputValid: meta.structuredOutputValid === true,
+    rawPromptStored: false,
+    rawResponseStored: false,
+    credentialStored: false,
+    externalWrite: false
+  };
+}
+
+function runMissionCommandOpenAiStage32LocalChecks() {
+  var stage31 = runMissionCommandOpenAiShadowFoundationChecksV31();
+  var blocked = getMissionCommandOpenAiStage32Preflight({
+    flags: {},
+    estimatedCostUsd: 0.01
+  });
+  var ready = getMissionCommandOpenAiStage32Preflight({
+    flags: {
+      stage32ProbeEnabled: true,
+      executeProviderCall: true,
+      approvedSingleCall: true,
+      modelAccessConfirmed: true,
+      scriptPropertyConfirmed: true,
+      timeoutBehaviorAccepted: true
+    },
+    estimatedCostUsd: 0.01
+  });
+  var invalidCost = getMissionCommandOpenAiStage32Preflight({
+    flags: {
+      stage32ProbeEnabled: true,
+      executeProviderCall: true,
+      approvedSingleCall: true,
+      modelAccessConfirmed: true,
+      scriptPropertyConfirmed: true,
+      timeoutBehaviorAccepted: true
+    },
+    estimatedCostUsd: 1.01
+  });
+  return {
+    ok: stage31.ok === true &&
+      blocked.ok === false &&
+      blocked.providerCallAttempted === false &&
+      ready.ok === true &&
+      ready.request.store === false &&
+      Array.isArray(ready.request.tools) &&
+      ready.request.tools.length === 0 &&
+      ready.request.model === MC_OPENAI_STAGE32_MODEL &&
+      invalidCost.ok === false &&
+      invalidCost.stopCondition === 'cost_cap_unconfirmed',
+    build: MC_OPENAI_STAGE32_PROBE_BUILD,
+    stage31Ok: stage31.ok === true,
+    blockedDefaultOff: blocked.ok === false && blocked.providerCallAttempted === false,
+    requestReady: ready.ok === true,
+    invalidCostBlocked: invalidCost.ok === false,
+    providerCall: false,
+    credentialValueReturned: false,
+    scriptPropertiesChanged: false,
+    sheetWrite: false,
+    triggerInstall: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
 function getMissionCommandVoiceProbeV25(params) {
   params = params || {};
   var text = sanitizeMissionCommandVoiceTextV25(params.text || '');
