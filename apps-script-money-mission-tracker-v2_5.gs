@@ -1890,25 +1890,6 @@ function makeMissionCommandOpenAiStage33SafeCapture(status, roleResults, meta) {
   };
 }
 
-function runMissionCommandOpenAiStage33CaptureBothRolesOnce() {
-  var capture = runMissionCommandOpenAiStage33CaptureBothRoles({
-    flags: {
-      stage33CaptureEnabled: true,
-      executeProviderCalls: true,
-      approvedManualRun: true,
-      scriptPropertyConfirmed: true,
-      visibleDeliveryEnabled: false,
-      externalWritesEnabled: false,
-      dispatchEnabled: false,
-      triggerEnabled: false,
-      fallbackEnabled: false
-    },
-    estimatedCostUsd: MC_OPENAI_STAGE33_PREFLIGHT_ESTIMATED_SPEND_USD
-  });
-  Logger.log(MC_OPENAI_STAGE33_LOG_PREFIX + JSON.stringify(capture));
-  return capture;
-}
-
 function runMissionCommandOpenAiStage33LocalChecks() {
   var stage31 = runMissionCommandOpenAiShadowFoundationChecksV31();
   var stage32 = runMissionCommandOpenAiStage32LocalChecks();
@@ -2038,6 +2019,7419 @@ function runMissionCommandOpenAiStage33LocalChecks() {
     visibleInboxMutation: false,
     dispatch: false,
     externalWrite: false
+  };
+}
+
+// ── MISSION COMMAND STAGE 3.3R DURABLE SAFE RECEIPTS ────────
+// Gate A only: local/synthetic receipt mechanics. No provider calls, live Sheet
+// writes, Script Properties reads/writes, routes, triggers, or editor wrapper.
+var MC_STAGE33R_RECEIPT_BUILD = 'mmos-20260711-stage3-3r-durable-safe-receipts-gate-a';
+var MC_STAGE33R_CONTRACT_VERSION = 'mc_stage_3_3r_receipt_v1';
+var MC_STAGE33R_STAGE_ID = '3.3r';
+var MC_STAGE33R_FIXTURE_ID = 'mc_stage33_capture_v1';
+var MC_STAGE33R_RECEIPT_SHEET_NAME = 'Mission Command Runtime Receipts';
+var MC_STAGE33R_SOURCE = 'apps_script_shadow_stage_3_3r';
+var MC_STAGE33R_PARENT_RECEIPT_TYPE = 'stage_3_3r_capture_parent';
+var MC_STAGE33R_ROLE_RECEIPT_TYPE = 'stage_3_3r_capture_role';
+var MC_STAGE33R_PROFILE_ID = 'a1xx-primary';
+var MC_STAGE33R_DEVICE_ID = 'a1xx-primary';
+var MC_STAGE33R_PRIVACY_CLASS = 'internal_shadow_redacted';
+var MC_STAGE33R_RETENTION_CLASS = 'compact_receipt_365_days';
+var MC_STAGE33R_LOCK_TIMEOUT_MS = 5000;
+var MC_STAGE33R_ROLE_ORDER = ['executive_assistant', 'chief_of_staff'];
+var MC_STAGE33R_GATE_B1_BUILD = 'mmos-20260711-stage3-3r-gate-b1-adapter-wrapper-prep';
+var MC_STAGE33R_GATE_B2_WRAPPER_NAME = 'runMissionCommandStage33RGateB2ApprovedReceiptCaptureOnce';
+var MC_STAGE33R_GATE_B2_PROPOSED_RUN_ID = 'mc_stage33r_gate_b2_20260711_manual_002';
+var MC_STAGE33R_GATE_B2_MAX_CALL_COUNT = 2;
+var MC_STAGE33R_GATE_B2_MAX_ESTIMATED_SPEND_USD = 0.10;
+var MC_STAGE33R_RUNTIME_RECEIPT_HEADERS = [
+  'receipt_id',
+  'profile_id',
+  'receipt_type',
+  'source',
+  'related_object',
+  'result',
+  'safe_summary',
+  'provider_key',
+  'model_key',
+  'role',
+  'latency_ms',
+  'input_tokens',
+  'cached_input_tokens',
+  'cache_write_tokens',
+  'output_tokens',
+  'reasoning_tokens',
+  'retry_count',
+  'estimated_cost',
+  'fallback_reason',
+  'safety_identifier_hash',
+  'created_at',
+  'device_id',
+  'request_id',
+  'privacy_class',
+  'retention_class',
+  'next_action',
+  'team_chat_receipt_url',
+  'version',
+  'etag',
+  'updated_at',
+  'updated_by',
+  'last_request_id'
+];
+
+function getMissionCommandStage33RReceiptFlags(overrides) {
+  var flags = {
+    stage33RReceiptLayerEnabled: false,
+    liveSheetWriteEnabled: false,
+    providerExecutionEnabled: false,
+    scriptPropertiesEnabled: false,
+    approvedManualRun: false,
+    visibleDeliveryEnabled: false,
+    dispatchEnabled: false,
+    externalWritesEnabled: false,
+    triggerEnabled: false
+  };
+  overrides = overrides || {};
+  Object.keys(flags).forEach(function(key) {
+    flags[key] = overrides[key] === true;
+  });
+  return flags;
+}
+
+function canonicalizeMissionCommandStage33RValue(value) {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(canonicalizeMissionCommandStage33RValue);
+  var result = {};
+  Object.keys(value).sort().forEach(function(key) {
+    result[key] = canonicalizeMissionCommandStage33RValue(value[key]);
+  });
+  return result;
+}
+
+function stringifyMissionCommandStage33RCanonical(value) {
+  return JSON.stringify(canonicalizeMissionCommandStage33RValue(value || {}));
+}
+
+function hashMissionCommandStage33RText(text) {
+  text = String(text || '');
+  if (typeof Utilities !== 'undefined' && Utilities.computeDigest) {
+    try {
+      var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text);
+      return digest.map(function(byte) {
+        var value = byte;
+        if (value < 0) value += 256;
+        return ('0' + value.toString(16)).slice(-2);
+      }).join('');
+    } catch (err) {}
+  }
+  var hash = 0;
+  for (var i = 0; i < text.length; i++) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return 'local_' + Math.abs(hash).toString(36);
+}
+
+function makeMissionCommandStage33RCaptureKey(oneTimeRunId) {
+  var runId = sanitizeMissionCommandOpenAiShadowTextV31(oneTimeRunId || '', 120);
+  if (!runId) return '';
+  var payload = [
+    MC_STAGE33R_CONTRACT_VERSION,
+    MC_STAGE33R_STAGE_ID,
+    MC_STAGE33R_FIXTURE_ID,
+    MC_STAGE33R_ROLE_ORDER.join('|'),
+    runId
+  ].join('|');
+  return hashMissionCommandStage33RText(payload);
+}
+
+function makeMissionCommandStage33RShortKey(captureKey) {
+  return String(captureKey || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 16) || 'missing_key';
+}
+
+function makeMissionCommandStage33RReceiptId(kind, captureKey, role) {
+  var suffix = makeMissionCommandStage33RShortKey(captureKey);
+  if (kind === 'parent') return 'rcp_mc33r_parent_' + suffix;
+  if (role === 'executive_assistant') return 'rcp_mc33r_ea_' + suffix;
+  if (role === 'chief_of_staff') return 'rcp_mc33r_cos_' + suffix;
+  return 'rcp_mc33r_role_' + suffix;
+}
+
+function getMissionCommandStage33RRequiredReceiptHeaders() {
+  return MC_STAGE33R_RUNTIME_RECEIPT_HEADERS.slice();
+}
+
+function validateMissionCommandStage33RReceiptHeaders(headers) {
+  headers = headers || [];
+  var missing = getMissionCommandStage33RRequiredReceiptHeaders().filter(function(header) {
+    return headers.indexOf(header) === -1;
+  });
+  return {
+    ok: missing.length === 0,
+    missing: missing
+  };
+}
+
+function makeMissionCommandStage33RBlockedResult(reason, detail) {
+  return {
+    ok: false,
+    status: 'blocked',
+    build: MC_STAGE33R_RECEIPT_BUILD,
+    stopCondition: sanitizeMissionCommandOpenAiShadowTextV31(reason || 'stage_3_3r_blocked', 120),
+    safeDetail: sanitizeMissionCommandOpenAiShadowTextV31(detail || '', 240),
+    providerCallAttempted: false,
+    liveSheetWrite: false,
+    scriptPropertiesAccessed: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function getMissionCommandStage33RForbiddenReceiptPatterns() {
+  return [
+    /api[_ -]?key/i,
+    /authorization/i,
+    /bearer/i,
+    /script\s*property/i,
+    /raw[_ -]?prompt/i,
+    /raw[_ -]?provider/i,
+    /raw[_ -]?response/i,
+    /provider[_ -]?envelope/i,
+    /hidden[_ -]?reasoning/i,
+    /chain[_ -]?of[_ -]?thought/i,
+    /previous_response_id/i,
+    /conversation[_ -]?id/i,
+    /team_chat_receipt_url[^\\\"]*https?:/i,
+    /visible[_ -]?inbox/i,
+    /dispatch[_ -]?job/i
+  ];
+}
+
+function assertMissionCommandStage33RReceiptSafe(value) {
+  var text = '';
+  try {
+    text = JSON.stringify(value || {});
+  } catch (err) {
+    return { ok: false, reason: 'receipt_not_serializable' };
+  }
+  text = text
+    .replace(/"raw_prompt_stored":false/g, '')
+    .replace(/"raw_response_stored":false/g, '')
+    .replace(/"credential_stored":false/g, '')
+    .replace(/"visible_delivery":false/g, '')
+    .replace(/"dispatch":false/g, '')
+    .replace(/"external_write":false/g, '')
+    .replace(/"provider_conversation":false/g, '')
+    .replace(/"previous_response_id":false/g, '')
+    .replace(/raw_prompt_stored/g, 'boundary_flag')
+    .replace(/raw_response_stored/g, 'boundary_flag')
+    .replace(/credential_stored/g, 'boundary_flag')
+    .replace(/visible_delivery/g, 'boundary_flag')
+    .replace(/external_write/g, 'boundary_flag')
+    .replace(/provider_conversation/g, 'boundary_flag')
+    .replace(/previous_response_id/g, 'boundary_flag');
+  var matched = getMissionCommandStage33RForbiddenReceiptPatterns().filter(function(pattern) {
+    return pattern.test(text);
+  });
+  return {
+    ok: matched.length === 0,
+    reason: matched.length ? 'unsafe_receipt_field' : ''
+  };
+}
+
+function makeMissionCommandStage33RSafeSummary(data) {
+  data = data || {};
+  var summary = {
+    stage_id: MC_STAGE33R_STAGE_ID,
+    fixture_id: MC_STAGE33R_FIXTURE_ID,
+    synthetic_fixture: true,
+    requested_roles: MC_STAGE33R_ROLE_ORDER.slice(),
+    capture_key: sanitizeMissionCommandOpenAiShadowTextV31(data.captureKey || '', 140),
+    children_expected: safeMissionCommandOpenAiNumberV31(data.childrenExpected || 0),
+    children_written: safeMissionCommandOpenAiNumberV31(data.childrenWritten || 0),
+    children_valid: safeMissionCommandOpenAiNumberV31(data.childrenValid || 0),
+    role: sanitizeMissionCommandOpenAiShadowTextV31(data.role || '', 80),
+    role_status: sanitizeMissionCommandOpenAiShadowTextV31(data.roleStatus || '', 80),
+    schema_valid: data.schemaValid === true,
+    candidate_evidence: sanitizeMissionCommandOpenAiShadowTextV31(data.candidateEvidence || '', 140),
+    child_receipt_ids: (data.childReceiptIds || []).slice(0, 2).map(function(id) {
+      return sanitizeMissionCommandOpenAiShadowTextV31(id, 140);
+    }),
+    fallback_code: sanitizeMissionCommandOpenAiShadowTextV31(data.fallbackCode || '', 100),
+    boundaries: {
+      raw_prompt_stored: false,
+      raw_response_stored: false,
+      credential_stored: false,
+      visible_delivery: false,
+      dispatch: false,
+      external_write: false,
+      provider_conversation: false,
+      previous_response_id: false
+    }
+  };
+  var safety = assertMissionCommandStage33RReceiptSafe(summary);
+  if (!safety.ok) return { ok: false, value: '', reason: safety.reason };
+  return { ok: true, value: stringifyMissionCommandStage33RCanonical(summary), reason: '' };
+}
+
+function makeMissionCommandStage33RRuntimeReceiptRow(input) {
+  input = input || {};
+  var now = input.now || new Date().toISOString();
+  var safeSummary = makeMissionCommandStage33RSafeSummary(input.safeSummary || {});
+  if (!safeSummary.ok) return { ok: false, reason: safeSummary.reason, row: null };
+  var row = {
+    receipt_id: sanitizeMissionCommandOpenAiShadowTextV31(input.receiptId || '', 160),
+    profile_id: MC_STAGE33R_PROFILE_ID,
+    receipt_type: sanitizeMissionCommandOpenAiShadowTextV31(input.receiptType || '', 120),
+    source: MC_STAGE33R_SOURCE,
+    related_object: sanitizeMissionCommandOpenAiShadowTextV31(input.relatedObject || '', 180),
+    result: sanitizeMissionCommandOpenAiShadowTextV31(input.result || 'receipt_draft', 80),
+    safe_summary: safeSummary.value,
+    provider_key: sanitizeMissionCommandOpenAiShadowTextV31(input.providerKey || '', 80),
+    model_key: sanitizeMissionCommandOpenAiShadowTextV31(input.modelKey || '', 120),
+    role: sanitizeMissionCommandOpenAiShadowTextV31(input.role || '', 120),
+    latency_ms: safeMissionCommandOpenAiNumberV31(input.latencyMs),
+    input_tokens: safeMissionCommandOpenAiNumberV31(input.inputTokens),
+    cached_input_tokens: safeMissionCommandOpenAiNumberV31(input.cachedInputTokens),
+    cache_write_tokens: safeMissionCommandOpenAiNumberV31(input.cacheWriteTokens),
+    output_tokens: safeMissionCommandOpenAiNumberV31(input.outputTokens),
+    reasoning_tokens: safeMissionCommandOpenAiNumberV31(input.reasoningTokens),
+    retry_count: 0,
+    estimated_cost: Math.max(0, Number(input.estimatedCost || 0)),
+    fallback_reason: sanitizeMissionCommandOpenAiShadowTextV31(input.fallbackReason || '', 120),
+    safety_identifier_hash: makeMissionCommandOpenAiSafetyIdentifierV31('a1xx-primary-stage33r'),
+    created_at: now,
+    device_id: MC_STAGE33R_DEVICE_ID,
+    request_id: sanitizeMissionCommandOpenAiShadowTextV31(input.requestId || '', 140),
+    privacy_class: MC_STAGE33R_PRIVACY_CLASS,
+    retention_class: MC_STAGE33R_RETENTION_CLASS,
+    next_action: sanitizeMissionCommandOpenAiShadowTextV31(input.nextAction || 'A1XX reviews the compact Stage 3.3R receipt before any next gate.', 240),
+    team_chat_receipt_url: '',
+    version: safeMissionCommandOpenAiNumberV31(input.version || 1),
+    etag: sanitizeMissionCommandOpenAiShadowTextV31(input.etag || ('etag_' + hashMissionCommandStage33RText(now + (input.receiptId || ''))), 120),
+    updated_at: now,
+    updated_by: 'integration_gate_a_local',
+    last_request_id: sanitizeMissionCommandOpenAiShadowTextV31(input.requestId || '', 140)
+  };
+  var safety = assertMissionCommandStage33RReceiptSafe(row);
+  return {
+    ok: safety.ok,
+    reason: safety.reason,
+    row: safety.ok ? row : null
+  };
+}
+
+function makeMissionCommandStage33RLocalReceiptAdapter(headers, rows, options) {
+  options = options || {};
+  return {
+    headers: headers || getMissionCommandStage33RRequiredReceiptHeaders(),
+    rows: (rows || []).slice(),
+    lockAvailable: options.lockAvailable !== false,
+    appendFails: options.appendFails === true,
+    updateFails: options.updateFails === true,
+    lockEvents: [],
+    appendedRows: 0,
+    updatedRows: 0,
+    acquireLock: function(label) {
+      this.lockEvents.push('acquire:' + label);
+      return this.lockAvailable === true;
+    },
+    releaseLock: function(label) {
+      this.lockEvents.push('release:' + label);
+    },
+    refreshRows: function() {
+      return true;
+    },
+    appendRowObject: function(row) {
+      if (this.appendFails) throw new Error('local_append_failed');
+      this.rows.push(row);
+      this.appendedRows += 1;
+      return this.rows.length;
+    },
+    updateRowObject: function(index, row, expected) {
+      if (this.updateFails) throw new Error('local_update_failed');
+      expected = expected || {};
+      var current = this.rows[index];
+      if (!current) throw new Error('local_update_missing_row');
+      if (Object.prototype.hasOwnProperty.call(expected, 'version') && safeMissionCommandOpenAiNumberV31(current.version) !== safeMissionCommandOpenAiNumberV31(expected.version)) {
+        throw new Error('local_update_version_conflict');
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'etag') && String(current.etag || '') !== String(expected.etag || '')) {
+        throw new Error('local_update_etag_conflict');
+      }
+      this.rows[index] = row;
+      this.updatedRows += 1;
+      return index + 1;
+    }
+  };
+}
+
+function makeMissionCommandStage33RRowValues(row, headers) {
+  row = row || {};
+  headers = headers || getMissionCommandStage33RRequiredReceiptHeaders();
+  return headers.map(function(header) {
+    return Object.prototype.hasOwnProperty.call(row, header) ? row[header] : '';
+  });
+}
+
+function makeMissionCommandStage33RRowObject(headers, values) {
+  var row = {};
+  headers = headers || [];
+  values = values || [];
+  headers.forEach(function(header, index) {
+    row[String(header || '')] = values[index];
+  });
+  return row;
+}
+
+function makeMissionCommandStage33RLiveReceiptAdapter(options) {
+  options = options || {};
+  var spreadsheet = options.spreadsheet || getMoneyMissionSpreadsheet();
+  var sheet = spreadsheet && spreadsheet.getSheetByName ? spreadsheet.getSheetByName(MC_STAGE33R_RECEIPT_SHEET_NAME) : null;
+  if (!sheet) throw new Error('stage_3_3r_runtime_receipts_sheet_missing');
+  var lock = options.lock || LockService.getScriptLock();
+  return {
+    headers: getMissionCommandStage33RRequiredReceiptHeaders(),
+    rows: [],
+    lockEvents: [],
+    appendedRows: 0,
+    updatedRows: 0,
+    acquireLock: function(label) {
+      this.lockEvents.push('acquire:' + label);
+      return lock.tryLock(MC_STAGE33R_LOCK_TIMEOUT_MS) === true;
+    },
+    releaseLock: function(label) {
+      this.lockEvents.push('release:' + label);
+      try {
+        lock.releaseLock();
+      } catch (err) {}
+    },
+    refreshRows: function() {
+      var lastColumn = Math.max(1, sheet.getLastColumn());
+      var refreshedHeaders = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(function(header) {
+        return String(header || '').trim();
+      });
+      var headerCheck = validateMissionCommandStage33RReceiptHeaders(refreshedHeaders);
+      if (!headerCheck.ok) throw new Error('stage_3_3r_runtime_receipts_headers_missing:' + headerCheck.missing.join(','));
+      var lastRow = Math.max(1, sheet.getLastRow());
+      var values = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues() : [];
+      this.headers = refreshedHeaders;
+      this.rows = values.map(function(valuesRow) {
+        return makeMissionCommandStage33RRowObject(refreshedHeaders, valuesRow);
+      });
+      return true;
+    },
+    appendRowObject: function(row) {
+      var rowValues = makeMissionCommandStage33RRowValues(row, this.headers);
+      sheet.appendRow(rowValues);
+      this.rows.push(row);
+      this.appendedRows += 1;
+      return this.rows.length + 1;
+    },
+    updateRowObject: function(index, row, expected) {
+      expected = expected || {};
+      var current = this.rows[index];
+      if (!current) throw new Error('live_update_missing_row');
+      if (Object.prototype.hasOwnProperty.call(expected, 'version') && safeMissionCommandOpenAiNumberV31(current.version) !== safeMissionCommandOpenAiNumberV31(expected.version)) {
+        throw new Error('live_update_version_conflict');
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'etag') && String(current.etag || '') !== String(expected.etag || '')) {
+        throw new Error('live_update_etag_conflict');
+      }
+      sheet.getRange(index + 2, 1, 1, this.headers.length).setValues([makeMissionCommandStage33RRowValues(row, this.headers)]);
+      this.rows[index] = row;
+      this.updatedRows += 1;
+      return index + 2;
+    }
+  };
+}
+
+function refreshMissionCommandStage33RAdapterUnderLock(adapter) {
+  if (!adapter) return { ok: false, stopCondition: 'receipt_adapter_missing', missing: [] };
+  if (typeof adapter.refreshRows === 'function') adapter.refreshRows();
+  var headerCheck = validateMissionCommandStage33RReceiptHeaders(adapter.headers);
+  if (!headerCheck.ok) {
+    return {
+      ok: false,
+      stopCondition: 'receipt_contract_invalid',
+      missing: headerCheck.missing
+    };
+  }
+  return { ok: true, stopCondition: '', missing: [] };
+}
+
+function findMissionCommandStage33RRowsByCaptureKey(adapter, captureKey) {
+  var related = 'mc33r:' + captureKey;
+  return (adapter.rows || []).map(function(row, index) {
+    return { row: row, index: index };
+  }).filter(function(entry) {
+    return entry.row.related_object === related;
+  });
+}
+
+function findMissionCommandStage33RParent(adapter, captureKey) {
+  var rows = findMissionCommandStage33RRowsByCaptureKey(adapter, captureKey);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].row.receipt_type === MC_STAGE33R_PARENT_RECEIPT_TYPE) return rows[i];
+  }
+  return null;
+}
+
+function findMissionCommandStage33RChild(adapter, captureKey, role) {
+  var rows = findMissionCommandStage33RRowsByCaptureKey(adapter, captureKey);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].row.receipt_type === MC_STAGE33R_ROLE_RECEIPT_TYPE && rows[i].row.role === role) return rows[i];
+  }
+  return null;
+}
+
+function claimMissionCommandStage33RParentReceipt(adapter, runId) {
+  var captureKey = makeMissionCommandStage33RCaptureKey(runId);
+  if (!captureKey) return makeMissionCommandStage33RBlockedResult('missing_run_id', 'A one-time run ID is required.');
+  if (!adapter.acquireLock('parent_claim')) return makeMissionCommandStage33RBlockedResult('lock_unavailable', 'Parent claim lock was unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(adapter);
+    if (!refresh.ok) return makeMissionCommandStage33RBlockedResult(refresh.stopCondition, 'Missing Runtime Receipts columns: ' + refresh.missing.join(', '));
+    var existing = findMissionCommandStage33RParent(adapter, captureKey);
+    if (existing) {
+      return {
+        ok: false,
+        status: 'duplicate_suppressed',
+        build: MC_STAGE33R_RECEIPT_BUILD,
+        captureKey: captureKey,
+        relatedObject: 'mc33r:' + captureKey,
+        receiptId: existing.row.receipt_id,
+        providerCallAttempted: false,
+        appendedRows: 0,
+        liveSheetWrite: false,
+        externalWrite: false
+      };
+    }
+    var receiptId = makeMissionCommandStage33RReceiptId('parent', captureKey);
+    var made = makeMissionCommandStage33RRuntimeReceiptRow({
+      receiptId: receiptId,
+      receiptType: MC_STAGE33R_PARENT_RECEIPT_TYPE,
+      relatedObject: 'mc33r:' + captureKey,
+      result: 'receipt_draft',
+      role: MC_STAGE33R_ROLE_ORDER.join('+'),
+      requestId: runId,
+      fallbackReason: '',
+      safeSummary: {
+        captureKey: captureKey,
+        childrenExpected: 2,
+        childrenWritten: 0,
+        childrenValid: 0,
+        fallbackCode: ''
+      }
+    });
+    if (!made.ok) return makeMissionCommandStage33RBlockedResult(made.reason, 'Parent receipt failed redaction.');
+    adapter.appendRowObject(made.row);
+    return {
+      ok: true,
+      status: 'receipt_draft',
+      build: MC_STAGE33R_RECEIPT_BUILD,
+      captureKey: captureKey,
+      relatedObject: 'mc33r:' + captureKey,
+      receiptId: receiptId,
+      providerCallAttempted: false,
+      appendedRows: 1,
+      liveSheetWrite: false,
+      externalWrite: false
+    };
+  } catch (err) {
+    return makeMissionCommandStage33RBlockedResult('receipt_claim_failed', 'Parent claim append failed before provider work.');
+  } finally {
+    adapter.releaseLock('parent_claim');
+  }
+}
+
+function makeMissionCommandStage33RCandidateEvidence(candidate) {
+  var validation = validateMissionCommandOpenAiStage33Candidate(candidate, normalizeMissionCommandOpenAiRoleV31(candidate && candidate.role));
+  if (!validation.ok) return { ok: false, evidence: '', errors: validation.errors };
+  return {
+    ok: true,
+    evidence: 'sha256:' + hashMissionCommandStage33RText(stringifyMissionCommandStage33RCanonical(validation.candidate)),
+    errors: []
+  };
+}
+
+function appendMissionCommandStage33RChildReceipt(adapter, runId, role, candidate, meta) {
+  meta = meta || {};
+  role = normalizeMissionCommandOpenAiRoleV31(role);
+  var captureKey = makeMissionCommandStage33RCaptureKey(runId);
+  if (!captureKey || MC_STAGE33R_ROLE_ORDER.indexOf(role) === -1) return makeMissionCommandStage33RBlockedResult('invalid_child_request', 'Stage 3.3R child receipt role or run ID is invalid.');
+  var evidence = makeMissionCommandStage33RCandidateEvidence(candidate || {});
+  if (!adapter.acquireLock('child_append_' + role)) return makeMissionCommandStage33RBlockedResult('lock_unavailable', 'Child append lock was unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(adapter);
+    if (!refresh.ok) return makeMissionCommandStage33RBlockedResult(refresh.stopCondition, 'Missing Runtime Receipts columns: ' + refresh.missing.join(', '));
+    if (!findMissionCommandStage33RParent(adapter, captureKey)) return makeMissionCommandStage33RBlockedResult('parent_missing', 'Parent receipt claim must exist before role child append.');
+    var existing = findMissionCommandStage33RChild(adapter, captureKey, role);
+    if (existing) {
+      return {
+        ok: false,
+        status: 'duplicate_child_suppressed',
+        build: MC_STAGE33R_RECEIPT_BUILD,
+        captureKey: captureKey,
+        receiptId: existing.row.receipt_id,
+        providerCallAttempted: false,
+        appendedRows: 0,
+        liveSheetWrite: false
+      };
+    }
+    var receiptId = makeMissionCommandStage33RReceiptId('child', captureKey, role);
+    var result = evidence.ok ? 'logged' : 'failed';
+    var made = makeMissionCommandStage33RRuntimeReceiptRow({
+      receiptId: receiptId,
+      receiptType: MC_STAGE33R_ROLE_RECEIPT_TYPE,
+      relatedObject: 'mc33r:' + captureKey,
+      result: result,
+      role: role,
+      requestId: runId,
+      providerKey: 'openai',
+      modelKey: MC_OPENAI_STAGE33_MODEL,
+      latencyMs: meta.latencyMs || 0,
+      inputTokens: meta.inputTokens || 0,
+      cachedInputTokens: meta.cachedInputTokens || 0,
+      cacheWriteTokens: meta.cacheWriteTokens || 0,
+      outputTokens: meta.outputTokens || 0,
+      reasoningTokens: meta.reasoningTokens || 0,
+      estimatedCost: meta.estimatedCost || 0,
+      fallbackReason: evidence.ok ? 'none' : 'schema_invalid',
+      safeSummary: {
+        captureKey: captureKey,
+        role: role,
+        roleStatus: evidence.ok ? 'capture_valid' : 'schema_invalid',
+        schemaValid: evidence.ok,
+        candidateEvidence: evidence.evidence,
+        childrenExpected: 0,
+        childrenWritten: 0,
+        childrenValid: evidence.ok ? 1 : 0,
+        fallbackCode: evidence.ok ? 'none' : 'schema_invalid'
+      }
+    });
+    if (!made.ok) return makeMissionCommandStage33RBlockedResult(made.reason, 'Child receipt failed redaction.');
+    adapter.appendRowObject(made.row);
+    return {
+      ok: evidence.ok,
+      status: result,
+      build: MC_STAGE33R_RECEIPT_BUILD,
+      captureKey: captureKey,
+      receiptId: receiptId,
+      role: role,
+      candidateEvidence: evidence.evidence,
+      providerCallAttempted: false,
+      appendedRows: 1,
+      liveSheetWrite: false
+    };
+  } catch (err) {
+    return makeMissionCommandStage33RBlockedResult('child_append_failed', 'Child receipt append failed without provider retry authority.');
+  } finally {
+    adapter.releaseLock('child_append_' + role);
+  }
+}
+
+function finalizeMissionCommandStage33RParentReceipt(adapter, runId, expected) {
+  var captureKey = makeMissionCommandStage33RCaptureKey(runId);
+  expected = expected || {};
+  if (!captureKey) return makeMissionCommandStage33RBlockedResult('missing_run_id', 'A one-time run ID is required.');
+  if (!adapter.acquireLock('parent_finalize')) return makeMissionCommandStage33RBlockedResult('lock_unavailable', 'Parent finalization lock was unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(adapter);
+    if (!refresh.ok) return makeMissionCommandStage33RBlockedResult(refresh.stopCondition, 'Missing Runtime Receipts columns: ' + refresh.missing.join(', '));
+    var parent = findMissionCommandStage33RParent(adapter, captureKey);
+    if (!parent) return makeMissionCommandStage33RBlockedResult('parent_missing', 'Parent receipt cannot be finalized because it does not exist.');
+    var currentVersion = safeMissionCommandOpenAiNumberV31(parent.row.version);
+    var currentEtag = String(parent.row.etag || '');
+    var expectedVersion = Object.prototype.hasOwnProperty.call(expected, 'version') ? safeMissionCommandOpenAiNumberV31(expected.version) : currentVersion;
+    var expectedEtag = Object.prototype.hasOwnProperty.call(expected, 'etag') ? String(expected.etag || '') : currentEtag;
+    if (currentVersion !== expectedVersion || currentEtag !== expectedEtag) {
+      return makeMissionCommandStage33RBlockedResult('receipt_conflict', 'Parent receipt version/etag changed before finalization.');
+    }
+    var children = MC_STAGE33R_ROLE_ORDER.map(function(role) {
+      return findMissionCommandStage33RChild(adapter, captureKey, role);
+    }).filter(function(entry) { return !!entry; });
+    var validChildren = children.filter(function(entry) { return entry.row.result === 'logged'; });
+    var now = new Date().toISOString();
+    var parentRow = {};
+    Object.keys(parent.row).forEach(function(key) { parentRow[key] = parent.row[key]; });
+    var finalResult = validChildren.length === 2 ? 'logged' : 'failed';
+    var childIds = children.map(function(entry) { return entry.row.receipt_id; });
+    var safeSummary = makeMissionCommandStage33RSafeSummary({
+      captureKey: captureKey,
+      childrenExpected: 2,
+      childrenWritten: children.length,
+      childrenValid: validChildren.length,
+      childReceiptIds: childIds,
+      fallbackCode: finalResult === 'logged' ? 'none' : 'partial_or_interrupted'
+    });
+    if (!safeSummary.ok) return makeMissionCommandStage33RBlockedResult(safeSummary.reason, 'Parent final summary failed redaction.');
+    parentRow.result = finalResult;
+    parentRow.safe_summary = safeSummary.value;
+    parentRow.version = currentVersion + 1;
+    parentRow.etag = 'etag_' + hashMissionCommandStage33RText(now + parentRow.receipt_id + parentRow.version);
+    parentRow.updated_at = now;
+    parentRow.updated_by = 'integration_gate_a_local';
+    parentRow.last_request_id = runId;
+    parentRow.fallback_reason = finalResult === 'logged' ? 'none' : 'partial_or_interrupted';
+    adapter.updateRowObject(parent.index, parentRow, { version: currentVersion, etag: currentEtag });
+    return {
+      ok: finalResult === 'logged',
+      status: finalResult,
+      build: MC_STAGE33R_RECEIPT_BUILD,
+      captureKey: captureKey,
+      receiptId: parentRow.receipt_id,
+      childrenWritten: children.length,
+      childrenValid: validChildren.length,
+      providerCallAttempted: false,
+      updatedRows: 1,
+      liveSheetWrite: false
+    };
+  } catch (err) {
+    return makeMissionCommandStage33RBlockedResult('parent_finalize_failed', 'Parent finalization failed without provider retry authority.');
+  } finally {
+    adapter.releaseLock('parent_finalize');
+  }
+}
+
+function getMissionCommandStage33RValidFixtureCandidate(role) {
+  role = normalizeMissionCommandOpenAiRoleV31(role);
+  return {
+    role: role,
+    message_type: role === 'executive_assistant' ? 'brief' : 'coordination',
+    priority: role === 'executive_assistant' ? 'high' : 'normal',
+    title: role === 'executive_assistant' ? 'Review the blocked output first' : 'Coordinate the synthetic review order',
+    body: role === 'executive_assistant' ? 'One synthetic output draft needs A1XX review before the next move.' : 'The synthetic fixture has one output review, one missing reference, and one returned content draft.',
+    why_it_matters: 'This is fixed synthetic Stage 3.3R evidence only.',
+    next_move: role === 'executive_assistant' ? 'Review the output draft first.' : 'Escalate the output review and park the missing reference.',
+    question: '',
+    source_labels: role === 'executive_assistant' ? ['synthetic_fixture:output_review'] : ['synthetic_fixture:client_project', 'synthetic_fixture:agent_return'],
+    grounding_state: 'sourced',
+    confidence: 0.8,
+    should_deliver: false,
+    blocked_reason: ''
+  };
+}
+
+function getMissionCommandStage33RGateB2Preflight(input) {
+  input = input || {};
+  var flags = getMissionCommandStage33RReceiptFlags(input.flags || {});
+  var runId = sanitizeMissionCommandOpenAiShadowTextV31(input.oneTimeRunId || '', 140);
+  var estimatedCost = Math.max(0, Number(input.estimatedCostUsd || 0));
+  var captureKey = makeMissionCommandStage33RCaptureKey(runId);
+  var requiredFlagsReady = flags.stage33RReceiptLayerEnabled === true &&
+    flags.liveSheetWriteEnabled === true &&
+    flags.providerExecutionEnabled === true &&
+    flags.scriptPropertiesEnabled === true &&
+    flags.approvedManualRun === true &&
+    flags.visibleDeliveryEnabled === false &&
+    flags.dispatchEnabled === false &&
+    flags.externalWritesEnabled === false &&
+    flags.triggerEnabled === false;
+  var stage33 = getMissionCommandOpenAiStage33Preflight({
+    flags: {
+      stage33CaptureEnabled: flags.providerExecutionEnabled === true,
+      executeProviderCalls: flags.providerExecutionEnabled === true,
+      approvedManualRun: flags.approvedManualRun === true,
+      scriptPropertyConfirmed: flags.scriptPropertiesEnabled === true,
+      visibleDeliveryEnabled: false,
+      externalWritesEnabled: false,
+      dispatchEnabled: false,
+      triggerEnabled: false,
+      fallbackEnabled: false
+    },
+    estimatedCostUsd: estimatedCost
+  });
+  var stopCondition = '';
+  if (!runId) stopCondition = 'missing_run_id';
+  else if (runId !== MC_STAGE33R_GATE_B2_PROPOSED_RUN_ID) stopCondition = 'run_id_not_approved';
+  else if (!captureKey) stopCondition = 'capture_key_unavailable';
+  else if (!requiredFlagsReady) stopCondition = 'gate_b2_flags_not_approved';
+  else if (estimatedCost > MC_STAGE33R_GATE_B2_MAX_ESTIMATED_SPEND_USD) stopCondition = 'estimated_cost_cap_exceeded';
+  else if (!stage33.ok) stopCondition = stage33.stopCondition || 'stage_3_3_preflight_blocked';
+  return {
+    ok: stopCondition === '',
+    status: stopCondition === '' ? 'preflight_ready' : 'blocked',
+    build: MC_STAGE33R_GATE_B1_BUILD,
+    stopCondition: stopCondition,
+    wrapperName: MC_STAGE33R_GATE_B2_WRAPPER_NAME,
+    oneTimeRunId: runId,
+    captureKey: captureKey,
+    relatedObject: captureKey ? 'mc33r:' + captureKey : '',
+    sheetName: MC_STAGE33R_RECEIPT_SHEET_NAME,
+    receiptTypes: [MC_STAGE33R_PARENT_RECEIPT_TYPE, MC_STAGE33R_ROLE_RECEIPT_TYPE],
+    orderedRoles: MC_STAGE33R_ROLE_ORDER.slice(),
+    maxCallCount: MC_STAGE33R_GATE_B2_MAX_CALL_COUNT,
+    stage33RequestCount: stage33.ok && stage33.requests ? stage33.requests.length : 0,
+    model: MC_OPENAI_STAGE33_MODEL,
+    timeoutSeconds: MC_OPENAI_STAGE33_TIMEOUT_SECONDS,
+    maxInputTokensPerRole: MC_OPENAI_STAGE33_MAX_INPUT_TOKENS_PER_ROLE,
+    maxOutputTokensPerRole: MC_OPENAI_STAGE33_MAX_OUTPUT_TOKENS_PER_ROLE,
+    estimatedCostUsd: estimatedCost,
+    maxEstimatedSpendUsd: MC_STAGE33R_GATE_B2_MAX_ESTIMATED_SPEND_USD,
+    store: false,
+    tools: [],
+    retryCount: 0,
+    fallbackUsed: false,
+    providerCallAttempted: false,
+    liveSheetWriteAttempted: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function getMissionCommandStage33RRoleResultsFromCapture(capture) {
+  var roles = capture && Array.isArray(capture.roles) ? capture.roles.slice(0, 2) : [];
+  var ok = roles.length === 2 &&
+    roles[0] &&
+    roles[1] &&
+    roles[0].role === 'executive_assistant' &&
+    roles[1].role === 'chief_of_staff';
+  return {
+    ok: ok,
+    roles: ok ? roles : [],
+    stopCondition: ok ? '' : 'role_result_shape_invalid'
+  };
+}
+
+function runMissionCommandStage33RGateB2ReceiptCapture(input) {
+  input = input || {};
+  var preflight = getMissionCommandStage33RGateB2Preflight(input);
+  if (!preflight.ok) return preflight;
+  var adapter;
+  try {
+    adapter = makeMissionCommandStage33RLiveReceiptAdapter();
+  } catch (adapterErr) {
+    return makeMissionCommandStage33RBlockedResult('live_receipt_adapter_unavailable', 'Runtime Receipts live adapter could not open the approved sheet/header shape.');
+  }
+  var parentClaim = claimMissionCommandStage33RParentReceipt(adapter, preflight.oneTimeRunId);
+  if (!parentClaim.ok) {
+    parentClaim.captureKey = preflight.captureKey;
+    parentClaim.relatedObject = preflight.relatedObject;
+    return parentClaim;
+  }
+  var parentBeforeCapture = findMissionCommandStage33RParent(adapter, preflight.captureKey);
+  var expectedVersion = parentBeforeCapture ? parentBeforeCapture.row.version : '';
+  var expectedEtag = parentBeforeCapture ? parentBeforeCapture.row.etag : '';
+  var capture = runMissionCommandOpenAiStage33CaptureBothRoles({
+    flags: {
+      stage33CaptureEnabled: true,
+      executeProviderCalls: true,
+      approvedManualRun: true,
+      scriptPropertyConfirmed: true,
+      visibleDeliveryEnabled: false,
+      externalWritesEnabled: false,
+      dispatchEnabled: false,
+      triggerEnabled: false,
+      fallbackEnabled: false
+    },
+    estimatedCostUsd: preflight.estimatedCostUsd
+  });
+  var roleShape = getMissionCommandStage33RRoleResultsFromCapture(capture);
+  if (!roleShape.ok) {
+    var failedFinalize = finalizeMissionCommandStage33RParentReceipt(adapter, preflight.oneTimeRunId, {
+      version: expectedVersion,
+      etag: expectedEtag
+    });
+    return {
+      ok: false,
+      status: failedFinalize.status || 'failed',
+      build: MC_STAGE33R_GATE_B1_BUILD,
+      wrapperName: MC_STAGE33R_GATE_B2_WRAPPER_NAME,
+      oneTimeRunId: preflight.oneTimeRunId,
+      captureKey: preflight.captureKey,
+      relatedObject: preflight.relatedObject,
+      parentReceiptId: parentClaim.receiptId || failedFinalize.receiptId || '',
+      childrenWritten: failedFinalize.childrenWritten || 0,
+      childrenValid: failedFinalize.childrenValid || 0,
+      captureStatus: sanitizeMissionCommandOpenAiShadowTextV31(capture && capture.status || 'capture_unavailable', 80),
+      stopCondition: roleShape.stopCondition,
+      maxCallCount: MC_STAGE33R_GATE_B2_MAX_CALL_COUNT,
+      retryCount: 0,
+      fallbackUsed: false,
+      visibleDelivery: false,
+      dispatch: false,
+      externalWrite: false,
+      nextAction: 'A1XX reviews failed safe receipt; no automatic retry is authorized.'
+    };
+  }
+  var roleResults = roleShape.roles;
+  roleResults.forEach(function(roleResult) {
+    appendMissionCommandStage33RChildReceipt(adapter, preflight.oneTimeRunId, roleResult.role, roleResult.candidate || {}, {
+      latencyMs: roleResult.latencyMs || 0,
+      inputTokens: roleResult.inputTokens || 0,
+      cachedInputTokens: roleResult.cachedInputTokens || 0,
+      cacheWriteTokens: roleResult.cacheWriteTokens || 0,
+      outputTokens: roleResult.outputTokens || 0,
+      reasoningTokens: roleResult.reasoningTokens || 0,
+      estimatedCost: roleResult.estimatedCost || 0
+    });
+  });
+  var finalized = finalizeMissionCommandStage33RParentReceipt(adapter, preflight.oneTimeRunId, {
+    version: expectedVersion,
+    etag: expectedEtag
+  });
+  return {
+    ok: finalized.ok === true && capture && capture.ok === true,
+    status: finalized.status || 'failed',
+    build: MC_STAGE33R_GATE_B1_BUILD,
+    wrapperName: MC_STAGE33R_GATE_B2_WRAPPER_NAME,
+    oneTimeRunId: preflight.oneTimeRunId,
+    captureKey: preflight.captureKey,
+    relatedObject: preflight.relatedObject,
+    parentReceiptId: parentClaim.receiptId || finalized.receiptId || '',
+    childrenWritten: finalized.childrenWritten || 0,
+    childrenValid: finalized.childrenValid || 0,
+    captureStatus: sanitizeMissionCommandOpenAiShadowTextV31(capture && capture.status || 'capture_unavailable', 80),
+    stopCondition: sanitizeMissionCommandOpenAiShadowTextV31(capture && capture.stopCondition || finalized.stopCondition || finalized.status || '', 120),
+    maxCallCount: MC_STAGE33R_GATE_B2_MAX_CALL_COUNT,
+    retryCount: 0,
+    fallbackUsed: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false,
+    nextAction: 'A1XX retrieves parent and child rows by related_object, then syncs disabled source.'
+  };
+}
+
+function runMissionCommandStage33RReceiptLocalChecks() {
+  var stage31 = runMissionCommandOpenAiShadowFoundationChecksV31();
+  var stage32 = runMissionCommandOpenAiStage32LocalChecks();
+  var stage33 = runMissionCommandOpenAiStage33LocalChecks();
+  var runId = 'stage33r_gate_a_local_run';
+  var missingHeaders = getMissionCommandStage33RRequiredReceiptHeaders().filter(function(header) { return header !== 'safe_summary'; });
+  var missingAdapter = makeMissionCommandStage33RLocalReceiptAdapter(missingHeaders, []);
+  var missingHeaderResult = claimMissionCommandStage33RParentReceipt(missingAdapter, runId);
+  var duplicateKey = makeMissionCommandStage33RCaptureKey(runId);
+  var existingParent = makeMissionCommandStage33RRuntimeReceiptRow({
+    receiptId: makeMissionCommandStage33RReceiptId('parent', duplicateKey),
+    receiptType: MC_STAGE33R_PARENT_RECEIPT_TYPE,
+    relatedObject: 'mc33r:' + duplicateKey,
+    result: 'receipt_draft',
+    role: MC_STAGE33R_ROLE_ORDER.join('+'),
+    requestId: runId,
+    safeSummary: { captureKey: duplicateKey, childrenExpected: 2, childrenWritten: 0, childrenValid: 0 }
+  }).row;
+  var duplicateAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, [existingParent]);
+  var duplicateResult = claimMissionCommandStage33RParentReceipt(duplicateAdapter, runId);
+  var claimFailAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, [], { appendFails: true });
+  var claimFailResult = claimMissionCommandStage33RParentReceipt(claimFailAdapter, runId);
+  var successAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  var parent = claimMissionCommandStage33RParentReceipt(successAdapter, runId);
+  var parentBeforeFinalize = findMissionCommandStage33RParent(successAdapter, makeMissionCommandStage33RCaptureKey(runId));
+  var expectedParentVersion = parentBeforeFinalize ? parentBeforeFinalize.row.version : '';
+  var expectedParentEtag = parentBeforeFinalize ? parentBeforeFinalize.row.etag : '';
+  var childEa = appendMissionCommandStage33RChildReceipt(successAdapter, runId, 'executive_assistant', getMissionCommandStage33RValidFixtureCandidate('executive_assistant'), { inputTokens: 100, outputTokens: 40, estimatedCost: 0.01 });
+  var childCos = appendMissionCommandStage33RChildReceipt(successAdapter, runId, 'chief_of_staff', getMissionCommandStage33RValidFixtureCandidate('chief_of_staff'), { inputTokens: 110, outputTokens: 45, estimatedCost: 0.01 });
+  var finalized = finalizeMissionCommandStage33RParentReceipt(successAdapter, runId, { version: expectedParentVersion, etag: expectedParentEtag });
+  var staleRunId = 'stage33r_gate_a_stale_run';
+  var staleAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  claimMissionCommandStage33RParentReceipt(staleAdapter, staleRunId);
+  appendMissionCommandStage33RChildReceipt(staleAdapter, staleRunId, 'executive_assistant', getMissionCommandStage33RValidFixtureCandidate('executive_assistant'), {});
+  appendMissionCommandStage33RChildReceipt(staleAdapter, staleRunId, 'chief_of_staff', getMissionCommandStage33RValidFixtureCandidate('chief_of_staff'), {});
+  var staleCaptureKey = makeMissionCommandStage33RCaptureKey(staleRunId);
+  var staleParentBefore = findMissionCommandStage33RParent(staleAdapter, staleCaptureKey);
+  var staleParentSnapshot = staleParentBefore ? stringifyMissionCommandStage33RCanonical(staleParentBefore.row) : '';
+  var staleFinal = finalizeMissionCommandStage33RParentReceipt(staleAdapter, staleRunId, { version: 999, etag: 'stale_etag' });
+  var staleParentAfter = findMissionCommandStage33RParent(staleAdapter, staleCaptureKey);
+  var staleParentUnchanged = staleParentAfter ? stringifyMissionCommandStage33RCanonical(staleParentAfter.row) === staleParentSnapshot : false;
+  var partialAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  claimMissionCommandStage33RParentReceipt(partialAdapter, runId);
+  appendMissionCommandStage33RChildReceipt(partialAdapter, runId, 'executive_assistant', getMissionCommandStage33RValidFixtureCandidate('executive_assistant'), {});
+  var partialFinal = finalizeMissionCommandStage33RParentReceipt(partialAdapter, runId);
+  var evidenceOne = makeMissionCommandStage33RCandidateEvidence(getMissionCommandStage33RValidFixtureCandidate('executive_assistant'));
+  var evidenceTwo = makeMissionCommandStage33RCandidateEvidence(getMissionCommandStage33RValidFixtureCandidate('executive_assistant'));
+  var unsafeRow = makeMissionCommandStage33RRuntimeReceiptRow({
+    receiptId: 'unsafe',
+    receiptType: MC_STAGE33R_ROLE_RECEIPT_TYPE,
+    relatedObject: 'mc33r:unsafe',
+    result: 'logged',
+    role: 'executive_assistant',
+    requestId: 'unsafe',
+    safeSummary: {
+      captureKey: 'unsafe',
+      role: 'executive_assistant',
+      candidateEvidence: 'raw_prompt: should fail'
+    }
+  });
+  var lockFailAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, [], { lockAvailable: false });
+  var lockFail = claimMissionCommandStage33RParentReceipt(lockFailAdapter, runId);
+  var defaultFlags = getMissionCommandStage33RReceiptFlags();
+  var defaultFlagsClosed = Object.keys(defaultFlags).every(function(key) { return defaultFlags[key] === false; });
+  var allRowsSafe = successAdapter.rows.every(function(row) {
+    return assertMissionCommandStage33RReceiptSafe(row).ok === true &&
+      row.team_chat_receipt_url === '' &&
+      row.privacy_class === MC_STAGE33R_PRIVACY_CLASS &&
+      row.retention_class === MC_STAGE33R_RETENTION_CLASS;
+  });
+  return {
+    ok: stage31.ok === true &&
+      stage32.ok === true &&
+      stage32.blockedDefaultOff === true &&
+      stage33.ok === true &&
+      stage33.blockedDefaultOff === true &&
+      missingHeaderResult.ok === false &&
+      missingHeaderResult.stopCondition === 'receipt_contract_invalid' &&
+      duplicateResult.status === 'duplicate_suppressed' &&
+      duplicateAdapter.appendedRows === 0 &&
+      claimFailResult.ok === false &&
+      claimFailResult.stopCondition === 'receipt_claim_failed' &&
+      parent.ok === true &&
+      childEa.ok === true &&
+      childCos.ok === true &&
+      finalized.ok === true &&
+      staleFinal.ok === false &&
+      staleFinal.stopCondition === 'receipt_conflict' &&
+      staleParentUnchanged === true &&
+      successAdapter.rows.length === 3 &&
+      partialFinal.ok === false &&
+      partialFinal.status === 'failed' &&
+      partialAdapter.rows.length === 2 &&
+      evidenceOne.ok === true &&
+      evidenceOne.evidence === evidenceTwo.evidence &&
+      unsafeRow.ok === false &&
+      lockFail.ok === false &&
+      lockFail.stopCondition === 'lock_unavailable' &&
+      defaultFlagsClosed === true &&
+      allRowsSafe === true,
+    build: MC_STAGE33R_RECEIPT_BUILD,
+    stage31Ok: stage31.ok === true,
+    stage32ClosedDefaultOff: stage32.ok === true && stage32.blockedDefaultOff === true,
+    stage33ClosedDefaultOff: stage33.ok === true && stage33.blockedDefaultOff === true,
+    missingInvalidHeadersFailClosed: missingHeaderResult.ok === false,
+    duplicateParentSuppressed: duplicateResult.status === 'duplicate_suppressed',
+    duplicateProviderCallAttempted: false,
+    duplicateAppendedRows: duplicateAdapter.appendedRows,
+    claimFailureProviderCallAttempted: false,
+    staleWriteBlocked: staleFinal.ok === false && staleFinal.stopCondition === 'receipt_conflict',
+    staleParentUnchanged: staleParentUnchanged,
+    staleWriteProviderCallAttempted: false,
+    syntheticSuccessRows: successAdapter.rows.length,
+    partialRowsPreserved: partialAdapter.rows.length,
+    partialResult: partialFinal.status,
+    deterministicCandidateEvidence: evidenceOne.ok === true && evidenceOne.evidence === evidenceTwo.evidence,
+    unsafeFieldsRejected: unsafeRow.ok === false,
+    lockUnavailableFailsClosed: lockFail.ok === false,
+    defaultFlagsClosed: defaultFlagsClosed,
+    lockEvents: successAdapter.lockEvents,
+    providerCall: false,
+    liveSheetWrite: false,
+    scriptPropertiesAccessed: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function runMissionCommandStage33RGateB1LocalChecks() {
+  var gateA = runMissionCommandStage33RReceiptLocalChecks();
+  var proposedRunId = MC_STAGE33R_GATE_B2_PROPOSED_RUN_ID;
+  var proposedCaptureKey = makeMissionCommandStage33RCaptureKey(proposedRunId);
+  var defaultPreflight = getMissionCommandStage33RGateB2Preflight({});
+  var approvedPreflight = getMissionCommandStage33RGateB2Preflight({
+    oneTimeRunId: proposedRunId,
+    estimatedCostUsd: MC_OPENAI_STAGE33_PREFLIGHT_ESTIMATED_SPEND_USD,
+    flags: {
+      stage33RReceiptLayerEnabled: true,
+      liveSheetWriteEnabled: true,
+      providerExecutionEnabled: true,
+      scriptPropertiesEnabled: true,
+      approvedManualRun: true,
+      visibleDeliveryEnabled: false,
+      dispatchEnabled: false,
+      externalWritesEnabled: false,
+      triggerEnabled: false
+    }
+  });
+  var overCostPreflight = getMissionCommandStage33RGateB2Preflight({
+    oneTimeRunId: proposedRunId,
+    estimatedCostUsd: 0.11,
+    flags: {
+      stage33RReceiptLayerEnabled: true,
+      liveSheetWriteEnabled: true,
+      providerExecutionEnabled: true,
+      scriptPropertiesEnabled: true,
+      approvedManualRun: true
+    }
+  });
+  var wrongRunPreflight = getMissionCommandStage33RGateB2Preflight({
+    oneTimeRunId: 'mc_stage33r_unapproved_run',
+    estimatedCostUsd: MC_OPENAI_STAGE33_PREFLIGHT_ESTIMATED_SPEND_USD,
+    flags: {
+      stage33RReceiptLayerEnabled: true,
+      liveSheetWriteEnabled: true,
+      providerExecutionEnabled: true,
+      scriptPropertiesEnabled: true,
+      approvedManualRun: true
+    }
+  });
+  var headers = getMissionCommandStage33RRequiredReceiptHeaders();
+  var sheetRows = [];
+  var stubSheet = {
+    getLastColumn: function() { return headers.length; },
+    getLastRow: function() { return sheetRows.length + 1; },
+    getRange: function(row, column, rowCount, columnCount) {
+      return {
+        getValues: function() {
+          if (row === 1) return [headers.slice(0, columnCount)];
+          return sheetRows.slice(row - 2, row - 2 + rowCount).map(function(values) {
+            return values.slice(0, columnCount);
+          });
+        },
+        setValues: function(values) {
+          sheetRows[row - 2] = values[0].slice();
+        }
+      };
+    },
+    appendRow: function(values) {
+      sheetRows.push(values.slice());
+    }
+  };
+  var stubSpreadsheet = {
+    getSheetByName: function(name) {
+      return name === MC_STAGE33R_RECEIPT_SHEET_NAME ? stubSheet : null;
+    }
+  };
+  var stubLock = {
+    locked: false,
+    tryLock: function(timeoutMs) {
+      this.locked = timeoutMs === MC_STAGE33R_LOCK_TIMEOUT_MS;
+      return this.locked;
+    },
+    releaseLock: function() {
+      this.locked = false;
+    }
+  };
+  var liveAdapterStub = makeMissionCommandStage33RLiveReceiptAdapter({
+    spreadsheet: stubSpreadsheet,
+    lock: stubLock
+  });
+  var parent = claimMissionCommandStage33RParentReceipt(liveAdapterStub, proposedRunId);
+  var duplicate = claimMissionCommandStage33RParentReceipt(liveAdapterStub, proposedRunId);
+  var parentBeforeFinalize = findMissionCommandStage33RParent(liveAdapterStub, proposedCaptureKey);
+  var childEa = appendMissionCommandStage33RChildReceipt(liveAdapterStub, proposedRunId, 'executive_assistant', getMissionCommandStage33RValidFixtureCandidate('executive_assistant'), {});
+  var childCos = appendMissionCommandStage33RChildReceipt(liveAdapterStub, proposedRunId, 'chief_of_staff', getMissionCommandStage33RValidFixtureCandidate('chief_of_staff'), {});
+  var finalized = finalizeMissionCommandStage33RParentReceipt(liveAdapterStub, proposedRunId, {
+    version: parentBeforeFinalize ? parentBeforeFinalize.row.version : '',
+    etag: parentBeforeFinalize ? parentBeforeFinalize.row.etag : ''
+  });
+  var concurrentRows = [];
+  var concurrentSheet = {
+    getLastColumn: function() { return headers.length; },
+    getLastRow: function() { return concurrentRows.length + 1; },
+    getRange: function(row, column, rowCount, columnCount) {
+      return {
+        getValues: function() {
+          if (row === 1) return [headers.slice(0, columnCount)];
+          return concurrentRows.slice(row - 2, row - 2 + rowCount).map(function(values) {
+            return values.slice(0, columnCount);
+          });
+        },
+        setValues: function(values) {
+          concurrentRows[row - 2] = values[0].slice();
+        }
+      };
+    },
+    appendRow: function(values) {
+      concurrentRows.push(values.slice());
+    }
+  };
+  var concurrentSpreadsheet = {
+    getSheetByName: function(name) {
+      return name === MC_STAGE33R_RECEIPT_SHEET_NAME ? concurrentSheet : null;
+    }
+  };
+  var concurrentLock = {
+    tryLock: function(timeoutMs) { return timeoutMs === MC_STAGE33R_LOCK_TIMEOUT_MS; },
+    releaseLock: function() {}
+  };
+  var concurrentAdapterOne = makeMissionCommandStage33RLiveReceiptAdapter({ spreadsheet: concurrentSpreadsheet, lock: concurrentLock });
+  var concurrentAdapterTwo = makeMissionCommandStage33RLiveReceiptAdapter({ spreadsheet: concurrentSpreadsheet, lock: concurrentLock });
+  var concurrentParentOne = claimMissionCommandStage33RParentReceipt(concurrentAdapterOne, proposedRunId);
+  var concurrentParentTwo = claimMissionCommandStage33RParentReceipt(concurrentAdapterTwo, proposedRunId);
+  var concurrentParentCount = concurrentRows.map(function(values) {
+    return makeMissionCommandStage33RRowObject(headers, values);
+  }).filter(function(row) {
+    return row.receipt_type === MC_STAGE33R_PARENT_RECEIPT_TYPE &&
+      row.related_object === 'mc33r:' + proposedCaptureKey;
+  }).length;
+  var concurrentChildAdapterOne = makeMissionCommandStage33RLiveReceiptAdapter({ spreadsheet: concurrentSpreadsheet, lock: concurrentLock });
+  var concurrentChildAdapterTwo = makeMissionCommandStage33RLiveReceiptAdapter({ spreadsheet: concurrentSpreadsheet, lock: concurrentLock });
+  var concurrentChildOne = appendMissionCommandStage33RChildReceipt(concurrentChildAdapterOne, proposedRunId, 'executive_assistant', getMissionCommandStage33RValidFixtureCandidate('executive_assistant'), {});
+  var concurrentChildTwo = appendMissionCommandStage33RChildReceipt(concurrentChildAdapterTwo, proposedRunId, 'executive_assistant', getMissionCommandStage33RValidFixtureCandidate('executive_assistant'), {});
+  var concurrentRowsAfterChild = concurrentRows.map(function(values) {
+    return makeMissionCommandStage33RRowObject(headers, values);
+  });
+  var concurrentEaChildCount = concurrentRowsAfterChild.filter(function(row) {
+    return row.receipt_type === MC_STAGE33R_ROLE_RECEIPT_TYPE &&
+      row.role === 'executive_assistant' &&
+      row.related_object === 'mc33r:' + proposedCaptureKey;
+  }).length;
+  var concurrentFinalizeAdapter = makeMissionCommandStage33RLiveReceiptAdapter({ spreadsheet: concurrentSpreadsheet, lock: concurrentLock });
+  var concurrentParentBeforeFinalize = concurrentRowsAfterChild.filter(function(row) {
+    return row.receipt_type === MC_STAGE33R_PARENT_RECEIPT_TYPE &&
+      row.related_object === 'mc33r:' + proposedCaptureKey;
+  })[0];
+  var concurrentCosChild = appendMissionCommandStage33RChildReceipt(
+    makeMissionCommandStage33RLiveReceiptAdapter({ spreadsheet: concurrentSpreadsheet, lock: concurrentLock }),
+    proposedRunId,
+    'chief_of_staff',
+    getMissionCommandStage33RValidFixtureCandidate('chief_of_staff'),
+    {}
+  );
+  var concurrentFinalized = finalizeMissionCommandStage33RParentReceipt(concurrentFinalizeAdapter, proposedRunId, {
+    version: concurrentParentBeforeFinalize ? concurrentParentBeforeFinalize.version : '',
+    etag: concurrentParentBeforeFinalize ? concurrentParentBeforeFinalize.etag : ''
+  });
+  var syntheticCapture = makeMissionCommandOpenAiStage33SafeCapture('capture_complete', [
+    makeMissionCommandOpenAiStage33RoleResult('executive_assistant', { usage: { input_tokens: 10, output_tokens: 5 } }, {
+      status: 'capture_valid',
+      structuredOutputValid: true,
+      candidate: getMissionCommandStage33RValidFixtureCandidate('executive_assistant')
+    }),
+    makeMissionCommandOpenAiStage33RoleResult('chief_of_staff', { usage: { input_tokens: 11, output_tokens: 6 } }, {
+      status: 'capture_valid',
+      structuredOutputValid: true,
+      candidate: getMissionCommandStage33RValidFixtureCandidate('chief_of_staff')
+    })
+  ], { stopCondition: 'manual_capture_complete', estimatedCost: MC_OPENAI_STAGE33_PREFLIGHT_ESTIMATED_SPEND_USD });
+  var roleShape = getMissionCommandStage33RRoleResultsFromCapture(syntheticCapture);
+  var badRoleShape = getMissionCommandStage33RRoleResultsFromCapture({ roles: [{ role: 'chief_of_staff' }] });
+  var flags = getMissionCommandStage33RReceiptFlags();
+  var defaultFlagsClosed = Object.keys(flags).every(function(key) { return flags[key] === false; });
+  return {
+    ok: gateA.ok === true &&
+      defaultPreflight.ok === false &&
+      approvedPreflight.ok === true &&
+      approvedPreflight.wrapperName === MC_STAGE33R_GATE_B2_WRAPPER_NAME &&
+      approvedPreflight.oneTimeRunId === proposedRunId &&
+      approvedPreflight.captureKey === proposedCaptureKey &&
+      approvedPreflight.sheetName === MC_STAGE33R_RECEIPT_SHEET_NAME &&
+      approvedPreflight.stage33RequestCount === 2 &&
+      approvedPreflight.maxCallCount === 2 &&
+      approvedPreflight.estimatedCostUsd <= MC_STAGE33R_GATE_B2_MAX_ESTIMATED_SPEND_USD &&
+      overCostPreflight.ok === false &&
+      overCostPreflight.stopCondition === 'estimated_cost_cap_exceeded' &&
+      wrongRunPreflight.ok === false &&
+      wrongRunPreflight.stopCondition === 'run_id_not_approved' &&
+      parent.ok === true &&
+      duplicate.status === 'duplicate_suppressed' &&
+      duplicate.providerCallAttempted === false &&
+      childEa.ok === true &&
+      childCos.ok === true &&
+      finalized.ok === true &&
+      liveAdapterStub.rows.length === 3 &&
+      sheetRows.length === 3 &&
+      liveAdapterStub.updatedRows === 1 &&
+      concurrentParentOne.ok === true &&
+      concurrentParentTwo.status === 'duplicate_suppressed' &&
+      concurrentParentTwo.providerCallAttempted === false &&
+      concurrentParentCount === 1 &&
+      concurrentChildOne.ok === true &&
+      concurrentChildTwo.status === 'duplicate_child_suppressed' &&
+      concurrentEaChildCount === 1 &&
+      concurrentCosChild.ok === true &&
+      concurrentFinalized.ok === true &&
+      concurrentFinalized.childrenWritten === 2 &&
+      roleShape.ok === true &&
+      roleShape.roles.length === 2 &&
+      badRoleShape.ok === false &&
+      defaultFlagsClosed === true,
+    build: MC_STAGE33R_GATE_B1_BUILD,
+    gateAOk: gateA.ok === true,
+    wrapperName: MC_STAGE33R_GATE_B2_WRAPPER_NAME,
+    proposedOneTimeRunId: proposedRunId,
+    deterministicCaptureKey: proposedCaptureKey,
+    relatedObject: 'mc33r:' + proposedCaptureKey,
+    sheetName: MC_STAGE33R_RECEIPT_SHEET_NAME,
+    canonicalHeadersPresent: validateMissionCommandStage33RReceiptHeaders(headers).ok === true,
+    defaultPreflightBlocked: defaultPreflight.ok === false,
+    approvedPreflightReady: approvedPreflight.ok === true,
+    overCostBlocked: overCostPreflight.stopCondition === 'estimated_cost_cap_exceeded',
+    wrongRunBlocked: wrongRunPreflight.stopCondition === 'run_id_not_approved',
+    duplicateSuppressedBeforeProvider: duplicate.status === 'duplicate_suppressed' && duplicate.providerCallAttempted === false,
+    concurrentParentRefreshDuplicateSuppressed: concurrentParentTwo.status === 'duplicate_suppressed' && concurrentParentCount === 1,
+    concurrentParentRefreshProviderCallAttempted: false,
+    concurrentChildRefreshDuplicateSuppressed: concurrentChildTwo.status === 'duplicate_child_suppressed' && concurrentEaChildCount === 1,
+    concurrentFinalizeRefreshSawBothChildren: concurrentFinalized.ok === true && concurrentFinalized.childrenWritten === 2,
+    stage33CaptureRoleShapeValid: roleShape.ok === true && roleShape.roles.length === 2,
+    stage33CaptureRoleShapeInvalidBlocked: badRoleShape.ok === false,
+    liveAdapterStubRows: liveAdapterStub.rows.length,
+    liveAdapterStubSheetRows: sheetRows.length,
+    versionEtagFinalizationUpdatedRows: liveAdapterStub.updatedRows,
+    defaultFlagsClosed: defaultFlagsClosed,
+    maxCallCount: MC_STAGE33R_GATE_B2_MAX_CALL_COUNT,
+    maxEstimatedSpendUsd: MC_STAGE33R_GATE_B2_MAX_ESTIMATED_SPEND_USD,
+    timeoutSeconds: MC_OPENAI_STAGE33_TIMEOUT_SECONDS,
+    maxInputTokensPerRole: MC_OPENAI_STAGE33_MAX_INPUT_TOKENS_PER_ROLE,
+    maxOutputTokensPerRole: MC_OPENAI_STAGE33_MAX_OUTPUT_TOKENS_PER_ROLE,
+    providerCall: false,
+    liveSheetReadWrite: false,
+    scriptPropertiesAccessed: false,
+    wrapperInvoked: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleRuntimeMutation: false,
+    visibleInboxMutation: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+// Mission Command Stage 3.4 Gate B1 deterministic shadow engine port.
+// Gate B1 only: pure local decisions and fake receipt rows, with no live source/provider behavior.
+var MC_STAGE34_GATE_B1_BUILD = 'mmos-20260712-stage3-4-gate-b1-apps-script-port';
+var MC_STAGE34_GATE_B1_CONTRACT_VERSION = 'mc_stage_3_4_shadow_engine_v1';
+var MC_STAGE34_GATE_B1_STAGE_ID = '3.4';
+var MC_STAGE34_GATE_B1_PROFILE_ID = 'a1xx-primary';
+var MC_STAGE34_GATE_B1_SOURCE = 'stage_3_4_shadow_fixture';
+var MC_STAGE34_GATE_B1_PRIVACY_CLASS = 'internal_shadow_redacted';
+var MC_STAGE34_GATE_B1_RETENTION_CLASS = 'compact_receipt_365_days';
+var MC_STAGE34_GATE_B1_FIXTURE_SHA256 = 'e84a369b458669d3c60322e33ad5351d22a7f8078db0e10727b15d0d0202262b';
+var MC_STAGE34_GATE_B1_PROVIDER_ENABLED = false;
+var MC_STAGE34_GATE_B1_RECEIPT_WRITE_ENABLED = false;
+var MC_STAGE34_GATE_B1_SOURCE_READ_ENABLED = false;
+var MC_STAGE34_GATE_B1_TRIGGER_ENABLED = false;
+var MC_STAGE34_GATE_B1_VISIBLE_DELIVERY_ENABLED = false;
+var MC_STAGE34_GATE_B1_DISPATCH_ENABLED = false;
+var MC_STAGE34_GATE_B1_KILL_SWITCH = true;
+var MC_STAGE34_GATE_B1_REQUIRED_EVENT_FIELDS = [
+  'source_class',
+  'source_label',
+  'event_type',
+  'occurred_at',
+  'observed_at',
+  'status_bucket',
+  'due_bucket',
+  'owner_bucket',
+  'mission_or_project_label',
+  'blocker_bucket',
+  'review_bucket',
+  'safe_summary'
+];
+var MC_STAGE34_GATE_B1_ALLOWED_SOURCE_CLASSES = ['fixture'];
+var MC_STAGE34_GATE_B1_ALLOWED_PRIORITIES = ['critical', 'important', 'routine', 'low'];
+var MC_STAGE34_GATE_B1_ALLOWED_FRESHNESS = ['fresh', 'stale', 'partial', 'blocked'];
+var MC_STAGE34_GATE_B1_MATERIAL_REOPEN_CODES = [
+  'new_critical_approval',
+  'missing_input_detected',
+  'a1xx_waiting_state_added',
+  'review_queue_count_increased',
+  'dependency_linked_to_multiple_lanes',
+  'stall_threshold_reached',
+  'due_bucket_worsened',
+  'blocker_cleared',
+  'chief_escalation_required',
+  'returning_with_current_action',
+  'merge_compatible_events_detected'
+];
+var MC_STAGE34_GATE_B1_ORACLE_FIELDS = [
+  'expected_outcome',
+  'candidate_text',
+  'role_owner',
+  'candidate_family_key',
+  'suppression_decision',
+  'next_move_type',
+  'escalated_from'
+];
+
+function getMissionCommandStage34GateB1Flags() {
+  return {
+    provider_call: false,
+    live_sheet_read: false,
+    live_sheet_write: false,
+    runtime_receipt_write: false,
+    script_properties_access: false,
+    trigger: false,
+    worker: false,
+    route_ui: false,
+    visible_inbox: false,
+    dispatch: false,
+    external_write: false,
+    team_chat_notion_api: false,
+    production_html: false,
+    apps_script_edit: false,
+    stage4: false,
+    workstream_e: false,
+    gate_b2: false,
+    gate_b3: false
+  };
+}
+
+function getMissionCommandStage34GateB1FeatureFlags() {
+  return {
+    build: MC_STAGE34_GATE_B1_BUILD,
+    contractVersion: MC_STAGE34_GATE_B1_CONTRACT_VERSION,
+    providerEnabled: MC_STAGE34_GATE_B1_PROVIDER_ENABLED,
+    receiptWriteEnabled: MC_STAGE34_GATE_B1_RECEIPT_WRITE_ENABLED,
+    sourceReadEnabled: MC_STAGE34_GATE_B1_SOURCE_READ_ENABLED,
+    triggerEnabled: MC_STAGE34_GATE_B1_TRIGGER_ENABLED,
+    visibleDeliveryEnabled: MC_STAGE34_GATE_B1_VISIBLE_DELIVERY_ENABLED,
+    dispatchEnabled: MC_STAGE34_GATE_B1_DISPATCH_ENABLED,
+    killSwitch: MC_STAGE34_GATE_B1_KILL_SWITCH
+  };
+}
+
+function missionCommandStage34GateB1ArrayHas(items, value) {
+  for (var i = 0; i < items.length; i++) {
+    if (items[i] === value) return true;
+  }
+  return false;
+}
+
+function missionCommandStage34GateB1Clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function missionCommandStage34GateB1SortStable(value) {
+  if (Array.isArray(value)) {
+    return value.map(function(item) { return missionCommandStage34GateB1SortStable(item); });
+  }
+  if (!value || typeof value !== 'object') return value;
+  var keys = Object.keys(value).sort();
+  var out = {};
+  for (var i = 0; i < keys.length; i++) {
+    out[keys[i]] = missionCommandStage34GateB1SortStable(value[keys[i]]);
+  }
+  return out;
+}
+
+function missionCommandStage34GateB1Hash(value) {
+  var text = JSON.stringify(missionCommandStage34GateB1SortStable(value));
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8);
+  var hex = '';
+  for (var i = 0; i < bytes.length; i++) {
+    var b = bytes[i];
+    if (b < 0) b += 256;
+    var h = b.toString(16);
+    if (h.length === 1) h = '0' + h;
+    hex += h;
+  }
+  return hex;
+}
+
+function stripMissionCommandStage34GateB1OracleFields(input) {
+  var copy = missionCommandStage34GateB1Clone(input || {});
+  for (var i = 0; i < MC_STAGE34_GATE_B1_ORACLE_FIELDS.length; i++) {
+    delete copy[MC_STAGE34_GATE_B1_ORACLE_FIELDS[i]];
+  }
+  return copy;
+}
+
+function getMissionCommandStage34GateB1OracleFieldsSeen(input) {
+  var seen = [];
+  input = input || {};
+  for (var i = 0; i < MC_STAGE34_GATE_B1_ORACLE_FIELDS.length; i++) {
+    var field = MC_STAGE34_GATE_B1_ORACLE_FIELDS[i];
+    if (Object.prototype.hasOwnProperty.call(input, field)) seen.push(field);
+  }
+  return seen;
+}
+
+function labelMissionCommandStage34GateB1NextMove(nextMoveType) {
+  var labels = {
+    approve_or_revise: 'review and approve or revise',
+    provide_context: 'provide context',
+    reply: 'reply',
+    coordinate_review: 'coordinate review',
+    resolve_dependency: 'review the dependency',
+    assign_unblocker: 'stage an unblocker for review',
+    resume_handoff: 'prepare the handoff to resume',
+    choose_direction: 'choose direction',
+    choose_scope: 'choose scope',
+    review_source_allowlist: 'review source allowlist',
+    wait_for_provider_recovery: 'wait for provider recovery',
+    review_budget_cap: 'review budget cap',
+    route_review_required: 'route review required',
+    none: 'none'
+  };
+  return labels[nextMoveType] || 'route review required';
+}
+
+function normalizeMissionCommandStage34GateB1Event(input) {
+  input = input || {};
+  var event = input.normalized_event || {};
+  var missing = [];
+  for (var i = 0; i < MC_STAGE34_GATE_B1_REQUIRED_EVENT_FIELDS.length; i++) {
+    var field = MC_STAGE34_GATE_B1_REQUIRED_EVENT_FIELDS[i];
+    if (!Object.prototype.hasOwnProperty.call(event, field)) missing.push(field);
+  }
+  var priority = input.priority || 'routine';
+  var freshness = input.freshness || 'fresh';
+  var sourceClassAllowed = missionCommandStage34GateB1ArrayHas(MC_STAGE34_GATE_B1_ALLOWED_SOURCE_CLASSES, event.source_class);
+  var syntheticOnlyAllowed = input.synthetic_only === true;
+  var priorityAllowed = missionCommandStage34GateB1ArrayHas(MC_STAGE34_GATE_B1_ALLOWED_PRIORITIES, priority);
+  var freshnessAllowed = missionCommandStage34GateB1ArrayHas(MC_STAGE34_GATE_B1_ALLOWED_FRESHNESS, freshness);
+  return {
+    normalized: {
+      fixture_id: input.fixture_id || null,
+      synthetic_only: input.synthetic_only === true,
+      source_class: event.source_class,
+      source_label: event.source_label,
+      event_type: event.event_type,
+      occurred_at: event.occurred_at,
+      observed_at: event.observed_at,
+      status_bucket: event.status_bucket,
+      due_bucket: event.due_bucket,
+      owner_bucket: event.owner_bucket,
+      mission_or_project_label: event.mission_or_project_label,
+      blocker_bucket: event.blocker_bucket,
+      review_bucket: event.review_bucket,
+      safe_summary: event.safe_summary,
+      priority: priority,
+      freshness: freshness,
+      material_change: input.material_change || 'none'
+    },
+    validation: {
+      ok: missing.length === 0 && syntheticOnlyAllowed && sourceClassAllowed && priorityAllowed && freshnessAllowed,
+      missing: missing,
+      syntheticOnlyAllowed: syntheticOnlyAllowed,
+      sourceClassAllowed: sourceClassAllowed,
+      priorityAllowed: priorityAllowed,
+      freshnessAllowed: freshnessAllowed
+    }
+  };
+}
+
+function routeMissionCommandStage34GateB1Role(event) {
+  if (event.material_change === 'chief_escalation_required') {
+    return { role_owner: 'executive_assistant', escalated_from: 'chief_of_staff', route_review_required: false };
+  }
+  if (event.owner_bucket === 'a1xx' || event.review_bucket === 'needs_a1xx') {
+    return { role_owner: 'executive_assistant', escalated_from: null, route_review_required: false };
+  }
+  if (event.owner_bucket === 'unassigned' && event.status_bucket === 'ambiguous') {
+    return { role_owner: 'chief_of_staff', escalated_from: null, route_review_required: true };
+  }
+  return { role_owner: 'chief_of_staff', escalated_from: null, route_review_required: false };
+}
+
+function classifyMissionCommandStage34GateB1NextMove(event, route) {
+  if (route.route_review_required) return 'route_review_required';
+  if (event.blocker_bucket === 'privacy') return 'review_source_allowlist';
+  if (event.event_type === 'provider_unavailable') return 'wait_for_provider_recovery';
+  if (event.event_type === 'quota_cap_reached') return 'review_budget_cap';
+  if (event.freshness === 'stale') return 'none';
+  if (event.material_change === 'none') return 'none';
+  if (!missionCommandStage34GateB1ArrayHas(MC_STAGE34_GATE_B1_MATERIAL_REOPEN_CODES, event.material_change)) return 'route_review_required';
+  if (event.material_change === 'chief_escalation_required') {
+    return event.event_type === 'scope_conflict' ? 'choose_scope' : 'choose_direction';
+  }
+  if (event.event_type === 'client_follow_up') return 'reply';
+  if (event.event_type === 'meeting_readiness') return 'provide_context';
+  if (event.event_type === 'agent_stall') {
+    return event.status_bucket === 'ready_to_resume' ? 'resume_handoff' : 'assign_unblocker';
+  }
+  if (event.event_type === 'handoff_dependency') return 'resolve_dependency';
+  if (event.event_type === 'output_review_queue' || event.event_type === 'related_review_items') return 'coordinate_review';
+  if (event.owner_bucket === 'a1xx' || event.review_bucket === 'needs_a1xx') return 'approve_or_revise';
+  return 'none';
+}
+
+function classifyMissionCommandStage34GateB1Outcome(event, route) {
+  if (event.blocker_bucket === 'privacy' || event.status_bucket === 'privacy_blocked' || event.freshness === 'blocked' && event.blocker_bucket === 'privacy') {
+    return { outcome: 'privacy_blocked', suppression_decision: 'block_privacy', safe_failure_code: 'privacy_blocked' };
+  }
+  if (event.event_type === 'provider_unavailable' || event.status_bucket === 'provider_unavailable') {
+    return { outcome: 'provider_blocked', suppression_decision: 'block_provider', safe_failure_code: 'provider_unavailable' };
+  }
+  if (event.event_type === 'quota_cap_reached' || event.status_bucket === 'quota_limited') {
+    return { outcome: 'quota_blocked', suppression_decision: 'block_quota', safe_failure_code: 'quota_cap_reached' };
+  }
+  if (event.freshness === 'stale') {
+    return { outcome: 'stale_expired', suppression_decision: 'expire_stale_item', safe_failure_code: 'stale_expired' };
+  }
+  if (route.route_review_required) {
+    return { outcome: 'route_review_required', suppression_decision: 'hold_for_route_review', safe_failure_code: 'route_review_required' };
+  }
+  if (event.material_change === 'none') {
+    if (event.priority === 'low' && event.review_bucket === 'none') {
+      return { outcome: 'suppressed', suppression_decision: 'suppress_low_value_noise', safe_failure_code: 'low_value_noise' };
+    }
+    return { outcome: 'suppressed', suppression_decision: 'suppress_unchanged_duplicate', safe_failure_code: 'unchanged_duplicate' };
+  }
+  if (!missionCommandStage34GateB1ArrayHas(MC_STAGE34_GATE_B1_MATERIAL_REOPEN_CODES, event.material_change)) {
+    return { outcome: 'route_review_required', suppression_decision: 'hold_for_route_review', safe_failure_code: 'unknown_material_change' };
+  }
+  if (event.material_change === 'merge_compatible_events_detected') {
+    return { outcome: 'merged', suppression_decision: 'merge_with_related_event', safe_failure_code: null };
+  }
+  if (event.material_change === 'chief_escalation_required') {
+    return { outcome: 'hidden_candidate', suppression_decision: 'eligible_attributed_escalation', safe_failure_code: null };
+  }
+  if (event.material_change === 'returning_with_current_action') {
+    return { outcome: 'hidden_candidate', suppression_decision: 'eligible_dormant_return_cap_applied', safe_failure_code: null };
+  }
+  if (missionCommandStage34GateB1ArrayHas(MC_STAGE34_GATE_B1_MATERIAL_REOPEN_CODES, event.material_change) && /worsened|cleared/.test(event.material_change)) {
+    return { outcome: 'hidden_candidate', suppression_decision: 'reopen_material_change', safe_failure_code: null };
+  }
+  return { outcome: 'hidden_candidate', suppression_decision: 'eligible_new', safe_failure_code: null };
+}
+
+function getMissionCommandStage34GateB1SuppressionWindow(priority) {
+  if (priority === 'critical') return '4h';
+  if (priority === 'important') return '24h';
+  if (priority === 'low') return '7d';
+  return '72h';
+}
+
+function deriveMissionCommandStage34GateB1WhyNow(event, outcome) {
+  if (outcome === 'privacy_blocked') return 'privacy_or_allowlist_stop';
+  if (outcome === 'provider_blocked') return 'provider_stop_no_retry';
+  if (outcome === 'quota_blocked') return 'quota_stop_no_retry';
+  if (outcome === 'stale_expired') return 'stale_no_backlog_replay';
+  if (outcome === 'suppressed') return event.priority === 'low' ? 'low_value_noise' : 'unchanged_inside_window';
+  if (outcome === 'merged') return 'related_events_one_owner';
+  if (outcome === 'route_review_required') return event.safe_failure_code === 'unknown_material_change' ? 'unknown_material_change_fail_closed' : 'ambiguous_owner_fail_closed';
+  if (event.material_change === 'chief_escalation_required') return 'a1xx_decision_required_from_chief_context';
+  if (event.material_change === 'returning_with_current_action') return 'dormant_return_current_action_only';
+  if (missionCommandStage34GateB1ArrayHas(MC_STAGE34_GATE_B1_MATERIAL_REOPEN_CODES, event.material_change)) return 'material_change_reopened';
+  return 'eligible_new_signal';
+}
+
+function makeMissionCommandStage34GateB1Keys(event, route, nextMove) {
+  var materialState = {
+    source_class: event.source_class,
+    source_label: event.source_label,
+    event_type: event.event_type,
+    mission_or_project_label: event.mission_or_project_label,
+    status_bucket: event.status_bucket,
+    priority: event.priority,
+    due_bucket: event.due_bucket,
+    owner_bucket: event.owner_bucket,
+    blocker_bucket: event.blocker_bucket,
+    review_bucket: event.review_bucket,
+    material_change: event.material_change
+  };
+  var eventFingerprint = missionCommandStage34GateB1Hash(materialState);
+  var familyKey = missionCommandStage34GateB1Hash({
+    stage: 'mission_command_stage_3_4',
+    event_fingerprint: eventFingerprint,
+    role_owner: route.role_owner,
+    escalated_from: route.escalated_from || 'none'
+  });
+  var mergeKey = missionCommandStage34GateB1Hash({
+    role_owner: route.role_owner,
+    mission_or_project_label: event.mission_or_project_label,
+    due_bucket: event.due_bucket,
+    next_move_type: nextMove
+  });
+  return {
+    event_fingerprint: eventFingerprint,
+    event_fingerprint_summary: 'sha256:' + eventFingerprint.slice(0, 16),
+    candidate_family_key: 'mc34:' + familyKey,
+    merge_key: 'mc34merge:' + mergeKey,
+    related_object: 'mc34:' + familyKey
+  };
+}
+
+function decideMissionCommandStage34GateB1ShadowEvent(input) {
+  var oracleFieldsSeen = getMissionCommandStage34GateB1OracleFieldsSeen(input);
+  var normalizedBundle = normalizeMissionCommandStage34GateB1Event(input || {});
+  var event = normalizedBundle.normalized;
+  var route = routeMissionCommandStage34GateB1Role(event);
+  var nextMove = classifyMissionCommandStage34GateB1NextMove(event, route);
+  var outcome = normalizedBundle.validation.ok ?
+    classifyMissionCommandStage34GateB1Outcome(event, route) :
+    { outcome: 'privacy_blocked', suppression_decision: 'block_privacy', safe_failure_code: 'invalid_or_unallowlisted_event' };
+  var keys = makeMissionCommandStage34GateB1Keys(event, route, nextMove);
+  var eventForWhy = {};
+  for (var k in event) eventForWhy[k] = event[k];
+  eventForWhy.safe_failure_code = outcome.safe_failure_code;
+  return {
+    fixture_id: event.fixture_id,
+    source_class: event.source_class,
+    source_label: event.source_label,
+    event_type: event.event_type,
+    outcome: outcome.outcome,
+    role_owner: route.role_owner,
+    priority: event.priority,
+    freshness: event.freshness,
+    why_now_code: deriveMissionCommandStage34GateB1WhyNow(eventForWhy, outcome.outcome),
+    material_change: event.material_change,
+    material_change_reopens: missionCommandStage34GateB1ArrayHas(MC_STAGE34_GATE_B1_MATERIAL_REOPEN_CODES, event.material_change),
+    event_fingerprint: keys.event_fingerprint,
+    event_fingerprint_summary: keys.event_fingerprint_summary,
+    candidate_family_key: keys.candidate_family_key,
+    merge_key: keys.merge_key,
+    related_object: keys.related_object,
+    suppression_window: getMissionCommandStage34GateB1SuppressionWindow(event.priority),
+    suppression_decision: outcome.suppression_decision,
+    escalated_from: route.escalated_from || null,
+    next_move_type: nextMove,
+    protected_next_move_label: labelMissionCommandStage34GateB1NextMove(nextMove),
+    safe_failure_code: outcome.safe_failure_code,
+    oracle_fields_seen: oracleFieldsSeen,
+    validation: normalizedBundle.validation,
+    boundary_flags: getMissionCommandStage34GateB1Flags()
+  };
+}
+
+function mapMissionCommandStage34GateB1ReceiptRow(decision, requestId) {
+  decision = decision || {};
+  var receiptType = 'stage_3_4_candidate';
+  var result = 'logged';
+  if (decision.outcome === 'suppressed' || decision.outcome === 'merged') receiptType = 'stage_3_4_suppression';
+  else if (decision.outcome === 'privacy_blocked') {
+    receiptType = 'stage_3_4_privacy_block';
+    result = 'redacted';
+  } else if (decision.outcome === 'provider_blocked') {
+    receiptType = 'stage_3_4_provider_block';
+    result = 'failed';
+  } else if (decision.outcome === 'quota_blocked') {
+    receiptType = 'stage_3_4_budget_block';
+    result = 'failed';
+  } else if (decision.outcome === 'stale_expired') receiptType = 'stage_3_4_expiry';
+  else if (decision.outcome === 'route_review_required') receiptType = 'stage_3_4_failure';
+  return {
+    receipt_id: 'mc34b1_' + missionCommandStage34GateB1Hash({
+      related_object: decision.related_object || '',
+      request_id: requestId || '',
+      outcome: decision.outcome || ''
+    }).slice(0, 24),
+    profile_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    receipt_type: receiptType,
+    source: MC_STAGE34_GATE_B1_SOURCE,
+    related_object: decision.related_object || '',
+    result: result,
+    safe_summary: JSON.stringify({
+      stage: MC_STAGE34_GATE_B1_STAGE_ID,
+      build: MC_STAGE34_GATE_B1_BUILD,
+      fixture_id: decision.fixture_id || '',
+      outcome: decision.outcome || '',
+      role_owner: decision.role_owner || '',
+      priority: decision.priority || '',
+      freshness: decision.freshness || '',
+      why_now_code: decision.why_now_code || '',
+      suppression_decision: decision.suppression_decision || '',
+      next_move_type: decision.next_move_type || '',
+      protected_next_move_label: decision.protected_next_move_label || '',
+      no_provider_call: true,
+      no_live_sheet: true,
+      no_visible_delivery: true,
+      no_dispatch: true,
+      hash_only_evidence: true
+    }),
+    provider_key: '',
+    model_key: '',
+    role: decision.role_owner || '',
+    latency_ms: '',
+    input_tokens: '',
+    cached_input_tokens: '',
+    cache_write_tokens: '',
+    output_tokens: '',
+    reasoning_tokens: '',
+    retry_count: 0,
+    estimated_cost: '',
+    fallback_reason: decision.safe_failure_code || decision.suppression_decision || '',
+    safety_identifier_hash: decision.event_fingerprint || '',
+    created_at: '',
+    device_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    request_id: requestId || 'gate_b1_fake_adapter_only',
+    privacy_class: MC_STAGE34_GATE_B1_PRIVACY_CLASS,
+    retention_class: MC_STAGE34_GATE_B1_RETENTION_CLASS,
+    next_action: decision.next_move_type || 'none',
+    team_chat_receipt_url: '',
+    version: 1,
+    etag: missionCommandStage34GateB1Hash({
+      related_object: decision.related_object || '',
+      receipt_type: receiptType,
+      result: result,
+      safety_identifier_hash: decision.event_fingerprint || ''
+    }).slice(0, 32),
+    updated_at: '',
+    updated_by: MC_STAGE34_GATE_B1_BUILD,
+    last_request_id: requestId || 'gate_b1_fake_adapter_only'
+  };
+}
+
+function verifyMissionCommandStage34GateB1WithFixtures(fixturePayload) {
+  var opportunities = fixturePayload && fixturePayload.opportunities ? fixturePayload.opportunities : [];
+  var results = [];
+  var metrics = {
+    fixture_count: opportunities.length,
+    expected_outcomes_matched: 0,
+    role_ownership_matched: 0,
+    unchanged_duplicates_suppressed: 0,
+    material_changes_reopened: 0,
+    chief_escalations_attributed: 0,
+    hidden_candidates: 0,
+    suppressed: 0,
+    privacy_blocks: 0,
+    provider_blocks: 0,
+    quota_blocks: 0,
+    stale_expired: 0,
+    route_review_required: 0,
+    merged: 0,
+    oracle_separation_ok: true,
+    boundary_flags_ok: true,
+    protected_labels_ok: true,
+    fake_receipts_ok: true
+  };
+  var forbiddenLabelWords = /\b(assign|resolve|restart|clear)\b/i;
+  for (var i = 0; i < opportunities.length; i++) {
+    var fixture = opportunities[i];
+    var stripped = stripMissionCommandStage34GateB1OracleFields(fixture);
+    var decision = decideMissionCommandStage34GateB1ShadowEvent(stripped);
+    var mutated = missionCommandStage34GateB1Clone(fixture);
+    mutated.expected_outcome = 'mutated';
+    mutated.candidate_text = 'mutated';
+    mutated.role_owner = 'mutated';
+    mutated.candidate_family_key = 'mutated';
+    mutated.suppression_decision = 'mutated';
+    mutated.next_move_type = 'mutated';
+    mutated.escalated_from = 'mutated';
+    var mutatedDecision = decideMissionCommandStage34GateB1ShadowEvent(mutated);
+    if (decision.outcome !== mutatedDecision.outcome ||
+      decision.role_owner !== mutatedDecision.role_owner ||
+      decision.next_move_type !== mutatedDecision.next_move_type ||
+      decision.candidate_family_key !== mutatedDecision.candidate_family_key) metrics.oracle_separation_ok = false;
+    if (decision.outcome === fixture.expected_outcome) metrics.expected_outcomes_matched++;
+    if (decision.role_owner === fixture.role_owner) metrics.role_ownership_matched++;
+    if (decision.suppression_decision === 'suppress_unchanged_duplicate') metrics.unchanged_duplicates_suppressed++;
+    if (decision.suppression_decision === 'reopen_material_change') metrics.material_changes_reopened++;
+    if (decision.escalated_from === 'chief_of_staff') metrics.chief_escalations_attributed++;
+    if (decision.outcome === 'hidden_candidate') metrics.hidden_candidates++;
+    else if (decision.outcome === 'suppressed') metrics.suppressed++;
+    else if (decision.outcome === 'privacy_blocked') metrics.privacy_blocks++;
+    else if (decision.outcome === 'provider_blocked') metrics.provider_blocks++;
+    else if (decision.outcome === 'quota_blocked') metrics.quota_blocks++;
+    else if (decision.outcome === 'stale_expired') metrics.stale_expired++;
+    else if (decision.outcome === 'route_review_required') metrics.route_review_required++;
+    else if (decision.outcome === 'merged') metrics.merged++;
+    if (forbiddenLabelWords.test(decision.protected_next_move_label)) metrics.protected_labels_ok = false;
+    var flags = decision.boundary_flags || {};
+    for (var flag in flags) {
+      if (flags[flag] !== false) metrics.boundary_flags_ok = false;
+    }
+    var fakeRow = mapMissionCommandStage34GateB1ReceiptRow(decision, 'gate_b1_fixture_' + fixture.fixture_id);
+    if (fakeRow.provider_key || fakeRow.model_key || fakeRow.team_chat_receipt_url ||
+      fakeRow.privacy_class !== MC_STAGE34_GATE_B1_PRIVACY_CLASS ||
+      fakeRow.retention_class !== MC_STAGE34_GATE_B1_RETENTION_CLASS ||
+      fakeRow.safe_summary.indexOf('candidate_text') !== -1) metrics.fake_receipts_ok = false;
+    results.push(decision);
+  }
+  var unknown = stripMissionCommandStage34GateB1OracleFields(opportunities[0] || {});
+  unknown.fixture_id = 'ADVERSARIAL-UNKNOWN-MATERIAL';
+  unknown.material_change = 'unreviewed_new_signal';
+  var unknownDecision = decideMissionCommandStage34GateB1ShadowEvent(unknown);
+  var nonSynthetic = stripMissionCommandStage34GateB1OracleFields(opportunities[0] || {});
+  nonSynthetic.fixture_id = 'ADVERSARIAL-NON-SYNTHETIC';
+  nonSynthetic.synthetic_only = false;
+  var nonSyntheticDecision = decideMissionCommandStage34GateB1ShadowEvent(nonSynthetic);
+  var runtimeReceipt = stripMissionCommandStage34GateB1OracleFields(opportunities[0] || {});
+  runtimeReceipt.fixture_id = 'ADVERSARIAL-RUNTIME-RECEIPT';
+  runtimeReceipt.normalized_event.source_class = 'runtime_receipt';
+  var runtimeDecision = decideMissionCommandStage34GateB1ShadowEvent(runtimeReceipt);
+  var approvedSummary = stripMissionCommandStage34GateB1OracleFields(opportunities[0] || {});
+  approvedSummary.fixture_id = 'ADVERSARIAL-APPROVED-SUMMARY';
+  approvedSummary.normalized_event.source_class = 'approved_summary';
+  var summaryDecision = decideMissionCommandStage34GateB1ShadowEvent(approvedSummary);
+  var featureFlags = getMissionCommandStage34GateB1FeatureFlags();
+  var defaultClosed = featureFlags.providerEnabled === false &&
+    featureFlags.receiptWriteEnabled === false &&
+    featureFlags.sourceReadEnabled === false &&
+    featureFlags.triggerEnabled === false &&
+    featureFlags.visibleDeliveryEnabled === false &&
+    featureFlags.dispatchEnabled === false &&
+    featureFlags.killSwitch === true;
+  var ok = opportunities.length === 25 &&
+    metrics.expected_outcomes_matched === 25 &&
+    metrics.role_ownership_matched === 25 &&
+    metrics.unchanged_duplicates_suppressed === 3 &&
+    metrics.material_changes_reopened === 3 &&
+    metrics.chief_escalations_attributed === 2 &&
+    metrics.oracle_separation_ok === true &&
+    metrics.boundary_flags_ok === true &&
+    metrics.protected_labels_ok === true &&
+    metrics.fake_receipts_ok === true &&
+    unknownDecision.outcome !== 'hidden_candidate' &&
+    unknownDecision.safe_failure_code === 'unknown_material_change' &&
+    nonSyntheticDecision.outcome === 'privacy_blocked' &&
+    nonSyntheticDecision.validation.syntheticOnlyAllowed === false &&
+    runtimeDecision.outcome === 'privacy_blocked' &&
+    runtimeDecision.validation.sourceClassAllowed === false &&
+    summaryDecision.outcome === 'privacy_blocked' &&
+    summaryDecision.validation.sourceClassAllowed === false &&
+    defaultClosed === true;
+  return {
+    ok: ok,
+    build: MC_STAGE34_GATE_B1_BUILD,
+    contractVersion: MC_STAGE34_GATE_B1_CONTRACT_VERSION,
+    fixtureSha256Expected: MC_STAGE34_GATE_B1_FIXTURE_SHA256,
+    metrics: metrics,
+    adversarial: {
+      unknownMaterial: unknownDecision,
+      nonSynthetic: nonSyntheticDecision,
+      runtimeReceipt: runtimeDecision,
+      approvedSummary: summaryDecision
+    },
+    defaultClosed: defaultClosed,
+    featureFlags: featureFlags,
+    sampleFakeReceipt: results.length ? mapMissionCommandStage34GateB1ReceiptRow(results[0], 'gate_b1_fixture_sample') : null,
+    providerCall: false,
+    liveSheetReadWrite: false,
+    runtimeReceiptWrite: false,
+    scriptPropertiesAccessed: false,
+    wrapperCreated: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleInboxMutation: false,
+    dispatch: false,
+    externalWrite: false,
+    gateB2Started: false,
+    gateB3Started: false
+  };
+}
+
+// Mission Command Stage 3.4 Gate B2 preparation only.
+// Prepares one no-provider Runtime Receipts batch wrapper. Do not invoke without separate A1XX approval.
+var MC_STAGE34_GATE_B2_BUILD = 'mmos-20260712-stage3-4-gate-b2-preparation';
+var MC_STAGE34_GATE_B2_WRAPPER_NAME = 'runMissionCommandStage34GateB2ApprovedReceiptBatchOnce';
+var MC_STAGE34_GATE_B2_RUN_ID = 'mc_stage34_gate_b2_20260712_manual_001';
+var MC_STAGE34_GATE_B2_CAPTURE_KEY = '36f462c8cd744c34dc05dfe421947d5d1aabf4c10d3956ca947b3c84f632e59a';
+var MC_STAGE34_GATE_B2_PARENT_RELATED_OBJECT = 'mc34b2:36f462c8cd744c34dc05dfe421947d5d1aabf4c10d3956ca947b3c84f632e59a';
+var MC_STAGE34_GATE_B2_MAX_ROWS = 26;
+var MC_STAGE34_GATE_B2_PARENT_RECEIPT_TYPE = 'stage_3_4_batch_parent';
+var MC_STAGE34_GATE_B2_REQUEST_SOURCE = 'stage_3_4_gate_b2_no_provider_fixture_batch';
+
+function getMissionCommandStage34GateB2FixturePayload() {
+  var rows = [
+    'MC34-F01|critical|fresh|new_critical_approval|fixture|synthetic_stage34_fixture|approval_deadline|2099-10-01T08:00:00Z|2099-10-01T08:05:00Z|awaiting_approval|today|a1xx|SYNTH-PROJECT-ALPHA|approval|needs_a1xx',
+    'MC34-F02|critical|fresh|missing_input_detected|fixture|synthetic_stage34_fixture|meeting_readiness|2099-10-01T08:15:00Z|2099-10-01T08:20:00Z|missing_required_input|next_24h|a1xx|SYNTH-SESSION-BRAVO|dependency|needs_a1xx',
+    'MC34-F03|critical|fresh|a1xx_waiting_state_added|fixture|synthetic_stage34_fixture|client_follow_up|2099-10-01T08:30:00Z|2099-10-01T08:35:00Z|a1xx_waiting|today|a1xx|SYNTH-CLIENT-GAMMA|approval|needs_a1xx',
+    'MC34-F04|important|fresh|review_queue_count_increased|fixture|synthetic_stage34_fixture|output_review_queue|2099-10-01T09:00:00Z|2099-10-01T09:05:00Z|review_queue_growing|this_week|team_agent|SYNTH-CONTENT-LANE|dependency|needs_team',
+    'MC34-F05|important|fresh|dependency_linked_to_multiple_lanes|fixture|synthetic_stage34_fixture|handoff_dependency|2099-10-01T09:10:00Z|2099-10-01T09:15:00Z|handoff_waiting|this_week|team_agent|SYNTH-GROWTH-LANE|dependency|needs_team',
+    'MC34-F06|important|fresh|stall_threshold_reached|fixture|synthetic_stage34_fixture|agent_stall|2099-10-01T09:20:00Z|2099-10-01T09:25:00Z|stalled|this_week|team_agent|SYNTH-OPS-LANE|source|needs_team',
+    'MC34-F07|low|fresh|none|fixture|synthetic_stage34_fixture|routine_status_ping|2099-10-01T09:30:00Z|2099-10-01T09:35:00Z|unchanged|later|team_agent|SYNTH-MAINTENANCE|none|none',
+    'MC34-F08|low|fresh|none|fixture|synthetic_stage34_fixture|optional_reference_update|2099-10-01T09:40:00Z|2099-10-01T09:45:00Z|informational|none|unassigned|SYNTH-LIBRARY|none|none',
+    'MC34-F09|critical|fresh|none|fixture|synthetic_stage34_fixture|approval_deadline|2099-10-01T09:50:00Z|2099-10-01T09:55:00Z|awaiting_approval|today|a1xx|SYNTH-PROJECT-ALPHA|approval|needs_a1xx',
+    'MC34-F10|important|fresh|none|fixture|synthetic_stage34_fixture|output_review_queue|2099-10-01T10:00:00Z|2099-10-01T10:05:00Z|review_queue_growing|this_week|team_agent|SYNTH-CONTENT-LANE|dependency|needs_team',
+    'MC34-F11|routine|fresh|none|fixture|synthetic_stage34_fixture|routine_status_ping|2099-10-01T10:10:00Z|2099-10-01T10:15:00Z|unchanged|later|team_agent|SYNTH-MAINTENANCE|none|none',
+    'MC34-F12|critical|fresh|due_bucket_worsened|fixture|synthetic_stage34_fixture|approval_deadline|2099-10-01T10:20:00Z|2099-10-01T10:25:00Z|awaiting_approval|overdue|a1xx|SYNTH-PROJECT-ALPHA|approval|needs_a1xx',
+    'MC34-F13|important|fresh|due_bucket_worsened|fixture|synthetic_stage34_fixture|handoff_dependency|2099-10-01T10:30:00Z|2099-10-01T10:35:00Z|handoff_waiting|today|team_agent|SYNTH-GROWTH-LANE|dependency|needs_team',
+    'MC34-F14|important|fresh|blocker_cleared|fixture|synthetic_stage34_fixture|agent_stall|2099-10-01T10:40:00Z|2099-10-01T10:45:00Z|ready_to_resume|this_week|team_agent|SYNTH-OPS-LANE|none|needs_team',
+    'MC34-F15|important|fresh|chief_escalation_required|fixture|synthetic_stage34_fixture|cross_lane_decision|2099-10-01T10:50:00Z|2099-10-01T10:55:00Z|team_context_ready|today|team_agent|SYNTH-CAMPAIGN-DELTA|approval|needs_a1xx',
+    'MC34-F16|important|fresh|chief_escalation_required|fixture|synthetic_stage34_fixture|scope_conflict|2099-10-01T11:00:00Z|2099-10-01T11:05:00Z|team_options_ready|next_24h|team_agent|SYNTH-PROJECT-ECHO|approval|needs_a1xx',
+    'MC34-F17|routine|stale|none|fixture|synthetic_stage34_fixture|old_review_item|2099-09-20T08:00:00Z|2099-10-01T11:15:00Z|unchanged|later|a1xx|SYNTH-ARCHIVE-ZETA|none|none',
+    'MC34-F18|routine|stale|none|fixture|synthetic_stage34_fixture|old_team_risk|2099-09-21T08:00:00Z|2099-10-01T11:20:00Z|unchanged|later|team_agent|SYNTH-OPS-LANE|none|none',
+    'MC34-F19|important|blocked|privacy_block_detected|fixture|synthetic_privacy_test|private_payload_detected|2099-10-01T11:30:00Z|2099-10-01T11:35:00Z|privacy_blocked|none|unassigned|withheld|privacy|none',
+    'MC34-F20|important|blocked|privacy_block_detected|fixture|synthetic_privacy_test|unapproved_source_class|2099-10-01T11:40:00Z|2099-10-01T11:45:00Z|privacy_blocked|none|unassigned|withheld|privacy|none',
+    'MC34-F21|important|blocked|provider_unavailable|fixture|synthetic_provider_health|provider_unavailable|2099-10-01T11:50:00Z|2099-10-01T11:55:00Z|provider_unavailable|today|team_agent|SYNTH-CONTENT-LANE|provider|needs_team',
+    'MC34-F22|important|blocked|quota_cap_reached|fixture|synthetic_provider_health|quota_cap_reached|2099-10-01T12:00:00Z|2099-10-01T12:05:00Z|quota_limited|this_week|team_agent|SYNTH-GROWTH-LANE|provider|needs_team',
+    'MC34-F23|routine|partial|role_ambiguity_detected|fixture|synthetic_stage34_fixture|ambiguous_status_change|2099-10-01T12:10:00Z|2099-10-01T12:15:00Z|ambiguous|this_week|unassigned|SYNTH-PROJECT-FOXTROT|none|needs_team',
+    'MC34-F24|important|fresh|merge_compatible_events_detected|fixture|synthetic_stage34_fixture|related_review_items|2099-10-01T12:20:00Z|2099-10-01T12:25:00Z|two_related_items|this_week|team_agent|SYNTH-CONTENT-LANE|dependency|needs_team',
+    'MC34-F25|important|fresh|returning_with_current_action|fixture|synthetic_stage34_fixture|dormant_return_priority|2099-10-01T12:30:00Z|2099-10-03T12:30:00Z|returning_after_dormancy|today|a1xx|SYNTH-MISSION-RETURN|approval|needs_a1xx'
+  ];
+  return {
+    schema_version: 'mc_stage_3_4_fixture_v1',
+    synthetic_only: true,
+    opportunities: rows.map(function(row) {
+      var p = row.split('|');
+      return {
+        fixture_id: p[0],
+        synthetic_only: true,
+        priority: p[1],
+        freshness: p[2],
+        material_change: p[3],
+        normalized_event: {
+          source_class: p[4],
+          source_label: p[5],
+          event_type: p[6],
+          occurred_at: p[7],
+          observed_at: p[8],
+          status_bucket: p[9],
+          due_bucket: p[10],
+          owner_bucket: p[11],
+          mission_or_project_label: p[12],
+          blocker_bucket: p[13],
+          review_bucket: p[14],
+          safe_summary: ''
+        }
+      };
+    })
+  };
+}
+
+function makeMissionCommandStage34GateB2Blocked(reason, detail) {
+  return {
+    ok: false,
+    status: 'blocked',
+    build: MC_STAGE34_GATE_B2_BUILD,
+    stopCondition: reason || 'gate_b2_blocked',
+    safeDetail: detail || '',
+    providerCallAttempted: false,
+    liveSheetWrite: false,
+    scriptPropertiesAccessed: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function makeMissionCommandStage34GateB2ReceiptId(kind, suffix) {
+  return 'rcp_mc34b2_' + kind + '_' + String(suffix || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 32);
+}
+
+function findMissionCommandStage34GateB2Rows(adapter) {
+  return (adapter.rows || []).map(function(row, index) {
+    return { row: row, index: index };
+  }).filter(function(entry) {
+    return entry.row.related_object === MC_STAGE34_GATE_B2_PARENT_RELATED_OBJECT ||
+      entry.row.request_id === MC_STAGE34_GATE_B2_RUN_ID;
+  });
+}
+
+function findMissionCommandStage34GateB2Parent(adapter) {
+  var rows = findMissionCommandStage34GateB2Rows(adapter);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].row.receipt_type === MC_STAGE34_GATE_B2_PARENT_RECEIPT_TYPE) return rows[i];
+  }
+  return null;
+}
+
+function findMissionCommandStage34GateB2Child(adapter, receiptId) {
+  var rows = findMissionCommandStage34GateB2Rows(adapter);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].row.receipt_id === receiptId) return rows[i];
+  }
+  return null;
+}
+
+function makeMissionCommandStage34GateB2ParentRow(state, meta) {
+  meta = meta || {};
+  var now = meta.now || new Date().toISOString();
+  var summary = {
+    stage: MC_STAGE34_GATE_B1_STAGE_ID,
+    gate: 'b2_no_provider_receipt_batch',
+    build: MC_STAGE34_GATE_B2_BUILD,
+    run_id: MC_STAGE34_GATE_B2_RUN_ID,
+    capture_key_hash: 'sha256:' + MC_STAGE34_GATE_B2_CAPTURE_KEY,
+    parent_related_object: MC_STAGE34_GATE_B2_PARENT_RELATED_OBJECT,
+    fixture_sha256: MC_STAGE34_GATE_B1_FIXTURE_SHA256,
+    children_expected: 25,
+    children_written: meta.childrenWritten || 0,
+    provider_call_attempted: false,
+    row_ceiling: MC_STAGE34_GATE_B2_MAX_ROWS,
+    hash_only_evidence: true,
+    status: state || 'receipt_draft'
+  };
+  var receiptId = makeMissionCommandStage34GateB2ReceiptId('parent', MC_STAGE34_GATE_B2_CAPTURE_KEY);
+  return {
+    receipt_id: receiptId,
+    profile_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    receipt_type: MC_STAGE34_GATE_B2_PARENT_RECEIPT_TYPE,
+    source: MC_STAGE34_GATE_B2_REQUEST_SOURCE,
+    related_object: MC_STAGE34_GATE_B2_PARENT_RELATED_OBJECT,
+    result: state || 'receipt_draft',
+    safe_summary: JSON.stringify(summary),
+    provider_key: '',
+    model_key: '',
+    role: 'batch',
+    latency_ms: '',
+    input_tokens: '',
+    cached_input_tokens: '',
+    cache_write_tokens: '',
+    output_tokens: '',
+    reasoning_tokens: '',
+    retry_count: 0,
+    estimated_cost: '',
+    fallback_reason: '',
+    safety_identifier_hash: missionCommandStage34GateB1Hash(summary),
+    created_at: now,
+    device_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    request_id: MC_STAGE34_GATE_B2_RUN_ID,
+    privacy_class: MC_STAGE34_GATE_B1_PRIVACY_CLASS,
+    retention_class: MC_STAGE34_GATE_B1_RETENTION_CLASS,
+    next_action: 'review_receipt_batch_counts',
+    team_chat_receipt_url: '',
+    version: meta.version || 1,
+    etag: meta.etag || ('etag_' + missionCommandStage34GateB1Hash(summary).slice(0, 24)),
+    updated_at: now,
+    updated_by: MC_STAGE34_GATE_B2_BUILD,
+    last_request_id: MC_STAGE34_GATE_B2_RUN_ID
+  };
+}
+
+function makeMissionCommandStage34GateB2ChildRow(decision) {
+  var row = mapMissionCommandStage34GateB1ReceiptRow(decision, MC_STAGE34_GATE_B2_RUN_ID);
+  row.receipt_id = makeMissionCommandStage34GateB2ReceiptId('child', decision.fixture_id + '_' + decision.event_fingerprint.slice(0, 16));
+  row.source = MC_STAGE34_GATE_B2_REQUEST_SOURCE;
+  row.related_object = MC_STAGE34_GATE_B2_PARENT_RELATED_OBJECT;
+  row.request_id = MC_STAGE34_GATE_B2_RUN_ID;
+  row.last_request_id = MC_STAGE34_GATE_B2_RUN_ID;
+  row.updated_by = MC_STAGE34_GATE_B2_BUILD;
+  row.created_at = '';
+  row.updated_at = '';
+  row.safe_summary = JSON.stringify({
+    stage: MC_STAGE34_GATE_B1_STAGE_ID,
+    gate: 'b2_no_provider_receipt_batch_child',
+    build: MC_STAGE34_GATE_B2_BUILD,
+    run_id: MC_STAGE34_GATE_B2_RUN_ID,
+    fixture_id: decision.fixture_id || '',
+    outcome: decision.outcome || '',
+    role_owner: decision.role_owner || '',
+    priority: decision.priority || '',
+    freshness: decision.freshness || '',
+    why_now_code: decision.why_now_code || '',
+    suppression_decision: decision.suppression_decision || '',
+    next_move_type: decision.next_move_type || '',
+    protected_next_move_label: decision.protected_next_move_label || '',
+    decision_related_object_hash: decision.related_object || '',
+    provider_call_attempted: false,
+    no_visible_delivery: true,
+    no_dispatch: true,
+    hash_only_evidence: true
+  });
+  row.etag = missionCommandStage34GateB1Hash({
+    receipt_id: row.receipt_id,
+    related_object: row.related_object,
+    safety_identifier_hash: row.safety_identifier_hash,
+    request_id: row.request_id
+  }).slice(0, 32);
+  return row;
+}
+
+function claimMissionCommandStage34GateB2Parent(adapter) {
+  if (!adapter || !adapter.acquireLock) return makeMissionCommandStage34GateB2Blocked('adapter_missing', 'Gate B2 receipt adapter is missing.');
+  if (!adapter.acquireLock('stage34_b2_parent_claim')) return makeMissionCommandStage34GateB2Blocked('lock_unavailable', 'Parent claim lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(adapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB2Blocked(refresh.stopCondition, 'Runtime Receipts headers missing: ' + refresh.missing.join(', '));
+    var existing = findMissionCommandStage34GateB2Parent(adapter);
+    if (existing) {
+      return {
+        ok: false,
+        status: 'duplicate_suppressed',
+        providerCallAttempted: false,
+        rowCount: findMissionCommandStage34GateB2Rows(adapter).length,
+        parent: existing.row
+      };
+    }
+    var parentRow = makeMissionCommandStage34GateB2ParentRow('receipt_draft');
+    adapter.appendRowObject(parentRow);
+    return {
+      ok: true,
+      status: 'parent_claimed',
+      providerCallAttempted: false,
+      parent: parentRow,
+      rowCount: findMissionCommandStage34GateB2Rows(adapter).length
+    };
+  } finally {
+    adapter.releaseLock('stage34_b2_parent_claim');
+  }
+}
+
+function appendMissionCommandStage34GateB2Child(adapter, decision) {
+  var row = makeMissionCommandStage34GateB2ChildRow(decision);
+  if (!adapter.acquireLock('stage34_b2_child_' + decision.fixture_id)) return makeMissionCommandStage34GateB2Blocked('lock_unavailable', 'Child append lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(adapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB2Blocked(refresh.stopCondition, 'Runtime Receipts headers missing: ' + refresh.missing.join(', '));
+    if (!findMissionCommandStage34GateB2Parent(adapter)) return makeMissionCommandStage34GateB2Blocked('parent_missing', 'Parent receipt must exist before child append.');
+    if (findMissionCommandStage34GateB2Child(adapter, row.receipt_id)) {
+      return { ok: false, status: 'duplicate_child_suppressed', row: row, providerCallAttempted: false };
+    }
+    if (findMissionCommandStage34GateB2Rows(adapter).length >= MC_STAGE34_GATE_B2_MAX_ROWS) return makeMissionCommandStage34GateB2Blocked('row_ceiling_reached', 'Gate B2 row ceiling reached.');
+    adapter.appendRowObject(row);
+    return { ok: true, status: 'child_logged', row: row, providerCallAttempted: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateB2Blocked('child_append_failed', 'Child append failed before finalization.');
+  } finally {
+    adapter.releaseLock('stage34_b2_child_' + decision.fixture_id);
+  }
+}
+
+function getMissionCommandStage34GateB2ExpectedChildReceiptIds() {
+  var fixturePayload = getMissionCommandStage34GateB2FixturePayload();
+  var opportunities = fixturePayload.opportunities || [];
+  return opportunities.map(function(opportunity) {
+    var decision = decideMissionCommandStage34GateB1ShadowEvent(stripMissionCommandStage34GateB1OracleFields(opportunity));
+    return makeMissionCommandStage34GateB2ReceiptId('child', decision.fixture_id + '_' + decision.event_fingerprint.slice(0, 16));
+  });
+}
+
+function countMissionCommandStage34GateB2ChildRows(adapter) {
+  return findMissionCommandStage34GateB2Rows(adapter).filter(function(entry) {
+    return entry.row.receipt_type !== MC_STAGE34_GATE_B2_PARENT_RECEIPT_TYPE;
+  }).length;
+}
+
+function makeMissionCommandStage34GateB2Interrupted(adapter, parent, childResults, decision, failed) {
+  var rows = findMissionCommandStage34GateB2Rows(adapter);
+  var parentEntry = findMissionCommandStage34GateB2Parent(adapter);
+  var childCount = countMissionCommandStage34GateB2ChildRows(adapter);
+  return {
+    ok: false,
+    status: 'receipt_interrupted',
+    build: MC_STAGE34_GATE_B2_BUILD,
+    stopCondition: failed.stopCondition || failed.status || 'child_append_failed',
+    safeDetail: 'Gate B2 stopped before parent finalization after child append failure.',
+    wrapperName: MC_STAGE34_GATE_B2_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_B2_RUN_ID,
+    captureKey: MC_STAGE34_GATE_B2_CAPTURE_KEY,
+    parentRelatedObject: MC_STAGE34_GATE_B2_PARENT_RELATED_OBJECT,
+    parentResult: parentEntry && parentEntry.row ? parentEntry.row.result : '',
+    childrenAttempted: childResults.length,
+    childrenWritten: childCount,
+    failedFixtureId: decision && decision.fixture_id ? decision.fixture_id : '',
+    failedChildStatus: failed.status || '',
+    failedChildStopCondition: failed.stopCondition || '',
+    rowCount: rows.length,
+    rowCeiling: MC_STAGE34_GATE_B2_MAX_ROWS,
+    providerCallAttempted: false,
+    retryAttempted: false,
+    finalized: false,
+    parent: parent && parent.parent ? parent.parent : null
+  };
+}
+
+function finalizeMissionCommandStage34GateB2Parent(adapter, expected) {
+  expected = expected || {};
+  if (!adapter.acquireLock('stage34_b2_parent_finalize')) return makeMissionCommandStage34GateB2Blocked('lock_unavailable', 'Parent finalize lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(adapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB2Blocked(refresh.stopCondition, 'Runtime Receipts headers missing: ' + refresh.missing.join(', '));
+    var parent = findMissionCommandStage34GateB2Parent(adapter);
+    if (!parent) return makeMissionCommandStage34GateB2Blocked('parent_missing', 'Parent receipt missing at finalization.');
+    if (Object.prototype.hasOwnProperty.call(expected, 'version') && safeMissionCommandOpenAiNumberV31(parent.row.version) !== safeMissionCommandOpenAiNumberV31(expected.version)) return makeMissionCommandStage34GateB2Blocked('receipt_conflict', 'Parent version changed before finalization.');
+    if (Object.prototype.hasOwnProperty.call(expected, 'etag') && String(parent.row.etag || '') !== String(expected.etag || '')) return makeMissionCommandStage34GateB2Blocked('receipt_conflict', 'Parent etag changed before finalization.');
+    var rows = findMissionCommandStage34GateB2Rows(adapter);
+    var childCount = rows.filter(function(entry) {
+      return entry.row.receipt_type !== MC_STAGE34_GATE_B2_PARENT_RECEIPT_TYPE;
+    }).length;
+    if (rows.length !== MC_STAGE34_GATE_B2_MAX_ROWS || childCount !== 25) return makeMissionCommandStage34GateB2Blocked('receipt_child_count_invalid', 'Parent finalization requires exactly 25 children and 26 matching rows.');
+    var expectedChildIds = getMissionCommandStage34GateB2ExpectedChildReceiptIds();
+    for (var i = 0; i < expectedChildIds.length; i++) {
+      if (!findMissionCommandStage34GateB2Child(adapter, expectedChildIds[i])) return makeMissionCommandStage34GateB2Blocked('receipt_child_set_invalid', 'Parent finalization requires all 25 deterministic child receipts.');
+    }
+    var updated = makeMissionCommandStage34GateB2ParentRow('logged', {
+      childrenWritten: childCount,
+      version: safeMissionCommandOpenAiNumberV31(parent.row.version) + 1
+    });
+    updated.created_at = parent.row.created_at;
+    adapter.updateRowObject(parent.index, updated, expected);
+    return { ok: true, status: 'parent_finalized', childrenWritten: childCount, parent: updated, providerCallAttempted: false };
+  } finally {
+    adapter.releaseLock('stage34_b2_parent_finalize');
+  }
+}
+
+function runMissionCommandStage34GateB2ReceiptBatch(adapter, fixturePayload, runId) {
+  if (runId !== MC_STAGE34_GATE_B2_RUN_ID) return makeMissionCommandStage34GateB2Blocked('run_id_not_approved', 'Gate B2 run ID is not approved.');
+  var parent = claimMissionCommandStage34GateB2Parent(adapter);
+  if (!parent.ok) return parent;
+  var expected = { version: parent.parent.version, etag: parent.parent.etag };
+  var opportunities = (fixturePayload && fixturePayload.opportunities) || [];
+  if (opportunities.length !== 25) return makeMissionCommandStage34GateB2Blocked('fixture_count_invalid', 'Gate B2 requires exactly 25 fixture opportunities.');
+  var childResults = [];
+  for (var i = 0; i < opportunities.length; i++) {
+    var decision = decideMissionCommandStage34GateB1ShadowEvent(stripMissionCommandStage34GateB1OracleFields(opportunities[i]));
+    var childResult = appendMissionCommandStage34GateB2Child(adapter, decision);
+    childResults.push(childResult);
+    if (!childResult.ok) return makeMissionCommandStage34GateB2Interrupted(adapter, parent, childResults, decision, childResult);
+  }
+  var finalized = finalizeMissionCommandStage34GateB2Parent(adapter, expected);
+  return {
+    ok: finalized.ok === true,
+    status: finalized.status,
+    build: MC_STAGE34_GATE_B2_BUILD,
+    wrapperName: MC_STAGE34_GATE_B2_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_B2_RUN_ID,
+    captureKey: MC_STAGE34_GATE_B2_CAPTURE_KEY,
+    parentRelatedObject: MC_STAGE34_GATE_B2_PARENT_RELATED_OBJECT,
+    childrenAttempted: childResults.length,
+    childrenWritten: finalized.childrenWritten || 0,
+    rowCount: findMissionCommandStage34GateB2Rows(adapter).length,
+    rowCeiling: MC_STAGE34_GATE_B2_MAX_ROWS,
+    providerCallAttempted: false,
+    liveSheetWritePrepared: true,
+    gateB3Started: false,
+    finalized: finalized
+  };
+}
+
+function verifyMissionCommandStage34GateB2PreparationLocalChecks(fixturePayload) {
+  fixturePayload = fixturePayload || getMissionCommandStage34GateB2FixturePayload();
+  var b1 = verifyMissionCommandStage34GateB1WithFixtures(fixturePayload);
+  var adapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  var result = runMissionCommandStage34GateB2ReceiptBatch(adapter, fixturePayload, MC_STAGE34_GATE_B2_RUN_ID);
+  var duplicate = runMissionCommandStage34GateB2ReceiptBatch(adapter, fixturePayload, MC_STAGE34_GATE_B2_RUN_ID);
+  var parentRows = findMissionCommandStage34GateB2Rows(adapter).filter(function(entry) {
+    return entry.row.receipt_type === MC_STAGE34_GATE_B2_PARENT_RECEIPT_TYPE;
+  });
+  var childRows = findMissionCommandStage34GateB2Rows(adapter).filter(function(entry) {
+    return entry.row.receipt_type !== MC_STAGE34_GATE_B2_PARENT_RECEIPT_TYPE;
+  });
+  var staleAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  var staleParent = claimMissionCommandStage34GateB2Parent(staleAdapter);
+  var staleFinalize = finalizeMissionCommandStage34GateB2Parent(staleAdapter, { version: 999, etag: 'stale_etag' });
+  var duplicateChildAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  var dupParent = claimMissionCommandStage34GateB2Parent(duplicateChildAdapter);
+  var dupDecision = decideMissionCommandStage34GateB1ShadowEvent(stripMissionCommandStage34GateB1OracleFields(fixturePayload.opportunities[0]));
+  var dupChildOne = appendMissionCommandStage34GateB2Child(duplicateChildAdapter, dupDecision);
+  var dupChildTwo = appendMissionCommandStage34GateB2Child(duplicateChildAdapter, dupDecision);
+  var missingHeaderAdapter = makeMissionCommandStage33RLocalReceiptAdapter(getMissionCommandStage33RRequiredReceiptHeaders().filter(function(header) { return header !== 'safe_summary'; }), []);
+  var missingHeader = claimMissionCommandStage34GateB2Parent(missingHeaderAdapter);
+  var childLockFailAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  var childLockAcquire = childLockFailAdapter.acquireLock;
+  childLockFailAdapter.acquireLock = function(label) {
+    if (String(label || '').indexOf('MC34-F04') !== -1) {
+      this.lockEvents.push('acquire:' + label);
+      return false;
+    }
+    return childLockAcquire.call(this, label);
+  };
+  var childLockInterrupted = runMissionCommandStage34GateB2ReceiptBatch(childLockFailAdapter, fixturePayload, MC_STAGE34_GATE_B2_RUN_ID);
+  var childLockParent = findMissionCommandStage34GateB2Parent(childLockFailAdapter);
+  var childLockRows = findMissionCommandStage34GateB2Rows(childLockFailAdapter);
+  var childLockChildren = countMissionCommandStage34GateB2ChildRows(childLockFailAdapter);
+  var headerFailAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  var headerRefreshCount = 0;
+  headerFailAdapter.refreshRows = function() {
+    headerRefreshCount += 1;
+    if (headerRefreshCount >= 5) this.headers = getMissionCommandStage33RRequiredReceiptHeaders().filter(function(header) { return header !== 'safe_summary'; });
+    return true;
+  };
+  var headerInterrupted = runMissionCommandStage34GateB2ReceiptBatch(headerFailAdapter, fixturePayload, MC_STAGE34_GATE_B2_RUN_ID);
+  var headerParent = findMissionCommandStage34GateB2Parent(headerFailAdapter);
+  var appendFailAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  var appendOriginal = appendFailAdapter.appendRowObject;
+  appendFailAdapter.appendRowObject = function(row) {
+    if (this.appendedRows >= 3) throw new Error('planned_child_append_failure');
+    return appendOriginal.call(this, row);
+  };
+  var appendInterrupted = runMissionCommandStage34GateB2ReceiptBatch(appendFailAdapter, fixturePayload, MC_STAGE34_GATE_B2_RUN_ID);
+  var appendParent = findMissionCommandStage34GateB2Parent(appendFailAdapter);
+  var partialFinalizeAdapter = makeMissionCommandStage33RLocalReceiptAdapter(null, []);
+  var partialParent = claimMissionCommandStage34GateB2Parent(partialFinalizeAdapter);
+  var partialExpected = { version: partialParent.parent.version, etag: partialParent.parent.etag };
+  for (var partialIndex = 0; partialIndex < 24; partialIndex++) {
+    var partialDecision = decideMissionCommandStage34GateB1ShadowEvent(stripMissionCommandStage34GateB1OracleFields(fixturePayload.opportunities[partialIndex]));
+    appendMissionCommandStage34GateB2Child(partialFinalizeAdapter, partialDecision);
+  }
+  var partialFinalize = finalizeMissionCommandStage34GateB2Parent(partialFinalizeAdapter, partialExpected);
+  var partialParentAfter = findMissionCommandStage34GateB2Parent(partialFinalizeAdapter);
+  var sample = childRows.length ? childRows[0].row : {};
+  var safeSummaryText = String(sample.safe_summary || '');
+  var receiptRedactionOk = sample.provider_key === '' &&
+    sample.model_key === '' &&
+    sample.team_chat_receipt_url === '' &&
+    safeSummaryText.indexOf('candidate_text') === -1 &&
+    safeSummaryText.indexOf('raw') === -1 &&
+    safeSummaryText.indexOf('credential') === -1;
+  return {
+    ok: b1.ok === true &&
+      result.ok === true &&
+      result.rowCount === MC_STAGE34_GATE_B2_MAX_ROWS &&
+      result.childrenWritten === 25 &&
+      parentRows.length === 1 &&
+      childRows.length === 25 &&
+      duplicate.status === 'duplicate_suppressed' &&
+      duplicate.providerCallAttempted === false &&
+      staleParent.ok === true &&
+      staleFinalize.ok === false &&
+      staleFinalize.stopCondition === 'receipt_conflict' &&
+      dupParent.ok === true &&
+      dupChildOne.ok === true &&
+      dupChildTwo.status === 'duplicate_child_suppressed' &&
+      missingHeader.ok === false &&
+      missingHeader.stopCondition === 'receipt_contract_invalid' &&
+      childLockInterrupted.status === 'receipt_interrupted' &&
+      childLockInterrupted.stopCondition === 'lock_unavailable' &&
+      childLockInterrupted.childrenWritten === 3 &&
+      childLockInterrupted.failedFixtureId === 'MC34-F04' &&
+      childLockInterrupted.parentResult === 'receipt_draft' &&
+      childLockInterrupted.retryAttempted === false &&
+      childLockInterrupted.providerCallAttempted === false &&
+      childLockParent.row.result === 'receipt_draft' &&
+      childLockChildren === 3 &&
+      childLockRows.length === 4 &&
+      headerInterrupted.status === 'receipt_interrupted' &&
+      headerInterrupted.stopCondition === 'receipt_contract_invalid' &&
+      headerParent.row.result === 'receipt_draft' &&
+      appendInterrupted.status === 'receipt_interrupted' &&
+      appendInterrupted.stopCondition === 'child_append_failed' &&
+      appendInterrupted.childrenWritten === 2 &&
+      appendInterrupted.failedFixtureId === 'MC34-F03' &&
+      appendInterrupted.providerCallAttempted === false &&
+      appendParent.row.result === 'receipt_draft' &&
+      partialFinalize.ok === false &&
+      partialFinalize.stopCondition === 'receipt_child_count_invalid' &&
+      partialParentAfter.row.result === 'receipt_draft' &&
+      receiptRedactionOk === true,
+    build: MC_STAGE34_GATE_B2_BUILD,
+    wrapperName: MC_STAGE34_GATE_B2_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_B2_RUN_ID,
+    captureKey: MC_STAGE34_GATE_B2_CAPTURE_KEY,
+    parentRelatedObject: MC_STAGE34_GATE_B2_PARENT_RELATED_OBJECT,
+    rowCeiling: MC_STAGE34_GATE_B2_MAX_ROWS,
+    b1Ok: b1.ok === true,
+    parentRows: parentRows.length,
+    childRows: childRows.length,
+    duplicateParentSuppressed: duplicate.status === 'duplicate_suppressed',
+    duplicateChildSuppressed: dupChildTwo.status === 'duplicate_child_suppressed',
+    staleVersionEtagBlocked: staleFinalize.stopCondition === 'receipt_conflict',
+    missingHeaderBlocked: missingHeader.stopCondition === 'receipt_contract_invalid',
+    childLockInterrupted: childLockInterrupted.status === 'receipt_interrupted',
+    childHeaderInterrupted: headerInterrupted.status === 'receipt_interrupted',
+    childAppendInterrupted: appendInterrupted.status === 'receipt_interrupted',
+    partialFinalizeBlocked: partialFinalize.stopCondition === 'receipt_child_count_invalid',
+    partialParentRemainsDraft: partialParentAfter.row.result === 'receipt_draft',
+    receiptRedactionOk: receiptRedactionOk,
+    providerCallAttempted: false,
+    wrapperPrepared: false,
+    wrapperRemovedAfterManualRun: true,
+    wrapperInvoked: false,
+    liveSheetTouchedByTest: false,
+    scriptPropertiesAccessed: false,
+    triggerInstall: false,
+    routeCreated: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false,
+    gateB3Started: false
+  };
+}
+
+// Mission Command Stage 3.4 Gate B3A local preparation only.
+// Defines the readable review contract with fake adapters; no live tab, provider, wrapper, route, or trigger.
+var MC_STAGE34_GATE_B3A_BUILD = 'mmos-20260712-stage3-4-gate-b3a-local-preparation';
+var MC_STAGE34_GATE_B3A_ENABLED = false;
+var MC_STAGE34_GATE_B3A_KILL_SWITCH = true;
+var MC_STAGE34_GATE_B3A_REVIEW_TAB_NAME = 'Mission Command Shadow Candidate Review';
+var MC_STAGE34_GATE_B3A_PRIVACY_CLASS = 'internal_synthetic_readable_review';
+var MC_STAGE34_GATE_B3A_RETENTION_DAYS = 7;
+var MC_STAGE34_GATE_B3A_REVIEW_HEADERS = [
+  'review_row_id',
+  'review_batch_id',
+  'fixture_id',
+  'fixture_pack_sha256',
+  'receipt_related_object',
+  'receipt_parent_id',
+  'receipt_child_id',
+  'candidate_sha256',
+  'role_owner',
+  'escalated_from',
+  'family',
+  'priority',
+  'why_now',
+  'material_change',
+  'next_move_type',
+  'candidate_text',
+  'schema_valid',
+  'review_state',
+  'reviewer',
+  'reviewed_at',
+  'privacy_class',
+  'retention_due_at',
+  'redacted_at',
+  'redaction_reason',
+  'batch_state',
+  'boundary_flags'
+];
+var MC_STAGE34_GATE_B3A_FIXTURE_IDS = ['MC34-F01', 'MC34-F04', 'MC34-F12', 'MC34-F15'];
+var MC_STAGE34_GATE_B3A_READABLE_FIELDS = [
+  'fixture_id',
+  'role_owner',
+  'escalated_from',
+  'family',
+  'priority',
+  'why_now',
+  'material_change',
+  'next_move_type',
+  'candidate_text'
+];
+var MC_STAGE34_GATE_B3A_RECEIPT_PARENT_TYPE = 'stage_3_4_gate_b3_review_parent';
+var MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE = 'stage_3_4_gate_b3_candidate_hash';
+
+function getMissionCommandStage34GateB3AFlags(input) {
+  input = input || {};
+  return {
+    gateB3AEnabled: MC_STAGE34_GATE_B3A_ENABLED === true && MC_STAGE34_GATE_B3A_KILL_SWITCH !== true,
+    killSwitchEnabled: MC_STAGE34_GATE_B3A_KILL_SWITCH === true,
+    liveSheetEnabled: false,
+    providerEnabled: false,
+    scriptPropertiesEnabled: false,
+    wrapperEnabled: false,
+    routeEnabled: false,
+    triggerEnabled: false,
+    visibleDeliveryEnabled: false,
+    dispatchEnabled: false,
+    externalWriteEnabled: false,
+    deleteEnabled: false
+  };
+}
+
+function getMissionCommandStage34GateB3AReviewHeaders() {
+  return MC_STAGE34_GATE_B3A_REVIEW_HEADERS.slice();
+}
+
+function validateMissionCommandStage34GateB3AReviewHeaders(headers) {
+  headers = headers || [];
+  var expected = getMissionCommandStage34GateB3AReviewHeaders();
+  var missing = expected.filter(function(header) {
+    return headers.indexOf(header) === -1;
+  });
+  var exactOrder = headers.length === expected.length && missing.length === 0 && expected.every(function(header, index) {
+    return headers[index] === header;
+  });
+  return { ok: missing.length === 0 && exactOrder, missing: missing, exactOrder: exactOrder };
+}
+
+function getMissionCommandStage34GateB3AFixtureAllowlist() {
+  return MC_STAGE34_GATE_B3A_FIXTURE_IDS.slice();
+}
+
+function isMissionCommandStage34GateB3AFixtureAllowed(fixtureId) {
+  return getMissionCommandStage34GateB3AFixtureAllowlist().indexOf(String(fixtureId || '')) !== -1;
+}
+
+function getMissionCommandStage34GateB3ADenylistPatterns() {
+  return [
+    /api[_ -]?key/i,
+    /authorization/i,
+    /bearer/i,
+    /script\s*propert/i,
+    /raw[_ -]?prompt/i,
+    /raw[_ -]?provider/i,
+    /raw[_ -]?response/i,
+    /provider[_ -]?envelope/i,
+    /hidden[_ -]?reasoning/i,
+    /chain[_ -]?of[_ -]?thought/i,
+    /conversation[_ -]?id/i,
+    /previous_response_id/i,
+    /visible[_ -]?delivery/i,
+    /dispatch/i,
+    /external[_ -]?write/i,
+    /live[_ -]?source/i,
+    /customer[_ -]?data/i,
+    /client[_ -]?secret/i
+  ];
+}
+
+function assertMissionCommandStage34GateB3AReadableSafe(value) {
+  var text = '';
+  try {
+    text = JSON.stringify(value || {});
+  } catch (err) {
+    return { ok: false, reason: 'candidate_not_serializable' };
+  }
+  var matched = getMissionCommandStage34GateB3ADenylistPatterns().filter(function(pattern) {
+    return pattern.test(text);
+  });
+  return { ok: matched.length === 0, reason: matched.length ? 'privacy_denylist_match' : '' };
+}
+
+function getMissionCommandStage34GateB3AFixtureMap() {
+  return {
+    'MC34-F01': { roleOwner: 'executive_assistant', family: 'executive_assistant_critical', priority: 'critical', escalatedFrom: '' },
+    'MC34-F04': { roleOwner: 'chief_of_staff', family: 'chief_coordination', priority: 'important', escalatedFrom: '' },
+    'MC34-F12': { roleOwner: 'chief_of_staff', family: 'material_change_reopen', priority: 'critical', escalatedFrom: '' },
+    'MC34-F15': { roleOwner: 'executive_assistant', family: 'attributed_chief_escalation', priority: 'important', escalatedFrom: 'chief_of_staff' }
+  };
+}
+
+function makeMissionCommandStage34GateB3ABatchKey(runId) {
+  return missionCommandStage34GateB1Hash(['stage_3_4_gate_b3', MC_STAGE34_GATE_B1_FIXTURE_SHA256, runId].join('|'));
+}
+
+function makeMissionCommandStage34GateB3ARelatedObject(batchKey) {
+  return 'mc34b3:' + String(batchKey || '');
+}
+
+function makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId) {
+  return 'mc34b3r:' + String(batchKey || '').slice(0, 16) + ':' + String(fixtureId || '');
+}
+
+function makeMissionCommandStage34GateB3ACandidateId(batchKey, fixtureId) {
+  return 'cand_mc34b3_' + String(batchKey || '').slice(0, 16) + '_' + String(fixtureId || '');
+}
+
+function makeMissionCommandStage34GateB3AReceiptId(kind, batchKey, fixtureId) {
+  if (kind === 'parent') return 'rcp_mc34b3_parent_' + String(batchKey || '').slice(0, 16);
+  return 'rcp_mc34b3_child_' + String(batchKey || '').slice(0, 16) + '_' + String(fixtureId || '');
+}
+
+function makeMissionCommandStage34GateB3ACandidateHash(candidate) {
+  var canonical = JSON.stringify(candidate || {}, Object.keys(candidate || {}).sort());
+  return missionCommandStage34GateB1Hash(canonical);
+}
+
+function makeMissionCommandStage34GateB3AFakeRuntimeAdapter(headers, rows, options) {
+  return makeMissionCommandStage33RLocalReceiptAdapter(headers || getMissionCommandStage33RRequiredReceiptHeaders(), rows || [], options || {});
+}
+
+function makeMissionCommandStage34GateB3AFakeReviewAdapter(headers, rows, options) {
+  options = options || {};
+  return {
+    tabName: MC_STAGE34_GATE_B3A_REVIEW_TAB_NAME,
+    headers: headers || getMissionCommandStage34GateB3AReviewHeaders(),
+    rows: (rows || []).slice(),
+    lockAvailable: options.lockAvailable !== false,
+    appendFails: options.appendFails === true,
+    updateFails: options.updateFails === true,
+    lockEvents: [],
+    appendedRows: 0,
+    updatedRows: 0,
+    deletedRows: 0,
+    acquireLock: function(label) {
+      this.lockEvents.push('acquire:' + label);
+      return this.lockAvailable === true;
+    },
+    releaseLock: function(label) {
+      this.lockEvents.push('release:' + label);
+    },
+    refreshRows: function() {
+      return true;
+    },
+    appendRowObject: function(row) {
+      if (this.appendFails) throw new Error('local_review_append_failed');
+      this.rows.push(row);
+      this.appendedRows += 1;
+      return this.rows.length;
+    },
+    updateRowObject: function(index, row, expected) {
+      if (this.updateFails) throw new Error('local_review_update_failed');
+      expected = expected || {};
+      var current = this.rows[index];
+      if (!current) throw new Error('local_review_update_missing_row');
+      if (Object.prototype.hasOwnProperty.call(expected, 'version') && safeMissionCommandOpenAiNumberV31(current.version) !== safeMissionCommandOpenAiNumberV31(expected.version)) {
+        throw new Error('local_review_update_version_conflict');
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'etag') && String(current.etag || '') !== String(expected.etag || '')) {
+        throw new Error('local_review_update_etag_conflict');
+      }
+      this.rows[index] = row;
+      this.updatedRows += 1;
+      return index + 1;
+    }
+  };
+}
+
+function refreshMissionCommandStage34GateB3AReviewAdapterUnderLock(adapter) {
+  if (!adapter) return { ok: false, stopCondition: 'review_adapter_missing', missing: [] };
+  if (typeof adapter.refreshRows === 'function') adapter.refreshRows();
+  var headerCheck = validateMissionCommandStage34GateB3AReviewHeaders(adapter.headers);
+  if (!headerCheck.ok) return { ok: false, stopCondition: 'review_contract_invalid', missing: headerCheck.missing };
+  return { ok: true, stopCondition: '', missing: [] };
+}
+
+function findMissionCommandStage34GateB3AReceiptRows(adapter, relatedObject) {
+  return (adapter.rows || []).map(function(row, index) {
+    return { row: row, index: index };
+  }).filter(function(entry) {
+    return entry.row.related_object === relatedObject;
+  });
+}
+
+function findMissionCommandStage34GateB3AReviewRows(adapter, batchKey) {
+  return (adapter.rows || []).map(function(row, index) {
+    return { row: row, index: index };
+  }).filter(function(entry) {
+    return entry.row.review_batch_id === batchKey;
+  });
+}
+
+function findMissionCommandStage34GateB3AReviewRow(adapter, reviewRowId) {
+  var rows = (adapter.rows || []).map(function(row, index) {
+    return { row: row, index: index };
+  });
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].row.review_row_id === reviewRowId) return rows[i];
+  }
+  return null;
+}
+
+function findMissionCommandStage34GateB3AChildReceipt(adapter, batchKey, fixtureId) {
+  var receiptId = makeMissionCommandStage34GateB3AReceiptId('child', batchKey, fixtureId);
+  var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+  var rows = (adapter.rows || []).map(function(row, index) {
+    return { row: row, index: index };
+  });
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].row.receipt_id === receiptId &&
+        rows[i].row.related_object === relatedObject &&
+        rows[i].row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE) return rows[i];
+  }
+  return null;
+}
+
+function parseMissionCommandStage34GateB3ASafeSummary(row) {
+  try {
+    return JSON.parse(String((row || {}).safe_summary || '{}'));
+  } catch (err) {
+    return {};
+  }
+}
+
+function makeMissionCommandStage34GateB3ABlocked(reason, detail) {
+  return {
+    ok: false,
+    status: 'blocked',
+    build: MC_STAGE34_GATE_B3A_BUILD,
+    stopCondition: reason || 'gate_b3a_blocked',
+    safeDetail: detail || '',
+    providerImplicationAllowed: false,
+    providerCallAttempted: false,
+    liveSheetTouched: false,
+    scriptPropertiesAccessed: false,
+    wrapperCreated: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false,
+    autoDelete: false
+  };
+}
+
+function makeMissionCommandStage34GateB3AParentReceipt(runId, batchKey) {
+  var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+  var summary = {
+    stage: MC_STAGE34_GATE_B1_STAGE_ID,
+    gate: 'b3a_local_preparation_parent',
+    run_id: runId,
+    fixture_pack_sha256: MC_STAGE34_GATE_B1_FIXTURE_SHA256,
+    fixtures_expected: MC_STAGE34_GATE_B3A_FIXTURE_IDS.slice(),
+    readable_text_stored: false,
+    provider_call_attempted: false,
+    review_tab: MC_STAGE34_GATE_B3A_REVIEW_TAB_NAME
+  };
+  return {
+    receipt_id: makeMissionCommandStage34GateB3AReceiptId('parent', batchKey),
+    profile_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    receipt_type: MC_STAGE34_GATE_B3A_RECEIPT_PARENT_TYPE,
+    source: 'stage_3_4_gate_b3a_local_preparation',
+    related_object: relatedObject,
+    result: 'receipt_draft',
+    safe_summary: JSON.stringify(summary),
+    provider_key: '',
+    model_key: '',
+    role: 'batch',
+    latency_ms: '',
+    input_tokens: '',
+    cached_input_tokens: '',
+    cache_write_tokens: '',
+    output_tokens: '',
+    reasoning_tokens: '',
+    retry_count: 0,
+    estimated_cost: '',
+    fallback_reason: '',
+    safety_identifier_hash: missionCommandStage34GateB1Hash(summary),
+    created_at: '',
+    device_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    request_id: runId,
+    privacy_class: MC_STAGE34_GATE_B1_PRIVACY_CLASS,
+    retention_class: MC_STAGE34_GATE_B1_RETENTION_CLASS,
+    next_action: 'review_gate_b3_readable_surface_contract',
+    team_chat_receipt_url: '',
+    version: 1,
+    etag: 'etag_' + missionCommandStage34GateB1Hash(summary).slice(0, 24),
+    updated_at: '',
+    updated_by: MC_STAGE34_GATE_B3A_BUILD,
+    last_request_id: runId
+  };
+}
+
+function makeMissionCommandStage34GateB3AChildReceipt(runId, batchKey, fixtureId, candidateHash, reviewRowId) {
+  var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+  var fixtureMeta = getMissionCommandStage34GateB3AFixtureMap()[fixtureId] || {};
+  var summary = {
+    gate: 'b3a_hash_only_child',
+    fixture_id: fixtureId,
+    candidate_sha256: candidateHash,
+    review_row_id: reviewRowId,
+    readable_text_stored: false,
+    provider_call_attempted: false
+  };
+  return {
+    receipt_id: makeMissionCommandStage34GateB3AReceiptId('child', batchKey, fixtureId),
+    profile_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    receipt_type: MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE,
+    source: 'stage_3_4_gate_b3a_local_preparation',
+    related_object: relatedObject,
+    result: 'hash_logged',
+    safe_summary: JSON.stringify(summary),
+    provider_key: '',
+    model_key: '',
+    role: fixtureMeta.roleOwner || '',
+    latency_ms: '',
+    input_tokens: '',
+    cached_input_tokens: '',
+    cache_write_tokens: '',
+    output_tokens: '',
+    reasoning_tokens: '',
+    retry_count: 0,
+    estimated_cost: '',
+    fallback_reason: '',
+    safety_identifier_hash: missionCommandStage34GateB1Hash(summary),
+    created_at: '',
+    device_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    request_id: runId,
+    privacy_class: MC_STAGE34_GATE_B1_PRIVACY_CLASS,
+    retention_class: MC_STAGE34_GATE_B1_RETENTION_CLASS,
+    next_action: 'link_hash_to_readable_review_row',
+    team_chat_receipt_url: '',
+    version: 1,
+    etag: 'etag_' + missionCommandStage34GateB1Hash(summary).slice(0, 24),
+    updated_at: '',
+    updated_by: MC_STAGE34_GATE_B3A_BUILD,
+    last_request_id: runId
+  };
+}
+
+function makeMissionCommandStage34GateB3ABlankReviewRow(runId, batchKey, fixtureId) {
+  var fixtureMeta = getMissionCommandStage34GateB3AFixtureMap()[fixtureId] || {};
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+  return {
+    review_row_id: reviewRowId,
+    review_batch_id: batchKey,
+    fixture_id: fixtureId,
+    fixture_pack_sha256: MC_STAGE34_GATE_B1_FIXTURE_SHA256,
+    receipt_related_object: makeMissionCommandStage34GateB3ARelatedObject(batchKey),
+    receipt_parent_id: makeMissionCommandStage34GateB3AReceiptId('parent', batchKey),
+    receipt_child_id: '',
+    candidate_sha256: '',
+    role_owner: fixtureMeta.roleOwner || '',
+    escalated_from: fixtureMeta.escalatedFrom || '',
+    family: fixtureMeta.family || '',
+    priority: fixtureMeta.priority || '',
+    why_now: '',
+    material_change: '',
+    next_move_type: '',
+    candidate_text: '',
+    schema_valid: false,
+    review_state: 'unreviewed',
+    reviewer: '',
+    reviewed_at: '',
+    privacy_class: MC_STAGE34_GATE_B3A_PRIVACY_CLASS,
+    retention_due_at: '2099-10-08T00:00:00Z',
+    redacted_at: '',
+    redaction_reason: '',
+    batch_state: 'reserved',
+    boundary_flags: JSON.stringify({
+      raw_prompt_stored: false,
+      raw_provider_response_stored: false,
+      visible_delivery: false,
+      dispatch: false,
+      external_write: false,
+      route_created: false
+    }),
+    version: 1,
+    etag: 'etag_' + missionCommandStage34GateB1Hash(reviewRowId).slice(0, 24)
+  };
+}
+
+function claimMissionCommandStage34GateB3AParent(runtimeAdapter, runId, batchKey) {
+  var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+  if (!runtimeAdapter || !runtimeAdapter.acquireLock) return makeMissionCommandStage34GateB3ABlocked('runtime_adapter_missing', 'Runtime receipt fake adapter missing.');
+  if (!runtimeAdapter.acquireLock('stage34_b3a_parent_claim')) return makeMissionCommandStage34GateB3ABlocked('runtime_lock_unavailable', 'Runtime receipt parent lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB3ABlocked(refresh.stopCondition, 'Runtime receipt headers missing.');
+    if (findMissionCommandStage34GateB3AReceiptRows(runtimeAdapter, relatedObject).length) {
+      return { ok: false, status: 'duplicate_suppressed', providerImplicationAllowed: false, providerCallAttempted: false };
+    }
+    var parent = makeMissionCommandStage34GateB3AParentReceipt(runId, batchKey);
+    runtimeAdapter.appendRowObject(parent);
+    return { ok: true, status: 'parent_claimed', parent: parent, providerImplicationAllowed: false, providerCallAttempted: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3ABlocked('parent_claim_failed', 'Parent claim failed before provider implication.');
+  } finally {
+    runtimeAdapter.releaseLock('stage34_b3a_parent_claim');
+  }
+}
+
+function reserveMissionCommandStage34GateB3AReviewRows(reviewAdapter, runId, batchKey) {
+  if (!reviewAdapter || !reviewAdapter.acquireLock) return makeMissionCommandStage34GateB3ABlocked('review_adapter_missing', 'Review fake adapter missing.');
+  if (!reviewAdapter.acquireLock('stage34_b3a_review_reserve')) return makeMissionCommandStage34GateB3ABlocked('review_lock_unavailable', 'Review reservation lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage34GateB3AReviewAdapterUnderLock(reviewAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB3ABlocked(refresh.stopCondition, 'Review tab headers missing.');
+    var reserved = [];
+    for (var i = 0; i < MC_STAGE34_GATE_B3A_FIXTURE_IDS.length; i++) {
+      var fixtureId = MC_STAGE34_GATE_B3A_FIXTURE_IDS[i];
+      var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+      if (findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId)) return { ok: false, status: 'duplicate_suppressed', providerImplicationAllowed: false, providerCallAttempted: false };
+      var row = makeMissionCommandStage34GateB3ABlankReviewRow(runId, batchKey, fixtureId);
+      reviewAdapter.appendRowObject(row);
+      reserved.push(row);
+    }
+    return { ok: true, status: 'four_blank_rows_reserved', rows: reserved, providerImplicationAllowed: false, providerCallAttempted: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3ABlocked('review_reservation_failed', 'Review row reservation failed before provider implication.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_b3a_review_reserve');
+  }
+}
+
+function validateMissionCommandStage34GateB3ACandidate(candidate) {
+  candidate = candidate || {};
+  if (!isMissionCommandStage34GateB3AFixtureAllowed(candidate.fixture_id)) return { ok: false, reason: 'fixture_not_allowed' };
+  var fixtureMeta = getMissionCommandStage34GateB3AFixtureMap()[candidate.fixture_id] || {};
+  if (candidate.role_owner !== fixtureMeta.roleOwner) return { ok: false, reason: 'role_owner_invalid' };
+  var keys = Object.keys(candidate);
+  for (var i = 0; i < keys.length; i++) {
+    if (MC_STAGE34_GATE_B3A_READABLE_FIELDS.indexOf(keys[i]) === -1) return { ok: false, reason: 'field_not_allowed' };
+  }
+  var safety = assertMissionCommandStage34GateB3AReadableSafe(candidate);
+  if (!safety.ok) return safety;
+  if (!candidate.candidate_text || String(candidate.candidate_text).length > 600) return { ok: false, reason: 'candidate_text_invalid' };
+  return { ok: true, reason: '' };
+}
+
+function appendMissionCommandStage34GateB3AHashChild(runtimeAdapter, runId, batchKey, fixtureId, candidateHash, reviewRowId) {
+  if (!runtimeAdapter.acquireLock('stage34_b3a_hash_child_' + fixtureId)) return makeMissionCommandStage34GateB3ABlocked('runtime_lock_unavailable', 'Hash child lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB3ABlocked(refresh.stopCondition, 'Runtime receipt headers missing.');
+    var row = makeMissionCommandStage34GateB3AChildReceipt(runId, batchKey, fixtureId, candidateHash, reviewRowId);
+    var existing = findMissionCommandStage34GateB3AChildReceipt(runtimeAdapter, batchKey, fixtureId);
+    if (existing) return { ok: false, status: 'duplicate_suppressed', row: existing.row, providerImplicationAllowed: false, providerCallAttempted: false };
+    runtimeAdapter.appendRowObject(row);
+    return { ok: true, status: 'hash_child_logged', row: row, providerCallAttempted: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3ABlocked('hash_child_failed', 'Hash-only child receipt failed before readable candidate text.');
+  } finally {
+    runtimeAdapter.releaseLock('stage34_b3a_hash_child_' + fixtureId);
+  }
+}
+
+function verifyMissionCommandStage34GateB3AHashChildEvidence(runtimeAdapter, batchKey, fixtureId, candidateHash, reviewRowId) {
+  var child = findMissionCommandStage34GateB3AChildReceipt(runtimeAdapter, batchKey, fixtureId);
+  if (!child) return { ok: false, stopCondition: 'hash_child_missing', child: null };
+  var summary = parseMissionCommandStage34GateB3ASafeSummary(child.row);
+  if (summary.fixture_id !== fixtureId) return { ok: false, stopCondition: 'hash_child_fixture_mismatch', child: child.row };
+  if (summary.candidate_sha256 !== candidateHash) return { ok: false, stopCondition: 'hash_child_hash_mismatch', child: child.row };
+  if (summary.review_row_id !== reviewRowId) return { ok: false, stopCondition: 'hash_child_review_row_mismatch', child: child.row };
+  if (child.row.related_object !== makeMissionCommandStage34GateB3ARelatedObject(batchKey)) return { ok: false, stopCondition: 'hash_child_batch_mismatch', child: child.row };
+  return { ok: true, stopCondition: '', child: child.row };
+}
+
+function writeMissionCommandStage34GateB3AReadableCandidate(runtimeAdapter, reviewAdapter, runId, batchKey, candidate, candidateHash, receiptChildId) {
+  var fixtureId = candidate.fixture_id;
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+  if (!reviewAdapter.acquireLock('stage34_b3a_readable_' + fixtureId)) return makeMissionCommandStage34GateB3ABlocked('review_lock_unavailable', 'Readable row lock unavailable.');
+  try {
+    var childEvidence = verifyMissionCommandStage34GateB3AHashChildEvidence(runtimeAdapter, batchKey, fixtureId, candidateHash, reviewRowId);
+    if (!childEvidence.ok) return makeMissionCommandStage34GateB3ABlocked(childEvidence.stopCondition, 'Readable candidate write requires matching hash-only child receipt evidence.');
+    if (childEvidence.child.receipt_id !== receiptChildId) return makeMissionCommandStage34GateB3ABlocked('hash_child_receipt_id_mismatch', 'Readable candidate write requires the matching child receipt ID.');
+    var refresh = refreshMissionCommandStage34GateB3AReviewAdapterUnderLock(reviewAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB3ABlocked(refresh.stopCondition, 'Review tab headers missing.');
+    var found = findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId);
+    if (!found) return makeMissionCommandStage34GateB3ABlocked('review_reservation_missing', 'Readable row reservation missing.');
+    if (String(found.row.candidate_sha256 || '') || String(found.row.candidate_text || '') || found.row.schema_valid === true) {
+      return { ok: false, status: 'duplicate_suppressed', row: found.row, providerImplicationAllowed: false, providerCallAttempted: false };
+    }
+    var expected = { version: found.row.version, etag: found.row.etag };
+    var updated = Object.assign({}, found.row, {
+      receipt_child_id: receiptChildId,
+      candidate_sha256: candidateHash,
+      why_now: candidate.why_now || '',
+      material_change: candidate.material_change || '',
+      next_move_type: candidate.next_move_type || '',
+      candidate_text: candidate.candidate_text || '',
+      schema_valid: true,
+      batch_state: 'partial',
+      version: safeMissionCommandOpenAiNumberV31(found.row.version) + 1,
+      etag: 'etag_' + missionCommandStage34GateB1Hash(reviewRowId + candidateHash).slice(0, 24)
+    });
+    reviewAdapter.updateRowObject(found.index, updated, expected);
+    return { ok: true, status: 'readable_candidate_written', row: updated, providerCallAttempted: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3ABlocked('review_write_failed', 'Readable candidate write failed after hash-only child.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_b3a_readable_' + fixtureId);
+  }
+}
+
+function addMissionCommandStage34GateB3ACandidate(runtimeAdapter, reviewAdapter, runId, batchKey, candidate) {
+  var validation = validateMissionCommandStage34GateB3ACandidate(candidate);
+  if (!validation.ok) return makeMissionCommandStage34GateB3ABlocked(validation.reason, 'Readable candidate failed validation.');
+  var candidateHash = makeMissionCommandStage34GateB3ACandidateHash(candidate);
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, candidate.fixture_id);
+  var child = appendMissionCommandStage34GateB3AHashChild(runtimeAdapter, runId, batchKey, candidate.fixture_id, candidateHash, reviewRowId);
+  if (!child.ok) return child;
+  return writeMissionCommandStage34GateB3AReadableCandidate(runtimeAdapter, reviewAdapter, runId, batchKey, candidate, candidateHash, child.row.receipt_id);
+}
+
+function finalizeMissionCommandStage34GateB3ABatch(runtimeAdapter, reviewAdapter, runId, batchKey) {
+  if (!runtimeAdapter.acquireLock('stage34_b3a_finalize_runtime')) return makeMissionCommandStage34GateB3ABlocked('runtime_lock_unavailable', 'Finalize runtime lock unavailable.');
+  if (!reviewAdapter.acquireLock('stage34_b3a_finalize_review')) {
+    runtimeAdapter.releaseLock('stage34_b3a_finalize_runtime');
+    return makeMissionCommandStage34GateB3ABlocked('review_lock_unavailable', 'Finalize review lock unavailable.');
+  }
+  try {
+  var runtimeRefresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+  if (!runtimeRefresh.ok) return makeMissionCommandStage34GateB3ABlocked(runtimeRefresh.stopCondition, 'Runtime receipt headers missing.');
+  var reviewRefresh = refreshMissionCommandStage34GateB3AReviewAdapterUnderLock(reviewAdapter);
+  if (!reviewRefresh.ok) return makeMissionCommandStage34GateB3ABlocked(reviewRefresh.stopCondition, 'Review tab headers missing.');
+  var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+  var receiptRows = findMissionCommandStage34GateB3AReceiptRows(runtimeAdapter, relatedObject);
+  var parentRows = receiptRows.filter(function(entry) { return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_PARENT_TYPE; });
+  var childRows = receiptRows.filter(function(entry) { return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE; });
+  var reviewRows = findMissionCommandStage34GateB3AReviewRows(reviewAdapter, batchKey);
+  var completeReviewRows = reviewRows.filter(function(entry) {
+    return entry.row.schema_valid === true && String(entry.row.candidate_text || '') !== '' && String(entry.row.candidate_sha256 || '') !== '';
+  });
+  if (parentRows.length !== 1 || childRows.length !== 4 || reviewRows.length !== 4 || completeReviewRows.length !== 4) return makeMissionCommandStage34GateB3ABlocked('b3a_exact_four_required', 'Finalization requires one parent, four hash-only children, and four complete review rows.');
+  for (var i = 0; i < MC_STAGE34_GATE_B3A_FIXTURE_IDS.length; i++) {
+    var fixtureId = MC_STAGE34_GATE_B3A_FIXTURE_IDS[i];
+    var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+    var reviewRow = findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId);
+    if (!reviewRow || reviewRow.row.fixture_id !== fixtureId) return makeMissionCommandStage34GateB3ABlocked('b3a_review_set_invalid', 'Exact four deterministic review rows are required.');
+    var child = findMissionCommandStage34GateB3AChildReceipt(runtimeAdapter, batchKey, fixtureId);
+    if (!child) return makeMissionCommandStage34GateB3ABlocked('b3a_child_set_invalid', 'Exact four deterministic child receipts are required.');
+    var summary = parseMissionCommandStage34GateB3ASafeSummary(child.row);
+    if (summary.fixture_id !== fixtureId ||
+        summary.candidate_sha256 !== reviewRow.row.candidate_sha256 ||
+        summary.review_row_id !== reviewRowId ||
+        reviewRow.row.receipt_child_id !== child.row.receipt_id) {
+      return makeMissionCommandStage34GateB3ABlocked('b3a_hash_link_invalid', 'Child receipt and readable review row linkage must match exactly.');
+    }
+  }
+  var parentEntry = parentRows[0];
+  var updatedParent = Object.assign({}, parentEntry.row, {
+    result: 'logged',
+    version: safeMissionCommandOpenAiNumberV31(parentEntry.row.version) + 1,
+    etag: 'etag_' + missionCommandStage34GateB1Hash(parentEntry.row.receipt_id + ':logged:' + batchKey).slice(0, 24),
+    updated_by: MC_STAGE34_GATE_B3A_BUILD,
+    last_request_id: runId
+  });
+  runtimeAdapter.updateRowObject(parentEntry.index, updatedParent, { version: parentEntry.row.version, etag: parentEntry.row.etag });
+  for (var j = 0; j < reviewRows.length; j++) {
+    var reviewEntry = reviewRows[j];
+    var updatedReview = Object.assign({}, reviewEntry.row, {
+      batch_state: 'review_ready',
+      version: safeMissionCommandOpenAiNumberV31(reviewEntry.row.version) + 1,
+      etag: 'etag_' + missionCommandStage34GateB1Hash(reviewEntry.row.review_row_id + ':review_ready:' + batchKey).slice(0, 24)
+    });
+    reviewAdapter.updateRowObject(reviewEntry.index, updatedReview, { version: reviewEntry.row.version, etag: reviewEntry.row.etag });
+  }
+  return { ok: true, status: 'review_ready', childrenWritten: childRows.length, reviewRowsComplete: completeReviewRows.length, parentResult: 'logged', providerCallAttempted: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3ABlocked('b3a_finalize_failed', 'Finalization update failed.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_b3a_finalize_review');
+    runtimeAdapter.releaseLock('stage34_b3a_finalize_runtime');
+  }
+}
+
+function markMissionCommandStage34GateB3ARedactionPending(reviewAdapter, nowIso) {
+  var now = new Date(nowIso || '').getTime();
+  var changed = 0;
+  for (var i = 0; i < reviewAdapter.rows.length; i++) {
+    var row = reviewAdapter.rows[i];
+    var due = new Date(row.retention_due_at || '').getTime();
+    if (isFinite(now) && isFinite(due) && due <= now && row.batch_state !== 'redacted') {
+      var updated = Object.assign({}, row, {
+        batch_state: 'redaction_pending',
+        review_state: row.review_state === 'unreviewed' ? 'expired' : row.review_state,
+        version: safeMissionCommandOpenAiNumberV31(row.version) + 1,
+        etag: 'etag_' + missionCommandStage34GateB1Hash(row.review_row_id + nowIso).slice(0, 24)
+      });
+      reviewAdapter.updateRowObject(i, updated, { version: row.version, etag: row.etag });
+      changed += 1;
+    }
+  }
+  return { ok: true, status: 'redaction_pending_marked', rowsMarked: changed, rowsDeleted: reviewAdapter.deletedRows || 0 };
+}
+
+function makeMissionCommandStage34GateB3ASafeCandidates() {
+  return [
+    {
+      fixture_id: 'MC34-F01',
+      role_owner: 'executive_assistant',
+      escalated_from: '',
+      family: 'executive_assistant_critical',
+      priority: 'critical',
+      why_now: 'A synthetic approval window moved into the today bucket.',
+      material_change: 'deadline_now_today',
+      next_move_type: 'review_and_approve_or_revise',
+      candidate_text: 'Review the synthetic approval and choose approve or revise before the window closes.'
+    },
+    {
+      fixture_id: 'MC34-F04',
+      role_owner: 'chief_of_staff',
+      escalated_from: '',
+      family: 'chief_coordination',
+      priority: 'important',
+      why_now: 'A synthetic review queue grew across a coordination lane.',
+      material_change: 'review_queue_count_increased',
+      next_move_type: 'stage_an_unblocker_for_review',
+      candidate_text: 'Stage an unblocker for review so the synthetic coordination lane can move cleanly.'
+    },
+    {
+      fixture_id: 'MC34-F12',
+      role_owner: 'chief_of_staff',
+      escalated_from: '',
+      family: 'material_change_reopen',
+      priority: 'critical',
+      why_now: 'The synthetic due bucket worsened from later to overdue.',
+      material_change: 'due_bucket_worsened',
+      next_move_type: 'review_the_dependency',
+      candidate_text: 'Review the dependency because the synthetic item reopened after its due bucket changed.'
+    },
+    {
+      fixture_id: 'MC34-F15',
+      role_owner: 'executive_assistant',
+      escalated_from: 'chief_of_staff',
+      family: 'attributed_chief_escalation',
+      priority: 'important',
+      why_now: 'Chief has synthetic team context ready and needs an A1XX decision.',
+      material_change: 'chief_escalation_required',
+      next_move_type: 'prepare_the_handoff_to_resume',
+      candidate_text: 'Chief has the synthetic context ready; review the decision so the handoff can resume.'
+    }
+  ];
+}
+
+function verifyMissionCommandStage34GateB3ALocalChecks() {
+  var runId = 'mc_stage34_gate_b3a_local_only';
+  var batchKey = makeMissionCommandStage34GateB3ABatchKey(runId);
+  var runtime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var review = makeMissionCommandStage34GateB3AFakeReviewAdapter();
+  var parent = claimMissionCommandStage34GateB3AParent(runtime, runId, batchKey);
+  var reserve = reserveMissionCommandStage34GateB3AReviewRows(review, runId, batchKey);
+  var candidates = makeMissionCommandStage34GateB3ASafeCandidates();
+  var writeResults = candidates.map(function(candidate) {
+    return addMissionCommandStage34GateB3ACandidate(runtime, review, runId, batchKey, candidate);
+  });
+  var final = finalizeMissionCommandStage34GateB3ABatch(runtime, review, runId, batchKey);
+  var finalizedParent = findMissionCommandStage34GateB3AReceiptRows(runtime, makeMissionCommandStage34GateB3ARelatedObject(batchKey)).filter(function(entry) {
+    return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_PARENT_TYPE;
+  })[0];
+  var finalizedReviewRows = findMissionCommandStage34GateB3AReviewRows(review, batchKey);
+  var duplicate = claimMissionCommandStage34GateB3AParent(runtime, runId, batchKey);
+  var beforeDuplicateChildCount = findMissionCommandStage34GateB3AReceiptRows(runtime, makeMissionCommandStage34GateB3ARelatedObject(batchKey)).filter(function(entry) {
+    return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE;
+  }).length;
+  var duplicateTextBefore = findMissionCommandStage34GateB3AReviewRow(review, makeMissionCommandStage34GateB3AReviewRowId(batchKey, 'MC34-F01')).row.candidate_text;
+  var duplicateCandidate = addMissionCommandStage34GateB3ACandidate(runtime, review, runId, batchKey, candidates[0]);
+  var afterDuplicateChildCount = findMissionCommandStage34GateB3AReceiptRows(runtime, makeMissionCommandStage34GateB3ARelatedObject(batchKey)).filter(function(entry) {
+    return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE;
+  }).length;
+  var duplicateTextAfter = findMissionCommandStage34GateB3AReviewRow(review, makeMissionCommandStage34GateB3AReviewRowId(batchKey, 'MC34-F01')).row.candidate_text;
+  var missingReviewHeaders = reserveMissionCommandStage34GateB3AReviewRows(makeMissionCommandStage34GateB3AFakeReviewAdapter(getMissionCommandStage34GateB3AReviewHeaders().filter(function(header) { return header !== 'candidate_text'; })), runId, batchKey);
+  var missingRuntimeHeaders = claimMissionCommandStage34GateB3AParent(makeMissionCommandStage34GateB3AFakeRuntimeAdapter(getMissionCommandStage33RRequiredReceiptHeaders().filter(function(header) { return header !== 'safe_summary'; })), runId, batchKey);
+  var reservationFail = reserveMissionCommandStage34GateB3AReviewRows(makeMissionCommandStage34GateB3AFakeReviewAdapter(null, [], { appendFails: true }), runId, batchKey);
+  var childFailRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter(null, [], { appendFails: true });
+  var childFailReview = makeMissionCommandStage34GateB3AFakeReviewAdapter();
+  var childFailParent = claimMissionCommandStage34GateB3AParent(childFailRuntime, runId + '_child_fail', makeMissionCommandStage34GateB3ABatchKey(runId + '_child_fail'));
+  var childFailReserve = reserveMissionCommandStage34GateB3AReviewRows(childFailReview, runId + '_child_fail', makeMissionCommandStage34GateB3ABatchKey(runId + '_child_fail'));
+  var childFail = addMissionCommandStage34GateB3ACandidate(childFailRuntime, childFailReview, runId + '_child_fail', makeMissionCommandStage34GateB3ABatchKey(runId + '_child_fail'), candidates[0]);
+  var childFailReviewRow = findMissionCommandStage34GateB3AReviewRow(childFailReview, makeMissionCommandStage34GateB3AReviewRowId(makeMissionCommandStage34GateB3ABatchKey(runId + '_child_fail'), 'MC34-F01'));
+  var directRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var directReview = makeMissionCommandStage34GateB3AFakeReviewAdapter();
+  var directKey = makeMissionCommandStage34GateB3ABatchKey(runId + '_direct');
+  claimMissionCommandStage34GateB3AParent(directRuntime, runId + '_direct', directKey);
+  reserveMissionCommandStage34GateB3AReviewRows(directReview, runId + '_direct', directKey);
+  var directHash = makeMissionCommandStage34GateB3ACandidateHash(candidates[0]);
+  var directWrite = writeMissionCommandStage34GateB3AReadableCandidate(directRuntime, directReview, runId + '_direct', directKey, candidates[0], directHash, makeMissionCommandStage34GateB3AReceiptId('child', directKey, 'MC34-F01'));
+  var wrongRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var wrongReview = makeMissionCommandStage34GateB3AFakeReviewAdapter();
+  var wrongKey = makeMissionCommandStage34GateB3ABatchKey(runId + '_wrong');
+  claimMissionCommandStage34GateB3AParent(wrongRuntime, runId + '_wrong', wrongKey);
+  reserveMissionCommandStage34GateB3AReviewRows(wrongReview, runId + '_wrong', wrongKey);
+  var wrongHash = makeMissionCommandStage34GateB3ACandidateHash(candidates[0]);
+  var wrongReviewRowId = makeMissionCommandStage34GateB3AReviewRowId(wrongKey, 'MC34-F01');
+  appendMissionCommandStage34GateB3AHashChild(wrongRuntime, runId + '_wrong', wrongKey, 'MC34-F01', 'wrong_hash', wrongReviewRowId);
+  var wrongWrite = writeMissionCommandStage34GateB3AReadableCandidate(wrongRuntime, wrongReview, runId + '_wrong', wrongKey, candidates[0], wrongHash, makeMissionCommandStage34GateB3AReceiptId('child', wrongKey, 'MC34-F01'));
+  var partialRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var partialReview = makeMissionCommandStage34GateB3AFakeReviewAdapter();
+  var partialKey = makeMissionCommandStage34GateB3ABatchKey(runId + '_partial');
+  claimMissionCommandStage34GateB3AParent(partialRuntime, runId + '_partial', partialKey);
+  reserveMissionCommandStage34GateB3AReviewRows(partialReview, runId + '_partial', partialKey);
+  addMissionCommandStage34GateB3ACandidate(partialRuntime, partialReview, runId + '_partial', partialKey, candidates[0]);
+  var partialParentBefore = findMissionCommandStage34GateB3AReceiptRows(partialRuntime, makeMissionCommandStage34GateB3ARelatedObject(partialKey))[0].row.result;
+  var partialReviewBefore = findMissionCommandStage34GateB3AReviewRow(partialReview, makeMissionCommandStage34GateB3AReviewRowId(partialKey, 'MC34-F01')).row.batch_state;
+  var partialFinal = finalizeMissionCommandStage34GateB3ABatch(partialRuntime, partialReview, runId + '_partial', partialKey);
+  var partialParentAfter = findMissionCommandStage34GateB3AReceiptRows(partialRuntime, makeMissionCommandStage34GateB3ARelatedObject(partialKey))[0].row.result;
+  var partialReviewAfter = findMissionCommandStage34GateB3AReviewRow(partialReview, makeMissionCommandStage34GateB3AReviewRowId(partialKey, 'MC34-F01')).row.batch_state;
+  var substitutedRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var substitutedReview = makeMissionCommandStage34GateB3AFakeReviewAdapter();
+  var substitutedKey = makeMissionCommandStage34GateB3ABatchKey(runId + '_substituted');
+  claimMissionCommandStage34GateB3AParent(substitutedRuntime, runId + '_substituted', substitutedKey);
+  reserveMissionCommandStage34GateB3AReviewRows(substitutedReview, runId + '_substituted', substitutedKey);
+  candidates.forEach(function(candidate) {
+    addMissionCommandStage34GateB3ACandidate(substitutedRuntime, substitutedReview, runId + '_substituted', substitutedKey, candidate);
+  });
+  substitutedReview.rows[3] = Object.assign({}, substitutedReview.rows[0]);
+  var substitutedFinal = finalizeMissionCommandStage34GateB3ABatch(substitutedRuntime, substitutedReview, runId + '_substituted', substitutedKey);
+  var unsafeCandidate = Object.assign({}, candidates[0], { candidate_text: 'raw provider response with api key' });
+  var unsafe = validateMissionCommandStage34GateB3ACandidate(unsafeCandidate);
+  var disallowed = validateMissionCommandStage34GateB3ACandidate(Object.assign({}, candidates[0], { fixture_id: 'MC34-F99' }));
+  var staleReview = makeMissionCommandStage34GateB3AFakeReviewAdapter();
+  reserveMissionCommandStage34GateB3AReviewRows(staleReview, runId + '_stale', makeMissionCommandStage34GateB3ABatchKey(runId + '_stale'));
+  var staleRow = staleReview.rows[0];
+  var staleBlocked = false;
+  try {
+    staleReview.updateRowObject(0, staleRow, { version: 999, etag: 'stale_etag' });
+  } catch (err) {
+    staleBlocked = true;
+  }
+  var beforeExpireCount = review.rows.length;
+  var expire = markMissionCommandStage34GateB3ARedactionPending(review, '2099-10-09T00:00:00Z');
+  var afterExpireCount = review.rows.length;
+  var runtimeText = JSON.stringify(runtime.rows);
+  var reviewText = JSON.stringify(review.rows);
+  var flags = getMissionCommandStage34GateB3AFlags();
+  var callerFlags = getMissionCommandStage34GateB3AFlags({ gateB3AEnabled: true });
+  return {
+    ok: parent.ok === true &&
+      reserve.ok === true &&
+      reserve.rows.length === 4 &&
+      writeResults.every(function(result) { return result.ok === true; }) &&
+      final.ok === true &&
+      final.parentResult === 'logged' &&
+      finalizedParent.row.result === 'logged' &&
+      finalizedReviewRows.every(function(entry) { return entry.row.batch_state === 'review_ready'; }) &&
+      final.childrenWritten === 4 &&
+      final.reviewRowsComplete === 4 &&
+      duplicate.status === 'duplicate_suppressed' &&
+      duplicateCandidate.status === 'duplicate_suppressed' &&
+      beforeDuplicateChildCount === afterDuplicateChildCount &&
+      duplicateTextBefore === duplicateTextAfter &&
+      missingReviewHeaders.stopCondition === 'review_contract_invalid' &&
+      missingRuntimeHeaders.stopCondition === 'receipt_contract_invalid' &&
+      reservationFail.stopCondition === 'review_reservation_failed' &&
+      childFailParent.ok === false &&
+      childFailParent.stopCondition === 'parent_claim_failed' &&
+      childFailReserve.ok === true &&
+      childFail.ok === false &&
+      childFailReviewRow.row.candidate_text === '' &&
+      directWrite.ok === false &&
+      directWrite.stopCondition === 'hash_child_missing' &&
+      wrongWrite.ok === false &&
+      wrongWrite.stopCondition === 'hash_child_hash_mismatch' &&
+      partialFinal.stopCondition === 'b3a_exact_four_required' &&
+      partialParentBefore === partialParentAfter &&
+      partialReviewBefore === partialReviewAfter &&
+      substitutedFinal.ok === false &&
+      substitutedFinal.stopCondition === 'b3a_review_set_invalid' &&
+      unsafe.ok === false &&
+      disallowed.ok === false &&
+      staleBlocked === true &&
+      expire.rowsMarked === 4 &&
+      beforeExpireCount === afterExpireCount &&
+      runtimeText.indexOf('candidate_text') === -1 &&
+      runtimeText.indexOf('Review the synthetic') === -1 &&
+      reviewText.indexOf('api key') === -1 &&
+      flags.liveSheetEnabled === false &&
+      flags.gateB3AEnabled === false &&
+      flags.killSwitchEnabled === true &&
+      callerFlags.gateB3AEnabled === false &&
+      callerFlags.killSwitchEnabled === true &&
+      flags.providerEnabled === false &&
+      flags.scriptPropertiesEnabled === false &&
+      flags.wrapperEnabled === false &&
+      flags.routeEnabled === false &&
+      flags.triggerEnabled === false &&
+      flags.deleteEnabled === false,
+    build: MC_STAGE34_GATE_B3A_BUILD,
+    reviewTabName: MC_STAGE34_GATE_B3A_REVIEW_TAB_NAME,
+    reviewHeaders: getMissionCommandStage34GateB3AReviewHeaders(),
+    fixtureAllowlist: getMissionCommandStage34GateB3AFixtureAllowlist(),
+    reviewRowsReserved: reserve.rows.length,
+    childrenWritten: final.childrenWritten || 0,
+    reviewRowsComplete: final.reviewRowsComplete || 0,
+    duplicateSuppressed: duplicate.status === 'duplicate_suppressed',
+    duplicateCandidateSuppressed: duplicateCandidate.status === 'duplicate_suppressed',
+    duplicateChildCountUnchanged: beforeDuplicateChildCount === afterDuplicateChildCount,
+    duplicateReadableNotOverwritten: duplicateTextBefore === duplicateTextAfter,
+    missingReviewHeadersBlocked: missingReviewHeaders.stopCondition === 'review_contract_invalid',
+    missingRuntimeHeadersBlocked: missingRuntimeHeaders.stopCondition === 'receipt_contract_invalid',
+    reservationFailureBlocksProvider: reservationFail.stopCondition === 'review_reservation_failed',
+    childBeforeText: childFailReviewRow.row.candidate_text === '',
+    directReadableWithoutChildBlocked: directWrite.stopCondition === 'hash_child_missing',
+    wrongHashLinkBlocked: wrongWrite.stopCondition === 'hash_child_hash_mismatch',
+    partialFinalizationBlocked: partialFinal.stopCondition === 'b3a_exact_four_required',
+    partialStatesUnchanged: partialParentBefore === partialParentAfter && partialReviewBefore === partialReviewAfter,
+    substitutedSetBlocked: substitutedFinal.stopCondition === 'b3a_review_set_invalid',
+    exactSetFinalized: final.parentResult === 'logged' && finalizedReviewRows.every(function(entry) { return entry.row.batch_state === 'review_ready'; }),
+    unsafeCandidateBlocked: unsafe.ok === false,
+    disallowedFixtureBlocked: disallowed.ok === false,
+    staleVersionEtagBlocked: staleBlocked,
+    redactionPendingRows: expire.rowsMarked,
+    automaticDeletion: false,
+    runtimeReceiptsHashOnly: runtimeText.indexOf('candidate_text') === -1,
+    gateB3AEnabled: flags.gateB3AEnabled,
+    killSwitchEnabled: flags.killSwitchEnabled,
+    callerCannotEnable: callerFlags.gateB3AEnabled === false,
+    wrapperCreated: false,
+    providerCallAttempted: false,
+    liveSheetTouched: false,
+    scriptPropertiesAccessed: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false,
+    gateB3BStarted: false
+  };
+}
+
+// Mission Command Stage 3.4 Gate B3C provider-run preparation only.
+// Prepares the future B3D manual wrapper path; local checks use fake adapters only.
+var MC_STAGE34_GATE_B3C_BUILD = 'mmos-20260712-stage3-4-gate-b3c-provider-run-preparation';
+var MC_STAGE34_GATE_B3C_ENABLED = false;
+var MC_STAGE34_GATE_B3C_KILL_SWITCH = true;
+var MC_STAGE34_GATE_B3C_WRAPPER_NAME = 'runMissionCommandStage34GateB3DApprovedProviderReviewOnce';
+var MC_STAGE34_GATE_B3C_RUN_ID = 'mc_stage34_gate_b3d_20260712_manual_001';
+var MC_STAGE34_GATE_B3C_BATCH_KEY = '57288e814a6b65a989bf1165452c7241cb304d729121e6b7e7bcdb5d323ff481';
+var MC_STAGE34_GATE_B3C_RELATED_OBJECT = 'mc34b3:57288e814a6b65a989bf1165452c7241cb304d729121e6b7e7bcdb5d323ff481';
+var MC_STAGE34_GATE_B3C_REVIEW_SHEET_ID = 2083401137;
+var MC_STAGE34_GATE_B3C_MODEL = 'gpt-5.6-terra';
+var MC_STAGE34_GATE_B3C_MAX_CALLS = 4;
+var MC_STAGE34_GATE_B3C_RETRY_COUNT = 0;
+var MC_STAGE34_GATE_B3C_TIMEOUT_SECONDS = 30;
+var MC_STAGE34_GATE_B3C_MAX_INPUT_TOKENS_PER_CALL = 2000;
+var MC_STAGE34_GATE_B3C_MAX_OUTPUT_TOKENS_PER_CALL = 450;
+var MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD = 0.20;
+var MC_STAGE34_GATE_B3C_AUTH_TOKEN = 'stage34_gate_b3d_manual_001_wrapper_only';
+var MC_STAGE34_GATE_B3C_FAILURE_RECEIPT_TYPE = 'stage_3_4_gate_b3_review_failure';
+var MC_STAGE34_GATE_B3C_INPUT_PRICE_PER_MILLION = 2.50;
+var MC_STAGE34_GATE_B3C_OUTPUT_PRICE_PER_MILLION = 15.00;
+
+function getMissionCommandStage34GateB3CFlags(input) {
+  input = input || {};
+  var wrapperAuthorized = input.wrapperAuthorization === true &&
+    input.authorizationToken === MC_STAGE34_GATE_B3C_AUTH_TOKEN &&
+    input.runId === MC_STAGE34_GATE_B3C_RUN_ID &&
+    input.batchKey === MC_STAGE34_GATE_B3C_BATCH_KEY;
+  return {
+    gateB3CEnabled: MC_STAGE34_GATE_B3C_ENABLED === true && MC_STAGE34_GATE_B3C_KILL_SWITCH !== true,
+    killSwitchEnabled: MC_STAGE34_GATE_B3C_KILL_SWITCH === true,
+    approvedManualRun: input.approvedManualRun === true,
+    wrapperAuthorization: wrapperAuthorized,
+    liveSheetEnabled: wrapperAuthorized === true,
+    providerEnabled: wrapperAuthorized === true,
+    scriptPropertiesEnabled: wrapperAuthorized === true,
+    wrapperEnabled: wrapperAuthorized === true,
+    routeEnabled: false,
+    triggerEnabled: false,
+    visibleDeliveryEnabled: false,
+    dispatchEnabled: false,
+    externalWriteEnabled: false,
+    retryEnabled: false,
+    fallbackEnabled: false
+  };
+}
+
+function makeMissionCommandStage34GateB3CBlocked(reason, detail, meta) {
+  meta = meta || {};
+  return {
+    ok: false,
+    status: meta.status || 'blocked',
+    build: MC_STAGE34_GATE_B3C_BUILD,
+    stopCondition: reason || 'gate_b3c_blocked',
+    safeDetail: detail || '',
+    runId: MC_STAGE34_GATE_B3C_RUN_ID,
+    batchKey: MC_STAGE34_GATE_B3C_BATCH_KEY,
+    relatedObject: MC_STAGE34_GATE_B3C_RELATED_OBJECT,
+    providerCallAttempted: false,
+    fakeProviderCalls: safeMissionCommandOpenAiNumberV31(meta.fakeProviderCalls || 0),
+    retryCount: 0,
+    fallbackUsed: false,
+    liveSheetTouched: false,
+    scriptPropertiesAccessed: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function validateMissionCommandStage34GateB3CRunIdentity(input) {
+  input = input || {};
+  if (input.runId !== MC_STAGE34_GATE_B3C_RUN_ID) return makeMissionCommandStage34GateB3CBlocked('run_id_mismatch', 'Gate B3C/B3D run ID must match the locked approval packet.');
+  if (input.batchKey !== MC_STAGE34_GATE_B3C_BATCH_KEY) return makeMissionCommandStage34GateB3CBlocked('batch_key_mismatch', 'Gate B3C/B3D batch key must match the locked approval packet.');
+  if (makeMissionCommandStage34GateB3ARelatedObject(input.batchKey) !== MC_STAGE34_GATE_B3C_RELATED_OBJECT) return makeMissionCommandStage34GateB3CBlocked('related_object_mismatch', 'Gate B3C/B3D related object must be deterministic.');
+  if (Number(input.estimatedCostUsd || 0) > MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD) return makeMissionCommandStage34GateB3CBlocked('cost_cap_exceeded', 'Estimated cost must stay at or below the approved B3C/B3D cap.');
+  return { ok: true, status: 'identity_ready' };
+}
+
+function makeMissionCommandStage34GateB3CWrapperAuthorization() {
+  return {
+    approvedManualRun: true,
+    wrapperAuthorization: true,
+    authorizationToken: MC_STAGE34_GATE_B3C_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_B3C_RUN_ID,
+    batchKey: MC_STAGE34_GATE_B3C_BATCH_KEY,
+    estimatedCostUsd: MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD
+  };
+}
+
+function validateMissionCommandStage34GateB3CAuthorization(input) {
+  input = input || {};
+  var identity = validateMissionCommandStage34GateB3CRunIdentity(input);
+  if (!identity.ok) return identity;
+  var flags = getMissionCommandStage34GateB3CFlags(input);
+  if (flags.gateB3CEnabled !== false || flags.killSwitchEnabled !== true) return makeMissionCommandStage34GateB3CBlocked('flag_state_invalid', 'Gate B3C helpers must remain default-off with kill switch true.');
+  if (input.approvedManualRun !== true || input.wrapperAuthorization !== true || input.authorizationToken !== MC_STAGE34_GATE_B3C_AUTH_TOKEN) {
+    return makeMissionCommandStage34GateB3CBlocked('wrapper_authorization_missing', 'Gate B3C/B3D coordinator requires the exact wrapper-only authorization shape.');
+  }
+  if (flags.liveSheetEnabled !== true || flags.providerEnabled !== true || flags.scriptPropertiesEnabled !== true || flags.wrapperEnabled !== true) {
+    return makeMissionCommandStage34GateB3CBlocked('wrapper_authorization_invalid', 'Wrapper authorization flags did not resolve to the approved live path.');
+  }
+  if (flags.routeEnabled || flags.triggerEnabled || flags.visibleDeliveryEnabled || flags.dispatchEnabled || flags.externalWriteEnabled || flags.retryEnabled || flags.fallbackEnabled) {
+    return makeMissionCommandStage34GateB3CBlocked('unsafe_flag_state', 'Route, trigger, visible delivery, dispatch, external write, retry, and fallback flags must remain false.');
+  }
+  return { ok: true, status: 'wrapper_authorized', flags: flags };
+}
+
+function getMissionCommandStage34GateB3CCandidateSchema() {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: MC_STAGE34_GATE_B3A_READABLE_FIELDS.slice(),
+    properties: {
+      fixture_id: { type: 'string', enum: getMissionCommandStage34GateB3AFixtureAllowlist() },
+      role_owner: { type: 'string', enum: ['executive_assistant', 'chief_of_staff'] },
+      escalated_from: { type: 'string' },
+      family: { type: 'string' },
+      priority: { type: 'string', enum: ['critical', 'important'] },
+      why_now: { type: 'string' },
+      material_change: { type: 'string' },
+      next_move_type: { type: 'string' },
+      candidate_text: { type: 'string' }
+    }
+  };
+}
+
+function getMissionCommandStage34GateB3CFixturePrompt(fixtureId) {
+  var meta = getMissionCommandStage34GateB3AFixtureMap()[fixtureId] || {};
+  return [
+    'Create one readable Mission Command shadow review candidate for A1XX.',
+    'Use fixture ' + fixtureId + ' only.',
+    'Return strict JSON matching the provided schema.',
+    'Use role_owner ' + meta.roleOwner + ', family ' + meta.family + ', priority ' + meta.priority + '.',
+    'Do not claim delivery, dispatch, completion, publication, external writes, or live source access.',
+    'Use protected next-move wording such as review, stage, prepare, or route for decision.'
+  ].join(' ');
+}
+
+function makeMissionCommandStage34GateB3CRequest(fixtureId) {
+  if (!isMissionCommandStage34GateB3AFixtureAllowed(fixtureId)) return { ok: false, error: 'fixture_not_allowed', request: null };
+  var meta = getMissionCommandStage34GateB3AFixtureMap()[fixtureId] || {};
+  var request = {
+    model: MC_STAGE34_GATE_B3C_MODEL,
+    store: false,
+    input: [
+      {
+        role: 'system',
+        content: 'You prepare hidden Mission Command review candidates. Output only strict JSON. Never include raw provider data, secrets, visible delivery claims, dispatch claims, or external action claims.'
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          run_id: MC_STAGE34_GATE_B3C_RUN_ID,
+          batch_key: MC_STAGE34_GATE_B3C_BATCH_KEY,
+          fixture_id: fixtureId,
+          fixture_pack_sha256: MC_STAGE34_GATE_B1_FIXTURE_SHA256,
+          fixture_meta: meta,
+          instruction: getMissionCommandStage34GateB3CFixturePrompt(fixtureId),
+          synthetic_only: true
+        })
+      }
+    ],
+    reasoning: { effort: 'low' },
+    max_output_tokens: MC_STAGE34_GATE_B3C_MAX_OUTPUT_TOKENS_PER_CALL,
+    tools: [],
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'mission_command_gate_b3_readable_candidate_v1',
+        strict: true,
+        schema: getMissionCommandStage34GateB3CCandidateSchema()
+      }
+    },
+    safety_identifier: makeMissionCommandOpenAiSafetyIdentifierV31('a1xx-primary-stage34-b3c-' + fixtureId)
+  };
+  return { ok: true, error: '', request: request };
+}
+
+function validateMissionCommandStage34GateB3CRequest(fixtureId, request) {
+  var errors = [];
+  var base = validateMissionCommandOpenAiShadowRequestV31(request);
+  errors = errors.concat(base.errors || []);
+  if (request.model !== MC_STAGE34_GATE_B3C_MODEL) errors.push('model must be ' + MC_STAGE34_GATE_B3C_MODEL);
+  if (request.max_output_tokens > MC_STAGE34_GATE_B3C_MAX_OUTPUT_TOKENS_PER_CALL) errors.push('max output tokens exceed B3C cap');
+  if (JSON.stringify(request).length > MC_STAGE34_GATE_B3C_MAX_INPUT_TOKENS_PER_CALL * 5) errors.push('request payload exceeds conservative input-size cap');
+  if (request.parallel_tool_calls || request.tool_choice) errors.push('tool selection fields must be absent');
+  if (!isMissionCommandStage34GateB3AFixtureAllowed(fixtureId)) errors.push('fixture not allowlisted');
+  return { ok: errors.length === 0, errors: errors };
+}
+
+function makeMissionCommandStage34GateB3CFetchOptions(apiKey, request) {
+  return {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      Authorization: 'Bearer ' + String(apiKey || '')
+    },
+    payload: JSON.stringify(request || {}),
+    muteHttpExceptions: true,
+    timeoutSeconds: MC_STAGE34_GATE_B3C_TIMEOUT_SECONDS
+  };
+}
+
+function buildMissionCommandStage34GateB3CRequests() {
+  var requests = [];
+  var errors = [];
+  getMissionCommandStage34GateB3AFixtureAllowlist().forEach(function(fixtureId) {
+    var draft = makeMissionCommandStage34GateB3CRequest(fixtureId);
+    if (!draft.ok) {
+      errors.push(fixtureId + ':' + draft.error);
+      return;
+    }
+    var validation = validateMissionCommandStage34GateB3CRequest(fixtureId, draft.request);
+    if (!validation.ok) {
+      errors.push(fixtureId + ':' + validation.errors.join('; '));
+      return;
+    }
+    requests.push({ fixtureId: fixtureId, request: draft.request, validation: validation });
+  });
+  return { ok: errors.length === 0 && requests.length === 4, requests: requests, errors: errors };
+}
+
+function extractMissionCommandStage34GateB3COutputText(providerResponse) {
+  return getMissionCommandOpenAiStage33OutputText(providerResponse || {});
+}
+
+function parseMissionCommandStage34GateB3CProviderCandidate(providerResponse) {
+  var parsed = null;
+  var outputText = extractMissionCommandStage34GateB3COutputText(providerResponse);
+  if (!String(outputText || '').trim()) return null;
+  try {
+    parsed = JSON.parse(outputText);
+  } catch (err) {
+    parsed = null;
+  }
+  return parsed;
+}
+
+function validateMissionCommandStage34GateB3CProviderCandidate(fixtureId, candidate) {
+  var validation = validateMissionCommandStage34GateB3ACandidate(candidate || {});
+  if (!validation.ok) return validation;
+  if (candidate.fixture_id !== fixtureId) return { ok: false, reason: 'fixture_id_mismatch' };
+  if (String(candidate.candidate_text || '').length < 20) return { ok: false, reason: 'candidate_text_too_short' };
+  return { ok: true, reason: '' };
+}
+
+function getMissionCommandStage34GateB3CUsage(providerResponse) {
+  providerResponse = providerResponse || {};
+  var usage = providerResponse.usage || {};
+  var inputTokens = safeMissionCommandOpenAiNumberV31(usage.input_tokens || usage.prompt_tokens || 0);
+  var outputTokens = safeMissionCommandOpenAiNumberV31(usage.output_tokens || usage.completion_tokens || 0);
+  var reasoningTokens = safeMissionCommandOpenAiNumberV31((usage.output_tokens_details && usage.output_tokens_details.reasoning_tokens) || usage.reasoning_tokens || 0);
+  var estimatedCost = ((inputTokens / 1000000) * MC_STAGE34_GATE_B3C_INPUT_PRICE_PER_MILLION) +
+    ((outputTokens / 1000000) * MC_STAGE34_GATE_B3C_OUTPUT_PRICE_PER_MILLION);
+  return {
+    inputTokens: inputTokens,
+    cachedInputTokens: safeMissionCommandOpenAiNumberV31((usage.input_tokens_details && usage.input_tokens_details.cached_tokens) || usage.cached_input_tokens || 0),
+    outputTokens: outputTokens,
+    reasoningTokens: reasoningTokens,
+    estimatedCost: Math.max(0, Number(estimatedCost || 0))
+  };
+}
+
+function makeMissionCommandStage34GateB3CProviderResultFromEnvelope(fixtureId, providerResponse, meta) {
+  meta = meta || {};
+  var candidate = parseMissionCommandStage34GateB3CProviderCandidate(providerResponse);
+  var validation = validateMissionCommandStage34GateB3CProviderCandidate(fixtureId, candidate);
+  var usage = getMissionCommandStage34GateB3CUsage(providerResponse || {});
+  return {
+    ok: validation.ok,
+    status: validation.ok ? 'provider_candidate_valid' : validation.reason,
+    candidate: validation.ok ? candidate : null,
+    meta: {
+      schemaValid: validation.ok,
+      providerCallAttempted: meta.providerCallAttempted === true,
+      authorizedFixtureAttempts: safeMissionCommandOpenAiNumberV31(meta.authorizedFixtureAttempts || 0),
+      fetchAttempts: safeMissionCommandOpenAiNumberV31(meta.fetchAttempts || 0),
+      latencyMs: safeMissionCommandOpenAiNumberV31(meta.latencyMs || 0),
+      httpStatus: safeMissionCommandOpenAiNumberV31(meta.httpStatus || 0),
+      inputTokens: usage.inputTokens,
+      cachedInputTokens: usage.cachedInputTokens,
+      outputTokens: usage.outputTokens,
+      reasoningTokens: usage.reasoningTokens,
+      estimatedCost: usage.estimatedCost
+    }
+  };
+}
+
+function makeMissionCommandStage34GateB3CParentReceipt(runId, batchKey) {
+  var row = makeMissionCommandStage34GateB3AParentReceipt(runId, batchKey);
+  var summary = {
+    stage: MC_STAGE34_GATE_B1_STAGE_ID,
+    gate: 'b3c_provider_run_preparation_parent',
+    run_id: runId,
+    fixture_pack_sha256: MC_STAGE34_GATE_B1_FIXTURE_SHA256,
+    fixtures_expected: MC_STAGE34_GATE_B3A_FIXTURE_IDS.slice(),
+    readable_text_stored: false,
+    provider_call_attempted: false,
+    review_tab: MC_STAGE34_GATE_B3A_REVIEW_TAB_NAME,
+    model: MC_STAGE34_GATE_B3C_MODEL,
+    max_calls: MC_STAGE34_GATE_B3C_MAX_CALLS,
+    retries: 0
+  };
+  row.source = 'stage_3_4_gate_b3c_provider_run_preparation';
+  row.safe_summary = JSON.stringify(summary);
+  row.safety_identifier_hash = missionCommandStage34GateB1Hash(summary);
+  row.updated_by = MC_STAGE34_GATE_B3C_BUILD;
+  row.etag = 'etag_' + missionCommandStage34GateB1Hash(summary).slice(0, 24);
+  return row;
+}
+
+function makeMissionCommandStage34GateB3CChildReceipt(runId, batchKey, fixtureId, candidateHash, reviewRowId, meta) {
+  meta = meta || {};
+  var row = makeMissionCommandStage34GateB3AChildReceipt(runId, batchKey, fixtureId, candidateHash, reviewRowId);
+  var summary = {
+    gate: 'b3c_hash_only_provider_child',
+    fixture_id: fixtureId,
+    candidate_sha256: candidateHash,
+    review_row_id: reviewRowId,
+    readable_text_stored: false,
+    provider_call_attempted: meta.providerCallAttempted === true,
+    authorized_fixture_attempts: safeMissionCommandOpenAiNumberV31(meta.authorizedFixtureAttempts || 0),
+    fetch_attempts: safeMissionCommandOpenAiNumberV31(meta.fetchAttempts || 0),
+    schema_valid: meta.schemaValid === true,
+    boundary_flags: {
+      raw_prompt_stored: false,
+      raw_provider_response_stored: false,
+      visible_delivery: false,
+      dispatch: false,
+      external_write: false,
+      conversation: false,
+      previous_response_id: false
+    }
+  };
+  row.source = 'stage_3_4_gate_b3c_provider_run_preparation';
+  row.result = meta.schemaValid === true ? 'hash_logged' : 'failed';
+  row.safe_summary = JSON.stringify(summary);
+  row.provider_key = 'openai';
+  row.model_key = MC_STAGE34_GATE_B3C_MODEL;
+  row.latency_ms = safeMissionCommandOpenAiNumberV31(meta.latencyMs || 0);
+  row.input_tokens = safeMissionCommandOpenAiNumberV31(meta.inputTokens || 0);
+  row.cached_input_tokens = safeMissionCommandOpenAiNumberV31(meta.cachedInputTokens || 0);
+  row.output_tokens = safeMissionCommandOpenAiNumberV31(meta.outputTokens || 0);
+  row.reasoning_tokens = safeMissionCommandOpenAiNumberV31(meta.reasoningTokens || 0);
+  row.estimated_cost = Math.max(0, Number(meta.estimatedCost || 0));
+  row.safety_identifier_hash = missionCommandStage34GateB1Hash(summary);
+  row.updated_by = MC_STAGE34_GATE_B3C_BUILD;
+  row.etag = 'etag_' + missionCommandStage34GateB1Hash(summary).slice(0, 24);
+  return row;
+}
+
+function makeMissionCommandStage34GateB3CFailureReceiptId(batchKey, fixtureId) {
+  return 'rcp_mc34b3_failure_' + String(batchKey || '').slice(0, 16) + '_' + String(fixtureId || '');
+}
+
+function findMissionCommandStage34GateB3CFailureReceipt(adapter, batchKey, fixtureId) {
+  var receiptId = makeMissionCommandStage34GateB3CFailureReceiptId(batchKey, fixtureId);
+  var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+  var rows = (adapter.rows || []).map(function(row, index) {
+    return { row: row, index: index };
+  });
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].row.receipt_id === receiptId &&
+        rows[i].row.related_object === relatedObject &&
+        rows[i].row.receipt_type === MC_STAGE34_GATE_B3C_FAILURE_RECEIPT_TYPE) return rows[i];
+  }
+  return null;
+}
+
+function makeMissionCommandStage34GateB3CFailureReceipt(runId, batchKey, fixtureId, status, callCount, meta) {
+  meta = meta || {};
+  var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+  var summary = {
+    gate: 'b3c_provider_validation_failure',
+    fixture_id: fixtureId,
+    provider_call_attempted: meta.providerCallAttempted === true,
+    safe_status: sanitizeMissionCommandOpenAiShadowTextV31(status || 'provider_candidate_failed', 80),
+    call_count: safeMissionCommandOpenAiNumberV31(callCount || 0),
+    authorized_fixture_attempts: safeMissionCommandOpenAiNumberV31(meta.authorizedFixtureAttempts || callCount || 0),
+    fetch_attempts: safeMissionCommandOpenAiNumberV31(meta.fetchAttempts || 0),
+    estimated_cost: Math.max(0, Number(meta.estimatedCost || 0)),
+    readable_text_stored: false,
+    retry_count: 0,
+    fallback_used: false,
+    boundary_flags: {
+      raw_prompt_stored: false,
+      raw_provider_response_stored: false,
+      visible_delivery: false,
+      dispatch: false,
+      external_write: false,
+      conversation: false,
+      previous_response_id: false
+    }
+  };
+  return {
+    receipt_id: makeMissionCommandStage34GateB3CFailureReceiptId(batchKey, fixtureId),
+    profile_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    receipt_type: MC_STAGE34_GATE_B3C_FAILURE_RECEIPT_TYPE,
+    source: 'stage_3_4_gate_b3c_provider_run_preparation',
+    related_object: relatedObject,
+    result: 'provider_validation_failed',
+    safe_summary: JSON.stringify(summary),
+    provider_key: 'openai',
+    model_key: MC_STAGE34_GATE_B3C_MODEL,
+    role: (getMissionCommandStage34GateB3AFixtureMap()[fixtureId] || {}).roleOwner || '',
+    latency_ms: '',
+    input_tokens: '',
+    cached_input_tokens: '',
+    cache_write_tokens: '',
+    output_tokens: '',
+    reasoning_tokens: '',
+    retry_count: 0,
+    estimated_cost: '',
+    fallback_reason: '',
+    safety_identifier_hash: missionCommandStage34GateB1Hash(summary),
+    created_at: '',
+    device_id: MC_STAGE34_GATE_B1_PROFILE_ID,
+    request_id: runId,
+    privacy_class: MC_STAGE34_GATE_B1_PRIVACY_CLASS,
+    retention_class: MC_STAGE34_GATE_B1_RETENTION_CLASS,
+    next_action: 'review_gate_b3_provider_failure_before_any_retry',
+    team_chat_receipt_url: '',
+    version: 1,
+    etag: 'etag_' + missionCommandStage34GateB1Hash(summary).slice(0, 24),
+    updated_at: '',
+    updated_by: MC_STAGE34_GATE_B3C_BUILD,
+    last_request_id: runId
+  };
+}
+
+function appendMissionCommandStage34GateB3CFailureReceipt(runtimeAdapter, runId, batchKey, fixtureId, status, callCount, meta) {
+  meta = meta || {};
+  if (!runtimeAdapter || !runtimeAdapter.acquireLock) return makeMissionCommandStage34GateB3CBlocked('runtime_adapter_missing', 'Runtime receipt adapter missing for failure receipt.');
+  if (!runtimeAdapter.acquireLock('stage34_b3c_failure_' + fixtureId)) return makeMissionCommandStage34GateB3CBlocked('runtime_lock_unavailable', 'Failure receipt lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB3CBlocked(refresh.stopCondition, 'Runtime receipt headers missing.');
+    var parentRows = findMissionCommandStage34GateB3AReceiptRows(runtimeAdapter, makeMissionCommandStage34GateB3ARelatedObject(batchKey)).filter(function(entry) {
+      return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_PARENT_TYPE;
+    });
+    if (parentRows.length !== 1) return makeMissionCommandStage34GateB3CBlocked('parent_missing', 'Failure receipt requires an existing parent receipt draft.');
+    var existing = findMissionCommandStage34GateB3CFailureReceipt(runtimeAdapter, batchKey, fixtureId);
+    if (existing) return { ok: false, status: 'duplicate_suppressed', row: existing.row, appendedRows: 0, providerCallAttempted: true };
+    var row = makeMissionCommandStage34GateB3CFailureReceipt(runId, batchKey, fixtureId, status, callCount, meta);
+    runtimeAdapter.appendRowObject(row);
+    return { ok: true, status: 'failure_receipt_logged', row: row, appendedRows: 1, providerCallAttempted: meta.providerCallAttempted === true };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3CBlocked('failure_receipt_failed', 'Failure receipt write failed; no readable candidate text was written.');
+  } finally {
+    runtimeAdapter.releaseLock('stage34_b3c_failure_' + fixtureId);
+  }
+}
+
+function claimMissionCommandStage34GateB3CParent(runtimeAdapter, runId, batchKey) {
+  var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+  if (relatedObject !== MC_STAGE34_GATE_B3C_RELATED_OBJECT) return makeMissionCommandStage34GateB3CBlocked('related_object_mismatch', 'Parent claim related object must match locked B3C/B3D identity.');
+  if (!runtimeAdapter || !runtimeAdapter.acquireLock) return makeMissionCommandStage34GateB3CBlocked('runtime_adapter_missing', 'Runtime receipt adapter missing.');
+  if (!runtimeAdapter.acquireLock('stage34_b3c_parent_claim')) return makeMissionCommandStage34GateB3CBlocked('runtime_lock_unavailable', 'Runtime receipt parent lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB3CBlocked(refresh.stopCondition, 'Runtime receipt headers missing.');
+    if (findMissionCommandStage34GateB3AReceiptRows(runtimeAdapter, relatedObject).length) {
+      return { ok: false, status: 'duplicate_suppressed', providerImplicationAllowed: false, providerCallAttempted: false, fakeProviderCalls: 0 };
+    }
+    var parent = makeMissionCommandStage34GateB3CParentReceipt(runId, batchKey);
+    runtimeAdapter.appendRowObject(parent);
+    return { ok: true, status: 'parent_claimed', parent: parent, providerImplicationAllowed: false, providerCallAttempted: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3CBlocked('parent_claim_failed', 'Parent claim failed before provider implication.');
+  } finally {
+    runtimeAdapter.releaseLock('stage34_b3c_parent_claim');
+  }
+}
+
+function appendMissionCommandStage34GateB3CHashChild(runtimeAdapter, runId, batchKey, fixtureId, candidateHash, reviewRowId, meta) {
+  if (!runtimeAdapter.acquireLock('stage34_b3c_hash_child_' + fixtureId)) return makeMissionCommandStage34GateB3CBlocked('runtime_lock_unavailable', 'Hash child lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB3CBlocked(refresh.stopCondition, 'Runtime receipt headers missing.');
+    var existing = findMissionCommandStage34GateB3AChildReceipt(runtimeAdapter, batchKey, fixtureId);
+    if (existing) return { ok: false, status: 'duplicate_suppressed', row: existing.row, appendedRows: 0, providerCallAttempted: false };
+    var row = makeMissionCommandStage34GateB3CChildReceipt(runId, batchKey, fixtureId, candidateHash, reviewRowId, meta || {});
+    runtimeAdapter.appendRowObject(row);
+    return { ok: true, status: 'hash_child_logged', row: row, appendedRows: 1, providerCallAttempted: true };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3CBlocked('hash_child_failed', 'Hash-only child receipt failed before readable candidate text.');
+  } finally {
+    runtimeAdapter.releaseLock('stage34_b3c_hash_child_' + fixtureId);
+  }
+}
+
+function addMissionCommandStage34GateB3CProviderCandidate(runtimeAdapter, reviewAdapter, runId, batchKey, candidate, meta) {
+  var validation = validateMissionCommandStage34GateB3CProviderCandidate(candidate && candidate.fixture_id, candidate);
+  if (!validation.ok) return makeMissionCommandStage34GateB3CBlocked(validation.reason, 'Provider candidate failed strict review validation.');
+  var candidateHash = makeMissionCommandStage34GateB3ACandidateHash(candidate);
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, candidate.fixture_id);
+  var child = appendMissionCommandStage34GateB3CHashChild(runtimeAdapter, runId, batchKey, candidate.fixture_id, candidateHash, reviewRowId, meta || {});
+  if (!child.ok) return child;
+  return writeMissionCommandStage34GateB3CReadableCandidate(runtimeAdapter, reviewAdapter, runId, batchKey, candidate, candidateHash, child.row.receipt_id);
+}
+
+function finalizeMissionCommandStage34GateB3CBatch(runtimeAdapter, reviewAdapter, runId, batchKey) {
+  var final = finalizeMissionCommandStage34GateB3CReviewBatch(runtimeAdapter, reviewAdapter, runId, batchKey);
+  if (!final.ok) return final;
+  return Object.assign({}, final, {
+    build: MC_STAGE34_GATE_B3C_BUILD,
+    providerCallAttempted: true,
+    wrapperInvokedByIntegration: false
+  });
+}
+
+function makeMissionCommandStage34GateB3CFakeProviderAdapter(options) {
+  options = options || {};
+  return {
+    calls: [],
+    fetchAttempts: 0,
+    failFixtureId: options.failFixtureId || '',
+    malformedFixtureId: options.malformedFixtureId || '',
+    credentialUnavailable: options.credentialUnavailable === true,
+    fetchFailFixtureId: options.fetchFailFixtureId || '',
+    expensiveFixtureId: options.expensiveFixtureId || '',
+    responseFor: function(fixtureId, request) {
+      this.calls.push({
+        fixtureId: fixtureId,
+        model: request && request.model,
+        maxOutputTokens: request && request.max_output_tokens,
+        safeAttemptRecorded: true,
+        providerCallAttempted: false
+      });
+      var authorizedAttempts = this.calls.length;
+      if (this.credentialUnavailable) return { ok: false, status: 'credential_unavailable', candidate: null, meta: { providerCallAttempted: false, authorizedFixtureAttempts: authorizedAttempts, fetchAttempts: this.fetchAttempts, latencyMs: 0, estimatedCost: 0 } };
+      this.fetchAttempts += 1;
+      this.calls[this.calls.length - 1].providerCallAttempted = true;
+      if (fixtureId === this.fetchFailFixtureId) return { ok: false, status: 'provider_fetch_failed', candidate: null, meta: { providerCallAttempted: true, authorizedFixtureAttempts: authorizedAttempts, fetchAttempts: this.fetchAttempts, latencyMs: 0, estimatedCost: 0 } };
+      if (fixtureId === this.failFixtureId) return { ok: false, status: 'fake_provider_blocked', candidate: null, meta: { providerCallAttempted: true, authorizedFixtureAttempts: authorizedAttempts, fetchAttempts: this.fetchAttempts, latencyMs: 0, estimatedCost: 0 } };
+      var candidates = makeMissionCommandStage34GateB3ASafeCandidates();
+      for (var i = 0; i < candidates.length; i++) {
+        if (candidates[i].fixture_id === fixtureId) {
+          if (fixtureId === this.expensiveFixtureId) {
+            return {
+              ok: true,
+              status: 'fake_provider_valid',
+              candidate: candidates[i],
+              meta: {
+                schemaValid: true,
+                providerCallAttempted: true,
+                authorizedFixtureAttempts: authorizedAttempts,
+                fetchAttempts: this.fetchAttempts,
+                latencyMs: 1,
+                inputTokens: 90000,
+                outputTokens: 1,
+                estimatedCost: MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD + 0.01
+              }
+            };
+          }
+          if (fixtureId === this.malformedFixtureId) {
+            return makeMissionCommandStage34GateB3CProviderResultFromEnvelope(fixtureId, { output_text: '{"fixture_id":"MC34-F99"}', usage: { input_tokens: 100, output_tokens: 20 } }, {
+              providerCallAttempted: true,
+              authorizedFixtureAttempts: authorizedAttempts,
+              fetchAttempts: this.fetchAttempts,
+              latencyMs: 1,
+              httpStatus: 200
+            });
+          }
+          return {
+            ok: true,
+            status: 'fake_provider_valid',
+            candidate: candidates[i],
+            meta: {
+              schemaValid: true,
+              providerCallAttempted: true,
+              authorizedFixtureAttempts: authorizedAttempts,
+              fetchAttempts: this.fetchAttempts,
+              latencyMs: 1,
+              inputTokens: 100,
+              outputTokens: 80,
+              estimatedCost: ((100 / 1000000) * MC_STAGE34_GATE_B3C_INPUT_PRICE_PER_MILLION) + ((80 / 1000000) * MC_STAGE34_GATE_B3C_OUTPUT_PRICE_PER_MILLION)
+            }
+          };
+        }
+      }
+      return { ok: false, status: 'fake_fixture_missing', candidate: null, meta: { providerCallAttempted: true, authorizedFixtureAttempts: authorizedAttempts, fetchAttempts: this.fetchAttempts, latencyMs: 0, estimatedCost: 0 } };
+    }
+  };
+}
+
+function makeMissionCommandStage34GateB3COpenAiProviderAdapter() {
+  return {
+    calls: [],
+    fetchAttempts: 0,
+    responseFor: function(fixtureId, request) {
+      this.calls.push({
+        fixtureId: fixtureId,
+        model: request && request.model,
+        maxOutputTokens: request && request.max_output_tokens,
+        safeAttemptRecorded: true,
+        providerCallAttempted: false
+      });
+      var authorizedAttempts = this.calls.length;
+      var apiKey = String(PropertiesService.getScriptProperties().getProperty(MC_OPENAI_STAGE32_SCRIPT_PROPERTY_KEY) || '').trim();
+      if (!apiKey) return { ok: false, status: 'credential_unavailable', candidate: null, meta: { providerCallAttempted: false, authorizedFixtureAttempts: authorizedAttempts, fetchAttempts: this.fetchAttempts, latencyMs: 0, estimatedCost: 0 } };
+      var started = Date.now();
+      var httpStatus = 0;
+      var parsed = null;
+      try {
+        this.fetchAttempts += 1;
+        this.calls[this.calls.length - 1].providerCallAttempted = true;
+        var response = UrlFetchApp.fetch(MC_OPENAI_STAGE32_ENDPOINT, makeMissionCommandStage34GateB3CFetchOptions(apiKey, request));
+        httpStatus = Number(response.getResponseCode() || 0);
+        parsed = parseMissionCommandOpenAiStage33JsonObject(response.getContentText());
+      } catch (err) {
+        return { ok: false, status: 'provider_fetch_failed', candidate: null, meta: { providerCallAttempted: true, authorizedFixtureAttempts: authorizedAttempts, fetchAttempts: this.fetchAttempts, latencyMs: Date.now() - started, httpStatus: httpStatus, estimatedCost: 0 } };
+      }
+      if (httpStatus < 200 || httpStatus >= 300) {
+        return { ok: false, status: httpStatus === 404 ? 'model_unavailable' : 'provider_http_' + httpStatus, candidate: null, meta: { providerCallAttempted: true, authorizedFixtureAttempts: authorizedAttempts, fetchAttempts: this.fetchAttempts, latencyMs: Date.now() - started, httpStatus: httpStatus, estimatedCost: 0 } };
+      }
+      return makeMissionCommandStage34GateB3CProviderResultFromEnvelope(fixtureId, parsed, {
+        providerCallAttempted: true,
+        authorizedFixtureAttempts: authorizedAttempts,
+        fetchAttempts: this.fetchAttempts,
+        latencyMs: Date.now() - started,
+        httpStatus: httpStatus
+      });
+    }
+  };
+}
+
+function makeMissionCommandStage34GateB3CLiveReviewAdapter(options) {
+  options = options || {};
+  var spreadsheet = options.spreadsheet || getMoneyMissionSpreadsheet();
+  var sheet = spreadsheet && spreadsheet.getSheetByName ? spreadsheet.getSheetByName(MC_STAGE34_GATE_B3A_REVIEW_TAB_NAME) : null;
+  if (!sheet) throw new Error('stage_3_4_gate_b3_review_sheet_missing');
+  if (Number(sheet.getSheetId && sheet.getSheetId()) !== MC_STAGE34_GATE_B3C_REVIEW_SHEET_ID) throw new Error('stage_3_4_gate_b3_review_sheet_id_mismatch');
+  var lock = options.lock || LockService.getScriptLock();
+  var headerValidator = options.headerValidator || validateMissionCommandStage34GateB3AReviewHeaders;
+  var headerInvalidCode = options.headerInvalidCode || 'stage_3_4_gate_b3_review_headers_invalid';
+  var adapter = makeMissionCommandStage34GateB3AFakeReviewAdapter();
+  adapter.sheetId = Number(sheet.getSheetId && sheet.getSheetId());
+  adapter.headerValidatorName = options.headerValidatorName || 'gate_b3a_legacy_26';
+  adapter.acquireLock = function(label) {
+    this.lockEvents.push('acquire:' + label);
+    return lock.tryLock(MC_STAGE33R_LOCK_TIMEOUT_MS) === true;
+  };
+  adapter.releaseLock = function(label) {
+    this.lockEvents.push('release:' + label);
+    try {
+      lock.releaseLock();
+    } catch (err) {}
+  };
+  adapter.refreshRows = function() {
+    var lastColumn = Math.max(1, sheet.getLastColumn());
+    var refreshedHeaders = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(function(header) {
+      return String(header || '').trim();
+    });
+    var headerCheck = headerValidator(refreshedHeaders);
+    if (!headerCheck.ok) throw new Error(headerInvalidCode + ':' + (headerCheck.missing || []).join(','));
+    var lastRow = Math.max(1, sheet.getLastRow());
+    var values = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues() : [];
+    this.headers = refreshedHeaders;
+    this.rows = values.map(function(valuesRow) {
+      var row = {};
+      refreshedHeaders.forEach(function(header, index) {
+        row[header] = valuesRow[index];
+      });
+      return row;
+    });
+    return true;
+  };
+  adapter.appendRowObject = function(row) {
+    sheet.appendRow(this.headers.map(function(header) { return Object.prototype.hasOwnProperty.call(row, header) ? row[header] : ''; }));
+    this.rows.push(row);
+    this.appendedRows += 1;
+    return this.rows.length + 1;
+  };
+  adapter.updateRowObject = function(index, row, expected) {
+    expected = expected || {};
+    if (Object.prototype.hasOwnProperty.call(expected, 'version') || Object.prototype.hasOwnProperty.call(expected, 'etag')) throw new Error('live_review_version_etag_not_persisted');
+    if (!Object.prototype.hasOwnProperty.call(expected, 'persistedHash')) throw new Error('live_review_update_missing_snapshot');
+    var currentValues = sheet.getRange(index + 2, 1, 1, this.headers.length).getValues()[0];
+    var current = {};
+    this.headers.forEach(function(header, headerIndex) {
+      current[header] = currentValues[headerIndex];
+    });
+    var currentHash = makeMissionCommandStage34GateB3CReviewSnapshotHash(current, this.headers);
+    if (currentHash !== String(expected.persistedHash || '')) throw new Error('live_review_update_snapshot_conflict');
+    sheet.getRange(index + 2, 1, 1, this.headers.length).setValues([this.headers.map(function(header) { return Object.prototype.hasOwnProperty.call(row, header) ? row[header] : ''; })]);
+    this.rows[index] = row;
+    this.updatedRows += 1;
+    return index + 2;
+  };
+  return adapter;
+}
+
+function makeMissionCommandStage34GateB3CReviewSnapshotHash(row, headers) {
+  headers = headers || getMissionCommandStage34GateB3AReviewHeaders();
+  var persisted = {};
+  headers.forEach(function(header) {
+    persisted[header] = Object.prototype.hasOwnProperty.call(row || {}, header) ? row[header] : '';
+  });
+  return missionCommandStage34GateB1Hash(persisted);
+}
+
+function updateMissionCommandStage34GateB3CReviewRowWithSnapshot(reviewAdapter, entry, updatedRow) {
+  if (!entry || !entry.row) throw new Error('b3c_review_update_missing_entry');
+  var expectedHash = makeMissionCommandStage34GateB3CReviewSnapshotHash(entry.row, reviewAdapter.headers);
+  reviewAdapter.updateRowObject(entry.index, updatedRow, { persistedHash: expectedHash });
+}
+
+function makeMissionCommandStage34GateB3CReviewAdapter(headers, rows, options) {
+  var adapter = makeMissionCommandStage34GateB3AFakeReviewAdapter(headers, rows, options || {});
+  var baseUpdate = adapter.updateRowObject;
+  adapter.updateRowObject = function(index, row, expected) {
+    expected = expected || {};
+    if (Object.prototype.hasOwnProperty.call(expected, 'version') || Object.prototype.hasOwnProperty.call(expected, 'etag')) {
+      throw new Error('b3c_review_version_etag_not_persisted');
+    }
+    if (Object.prototype.hasOwnProperty.call(expected, 'persistedHash')) {
+      var current = this.rows[index];
+      if (!current) throw new Error('local_review_update_missing_row');
+      var currentHash = makeMissionCommandStage34GateB3CReviewSnapshotHash(current, this.headers);
+      if (currentHash !== String(expected.persistedHash || '')) throw new Error('local_review_update_snapshot_conflict');
+      this.rows[index] = row;
+      this.updatedRows += 1;
+      return index + 1;
+    }
+    return baseUpdate.call(this, index, row, expected);
+  };
+  return adapter;
+}
+
+function reserveMissionCommandStage34GateB3CReviewRows(reviewAdapter, runId, batchKey) {
+  return reserveMissionCommandStage34GateB3AReviewRows(reviewAdapter, runId, batchKey);
+}
+
+function writeMissionCommandStage34GateB3CReadableCandidate(runtimeAdapter, reviewAdapter, runId, batchKey, candidate, candidateHash, receiptChildId) {
+  var validation = validateMissionCommandStage34GateB3CProviderCandidate(candidate && candidate.fixture_id, candidate);
+  if (!validation.ok) return makeMissionCommandStage34GateB3CBlocked(validation.reason, 'Readable candidate failed strict validation.');
+  var fixtureId = candidate.fixture_id;
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+  if (!reviewAdapter.acquireLock('stage34_b3c_readable_' + fixtureId)) return makeMissionCommandStage34GateB3CBlocked('review_lock_unavailable', 'Readable row lock unavailable.');
+  try {
+    var childEvidence = verifyMissionCommandStage34GateB3AHashChildEvidence(runtimeAdapter, batchKey, fixtureId, candidateHash, reviewRowId);
+    if (!childEvidence.ok) return makeMissionCommandStage34GateB3CBlocked(childEvidence.stopCondition, 'Readable candidate write requires matching hash-only child receipt evidence.');
+    if (childEvidence.child.receipt_id !== receiptChildId) return makeMissionCommandStage34GateB3CBlocked('hash_child_receipt_id_mismatch', 'Readable candidate write requires the matching child receipt ID.');
+    var refresh = refreshMissionCommandStage34GateB3AReviewAdapterUnderLock(reviewAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateB3CBlocked(refresh.stopCondition, 'Review tab headers missing.');
+    var found = findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId);
+    if (!found) return makeMissionCommandStage34GateB3CBlocked('review_reservation_missing', 'Readable row reservation missing.');
+    if (String(found.row.candidate_text || '') || String(found.row.candidate_sha256 || '')) return { ok: false, status: 'duplicate_suppressed', providerCallAttempted: false };
+    var updated = Object.assign({}, found.row, {
+      receipt_child_id: receiptChildId,
+      candidate_sha256: candidateHash,
+      why_now: sanitizeMissionCommandOpenAiShadowTextV31(candidate.why_now, 220),
+      material_change: sanitizeMissionCommandOpenAiShadowTextV31(candidate.material_change, 120),
+      next_move_type: sanitizeMissionCommandOpenAiShadowTextV31(candidate.next_move_type, 120),
+      candidate_text: sanitizeMissionCommandOpenAiShadowTextV31(candidate.candidate_text, 600),
+      schema_valid: true,
+      batch_state: 'candidate_ready'
+    });
+    updateMissionCommandStage34GateB3CReviewRowWithSnapshot(reviewAdapter, found, updated);
+    return { ok: true, status: 'readable_candidate_written', row: updated, providerCallAttempted: true };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3CBlocked('review_write_failed', 'Readable candidate write failed after snapshot check.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_b3c_readable_' + fixtureId);
+  }
+}
+
+function finalizeMissionCommandStage34GateB3CReviewBatch(runtimeAdapter, reviewAdapter, runId, batchKey) {
+  if (!runtimeAdapter.acquireLock('stage34_b3c_finalize_runtime')) return makeMissionCommandStage34GateB3CBlocked('runtime_lock_unavailable', 'Finalize runtime lock unavailable.');
+  if (!reviewAdapter.acquireLock('stage34_b3c_finalize_review')) {
+    runtimeAdapter.releaseLock('stage34_b3c_finalize_runtime');
+    return makeMissionCommandStage34GateB3CBlocked('review_lock_unavailable', 'Finalize review lock unavailable.');
+  }
+  try {
+    var runtimeRefresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+    if (!runtimeRefresh.ok) return makeMissionCommandStage34GateB3CBlocked(runtimeRefresh.stopCondition, 'Runtime receipt headers missing.');
+    var reviewRefresh = refreshMissionCommandStage34GateB3AReviewAdapterUnderLock(reviewAdapter);
+    if (!reviewRefresh.ok) return makeMissionCommandStage34GateB3CBlocked(reviewRefresh.stopCondition, 'Review tab headers missing.');
+    var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+    var receiptRows = findMissionCommandStage34GateB3AReceiptRows(runtimeAdapter, relatedObject);
+    var parentRows = receiptRows.filter(function(entry) { return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_PARENT_TYPE; });
+    var childRows = receiptRows.filter(function(entry) { return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE; });
+    var failureRows = receiptRows.filter(function(entry) { return entry.row.receipt_type === MC_STAGE34_GATE_B3C_FAILURE_RECEIPT_TYPE; });
+    var reviewRows = findMissionCommandStage34GateB3AReviewRows(reviewAdapter, batchKey);
+    var completeReviewRows = reviewRows.filter(function(entry) {
+      return entry.row.schema_valid === true && String(entry.row.candidate_text || '') !== '' && String(entry.row.candidate_sha256 || '') !== '';
+    });
+    if (failureRows.length > 0) return makeMissionCommandStage34GateB3CBlocked('b3c_failure_receipt_present', 'Parent remains receipt_draft when any provider failure receipt exists.');
+    if (parentRows.length !== 1 || childRows.length !== 4 || reviewRows.length !== 4 || completeReviewRows.length !== 4) return makeMissionCommandStage34GateB3CBlocked('b3c_exact_four_required', 'Finalization requires one parent, four hash-only children, and four complete review rows.');
+    for (var i = 0; i < MC_STAGE34_GATE_B3A_FIXTURE_IDS.length; i++) {
+      var fixtureId = MC_STAGE34_GATE_B3A_FIXTURE_IDS[i];
+      var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+      var reviewRow = findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId);
+      if (!reviewRow || reviewRow.row.fixture_id !== fixtureId) return makeMissionCommandStage34GateB3CBlocked('b3c_review_set_invalid', 'Exact four deterministic review rows are required.');
+      var child = findMissionCommandStage34GateB3AChildReceipt(runtimeAdapter, batchKey, fixtureId);
+      if (!child) return makeMissionCommandStage34GateB3CBlocked('b3c_child_set_invalid', 'Exact four deterministic child receipts are required.');
+      var summary = parseMissionCommandStage34GateB3ASafeSummary(child.row);
+      if (summary.fixture_id !== fixtureId ||
+          summary.candidate_sha256 !== reviewRow.row.candidate_sha256 ||
+          summary.review_row_id !== reviewRowId ||
+          reviewRow.row.receipt_child_id !== child.row.receipt_id) {
+        return makeMissionCommandStage34GateB3CBlocked('b3c_hash_link_invalid', 'Child receipt and readable review row linkage must match exactly.');
+      }
+    }
+    var parentEntry = parentRows[0];
+    var updatedParent = Object.assign({}, parentEntry.row, {
+      result: 'logged',
+      version: safeMissionCommandOpenAiNumberV31(parentEntry.row.version) + 1,
+      etag: 'etag_' + missionCommandStage34GateB1Hash(parentEntry.row.receipt_id + ':logged:' + batchKey).slice(0, 24),
+      updated_by: MC_STAGE34_GATE_B3C_BUILD,
+      last_request_id: runId
+    });
+    runtimeAdapter.updateRowObject(parentEntry.index, updatedParent, { version: parentEntry.row.version, etag: parentEntry.row.etag });
+    for (var j = 0; j < reviewRows.length; j++) {
+      var reviewEntry = reviewRows[j];
+      var updatedReview = Object.assign({}, reviewEntry.row, {
+        batch_state: 'review_ready'
+      });
+      updateMissionCommandStage34GateB3CReviewRowWithSnapshot(reviewAdapter, reviewEntry, updatedReview);
+    }
+    return { ok: true, status: 'review_ready', build: MC_STAGE34_GATE_B3C_BUILD, childrenWritten: childRows.length, reviewRowsComplete: completeReviewRows.length, parentResult: 'logged', providerCallAttempted: true };
+  } catch (err) {
+    return makeMissionCommandStage34GateB3CBlocked('b3c_finalize_failed', 'Finalization update failed.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_b3c_finalize_review');
+    runtimeAdapter.releaseLock('stage34_b3c_finalize_runtime');
+  }
+}
+
+function runMissionCommandStage34GateB3CProviderReviewBatch(runtimeAdapter, reviewAdapter, providerAdapter, input) {
+  input = input || {};
+  var authorization = validateMissionCommandStage34GateB3CAuthorization(input);
+  if (!authorization.ok) return authorization;
+  var requests = buildMissionCommandStage34GateB3CRequests();
+  if (!requests.ok) return makeMissionCommandStage34GateB3CBlocked('request_contract_invalid', requests.errors.join(' | '));
+  var parent = claimMissionCommandStage34GateB3CParent(runtimeAdapter, input.runId, input.batchKey);
+  if (!parent.ok) return parent;
+  var reserve = reserveMissionCommandStage34GateB3AReviewRows(reviewAdapter, input.runId, input.batchKey);
+  if (!reserve.ok) return reserve;
+  var results = [];
+  var cumulativeEstimatedCost = 0;
+  for (var i = 0; i < requests.requests.length; i++) {
+    if (i >= MC_STAGE34_GATE_B3C_MAX_CALLS) return makeMissionCommandStage34GateB3CBlocked('call_cap_exceeded', 'B3C/B3D call cap exceeded.', { fakeProviderCalls: results.length });
+    var entry = requests.requests[i];
+    var providerResult = providerAdapter.responseFor(entry.fixtureId, entry.request);
+    if (!providerResult.ok) {
+      var providerMeta = providerResult.meta || {};
+      var failureReceipt = appendMissionCommandStage34GateB3CFailureReceipt(runtimeAdapter, input.runId, input.batchKey, entry.fixtureId, providerResult.status, providerMeta.authorizedFixtureAttempts || (providerAdapter.calls ? providerAdapter.calls.length : results.length + 1), providerMeta);
+      return {
+        ok: false,
+        status: 'interrupted',
+        build: MC_STAGE34_GATE_B3C_BUILD,
+        stopCondition: failureReceipt.ok || failureReceipt.status === 'duplicate_suppressed' ? (providerResult.status || 'provider_candidate_failed') : (failureReceipt.stopCondition || 'failure_receipt_failed'),
+        failedFixtureId: entry.fixtureId,
+        childrenWritten: results.length,
+        parentResult: 'receipt_draft',
+        failureReceiptStatus: failureReceipt.status || '',
+        failureReceiptWritten: failureReceipt.ok === true,
+        providerCallAttempted: providerMeta.providerCallAttempted === true,
+        authorizedFixtureAttempts: safeMissionCommandOpenAiNumberV31(providerMeta.authorizedFixtureAttempts || (providerAdapter.calls ? providerAdapter.calls.length : results.length + 1)),
+        actualFetchAttempts: safeMissionCommandOpenAiNumberV31(providerMeta.fetchAttempts || (providerAdapter.fetchAttempts || 0)),
+        cumulativeEstimatedCost: cumulativeEstimatedCost + Math.max(0, Number(providerMeta.estimatedCost || 0)),
+        retryCount: 0,
+        fallbackUsed: false
+      };
+    }
+    cumulativeEstimatedCost += Math.max(0, Number((providerResult.meta || {}).estimatedCost || 0));
+    if (cumulativeEstimatedCost > MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD) {
+      var costFailureReceipt = appendMissionCommandStage34GateB3CFailureReceipt(runtimeAdapter, input.runId, input.batchKey, entry.fixtureId, 'cost_cap_exceeded', (providerResult.meta || {}).authorizedFixtureAttempts || (providerAdapter.calls ? providerAdapter.calls.length : results.length + 1), Object.assign({}, providerResult.meta || {}, { estimatedCost: cumulativeEstimatedCost }));
+      return {
+        ok: false,
+        status: 'interrupted',
+        build: MC_STAGE34_GATE_B3C_BUILD,
+        stopCondition: costFailureReceipt.ok || costFailureReceipt.status === 'duplicate_suppressed' ? 'cost_cap_exceeded' : (costFailureReceipt.stopCondition || 'failure_receipt_failed'),
+        failedFixtureId: entry.fixtureId,
+        childrenWritten: results.length,
+        parentResult: 'receipt_draft',
+        failureReceiptStatus: costFailureReceipt.status || '',
+        failureReceiptWritten: costFailureReceipt.ok === true,
+        providerCallAttempted: (providerResult.meta || {}).providerCallAttempted === true,
+        authorizedFixtureAttempts: safeMissionCommandOpenAiNumberV31((providerResult.meta || {}).authorizedFixtureAttempts || (providerAdapter.calls ? providerAdapter.calls.length : results.length + 1)),
+        actualFetchAttempts: safeMissionCommandOpenAiNumberV31((providerResult.meta || {}).fetchAttempts || (providerAdapter.fetchAttempts || 0)),
+        cumulativeEstimatedCost: cumulativeEstimatedCost,
+        retryCount: 0,
+        fallbackUsed: false
+      };
+    }
+    var add = addMissionCommandStage34GateB3CProviderCandidate(runtimeAdapter, reviewAdapter, input.runId, input.batchKey, providerResult.candidate, providerResult.meta);
+    if (!add.ok) {
+      var addMeta = providerResult.meta || {};
+      var addFailureReceipt = appendMissionCommandStage34GateB3CFailureReceipt(runtimeAdapter, input.runId, input.batchKey, entry.fixtureId, add.stopCondition || add.status || 'candidate_write_failed', addMeta.authorizedFixtureAttempts || (providerAdapter.calls ? providerAdapter.calls.length : results.length + 1), addMeta);
+      return {
+        ok: false,
+        status: 'interrupted',
+        build: MC_STAGE34_GATE_B3C_BUILD,
+        stopCondition: addFailureReceipt.ok || addFailureReceipt.status === 'duplicate_suppressed' ? (add.stopCondition || add.status || 'candidate_write_failed') : (addFailureReceipt.stopCondition || 'failure_receipt_failed'),
+        failedFixtureId: entry.fixtureId,
+        childrenWritten: results.length,
+        parentResult: 'receipt_draft',
+        failureReceiptStatus: addFailureReceipt.status || '',
+        failureReceiptWritten: addFailureReceipt.ok === true,
+        providerCallAttempted: addMeta.providerCallAttempted === true,
+        authorizedFixtureAttempts: safeMissionCommandOpenAiNumberV31(addMeta.authorizedFixtureAttempts || (providerAdapter.calls ? providerAdapter.calls.length : results.length + 1)),
+        actualFetchAttempts: safeMissionCommandOpenAiNumberV31(addMeta.fetchAttempts || (providerAdapter.fetchAttempts || 0)),
+        cumulativeEstimatedCost: cumulativeEstimatedCost,
+        retryCount: 0,
+        fallbackUsed: false
+      };
+    }
+    results.push(add);
+  }
+  var final = finalizeMissionCommandStage34GateB3CBatch(runtimeAdapter, reviewAdapter, input.runId, input.batchKey);
+  if (!final.ok) return final;
+  return {
+    ok: true,
+    status: 'ready_for_review',
+    build: MC_STAGE34_GATE_B3C_BUILD,
+    runId: input.runId,
+    batchKey: input.batchKey,
+    relatedObject: MC_STAGE34_GATE_B3C_RELATED_OBJECT,
+    childrenWritten: results.length,
+    reviewRowsComplete: final.reviewRowsComplete,
+    providerCallAttempted: true,
+    authorizedFixtureAttempts: providerAdapter.calls ? providerAdapter.calls.length : results.length,
+    actualFetchAttempts: safeMissionCommandOpenAiNumberV31(providerAdapter.fetchAttempts || 0),
+    fakeProviderCalls: providerAdapter.calls ? providerAdapter.calls.length : results.length,
+    cumulativeEstimatedCost: cumulativeEstimatedCost,
+    retryCount: 0,
+    fallbackUsed: false,
+    wrapperInvokedByIntegration: false
+  };
+}
+
+function verifyMissionCommandStage34GateB3CLocalChecks() {
+  var stage31 = runMissionCommandOpenAiShadowFoundationChecksV31();
+  var stage32 = runMissionCommandOpenAiStage32LocalChecks();
+  var stage33 = runMissionCommandOpenAiStage33LocalChecks();
+  var stage33r = runMissionCommandStage33RReceiptLocalChecks();
+  var b3a = verifyMissionCommandStage34GateB3ALocalChecks();
+  var flags = getMissionCommandStage34GateB3CFlags();
+  var callerFlags = getMissionCommandStage34GateB3CFlags({ gateB3CEnabled: true });
+  var wrongTokenInput = Object.assign({}, makeMissionCommandStage34GateB3CWrapperAuthorization(), { authorizationToken: 'wrong' });
+  var wrongFlagsInput = Object.assign({}, makeMissionCommandStage34GateB3CWrapperAuthorization(), { wrapperAuthorization: false });
+  var directRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var directReview = makeMissionCommandStage34GateB3CReviewAdapter();
+  var directProvider = makeMissionCommandStage34GateB3CFakeProviderAdapter();
+  var directBlocked = runMissionCommandStage34GateB3CProviderReviewBatch(directRuntime, directReview, directProvider, {});
+  var wrongTokenBlocked = runMissionCommandStage34GateB3CProviderReviewBatch(directRuntime, directReview, directProvider, wrongTokenInput);
+  var wrongFlagsBlocked = runMissionCommandStage34GateB3CProviderReviewBatch(directRuntime, directReview, directProvider, wrongFlagsInput);
+  var wrongIdentityBlocked = runMissionCommandStage34GateB3CProviderReviewBatch(directRuntime, directReview, directProvider, Object.assign({}, makeMissionCommandStage34GateB3CWrapperAuthorization(), { runId: 'wrong' }));
+  var requests = buildMissionCommandStage34GateB3CRequests();
+  var redactedFetch = requests.ok ? makeMissionCommandStage34GateB3CFetchOptions('[redacted]', requests.requests[0].request) : {};
+  var runtime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var review = makeMissionCommandStage34GateB3CReviewAdapter();
+  var provider = makeMissionCommandStage34GateB3CFakeProviderAdapter();
+  var success = runMissionCommandStage34GateB3CProviderReviewBatch(runtime, review, provider, makeMissionCommandStage34GateB3CWrapperAuthorization());
+  var duplicateProvider = makeMissionCommandStage34GateB3CFakeProviderAdapter();
+  var duplicate = runMissionCommandStage34GateB3CProviderReviewBatch(runtime, review, duplicateProvider, makeMissionCommandStage34GateB3CWrapperAuthorization());
+  var failureRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var failureReview = makeMissionCommandStage34GateB3CReviewAdapter();
+  var failureProvider = makeMissionCommandStage34GateB3CFakeProviderAdapter({ failFixtureId: 'MC34-F12' });
+  var interrupted = runMissionCommandStage34GateB3CProviderReviewBatch(failureRuntime, failureReview, failureProvider, makeMissionCommandStage34GateB3CWrapperAuthorization());
+  var failureReceipt = findMissionCommandStage34GateB3CFailureReceipt(failureRuntime, MC_STAGE34_GATE_B3C_BATCH_KEY, 'MC34-F12');
+  var failureDuplicate = appendMissionCommandStage34GateB3CFailureReceipt(failureRuntime, MC_STAGE34_GATE_B3C_RUN_ID, MC_STAGE34_GATE_B3C_BATCH_KEY, 'MC34-F12', 'fake_provider_blocked', failureProvider.calls.length);
+  var interruptedRows = findMissionCommandStage34GateB3AReviewRows(failureReview, MC_STAGE34_GATE_B3C_BATCH_KEY);
+  var credentialRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var credentialReview = makeMissionCommandStage34GateB3CReviewAdapter();
+  var credentialProvider = makeMissionCommandStage34GateB3CFakeProviderAdapter({ credentialUnavailable: true });
+  var credentialBlocked = runMissionCommandStage34GateB3CProviderReviewBatch(credentialRuntime, credentialReview, credentialProvider, makeMissionCommandStage34GateB3CWrapperAuthorization());
+  var credentialFailureReceipt = findMissionCommandStage34GateB3CFailureReceipt(credentialRuntime, MC_STAGE34_GATE_B3C_BATCH_KEY, 'MC34-F01');
+  var credentialSummary = parseMissionCommandStage34GateB3ASafeSummary(credentialFailureReceipt && credentialFailureReceipt.row);
+  var fetchRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var fetchReview = makeMissionCommandStage34GateB3CReviewAdapter();
+  var fetchProvider = makeMissionCommandStage34GateB3CFakeProviderAdapter({ fetchFailFixtureId: 'MC34-F01' });
+  var fetchBlocked = runMissionCommandStage34GateB3CProviderReviewBatch(fetchRuntime, fetchReview, fetchProvider, makeMissionCommandStage34GateB3CWrapperAuthorization());
+  var fetchFailureReceipt = findMissionCommandStage34GateB3CFailureReceipt(fetchRuntime, MC_STAGE34_GATE_B3C_BATCH_KEY, 'MC34-F01');
+  var fetchSummary = parseMissionCommandStage34GateB3ASafeSummary(fetchFailureReceipt && fetchFailureReceipt.row);
+  var malformedRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var malformedReview = makeMissionCommandStage34GateB3CReviewAdapter();
+  var malformedProvider = makeMissionCommandStage34GateB3CFakeProviderAdapter({ malformedFixtureId: 'MC34-F01' });
+  var malformedBlocked = runMissionCommandStage34GateB3CProviderReviewBatch(malformedRuntime, malformedReview, malformedProvider, makeMissionCommandStage34GateB3CWrapperAuthorization());
+  var malformedReviewRow = findMissionCommandStage34GateB3AReviewRow(malformedReview, makeMissionCommandStage34GateB3AReviewRowId(MC_STAGE34_GATE_B3C_BATCH_KEY, 'MC34-F01'));
+  var costRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var costReview = makeMissionCommandStage34GateB3CReviewAdapter();
+  var costProvider = makeMissionCommandStage34GateB3CFakeProviderAdapter({ expensiveFixtureId: 'MC34-F01' });
+  var costBlocked = runMissionCommandStage34GateB3CProviderReviewBatch(costRuntime, costReview, costProvider, makeMissionCommandStage34GateB3CWrapperAuthorization());
+  var costReviewRow = findMissionCommandStage34GateB3AReviewRow(costReview, makeMissionCommandStage34GateB3AReviewRowId(MC_STAGE34_GATE_B3C_BATCH_KEY, 'MC34-F01'));
+  var envelopeCandidate = makeMissionCommandStage34GateB3ASafeCandidates()[0];
+  var envelope = {
+    output_text: JSON.stringify(envelopeCandidate),
+    usage: {
+      input_tokens: 2000,
+      output_tokens: 450,
+      input_tokens_details: { cached_tokens: 0 },
+      output_tokens_details: { reasoning_tokens: 12 }
+    }
+  };
+  var envelopeResult = makeMissionCommandStage34GateB3CProviderResultFromEnvelope('MC34-F01', envelope, {
+    providerCallAttempted: true,
+    authorizedFixtureAttempts: 1,
+    fetchAttempts: 1,
+    latencyMs: 12,
+    httpStatus: 200
+  });
+  var extraHeader = refreshMissionCommandStage34GateB3AReviewAdapterUnderLock(makeMissionCommandStage34GateB3CReviewAdapter(getMissionCommandStage34GateB3AReviewHeaders().concat(['version']), []));
+  var staleReview = makeMissionCommandStage34GateB3CReviewAdapter();
+  reserveMissionCommandStage34GateB3CReviewRows(staleReview, MC_STAGE34_GATE_B3C_RUN_ID, MC_STAGE34_GATE_B3C_BATCH_KEY);
+  var staleEntry = findMissionCommandStage34GateB3AReviewRow(staleReview, makeMissionCommandStage34GateB3AReviewRowId(MC_STAGE34_GATE_B3C_BATCH_KEY, 'MC34-F01'));
+  var staleHash = makeMissionCommandStage34GateB3CReviewSnapshotHash(staleEntry.row, staleReview.headers);
+  staleReview.rows[staleEntry.index].candidate_text = 'manual change before update';
+  var staleBlocked = false;
+  try {
+    staleReview.updateRowObject(staleEntry.index, staleEntry.row, { persistedHash: staleHash });
+  } catch (err) {
+    staleBlocked = true;
+  }
+  var versionEtagBlocked = false;
+  try {
+    staleReview.updateRowObject(staleEntry.index, staleEntry.row, { version: 1, etag: 'x' });
+  } catch (err2) {
+    versionEtagBlocked = true;
+  }
+  var invalidCost = validateMissionCommandStage34GateB3CRunIdentity({
+    runId: MC_STAGE34_GATE_B3C_RUN_ID,
+    batchKey: MC_STAGE34_GATE_B3C_BATCH_KEY,
+    estimatedCostUsd: 0.21
+  });
+  var runtimeText = JSON.stringify(runtime.rows);
+  var reviewText = JSON.stringify(review.rows);
+  var requestText = JSON.stringify(requests.requests || []);
+  return {
+    ok: stage31.ok === true &&
+      stage32.ok === true &&
+      stage33.ok === true &&
+      stage33r.ok === true &&
+      b3a.ok === true &&
+      flags.gateB3CEnabled === false &&
+      flags.killSwitchEnabled === true &&
+      callerFlags.gateB3CEnabled === false &&
+      directBlocked.stopCondition === 'run_id_mismatch' &&
+      directRuntime.rows.length === 0 &&
+      directProvider.calls.length === 0 &&
+      wrongTokenBlocked.stopCondition === 'wrapper_authorization_missing' &&
+      wrongFlagsBlocked.stopCondition === 'wrapper_authorization_missing' &&
+      wrongIdentityBlocked.stopCondition === 'run_id_mismatch' &&
+      requests.ok === true &&
+      requests.requests.length === 4 &&
+      requests.requests.every(function(entry) {
+        return entry.request.model === MC_STAGE34_GATE_B3C_MODEL &&
+          entry.request.store === false &&
+          Array.isArray(entry.request.tools) &&
+          entry.request.tools.length === 0 &&
+          !entry.request.previous_response_id &&
+          !entry.request.conversation &&
+          entry.request.text.format.strict === true &&
+          entry.request.max_output_tokens <= MC_STAGE34_GATE_B3C_MAX_OUTPUT_TOKENS_PER_CALL;
+      }) &&
+      redactedFetch.timeoutSeconds === MC_STAGE34_GATE_B3C_TIMEOUT_SECONDS &&
+      redactedFetch.headers.Authorization === 'Bearer [redacted]' &&
+      success.ok === true &&
+      success.fakeProviderCalls === 4 &&
+      success.childrenWritten === 4 &&
+      success.reviewRowsComplete === 4 &&
+      provider.calls[0].fixtureId === 'MC34-F01' &&
+      duplicate.status === 'duplicate_suppressed' &&
+      duplicateProvider.calls.length === 0 &&
+      interrupted.ok === false &&
+      interrupted.status === 'interrupted' &&
+      interrupted.failedFixtureId === 'MC34-F12' &&
+      interrupted.childrenWritten === 2 &&
+      interrupted.failureReceiptWritten === true &&
+      interrupted.providerCallAttempted === true &&
+      interrupted.authorizedFixtureAttempts === 3 &&
+      interrupted.actualFetchAttempts === 3 &&
+      failureReceipt &&
+      failureReceipt.row.receipt_type === MC_STAGE34_GATE_B3C_FAILURE_RECEIPT_TYPE &&
+      failureDuplicate.status === 'duplicate_suppressed' &&
+      interrupted.retryCount === 0 &&
+      interrupted.fallbackUsed === false &&
+      success.cumulativeEstimatedCost > 0 &&
+      success.cumulativeEstimatedCost < MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD &&
+      credentialBlocked.stopCondition === 'credential_unavailable' &&
+      credentialBlocked.providerCallAttempted === false &&
+      credentialBlocked.authorizedFixtureAttempts === 1 &&
+      credentialBlocked.actualFetchAttempts === 0 &&
+      credentialSummary.provider_call_attempted === false &&
+      credentialSummary.fetch_attempts === 0 &&
+      fetchBlocked.stopCondition === 'provider_fetch_failed' &&
+      fetchBlocked.providerCallAttempted === true &&
+      fetchBlocked.actualFetchAttempts === 1 &&
+      fetchSummary.provider_call_attempted === true &&
+      fetchSummary.fetch_attempts === 1 &&
+      malformedBlocked.stopCondition === 'fixture_not_allowed' &&
+      malformedReviewRow.row.candidate_text === '' &&
+      costBlocked.stopCondition === 'cost_cap_exceeded' &&
+      costBlocked.cumulativeEstimatedCost > MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD &&
+      costReviewRow.row.candidate_text === '' &&
+      envelopeResult.ok === true &&
+      envelopeResult.candidate.fixture_id === 'MC34-F01' &&
+      envelopeResult.meta.inputTokens === 2000 &&
+      envelopeResult.meta.outputTokens === 450 &&
+      envelopeResult.meta.reasoningTokens === 12 &&
+      envelopeResult.meta.estimatedCost > 0 &&
+      envelopeResult.meta.estimatedCost < MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD &&
+      interruptedRows.filter(function(entry) { return entry.row.candidate_text; }).length === 2 &&
+      findMissionCommandStage34GateB3AReviewRow(failureReview, makeMissionCommandStage34GateB3AReviewRowId(MC_STAGE34_GATE_B3C_BATCH_KEY, 'MC34-F12')).row.candidate_text === '' &&
+      extraHeader.ok === false &&
+      staleBlocked === true &&
+      versionEtagBlocked === true &&
+      invalidCost.ok === false &&
+      runtimeText.indexOf('candidate_text') === -1 &&
+      runtimeText.indexOf('Review the synthetic') === -1 &&
+      reviewText.indexOf('api key') === -1 &&
+      requestText.indexOf('previous_response_id') === -1 &&
+      requestText.indexOf('conversation') === -1,
+    build: MC_STAGE34_GATE_B3C_BUILD,
+    wrapperName: MC_STAGE34_GATE_B3C_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_B3C_RUN_ID,
+    batchKey: MC_STAGE34_GATE_B3C_BATCH_KEY,
+    relatedObject: MC_STAGE34_GATE_B3C_RELATED_OBJECT,
+    reviewTabName: MC_STAGE34_GATE_B3A_REVIEW_TAB_NAME,
+    reviewSheetId: MC_STAGE34_GATE_B3C_REVIEW_SHEET_ID,
+    model: MC_STAGE34_GATE_B3C_MODEL,
+    maxCalls: MC_STAGE34_GATE_B3C_MAX_CALLS,
+    retryCount: MC_STAGE34_GATE_B3C_RETRY_COUNT,
+    fallbackUsed: false,
+    timeoutSeconds: MC_STAGE34_GATE_B3C_TIMEOUT_SECONDS,
+    maxInputTokensPerCall: MC_STAGE34_GATE_B3C_MAX_INPUT_TOKENS_PER_CALL,
+    maxOutputTokensPerCall: MC_STAGE34_GATE_B3C_MAX_OUTPUT_TOKENS_PER_CALL,
+    maxEstimatedSpendUsd: MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD,
+    requestCount: requests.requests.length,
+    requestContractReady: requests.ok === true,
+    directCoordinatorBlocked: directBlocked.stopCondition === 'run_id_mismatch' && directRuntime.rows.length === 0 && directProvider.calls.length === 0,
+    wrongAuthorizationBlocked: wrongTokenBlocked.stopCondition === 'wrapper_authorization_missing',
+    wrongFlagsBlocked: wrongFlagsBlocked.stopCondition === 'wrapper_authorization_missing',
+    wrongIdentityBlocked: wrongIdentityBlocked.stopCondition === 'run_id_mismatch',
+    successFakeProviderCalls: success.fakeProviderCalls || 0,
+    authorizedFixtureAttempts: success.authorizedFixtureAttempts || 0,
+    actualFetchAttempts: success.actualFetchAttempts || 0,
+    cumulativeEstimatedCost: success.cumulativeEstimatedCost || 0,
+    cumulativeCostBelowCap: success.cumulativeEstimatedCost > 0 && success.cumulativeEstimatedCost < MC_STAGE34_GATE_B3C_MAX_ESTIMATED_SPEND_USD,
+    providerAttemptsRecorded: provider.calls.length === 4 && provider.calls.every(function(call) { return call.safeAttemptRecorded === true && !call.request; }),
+    duplicateSuppressedBeforeProvider: duplicate.status === 'duplicate_suppressed' && duplicateProvider.calls.length === 0,
+    interruptionStopsWithoutRetry: interrupted.status === 'interrupted' && interrupted.retryCount === 0,
+    failedThirdCallCountTruthful: interrupted.authorizedFixtureAttempts === 3 && interrupted.actualFetchAttempts === 3 && failureProvider.calls.length === 3,
+    failureReceiptWritten: interrupted.failureReceiptWritten === true,
+    failureReceiptDuplicateSuppressed: failureDuplicate.status === 'duplicate_suppressed',
+    credentialUnavailableZeroFetch: credentialBlocked.providerCallAttempted === false && credentialBlocked.actualFetchAttempts === 0 && credentialSummary.provider_call_attempted === false,
+    fetchFailureOneAttempt: fetchBlocked.providerCallAttempted === true && fetchBlocked.actualFetchAttempts === 1 && fetchSummary.provider_call_attempted === true,
+    malformedEnvelopeBlocked: malformedBlocked.stopCondition === 'fixture_not_allowed' && malformedReviewRow.row.candidate_text === '',
+    returnedUsageCostCapBlocked: costBlocked.stopCondition === 'cost_cap_exceeded' && costReviewRow.row.candidate_text === '',
+    realisticEnvelopeParsed: envelopeResult.ok === true && envelopeResult.candidate.fixture_id === 'MC34-F01',
+    realisticEnvelopeUsageCostReady: envelopeResult.meta.inputTokens === 2000 && envelopeResult.meta.outputTokens === 450 && envelopeResult.meta.estimatedCost > 0,
+    failedFixtureReadableBlank: findMissionCommandStage34GateB3AReviewRow(failureReview, makeMissionCommandStage34GateB3AReviewRowId(MC_STAGE34_GATE_B3C_BATCH_KEY, 'MC34-F12')).row.candidate_text === '',
+    extraReviewHeaderBlocked: extraHeader.ok === false,
+    staleReviewSnapshotBlocked: staleBlocked,
+    versionEtagRejectedForReviewRows: versionEtagBlocked,
+    partialRowsRemainReviewable: interruptedRows.length === 4,
+    runtimeReceiptsHashOnly: runtimeText.indexOf('candidate_text') === -1,
+    readableTextReviewTabOnly: reviewText.indexOf('Review the synthetic') !== -1,
+    modelAccessVerified: false,
+    pricingVerifiedForB3D: false,
+    providerCallAttemptedByIntegration: false,
+    wrapperInvokedByIntegration: false,
+    liveSheetTouched: false,
+    scriptPropertiesAccessed: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false,
+    gateB3DStarted: false
+  };
+}
+
+// Mission Command Stage 3.4 Gate C2 local correction preparation only.
+// Adds candidate V2 validation and fake evidence helpers; no live schema, wrapper, provider, route, or trigger.
+var MC_STAGE34_GATE_C2_BUILD = 'mmos-20260712-stage3-4-gate-c2-local-correction-preparation';
+var MC_STAGE34_GATE_C2_ENABLED = false;
+var MC_STAGE34_GATE_C2_KILL_SWITCH = true;
+var MC_STAGE34_GATE_C2_SCHEMA_VERSION = 'mc_stage34_candidate_v2';
+var MC_STAGE34_GATE_C2_RETENTION_SECONDS = 604800;
+var MC_STAGE34_GATE_C2_FAILURE_RECEIPT_TYPE = 'stage_3_4_gate_b3_quality_block';
+var MC_STAGE34_GATE_C2_OBJECT_TYPES = ['approval_packet', 'review_queue', 'project_decision', 'campaign_direction', 'handoff_dependency', 'meeting_brief', 'other_synthetic'];
+var MC_STAGE34_GATE_C2_SOURCE_LABELS = ['synthetic_fixture', 'shadow_review_fixture', 'synthetic_runtime_receipt', 'synthetic_shadow_fixture', 'runtime_receipt_hash_link', 'chief_escalation_context'];
+var MC_STAGE34_GATE_C2_GROUNDING_STATES = ['grounded_synthetic', 'grounded_hash_linked', 'synthetic_fixture_only'];
+var MC_STAGE34_GATE_C2_MATERIAL_CODES = ['new_eligible_event', 'state_changed', 'priority_changed', 'due_date_changed', 'owner_changed', 'blocker_changed', 'review_transition_changed', 'dependency_changed', 'suppression_reopen', 'chief_escalation_required', 'none'];
+var MC_STAGE34_GATE_C2_NEXT_MOVE_TYPES = ['review', 'approve_or_revise', 'choose_direction', 'review_dependency', 'review_owner', 'reply', 'park', 'review_decision_packet', 'stage_coordination_owner', 'review_changed_due_date', 'choose_approval_path'];
+var MC_STAGE34_GATE_C2_QUALITY_FAIL_CODES = [
+  'missing_object_label',
+  'generic_object_label',
+  'missing_decision',
+  'missing_source_labels',
+  'grounding_incomplete',
+  'why_now_generic',
+  'invalid_material_change_code',
+  'missing_material_change_summary',
+  'material_change_contradiction',
+  'next_move_count_invalid',
+  'invalid_next_move_type',
+  'meta_instruction_detected',
+  'role_mismatch',
+  'escalation_attribution_missing',
+  'dedupe_evidence_missing',
+  'execution_claim_detected',
+  'privacy_blocked',
+  'unsafe_or_incomplete_truncation',
+  'retention_invalid',
+  'provider_aggregation_mismatch'
+];
+var MC_STAGE34_GATE_C2_ADDITIVE_REVIEW_COLUMNS = [
+  'schema_version',
+  'created_at',
+  'object_type',
+  'object_label',
+  'source_labels',
+  'grounding_state',
+  'grounding_evidence',
+  'material_change_code',
+  'material_change_summary',
+  'material_change_summary_truncated',
+  'why_now_truncated',
+  'candidate_text_truncated',
+  'next_move_text',
+  'next_move_count',
+  'escalation_chain_id',
+  'escalated_to',
+  'chief_context_summary',
+  'executive_decision_required',
+  'companion_chief_candidate_state',
+  'dedupe_evidence_key',
+  'suppression_evidence_state',
+  'confidence',
+  'should_deliver',
+  'blocked_reason',
+  'quality_gate_state',
+  'quality_fail_codes',
+  'concrete_object_present',
+  'source_labels_valid',
+  'grounding_valid',
+  'why_now_specific',
+  'material_change_valid',
+  'next_move_count_valid',
+  'role_fidelity_valid',
+  'escalation_attribution_valid',
+  'dedupe_evidence_valid',
+  'protected_wording_valid',
+  'word_boundary_safe',
+  'candidate_non_meta',
+  'privacy_valid',
+  'review_ready',
+  'provider_call_attempted',
+  'fetch_attempt_count',
+  'fetch_attempt_index'
+];
+
+function getMissionCommandStage34GateC2Flags(input) {
+  input = input || {};
+  return {
+    gateC2Enabled: MC_STAGE34_GATE_C2_ENABLED === true && MC_STAGE34_GATE_C2_KILL_SWITCH !== true,
+    killSwitchEnabled: MC_STAGE34_GATE_C2_KILL_SWITCH === true,
+    callerCanEnable: false,
+    requestedEnabled: input.gateC2Enabled === true,
+    liveSheetEnabled: false,
+    providerEnabled: false,
+    scriptPropertiesEnabled: false,
+    wrapperEnabled: false,
+    routeEnabled: false,
+    triggerEnabled: false,
+    visibleDeliveryEnabled: false,
+    dispatchEnabled: false,
+    externalWriteEnabled: false
+  };
+}
+
+function getMissionCommandStage34GateC2AdditiveReviewColumns() {
+  return MC_STAGE34_GATE_C2_ADDITIVE_REVIEW_COLUMNS.slice();
+}
+
+function getMissionCommandStage34GateC2ProposedReviewHeaders() {
+  return getMissionCommandStage34GateB3AReviewHeaders().concat(getMissionCommandStage34GateC2AdditiveReviewColumns());
+}
+
+function validateMissionCommandStage34GateC2ProposedHeaders(headers) {
+  headers = headers || [];
+  var expected = getMissionCommandStage34GateC2ProposedReviewHeaders();
+  var missing = expected.filter(function(header) { return headers.indexOf(header) === -1; });
+  var exactOrder = headers.length === expected.length && missing.length === 0 && expected.every(function(header, index) {
+    return headers[index] === header;
+  });
+  return { ok: exactOrder, missing: missing, exactOrder: exactOrder, expectedCount: expected.length, actualCount: headers.length };
+}
+
+function makeMissionCommandStage34GateC2Blocked(reason, detail, meta) {
+  meta = meta || {};
+  return {
+    ok: false,
+    status: meta.status || 'blocked',
+    build: MC_STAGE34_GATE_C2_BUILD,
+    stopCondition: reason || 'gate_c2_blocked',
+    safeDetail: detail || '',
+    providerCallAttempted: false,
+    liveSheetTouched: false,
+    scriptPropertiesAccessed: false,
+    wrapperCreated: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function normalizeMissionCommandStage34GateC2Text(value) {
+  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function sanitizeMissionCommandStage34GateC2Text(value, maxLength) {
+  var text = normalizeMissionCommandStage34GateC2Text(value);
+  maxLength = safeMissionCommandOpenAiNumberV31(maxLength || 0);
+  if (!maxLength || text.length <= maxLength) return { text: text, truncated: false, wordBoundarySafe: true };
+  var limit = Math.max(0, maxLength - 3);
+  var slice = text.slice(0, limit);
+  var boundary = slice.lastIndexOf(' ');
+  if (boundary <= 0) return { text: slice + '...', truncated: true, wordBoundarySafe: false };
+  return { text: slice.slice(0, boundary).trim() + '...', truncated: true, wordBoundarySafe: true };
+}
+
+function isMissionCommandStage34GateC2GenericObject(label) {
+  var value = normalizeMissionCommandStage34GateC2Text(label).toLowerCase();
+  return !value || ['matter', 'item', 'thing', 'request', 'context', 'brief', 'the matter', 'the item'].indexOf(value) !== -1;
+}
+
+function missionCommandStage34GateC2ContainsAny(text, phrases) {
+  var value = normalizeMissionCommandStage34GateC2Text(text).toLowerCase();
+  for (var i = 0; i < phrases.length; i++) {
+    if (value.indexOf(phrases[i]) !== -1) return true;
+  }
+  return false;
+}
+
+function hasMissionCommandStage34GateC2MetaInstruction(candidate) {
+  var text = [candidate.candidate_text, candidate.next_move_text, candidate.why_now].join(' ');
+  return missionCommandStage34GateC2ContainsAny(text, [
+    'prepare a brief',
+    'prepare a concise brief',
+    'frame the decision',
+    'route the matter',
+    'route options',
+    'validate assumptions',
+    'validate impacted assumptions',
+    'identify dependencies',
+    'stage updated context'
+  ]);
+}
+
+function hasMissionCommandStage34GateC2ExecutionClaim(candidate) {
+  var text = normalizeMissionCommandStage34GateC2Text([candidate.candidate_text, candidate.next_move_text].join(' ')).toLowerCase();
+  var negated = ['do not dispatch', 'no dispatch', 'do not send', 'no external action', 'not delivered'];
+  for (var n = 0; n < negated.length; n++) text = text.replace(negated[n], '');
+  return /\b(assign|assigned|resolve|resolved|restart|clear|send|sent|publish|published|deliver|delivered|dispatch|dispatched|mark complete|updated the record|update the record)\b/.test(text);
+}
+
+function hasMissionCommandStage34GateC2SpecificWhyNow(whyNow) {
+  var value = normalizeMissionCommandStage34GateC2Text(whyNow).toLowerCase();
+  if (value.length < 12) return false;
+  if (['time-sensitive', 'important', 'urgent', 'needs review', 'requires leadership review'].indexOf(value) !== -1) return false;
+  return /(today|window|due|changed|waiting|moved|slot|threshold|parked|competing|approval|owner)/.test(value);
+}
+
+function getMissionCommandStage34GateC2AcceptanceFixtureMap() {
+  return Object.assign({
+    'MC34-F01': {
+      revised_id: 'MC34-F01-R1',
+      role_owner: 'executive_assistant',
+      family: 'executive_assistant_critical',
+      priority: 'critical',
+      object_type: 'approval_packet',
+      object_label: 'Project Atlas launch approval packet',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'],
+      grounding_state: 'synthetic_fixture_only',
+      grounding_evidence: 'The synthetic approval packet is linked to the shadow review fixture.',
+      decision_needed: 'Choose approve or revise before the review window closes.',
+      why_now: 'The review window closes today and downstream client-facing draft work must stay parked.',
+      material_change_code: 'review_transition_changed',
+      material_change_summary: 'The packet moved from routine preparation to executive approval-needed.',
+      next_move_type: 'review_decision_packet',
+      next_move_text: 'Review the Project Atlas approval packet.',
+      next_move_count: 1,
+      candidate_text: 'Project Atlas launch approval is at the review window. Choose approve or revise so the client-facing draft stays parked until your direction is set.',
+      confidence: 0.86,
+      should_deliver: false,
+      escalated_from: '',
+      escalated_to: '',
+      chief_context_summary: '',
+      executive_decision_required: '',
+      companion_chief_candidate_state: '',
+      suppression_evidence_state: ''
+    },
+    'MC34-F04': {
+      revised_id: 'MC34-F04-R1',
+      role_owner: 'chief_of_staff',
+      family: 'chief_coordination',
+      priority: 'important',
+      object_type: 'review_queue',
+      object_label: 'Build Lane Delta sequencing handoff',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'],
+      grounding_state: 'synthetic_fixture_only',
+      grounding_evidence: 'Prototype and Integration are waiting on one synthetic route decision.',
+      decision_needed: 'Stage Planning as sequencing owner before downstream Build work is proposed.',
+      why_now: 'Prototype and Integration are both waiting on the same route decision.',
+      material_change_code: 'owner_changed',
+      material_change_summary: 'Ownership changed from unassigned coordination to Planning-owned sequencing review.',
+      next_move_type: 'stage_coordination_owner',
+      next_move_text: 'Stage Planning as sequencing owner.',
+      next_move_count: 1,
+      candidate_text: 'Build Lane Delta has Prototype and Integration waiting on the same route decision. Stage Planning as sequencing owner before any downstream Build handoff is proposed.',
+      confidence: 0.84,
+      should_deliver: false,
+      escalated_from: '',
+      escalated_to: '',
+      chief_context_summary: '',
+      executive_decision_required: '',
+      companion_chief_candidate_state: '',
+      suppression_evidence_state: ''
+    },
+    'MC34-F12': {
+      revised_id: 'MC34-F12-R1',
+      role_owner: 'chief_of_staff',
+      family: 'material_change_reopen',
+      priority: 'critical',
+      object_type: 'approval_packet',
+      object_label: 'Client Packet Orion output review',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'],
+      grounding_state: 'synthetic_fixture_only',
+      grounding_evidence: 'The synthetic due-date change reopens a previously quiet review.',
+      decision_needed: 'Reopen the review because the due date changed from later this week to today.',
+      why_now: 'The due date moved to today, so the prior quiet state is no longer valid.',
+      material_change_code: 'due_date_changed',
+      material_change_summary: 'Due date changed from later this week to today.',
+      next_move_type: 'review_changed_due_date',
+      next_move_text: 'Review the changed due-date dependency.',
+      next_move_count: 1,
+      candidate_text: 'Client Packet Orion moved from later this week to today. Reopen the review and check the changed due-date dependency before the handoff remains parked.',
+      confidence: 0.88,
+      should_deliver: false,
+      escalated_from: '',
+      escalated_to: '',
+      chief_context_summary: '',
+      executive_decision_required: '',
+      companion_chief_candidate_state: '',
+      suppression_evidence_state: ''
+    },
+    'MC34-F15': {
+      revised_id: 'MC34-F15-R1',
+      role_owner: 'executive_assistant',
+      family: 'attributed_chief_escalation',
+      priority: 'important',
+      object_type: 'project_decision',
+      object_label: 'Project Nova approval path',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link', 'chief_escalation_context'],
+      grounding_state: 'synthetic_fixture_only',
+      grounding_evidence: 'Chief context shows two synthetic lanes competing for one approval slot.',
+      decision_needed: 'Choose whether the Build path or Content path gets today\'s approval slot.',
+      why_now: 'Chief identified two lanes competing for the same approval slot, and one must stay parked.',
+      material_change_code: 'review_transition_changed',
+      material_change_summary: 'Team coordination moved into an A1XX decision because the approval slot can hold only one path.',
+      next_move_type: 'choose_approval_path',
+      next_move_text: 'Choose Build path or Content path for today\'s approval slot.',
+      next_move_count: 1,
+      candidate_text: 'Chief flagged Project Nova: Build and Content are competing for today\'s approval slot. Choose which path gets reviewed now; the other stays parked.',
+      confidence: 0.87,
+      should_deliver: false,
+      escalated_from: 'chief_of_staff',
+      escalated_to: 'executive_assistant',
+      chief_context_summary: 'Chief identified Build and Content lanes competing for one synthetic approval slot.',
+      executive_decision_required: 'Choose whether Build or Content gets today\'s approval slot.',
+      companion_chief_candidate_state: 'merged_into_escalation',
+      suppression_evidence_state: 'verified_hash_link'
+    }
+  }, getMissionCommandStage34GateI5AFixtureMap(), getMissionCommandStage34GateI5BFixtureMap(), getMissionCommandStage34GateI5CFixtureMap(), getMissionCommandStage34GateI5DFixtureMap());
+}
+
+function makeMissionCommandStage34GateC2DedupeKey(candidate) {
+  return missionCommandStage34GateB1Hash([
+    MC_STAGE34_GATE_C2_SCHEMA_VERSION,
+    candidate.fixture_id || '',
+    candidate.role_owner || '',
+    candidate.escalated_from || '',
+    candidate.object_label || '',
+    candidate.decision_needed || ''
+  ].join('|'));
+}
+
+function makeMissionCommandStage34GateC2EscalationChainId(candidate) {
+  return missionCommandStage34GateB1Hash([
+    'stage34_c2_escalation',
+    candidate.fixture_id || '',
+    candidate.family || '',
+    candidate.chief_context_summary || '',
+    candidate.executive_decision_required || ''
+  ].join('|'));
+}
+
+function makeMissionCommandStage34GateC2Candidate(fixtureId, overrides) {
+  var base = Object.assign({}, (getMissionCommandStage34GateC2AcceptanceFixtureMap()[fixtureId] || {}), overrides || {});
+  base.schema_version = base.schema_version || MC_STAGE34_GATE_C2_SCHEMA_VERSION;
+  base.fixture_id = base.fixture_id || fixtureId;
+  base.candidate_family_key = base.candidate_family_key || missionCommandStage34GateB1Hash(['candidate_v2', fixtureId, base.family || ''].join('|'));
+  base.escalation_chain_id = base.escalation_chain_id || (base.escalated_from ? makeMissionCommandStage34GateC2EscalationChainId(base) : '');
+  base.dedupe_evidence_key = base.dedupe_evidence_key || (base.escalated_from ? makeMissionCommandStage34GateC2DedupeKey(base) : '');
+  base.blocked_reason = base.blocked_reason || '';
+  return base;
+}
+
+function getMissionCommandStage34GateC2CandidateSchema() {
+  return {
+    schema_version: MC_STAGE34_GATE_C2_SCHEMA_VERSION,
+    required: [
+      'schema_version',
+      'fixture_id',
+      'candidate_family_key',
+      'role_owner',
+      'family',
+      'priority',
+      'object_type',
+      'object_label',
+      'source_labels',
+      'grounding_state',
+      'grounding_evidence',
+      'decision_needed',
+      'why_now',
+      'material_change_code',
+      'material_change_summary',
+      'next_move_type',
+      'next_move_text',
+      'next_move_count',
+      'candidate_text',
+      'confidence',
+      'should_deliver'
+    ],
+    materialChangeCodes: MC_STAGE34_GATE_C2_MATERIAL_CODES.slice(),
+    nextMoveTypes: MC_STAGE34_GATE_C2_NEXT_MOVE_TYPES.slice()
+  };
+}
+
+function getMissionCommandStage34GateC3ProviderCandidateFields() {
+  return [
+    'schema_version',
+    'fixture_id',
+    'candidate_family_key',
+    'role_owner',
+    'family',
+    'priority',
+    'object_type',
+    'object_label',
+    'source_labels',
+    'grounding_state',
+    'grounding_evidence',
+    'decision_needed',
+    'why_now',
+    'material_change_code',
+    'material_change_summary',
+    'next_move_type',
+    'next_move_text',
+    'next_move_count',
+    'candidate_text',
+    'confidence',
+    'should_deliver',
+    'escalated_from',
+    'escalated_to',
+    'chief_context_summary',
+    'executive_decision_required',
+    'companion_chief_candidate_state',
+    'dedupe_evidence_key',
+    'suppression_evidence_state'
+  ];
+}
+
+function getMissionCommandStage34GateC3RuntimeOwnedProviderSchemaFields() {
+  return [
+    'review_row_id',
+    'review_batch_id',
+    'receipt_id',
+    'receipt_parent_id',
+    'receipt_child_id',
+    'receipt_related_object',
+    'candidate_sha256',
+    'quality_gate_state',
+    'quality_fail_codes',
+    'review_ready',
+    'review_state',
+    'batch_state',
+    'retention_due_at',
+    'created_at',
+    'updated_at',
+    'provider_call_attempted',
+    'fetch_attempt_count',
+    'fetch_attempt_index',
+    'safe_summary',
+    'safety_identifier_hash',
+    'etag',
+    'version'
+  ];
+}
+
+function getMissionCommandStage34GateC3ProviderCandidateSchema() {
+  var fields = getMissionCommandStage34GateC3ProviderCandidateFields();
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: fields.slice(),
+    properties: {
+      schema_version: { type: 'string', enum: [MC_STAGE34_GATE_C2_SCHEMA_VERSION] },
+      fixture_id: { type: 'string', enum: MC_STAGE34_GATE_B3A_FIXTURE_IDS.slice() },
+      candidate_family_key: { type: 'string' },
+      role_owner: { type: 'string', enum: ['executive_assistant', 'chief_of_staff'] },
+      family: { type: 'string', enum: ['executive_assistant_critical', 'chief_coordination', 'material_change_reopen', 'attributed_chief_escalation'] },
+      priority: { type: 'string', enum: ['critical', 'important', 'routine', 'low'] },
+      object_type: { type: 'string', enum: MC_STAGE34_GATE_C2_OBJECT_TYPES.slice() },
+      object_label: { type: 'string' },
+      source_labels: { type: 'array', items: { type: 'string', enum: MC_STAGE34_GATE_C2_SOURCE_LABELS.slice() } },
+      grounding_state: { type: 'string', enum: MC_STAGE34_GATE_C2_GROUNDING_STATES.slice() },
+      grounding_evidence: { type: 'string' },
+      decision_needed: { type: 'string' },
+      why_now: { type: 'string' },
+      material_change_code: { type: 'string', enum: MC_STAGE34_GATE_C2_MATERIAL_CODES.slice() },
+      material_change_summary: { type: 'string' },
+      next_move_type: { type: 'string', enum: MC_STAGE34_GATE_C2_NEXT_MOVE_TYPES.slice() },
+      next_move_text: { type: 'string' },
+      next_move_count: { type: 'number', enum: [1] },
+      candidate_text: { type: 'string' },
+      confidence: { type: 'number' },
+      should_deliver: { type: 'boolean', enum: [false] },
+      escalated_from: { type: 'string' },
+      escalated_to: { type: 'string' },
+      chief_context_summary: { type: 'string' },
+      executive_decision_required: { type: 'string' },
+      companion_chief_candidate_state: { type: 'string', enum: ['', 'suppressed_same_family', 'merged_into_escalation'] },
+      dedupe_evidence_key: { type: 'string' },
+      suppression_evidence_state: { type: 'string', enum: ['', 'verified_hash_link'] }
+    }
+  };
+}
+
+function validateMissionCommandStage34GateC3StrictSchemaNode(node, path, errors) {
+  node = node || {};
+  path = path || 'schema';
+  errors = errors || [];
+  var allowed = ['type', 'enum', 'items', 'properties', 'required', 'additionalProperties'];
+  Object.keys(node).forEach(function(key) {
+    if (allowed.indexOf(key) === -1) errors.push(path + ':unsupported_keyword_' + key);
+  });
+  if (!node.type) errors.push(path + ':missing_type');
+  if (['object', 'string', 'number', 'boolean', 'array'].indexOf(node.type) === -1) errors.push(path + ':unsupported_type');
+  if (node.enum && (!Array.isArray(node.enum) || node.enum.length === 0)) errors.push(path + ':invalid_enum');
+  if (node.type === 'array') {
+    if (!node.items || typeof node.items !== 'object') errors.push(path + ':array_items_missing');
+    else validateMissionCommandStage34GateC3StrictSchemaNode(node.items, path + '.items', errors);
+  }
+  if (node.type === 'object') {
+    if (node.additionalProperties !== false) errors.push(path + ':additional_properties_must_be_false');
+    if (!node.properties || typeof node.properties !== 'object' || Array.isArray(node.properties)) errors.push(path + ':properties_missing');
+    var required = Array.isArray(node.required) ? node.required : [];
+    if (!Array.isArray(node.required)) errors.push(path + ':required_missing');
+    var seen = {};
+    required.forEach(function(name) {
+      if (seen[name]) errors.push(path + ':duplicate_required_' + name);
+      seen[name] = true;
+      if (!node.properties || !node.properties[name]) errors.push(path + ':required_property_missing_' + name);
+    });
+    if (node.properties) {
+      Object.keys(node.properties).forEach(function(name) {
+        if (required.indexOf(name) === -1) errors.push(path + ':property_not_required_' + name);
+        validateMissionCommandStage34GateC3StrictSchemaNode(node.properties[name], path + '.properties.' + name, errors);
+      });
+    }
+  }
+  return errors;
+}
+
+function validateMissionCommandStage34GateC3ProviderSchema(schema) {
+  var errors = [];
+  schema = schema || {};
+  validateMissionCommandStage34GateC3StrictSchemaNode(schema, 'schema', errors);
+  var required = Array.isArray(schema.required) ? schema.required : [];
+  var properties = schema.properties || {};
+  var expected = getMissionCommandStage34GateC3ProviderCandidateFields();
+  expected.forEach(function(field) {
+    if (required.indexOf(field) === -1) errors.push('provider_required_missing_' + field);
+    if (!properties[field]) errors.push('provider_property_missing_' + field);
+  });
+  required.forEach(function(field) {
+    if (expected.indexOf(field) === -1) errors.push('provider_required_unexpected_' + field);
+  });
+  Object.keys(properties).forEach(function(field) {
+    if (expected.indexOf(field) === -1) errors.push('provider_property_unexpected_' + field);
+  });
+  getMissionCommandStage34GateC3RuntimeOwnedProviderSchemaFields().forEach(function(field) {
+    if (required.indexOf(field) !== -1 || properties[field]) errors.push('runtime_owned_field_leaked_' + field);
+  });
+  return { ok: errors.length === 0, errors: errors };
+}
+
+function validateMissionCommandStage34GateC3Request(fixtureId, request) {
+  var errors = [];
+  var base = validateMissionCommandOpenAiShadowRequestV31(request);
+  errors = errors.concat(base.errors || []);
+  request = request || {};
+  if (request.model !== MC_STAGE34_GATE_C3_MODEL) errors.push('model_mismatch');
+  if (request.max_output_tokens !== MC_STAGE34_GATE_C3_MAX_OUTPUT_TOKENS_PER_CALL) errors.push('max_output_tokens_mismatch');
+  if (!request.reasoning || request.reasoning.effort !== 'low') errors.push('reasoning_effort_mismatch');
+  if (request.parallel_tool_calls || request.tool_choice) errors.push('tool_selection_fields_must_be_absent');
+  if (!Array.isArray(request.input) || request.input.length !== 2) errors.push('input_messages_invalid');
+  if (request.input && request.input[1]) {
+    var payload = {};
+    try {
+      payload = JSON.parse(request.input[1].content || '{}');
+    } catch (err) {
+      errors.push('user_payload_not_json');
+    }
+    if (payload.run_id !== MC_STAGE34_GATE_C3_RUN_ID) errors.push('run_id_mismatch');
+    if (payload.batch_key !== MC_STAGE34_GATE_C3_BATCH_KEY) errors.push('batch_key_mismatch');
+    if (payload.fixture_id !== fixtureId) errors.push('fixture_id_mismatch');
+    if (payload.synthetic_only !== true) errors.push('synthetic_only_missing');
+  }
+  var format = request.text && request.text.format || {};
+  if (format.name !== 'mission_command_stage34_candidate_v2') errors.push('schema_name_mismatch');
+  var schemaCheck = validateMissionCommandStage34GateC3ProviderSchema(format.schema || {});
+  errors = errors.concat(schemaCheck.errors || []);
+  var serialized = '';
+  try {
+    serialized = JSON.stringify(request);
+  } catch (err) {
+    errors.push('request_serialization_failed');
+  }
+  if (serialized && serialized.length > MC_STAGE34_GATE_C3_MAX_INPUT_TOKENS_PER_CALL * 5) errors.push('request_payload_exceeds_input_cap');
+  if (MC_STAGE34_GATE_B3A_FIXTURE_IDS.indexOf(fixtureId) === -1) errors.push('fixture_not_allowlisted');
+  return { ok: errors.length === 0, errors: errors, serializedLength: serialized.length };
+}
+
+function computeMissionCommandStage34GateC2QualityGate(candidate) {
+  candidate = candidate || {};
+  var fixture = getMissionCommandStage34GateC2AcceptanceFixtureMap()[candidate.fixture_id] || {};
+  var failCodes = [];
+  var objectLabel = normalizeMissionCommandStage34GateC2Text(candidate.object_label);
+  var sourceLabels = Array.isArray(candidate.source_labels) ? candidate.source_labels : [];
+  var materialSummary = sanitizeMissionCommandStage34GateC2Text(candidate.material_change_summary, 200);
+  var whyNow = sanitizeMissionCommandStage34GateC2Text(candidate.why_now, 180);
+  var candidateText = sanitizeMissionCommandStage34GateC2Text(candidate.candidate_text, 360);
+  var nextMoveText = sanitizeMissionCommandStage34GateC2Text(candidate.next_move_text, 120);
+  var concreteObjectPresent = objectLabel.length >= 8 && objectLabel.length <= 80 && !isMissionCommandStage34GateC2GenericObject(objectLabel);
+  var sourceLabelsValid = sourceLabels.length >= 1 && sourceLabels.length <= 3 && sourceLabels.every(function(label) {
+    return MC_STAGE34_GATE_C2_SOURCE_LABELS.indexOf(label) !== -1;
+  });
+  var groundingValid = MC_STAGE34_GATE_C2_GROUNDING_STATES.indexOf(candidate.grounding_state) !== -1 && normalizeMissionCommandStage34GateC2Text(candidate.grounding_evidence).length >= 12;
+  var whyNowSpecific = hasMissionCommandStage34GateC2SpecificWhyNow(candidate.why_now);
+  var materialValid = MC_STAGE34_GATE_C2_MATERIAL_CODES.indexOf(candidate.material_change_code) !== -1 &&
+    candidate.material_change_code !== 'none' &&
+    materialSummary.text.length >= 12 &&
+    !materialSummary.truncated &&
+    !missionCommandStage34GateC2ContainsAny(materialSummary.text, ['material change', 'changed condition', 'needs review']);
+  var nextMoveCountValid = safeMissionCommandOpenAiNumberV31(candidate.next_move_count) === 1 &&
+    MC_STAGE34_GATE_C2_NEXT_MOVE_TYPES.indexOf(candidate.next_move_type) !== -1 &&
+    nextMoveText.text.length >= 6 &&
+    !/\b(and then|then|, and|;)\b/i.test(nextMoveText.text);
+  var roleFidelityValid = candidate.role_owner === fixture.role_owner && candidate.family === fixture.family;
+  var escalationRequired = candidate.fixture_id === 'MC34-F15' || candidate.family === 'attributed_chief_escalation';
+  var escalationAttributionValid = !escalationRequired || (candidate.escalated_from === 'chief_of_staff' &&
+    candidate.escalated_to === 'executive_assistant' &&
+    normalizeMissionCommandStage34GateC2Text(candidate.chief_context_summary).length >= 12 &&
+    normalizeMissionCommandStage34GateC2Text(candidate.executive_decision_required).length >= 8);
+  var dedupeEvidenceValid = !escalationRequired || (['suppressed_same_family', 'merged_into_escalation'].indexOf(candidate.companion_chief_candidate_state) !== -1 &&
+    candidate.suppression_evidence_state === 'verified_hash_link' &&
+    normalizeMissionCommandStage34GateC2Text(candidate.dedupe_evidence_key).length >= 16);
+  var protectedWordingValid = !hasMissionCommandStage34GateC2ExecutionClaim(candidate);
+  var wordBoundarySafe = !materialSummary.truncated && !whyNow.truncated && !candidateText.truncated && !nextMoveText.truncated &&
+    materialSummary.wordBoundarySafe && whyNow.wordBoundarySafe && candidateText.wordBoundarySafe && nextMoveText.wordBoundarySafe;
+  var candidateNonMeta = !hasMissionCommandStage34GateC2MetaInstruction(candidate);
+  var privacyValid = candidate.should_deliver === false && !missionCommandStage34GateC2ContainsAny(candidateText.text, ['api key', 'script property', 'raw provider', 'hidden reasoning', 'client email']);
+  var decisionPresent = normalizeMissionCommandStage34GateC2Text(candidate.decision_needed).length >= 8;
+  if (!concreteObjectPresent) failCodes.push(objectLabel ? 'generic_object_label' : 'missing_object_label');
+  if (!decisionPresent) failCodes.push('missing_decision');
+  if (!sourceLabelsValid) failCodes.push('missing_source_labels');
+  if (!groundingValid) failCodes.push('grounding_incomplete');
+  if (!whyNowSpecific) failCodes.push('why_now_generic');
+  if (MC_STAGE34_GATE_C2_MATERIAL_CODES.indexOf(candidate.material_change_code) === -1 || candidate.material_change_code === 'none') failCodes.push('invalid_material_change_code');
+  if (!materialValid) failCodes.push('missing_material_change_summary');
+  if (!nextMoveCountValid) failCodes.push(safeMissionCommandOpenAiNumberV31(candidate.next_move_count) !== 1 ? 'next_move_count_invalid' : 'invalid_next_move_type');
+  if (!roleFidelityValid) failCodes.push('role_mismatch');
+  if (!escalationAttributionValid) failCodes.push('escalation_attribution_missing');
+  if (!dedupeEvidenceValid) failCodes.push('dedupe_evidence_missing');
+  if (!protectedWordingValid) failCodes.push('execution_claim_detected');
+  if (!wordBoundarySafe) failCodes.push('unsafe_or_incomplete_truncation');
+  if (!candidateNonMeta) failCodes.push('meta_instruction_detected');
+  if (!privacyValid) failCodes.push('privacy_blocked');
+  var pass = failCodes.length === 0 && Number(candidate.confidence || 0) >= 0.70;
+  return {
+    schema_valid: true,
+    quality_gate_state: pass ? 'pass' : 'fail',
+    quality_fail_codes: failCodes,
+    concrete_object_present: concreteObjectPresent,
+    source_labels_valid: sourceLabelsValid,
+    grounding_valid: groundingValid,
+    why_now_specific: whyNowSpecific,
+    material_change_valid: materialValid,
+    next_move_count_valid: nextMoveCountValid,
+    role_fidelity_valid: roleFidelityValid,
+    escalation_attribution_valid: escalationAttributionValid,
+    dedupe_evidence_valid: dedupeEvidenceValid,
+    protected_wording_valid: protectedWordingValid,
+    word_boundary_safe: wordBoundarySafe,
+    candidate_non_meta: candidateNonMeta,
+    privacy_valid: privacyValid,
+    review_ready: pass,
+    sanitized: {
+      why_now: whyNow,
+      material_change_summary: materialSummary,
+      next_move_text: nextMoveText,
+      candidate_text: candidateText
+    }
+  };
+}
+
+function validateMissionCommandStage34GateC2Candidate(candidate) {
+  candidate = candidate || {};
+  var schemaErrors = [];
+  var fixture = getMissionCommandStage34GateC2AcceptanceFixtureMap()[candidate.fixture_id] || null;
+  if (candidate.schema_version !== MC_STAGE34_GATE_C2_SCHEMA_VERSION) schemaErrors.push('schema_version_invalid');
+  if (!fixture) schemaErrors.push('fixture_not_allowed');
+  if (MC_STAGE34_GATE_C2_OBJECT_TYPES.indexOf(candidate.object_type) === -1) schemaErrors.push('object_type_invalid');
+  if (['critical', 'important', 'routine', 'low'].indexOf(candidate.priority) === -1) schemaErrors.push('priority_invalid');
+  if (candidate.should_deliver !== false) schemaErrors.push('should_deliver_must_be_false');
+  var quality = computeMissionCommandStage34GateC2QualityGate(candidate);
+  if (schemaErrors.length) {
+    quality.schema_valid = false;
+    quality.quality_gate_state = 'fail';
+    quality.review_ready = false;
+    quality.quality_fail_codes = schemaErrors.concat(quality.quality_fail_codes || []);
+  }
+  return { ok: quality.schema_valid === true && quality.review_ready === true, schemaErrors: schemaErrors, quality: quality };
+}
+
+function makeMissionCommandStage34GateC2RetentionDueAt(createdAtIso) {
+  var started = new Date(createdAtIso || '').getTime();
+  if (!isFinite(started)) return { ok: false, stopCondition: 'run_timestamp_invalid', createdAt: createdAtIso || '', retentionDueAt: '' };
+  var due = new Date(started + MC_STAGE34_GATE_C2_RETENTION_SECONDS * 1000).toISOString();
+  return { ok: true, createdAt: new Date(started).toISOString(), retentionDueAt: due, seconds: MC_STAGE34_GATE_C2_RETENTION_SECONDS };
+}
+
+function validateMissionCommandStage34GateC2Retention(createdAtIso, retentionDueAtIso) {
+  var created = new Date(createdAtIso || '').getTime();
+  var due = new Date(retentionDueAtIso || '').getTime();
+  var seconds = Math.round((due - created) / 1000);
+  return { ok: isFinite(created) && isFinite(due) && seconds === MC_STAGE34_GATE_C2_RETENTION_SECONDS, seconds: seconds };
+}
+
+function makeMissionCommandStage34GateC2ReviewRow(candidate, runId, batchKey, createdAtIso) {
+  var validation = validateMissionCommandStage34GateC2Candidate(candidate);
+  var retention = makeMissionCommandStage34GateC2RetentionDueAt(createdAtIso);
+  if (!retention.ok) return makeMissionCommandStage34GateC2Blocked(retention.stopCondition, 'Gate C2 review row requires a valid actual run timestamp.');
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, candidate.fixture_id);
+  var candidateHash = makeMissionCommandStage34GateB3ACandidateHash(candidate);
+  var quality = validation.quality;
+  var row = {
+    review_row_id: reviewRowId,
+    review_batch_id: batchKey,
+    fixture_id: candidate.fixture_id,
+    fixture_pack_sha256: MC_STAGE34_GATE_B1_FIXTURE_SHA256,
+    receipt_related_object: makeMissionCommandStage34GateB3ARelatedObject(batchKey),
+    receipt_parent_id: makeMissionCommandStage34GateB3AReceiptId('parent', batchKey),
+    receipt_child_id: validation.ok ? makeMissionCommandStage34GateB3AReceiptId('child', batchKey, candidate.fixture_id) : '',
+    candidate_sha256: validation.ok ? candidateHash : '',
+    role_owner: candidate.role_owner || '',
+    escalated_from: candidate.escalated_from || '',
+    family: candidate.family || '',
+    priority: candidate.priority || '',
+    why_now: validation.ok ? quality.sanitized.why_now.text : '',
+    material_change: '',
+    next_move_type: candidate.next_move_type || '',
+    candidate_text: validation.ok ? quality.sanitized.candidate_text.text : '',
+    schema_valid: quality.schema_valid === true,
+    review_state: validation.ok ? 'unreviewed' : 'quality_blocked',
+    reviewer: '',
+    reviewed_at: '',
+    privacy_class: MC_STAGE34_GATE_B3A_PRIVACY_CLASS,
+    retention_due_at: retention.retentionDueAt,
+    redacted_at: '',
+    redaction_reason: '',
+    batch_state: validation.ok ? 'review_ready' : 'quality_blocked',
+    boundary_flags: JSON.stringify({ raw_prompt_stored: false, raw_provider_response_stored: false, visible_delivery: false, dispatch: false, external_write: false, route_created: false }),
+    schema_version: MC_STAGE34_GATE_C2_SCHEMA_VERSION,
+    created_at: retention.createdAt,
+    object_type: candidate.object_type || '',
+    object_label: candidate.object_label || '',
+    source_labels: JSON.stringify(candidate.source_labels || []),
+    grounding_state: candidate.grounding_state || '',
+    grounding_evidence: validation.ok ? normalizeMissionCommandStage34GateC2Text(candidate.grounding_evidence) : '',
+    material_change_code: candidate.material_change_code || '',
+    material_change_summary: validation.ok ? quality.sanitized.material_change_summary.text : '',
+    material_change_summary_truncated: quality.sanitized.material_change_summary.truncated,
+    why_now_truncated: quality.sanitized.why_now.truncated,
+    candidate_text_truncated: quality.sanitized.candidate_text.truncated,
+    next_move_text: validation.ok ? quality.sanitized.next_move_text.text : '',
+    next_move_count: safeMissionCommandOpenAiNumberV31(candidate.next_move_count || 0),
+    escalation_chain_id: candidate.escalation_chain_id || '',
+    escalated_to: candidate.escalated_to || '',
+    chief_context_summary: validation.ok ? normalizeMissionCommandStage34GateC2Text(candidate.chief_context_summary || '') : '',
+    executive_decision_required: validation.ok ? normalizeMissionCommandStage34GateC2Text(candidate.executive_decision_required || '') : '',
+    companion_chief_candidate_state: candidate.companion_chief_candidate_state || '',
+    dedupe_evidence_key: candidate.dedupe_evidence_key || '',
+    suppression_evidence_state: candidate.suppression_evidence_state || '',
+    confidence: Number(candidate.confidence || 0),
+    should_deliver: candidate.should_deliver === true,
+    blocked_reason: validation.ok ? '' : (quality.quality_fail_codes[0] || 'quality_blocked'),
+    quality_gate_state: quality.quality_gate_state,
+    quality_fail_codes: JSON.stringify(quality.quality_fail_codes || []),
+    concrete_object_present: quality.concrete_object_present,
+    source_labels_valid: quality.source_labels_valid,
+    grounding_valid: quality.grounding_valid,
+    why_now_specific: quality.why_now_specific,
+    material_change_valid: quality.material_change_valid,
+    next_move_count_valid: quality.next_move_count_valid,
+    role_fidelity_valid: quality.role_fidelity_valid,
+    escalation_attribution_valid: quality.escalation_attribution_valid,
+    dedupe_evidence_valid: quality.dedupe_evidence_valid,
+    protected_wording_valid: quality.protected_wording_valid,
+    word_boundary_safe: quality.word_boundary_safe,
+    candidate_non_meta: quality.candidate_non_meta,
+    privacy_valid: quality.privacy_valid,
+    review_ready: validation.ok,
+    provider_call_attempted: false,
+    fetch_attempt_count: 0,
+    fetch_attempt_index: ''
+  };
+  return { ok: true, status: validation.ok ? 'review_ready' : 'quality_blocked', row: row, validation: validation, candidateHash: candidateHash };
+}
+
+function makeMissionCommandStage34GateC2QualityFailureReceipt(runId, batchKey, candidate, validation) {
+  candidate = candidate || {};
+  validation = validation || { quality: { quality_fail_codes: [] } };
+  var summary = {
+    schema_version: MC_STAGE34_GATE_C2_SCHEMA_VERSION,
+    fixture_id: candidate.fixture_id || '',
+    quality_gate_state: 'fail',
+    quality_fail_codes: (validation.quality && validation.quality.quality_fail_codes) || [],
+    readable_text_stored: false,
+    retry_count: 0,
+    fallback_used: false,
+    provider_call_attempted: false,
+    boundary_flags: {
+      raw_prompt_stored: false,
+      raw_provider_response_stored: false,
+      visible_delivery: false,
+      dispatch: false,
+      external_write: false
+    }
+  };
+  return {
+    receipt_id: 'rcp_mc34c2_quality_' + String(batchKey || '').slice(0, 16) + '_' + String(candidate.fixture_id || ''),
+    receipt_type: MC_STAGE34_GATE_C2_FAILURE_RECEIPT_TYPE,
+    related_object: makeMissionCommandStage34GateB3ARelatedObject(batchKey),
+    result: 'quality_blocked',
+    safe_summary: JSON.stringify(summary),
+    fallback_reason: summary.quality_fail_codes[0] || 'quality_blocked',
+    request_id: runId,
+    role: candidate.role_owner || '',
+    privacy_class: MC_STAGE34_GATE_B1_PRIVACY_CLASS,
+    retention_class: MC_STAGE34_GATE_B1_RETENTION_CLASS
+  };
+}
+
+function aggregateMissionCommandStage34GateC2ProviderAttempts(receipts) {
+  receipts = receipts || [];
+  var authorizedFixtures = {};
+  var seenFixtures = {};
+  var totalFetch = 0;
+  var fetchSuccesses = 0;
+  var httpSuccesses = 0;
+  var responseParsed = 0;
+  var schemaPasses = 0;
+  var qualityPasses = 0;
+  var reviewRowsWritten = 0;
+  receipts.forEach(function(row) {
+    var summary = parseMissionCommandStage34GateB3ASafeSummary(row);
+    var fixtureId = String(summary.fixture_id || '');
+    if (!fixtureId || seenFixtures[fixtureId]) return;
+    seenFixtures[fixtureId] = true;
+    if (summary.authorized_fixture_attempt === true) authorizedFixtures[fixtureId] = true;
+    var fetchCount = safeMissionCommandOpenAiNumberV31(summary.fetch_attempt_count || 0);
+    totalFetch += fetchCount === 1 ? 1 : 0;
+    if (summary.fetch_succeeded === true) fetchSuccesses += 1;
+    if (summary.http_succeeded === true) httpSuccesses += 1;
+    if (summary.response_parsed === true) responseParsed += 1;
+    if (summary.schema_valid === true) schemaPasses += 1;
+    if (summary.quality_gate_passed === true || summary.quality_gate_state === 'pass') qualityPasses += 1;
+    if (summary.review_row_written === true) reviewRowsWritten += 1;
+  });
+  var exactSet = MC_STAGE34_GATE_B3A_FIXTURE_IDS.every(function(fixtureId) { return seenFixtures[fixtureId] === true; }) &&
+    Object.keys(seenFixtures).length === MC_STAGE34_GATE_B3A_FIXTURE_IDS.length;
+  return {
+    authorized_fixture_count: Object.keys(authorizedFixtures).length,
+    provider_fetch_attempts_actual: totalFetch,
+    provider_call_attempted: totalFetch > 0,
+    provider_fetch_successes: fetchSuccesses,
+    provider_fetch_failures: totalFetch - fetchSuccesses,
+    http_successes: httpSuccesses,
+    response_parsed_count: responseParsed,
+    schema_valid_count: schemaPasses,
+    quality_gate_passes: qualityPasses,
+    review_rows_written: reviewRowsWritten,
+    deterministic_child_set_complete: exactSet,
+    aggregation_state: exactSet ? 'complete' : 'partial'
+  };
+}
+
+function makeMissionCommandStage34GateC2FakeChildReceipt(fixtureId, meta) {
+  meta = meta || {};
+  var summary = {
+    schema_version: MC_STAGE34_GATE_C2_SCHEMA_VERSION,
+    fixture_id: fixtureId,
+    authorized_fixture_attempt: meta.authorized !== false,
+    provider_call_attempted: meta.providerCallAttempted === true,
+    fetch_attempt_count: safeMissionCommandOpenAiNumberV31(meta.fetchAttemptCount || 0),
+    fetch_succeeded: meta.fetchSucceeded === true,
+    schema_valid: meta.schemaValid !== false,
+    quality_gate_state: meta.qualityGatePassed === false ? 'fail' : 'pass',
+    quality_gate_passed: meta.qualityGatePassed !== false,
+    review_row_written: meta.reviewRowWritten === true
+  };
+  return {
+    receipt_type: MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE,
+    result: summary.quality_gate_passed ? 'hash_logged' : 'quality_blocked',
+    safe_summary: JSON.stringify(summary)
+  };
+}
+
+function verifyMissionCommandStage34GateC2LocalChecks() {
+  var flags = getMissionCommandStage34GateC2Flags();
+  var callerFlags = getMissionCommandStage34GateC2Flags({ gateC2Enabled: true });
+  var schema = getMissionCommandStage34GateC2CandidateSchema();
+  var proposedHeaders = getMissionCommandStage34GateC2ProposedReviewHeaders();
+  var headerCheck = validateMissionCommandStage34GateC2ProposedHeaders(proposedHeaders);
+  var extraHeaderCheck = validateMissionCommandStage34GateC2ProposedHeaders(proposedHeaders.concat(['unexpected_extra']));
+  var fixtures = MC_STAGE34_GATE_B3A_FIXTURE_IDS.map(function(fixtureId) {
+    var candidate = makeMissionCommandStage34GateC2Candidate(fixtureId);
+    var validation = validateMissionCommandStage34GateC2Candidate(candidate);
+    var row = makeMissionCommandStage34GateC2ReviewRow(candidate, 'mc_stage34_gate_c2_local', MC_STAGE34_GATE_B3C_BATCH_KEY, '2026-07-12T18:00:00Z');
+    return { fixtureId: fixtureId, candidate: candidate, validation: validation, row: row };
+  });
+  var generic = validateMissionCommandStage34GateC2Candidate(makeMissionCommandStage34GateC2Candidate('MC34-F01', {
+    object_label: 'item',
+    candidate_text: 'Prepare a concise brief and route the matter for leadership review.'
+  }));
+  var missingDecision = validateMissionCommandStage34GateC2Candidate(makeMissionCommandStage34GateC2Candidate('MC34-F01', { decision_needed: '' }));
+  var proseMaterial = validateMissionCommandStage34GateC2Candidate(makeMissionCommandStage34GateC2Candidate('MC34-F12', { material_change_code: 'the date changed today' }));
+  var genericMaterial = validateMissionCommandStage34GateC2Candidate(makeMissionCommandStage34GateC2Candidate('MC34-F12', { material_change_summary: 'material change needs review' }));
+  var truncatedMaterialCandidate = makeMissionCommandStage34GateC2Candidate('MC34-F12', { material_change_summary: Array(230).join('A') });
+  var truncatedMaterial = validateMissionCommandStage34GateC2Candidate(truncatedMaterialCandidate);
+  var multipleMoves = validateMissionCommandStage34GateC2Candidate(makeMissionCommandStage34GateC2Candidate('MC34-F04', { next_move_count: 2, next_move_text: 'Stage Planning and route Build.' }));
+  var executionClaim = validateMissionCommandStage34GateC2Candidate(makeMissionCommandStage34GateC2Candidate('MC34-F01', { candidate_text: 'Project Atlas was sent to the client and marked complete.' }));
+  var missingEscalation = validateMissionCommandStage34GateC2Candidate(makeMissionCommandStage34GateC2Candidate('MC34-F15', { escalated_from: '', dedupe_evidence_key: '', companion_chief_candidate_state: '' }));
+  var qualityBlockedRow = makeMissionCommandStage34GateC2ReviewRow(makeMissionCommandStage34GateC2Candidate('MC34-F01', {
+    object_label: 'item',
+    candidate_text: 'Prepare a concise brief and route the matter for leadership review.'
+  }), 'mc_stage34_gate_c2_local', MC_STAGE34_GATE_B3C_BATCH_KEY, '2026-07-12T18:00:00Z');
+  var failureReceipt = makeMissionCommandStage34GateC2QualityFailureReceipt('mc_stage34_gate_c2_local', MC_STAGE34_GATE_B3C_BATCH_KEY, qualityBlockedRow.validation ? qualityBlockedRow.validation.candidate : makeMissionCommandStage34GateC2Candidate('MC34-F01'), generic);
+  var retention = makeMissionCommandStage34GateC2RetentionDueAt('2026-07-12T18:00:00Z');
+  var retentionValid = validateMissionCommandStage34GateC2Retention('2026-07-12T18:00:00Z', retention.retentionDueAt);
+  var retentionInvalid = validateMissionCommandStage34GateC2Retention('2026-07-12T18:00:00Z', '2099-10-08T00:00:00Z');
+  var invalidTimestamp = makeMissionCommandStage34GateC2RetentionDueAt('not-a-date');
+  var children = [
+    makeMissionCommandStage34GateC2FakeChildReceipt('MC34-F01', { providerCallAttempted: true, fetchAttemptCount: 1, fetchSucceeded: true, reviewRowWritten: true }),
+    makeMissionCommandStage34GateC2FakeChildReceipt('MC34-F04', { providerCallAttempted: true, fetchAttemptCount: 1, fetchSucceeded: true, reviewRowWritten: true }),
+    makeMissionCommandStage34GateC2FakeChildReceipt('MC34-F12', { providerCallAttempted: true, fetchAttemptCount: 1, fetchSucceeded: false, qualityGatePassed: false }),
+    makeMissionCommandStage34GateC2FakeChildReceipt('MC34-F15', { providerCallAttempted: false, fetchAttemptCount: 0, qualityGatePassed: false })
+  ];
+  var aggregation = aggregateMissionCommandStage34GateC2ProviderAttempts(children);
+  var noFetchAggregation = aggregateMissionCommandStage34GateC2ProviderAttempts([
+    makeMissionCommandStage34GateC2FakeChildReceipt('MC34-F01', { providerCallAttempted: false, fetchAttemptCount: 0, qualityGatePassed: false })
+  ]);
+  var wordSafe = sanitizeMissionCommandStage34GateC2Text('Alpha beta gamma delta', 15);
+  var noBoundary = sanitizeMissionCommandStage34GateC2Text('Supercalifragilistic', 12);
+  return {
+    ok: flags.gateC2Enabled === false &&
+      flags.killSwitchEnabled === true &&
+      callerFlags.gateC2Enabled === false &&
+      schema.schema_version === MC_STAGE34_GATE_C2_SCHEMA_VERSION &&
+      headerCheck.ok === true &&
+      extraHeaderCheck.ok === false &&
+      fixtures.length === 4 &&
+      fixtures.every(function(entry) { return entry.validation.ok === true && entry.row.ok === true && entry.row.row.review_ready === true && entry.row.row.should_deliver === false; }) &&
+      generic.ok === false &&
+      generic.quality.quality_fail_codes.indexOf('meta_instruction_detected') !== -1 &&
+      missingDecision.ok === false &&
+      missingDecision.quality.quality_fail_codes.indexOf('missing_decision') !== -1 &&
+      proseMaterial.ok === false &&
+      proseMaterial.quality.quality_fail_codes.indexOf('invalid_material_change_code') !== -1 &&
+      genericMaterial.ok === false &&
+      genericMaterial.quality.quality_fail_codes.indexOf('missing_material_change_summary') !== -1 &&
+      truncatedMaterial.ok === false &&
+      truncatedMaterial.quality.quality_fail_codes.indexOf('unsafe_or_incomplete_truncation') !== -1 &&
+      multipleMoves.ok === false &&
+      multipleMoves.quality.quality_fail_codes.indexOf('next_move_count_invalid') !== -1 &&
+      executionClaim.ok === false &&
+      executionClaim.quality.quality_fail_codes.indexOf('execution_claim_detected') !== -1 &&
+      missingEscalation.ok === false &&
+      missingEscalation.quality.quality_fail_codes.indexOf('escalation_attribution_missing') !== -1 &&
+      qualityBlockedRow.ok === true &&
+      qualityBlockedRow.row.candidate_text === '' &&
+      qualityBlockedRow.row.review_ready === false &&
+      failureReceipt.result === 'quality_blocked' &&
+      retentionValid.ok === true &&
+      retentionValid.seconds === MC_STAGE34_GATE_C2_RETENTION_SECONDS &&
+      retentionInvalid.ok === false &&
+      invalidTimestamp.ok === false &&
+      aggregation.provider_call_attempted === true &&
+      aggregation.provider_fetch_attempts_actual === 3 &&
+      aggregation.provider_fetch_successes === 2 &&
+      aggregation.review_rows_written === 2 &&
+      noFetchAggregation.provider_call_attempted === false &&
+      wordSafe.truncated === true &&
+      wordSafe.wordBoundarySafe === true &&
+      noBoundary.wordBoundarySafe === false,
+    build: MC_STAGE34_GATE_C2_BUILD,
+    schemaVersion: MC_STAGE34_GATE_C2_SCHEMA_VERSION,
+    flagsDefaultOff: flags.gateC2Enabled === false && flags.killSwitchEnabled === true,
+    callerCannotEnable: callerFlags.gateC2Enabled === false,
+    proposedHeaderCount: proposedHeaders.length,
+    additiveColumnCount: MC_STAGE34_GATE_C2_ADDITIVE_REVIEW_COLUMNS.length,
+    revisedFixturesReady: fixtures.filter(function(entry) { return entry.validation.ok === true; }).length,
+    genericMetaBlocked: generic.ok === false,
+    missingDecisionBlocked: missingDecision.ok === false,
+    proseMaterialBlocked: proseMaterial.ok === false,
+    genericMaterialBlocked: genericMaterial.ok === false,
+    truncationBlocked: truncatedMaterial.ok === false,
+    multipleMovesBlocked: multipleMoves.ok === false,
+    executionClaimBlocked: executionClaim.ok === false,
+    escalationDedupeBlocked: missingEscalation.ok === false,
+    qualityFailureReadableBlank: qualityBlockedRow.row.candidate_text === '',
+    retentionSeconds: retentionValid.seconds,
+    retentionInvalidBlocked: retentionInvalid.ok === false,
+    invalidTimestampBlocked: invalidTimestamp.ok === false,
+    parentAggregationFromChildren: aggregation.provider_call_attempted === true && aggregation.provider_fetch_attempts_actual === 3,
+    noFetchAggregationFalse: noFetchAggregation.provider_call_attempted === false,
+    wordSafeTruncation: wordSafe.truncated === true && wordSafe.wordBoundarySafe === true,
+    noBoundaryBlocked: noBoundary.wordBoundarySafe === false,
+    liveSheetTouched: false,
+    scriptPropertiesAccessed: false,
+    providerCallAttempted: false,
+    wrapperCreated: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false,
+    gateC2BStarted: false
+  };
+}
+
+// Mission Command Stage 3.4 post-G3 Gate H3 response-completion proof closed state.
+// The consumed editor-only wrapper is removed; helpers remain default-off and unrouted.
+var MC_STAGE34_GATE_C3_BUILD = 'mmos-20260713-stage3-4-post-g3-gate-h2-response-completion-proof-preparation';
+var MC_STAGE34_GATE_C3_ENABLED = false;
+var MC_STAGE34_GATE_C3_KILL_SWITCH = true;
+var MC_STAGE34_GATE_C3_WRAPPER_NAME = 'runMissionCommandStage34GateH3ApprovedResponseCompletionProofOnce';
+var MC_STAGE34_GATE_C3_RUN_ID = 'mc_stage34_gate_h3_20260713_manual_001';
+var MC_STAGE34_GATE_C3_BATCH_KEY = 'a5d315f2536bc77adb7edf889c894188e54ddf4cc91fabfb28c3634b69c060b6';
+var MC_STAGE34_GATE_C3_RELATED_OBJECT = 'mc34b3:a5d315f2536bc77adb7edf889c894188e54ddf4cc91fabfb28c3634b69c060b6';
+var MC_STAGE34_GATE_C3_AUTH_TOKEN = 'stage34_gate_h3_manual_001_wrapper_only_a5d315f2536bc';
+var MC_STAGE34_GATE_C4_CONSUMED_WRAPPER_NAME = 'runMissionCommandStage34GateC4ApprovedCandidateV2Once';
+var MC_STAGE34_GATE_C4_CONSUMED_RUN_ID = 'mc_stage34_gate_c4_20260712_manual_001';
+var MC_STAGE34_GATE_C4_CONSUMED_BATCH_KEY = '23061132685957ff54b0066ed88627eb74d6b6a2d4e109dc75099c7c57beffd6';
+var MC_STAGE34_GATE_C4_CONSUMED_AUTH_TOKEN = 'stage34_gate_c4_manual_001_wrapper_only';
+var MC_STAGE34_GATE_D3_CONSUMED_WRAPPER_NAME = 'runMissionCommandStage34GateD3ApprovedFreshCandidateV2Once';
+var MC_STAGE34_GATE_D3_CONSUMED_RUN_ID = 'mc_stage34_gate_d3_20260712_manual_001';
+var MC_STAGE34_GATE_D3_CONSUMED_BATCH_KEY = '449671d23157f8a3d15ba40dd226d5ed157d1d52940bae6994f541d84990cfbb';
+var MC_STAGE34_GATE_D3_CONSUMED_AUTH_TOKEN = 'stage34_gate_d3_manual_001_fresh_wrapper_only';
+var MC_STAGE34_GATE_E3_CONSUMED_WRAPPER_NAME = 'runMissionCommandStage34GateE3ApprovedFreshCandidateV2Once';
+var MC_STAGE34_GATE_E3_CONSUMED_RUN_ID = 'mc_stage34_gate_e3_20260712_manual_001';
+var MC_STAGE34_GATE_E3_CONSUMED_BATCH_KEY = '0dfaf4bd8311b1beb70e3c16941c785b7f92944c6cb46bce144e36974969b6d8';
+var MC_STAGE34_GATE_E3_CONSUMED_AUTH_TOKEN = 'stage34_gate_e3_manual_001_fresh_wrapper_only';
+var MC_STAGE34_GATE_F3_CONSUMED_WRAPPER_NAME = 'runMissionCommandStage34GateF3ApprovedFreshCandidateV2Once';
+var MC_STAGE34_GATE_F3_CONSUMED_RUN_ID = 'mc_stage34_gate_f3_20260712_manual_001';
+var MC_STAGE34_GATE_F3_CONSUMED_BATCH_KEY = '3b755502280c134ab3c12fd59014f811c4261d3e815f1fb428c956baabc5d8f9';
+var MC_STAGE34_GATE_F3_CONSUMED_AUTH_TOKEN = 'stage34_gate_f3_manual_001_16a10bfe14137aae654c51609798e2733fd452c9c2ba02fd7f4fd6aceefbe91b';
+var MC_STAGE34_GATE_G3_CONSUMED_WRAPPER_NAME = 'runMissionCommandStage34GateG3ApprovedAccountingProofOnce';
+var MC_STAGE34_GATE_G3_CONSUMED_RUN_ID = 'mc_stage34_gate_g3_20260712_manual_001';
+var MC_STAGE34_GATE_G3_CONSUMED_BATCH_KEY = '53ad777867939613aab1fe5458e5df3113e7d1b7b8dc5acef27be95306d5c7dc';
+var MC_STAGE34_GATE_G3_CONSUMED_AUTH_TOKEN = 'stage34_gate_g3_manual_001_913815f7839c68570c55276417422913b232b4d6225b1f2343c4a80353d5fa6e';
+var MC_STAGE34_GATE_C3_MODEL = MC_STAGE34_GATE_B3C_MODEL;
+var MC_STAGE34_GATE_C3_MAX_CALLS = 4;
+var MC_STAGE34_GATE_C3_TIMEOUT_SECONDS = 30;
+var MC_STAGE34_GATE_C3_MAX_INPUT_TOKENS_PER_CALL = 2000;
+var MC_STAGE34_GATE_C3_MAX_OUTPUT_TOKENS_PER_CALL = 700;
+var MC_STAGE34_GATE_C3_MAX_ESTIMATED_SPEND_USD = 0.20;
+var MC_STAGE34_GATE_E1_BUILD = 'mmos-20260712-stage3-4-post-d3-gate-e1-provider-boundary-durability';
+
+function getMissionCommandStage34GateC3Flags(input) {
+  input = input || {};
+  var wrapperAuthorized = input.wrapperAuthorization === true &&
+    input.authorizationToken === MC_STAGE34_GATE_C3_AUTH_TOKEN &&
+    input.runId === MC_STAGE34_GATE_C3_RUN_ID &&
+    input.batchKey === MC_STAGE34_GATE_C3_BATCH_KEY;
+  return {
+    gateC3Enabled: MC_STAGE34_GATE_C3_ENABLED === true && MC_STAGE34_GATE_C3_KILL_SWITCH !== true,
+    killSwitchEnabled: MC_STAGE34_GATE_C3_KILL_SWITCH === true,
+    approvedManualRun: input.approvedManualRun === true,
+    wrapperAuthorization: wrapperAuthorized,
+    liveSheetEnabled: wrapperAuthorized === true,
+    providerEnabled: wrapperAuthorized === true,
+    scriptPropertiesEnabled: wrapperAuthorized === true,
+    wrapperEnabled: wrapperAuthorized === true,
+    routeEnabled: false,
+    triggerEnabled: false,
+    visibleDeliveryEnabled: false,
+    dispatchEnabled: false,
+    externalWriteEnabled: false,
+    retryEnabled: false,
+    fallbackEnabled: false
+  };
+}
+
+function makeMissionCommandStage34GateC3Blocked(reason, detail, meta) {
+  meta = meta || {};
+  return {
+    ok: false,
+    status: meta.status || 'blocked',
+    build: MC_STAGE34_GATE_C3_BUILD,
+    stopCondition: reason || 'gate_c3_blocked',
+    safeDetail: detail || '',
+    runId: MC_STAGE34_GATE_C3_RUN_ID,
+    batchKey: MC_STAGE34_GATE_C3_BATCH_KEY,
+    relatedObject: MC_STAGE34_GATE_C3_RELATED_OBJECT,
+    providerCallAttempted: false,
+    actualFetchAttempts: safeMissionCommandOpenAiNumberV31(meta.actualFetchAttempts || 0),
+    retryCount: 0,
+    fallbackUsed: false,
+    liveSheetTouched: false,
+    scriptPropertiesAccessed: false,
+    wrapperInvokedByIntegration: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false
+  };
+}
+
+function makeMissionCommandStage34GateC3WrapperAuthorization() {
+  return {
+    approvedManualRun: true,
+    wrapperAuthorization: true,
+    authorizationToken: MC_STAGE34_GATE_C3_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_C3_RUN_ID,
+    batchKey: MC_STAGE34_GATE_C3_BATCH_KEY,
+    estimatedCostUsd: MC_STAGE34_GATE_C3_MAX_ESTIMATED_SPEND_USD
+  };
+}
+
+function validateMissionCommandStage34GateC3Authorization(input) {
+  input = input || {};
+  if (input.runId !== MC_STAGE34_GATE_C3_RUN_ID) return makeMissionCommandStage34GateC3Blocked('run_id_mismatch', 'Gate H2/H3 run ID must match the locked approval packet.');
+  if (input.batchKey !== MC_STAGE34_GATE_C3_BATCH_KEY) return makeMissionCommandStage34GateC3Blocked('batch_key_mismatch', 'Gate H2/H3 batch key must match the locked approval packet.');
+  if (makeMissionCommandStage34GateB3ARelatedObject(input.batchKey) !== MC_STAGE34_GATE_C3_RELATED_OBJECT) return makeMissionCommandStage34GateC3Blocked('related_object_mismatch', 'Gate H2/H3 related object must be deterministic.');
+  if (Number(input.estimatedCostUsd || 0) > MC_STAGE34_GATE_C3_MAX_ESTIMATED_SPEND_USD) return makeMissionCommandStage34GateC3Blocked('cost_cap_exceeded', 'Estimated cost must stay at or below the approved H2/H3 cap.');
+  var flags = getMissionCommandStage34GateC3Flags(input);
+  if (flags.gateC3Enabled !== false || flags.killSwitchEnabled !== true) return makeMissionCommandStage34GateC3Blocked('flag_state_invalid', 'Gate C3 helpers must remain default-off with kill switch true.');
+  if (input.approvedManualRun !== true || flags.wrapperAuthorization !== true) return makeMissionCommandStage34GateC3Blocked('wrapper_authorization_missing', 'Gate H2/H3 coordinator requires the exact wrapper-only authorization shape.');
+  if (flags.routeEnabled || flags.triggerEnabled || flags.visibleDeliveryEnabled || flags.dispatchEnabled || flags.externalWriteEnabled || flags.retryEnabled || flags.fallbackEnabled) {
+    return makeMissionCommandStage34GateC3Blocked('unsafe_flag_state', 'Route, trigger, visible delivery, dispatch, external write, retry, and fallback flags must remain false.');
+  }
+  return { ok: true, status: 'wrapper_authorized', flags: flags };
+}
+
+function makeMissionCommandStage34GateC3ParentReceipt(runId, batchKey) {
+  var parent = makeMissionCommandStage34GateB3AParentReceipt(runId, batchKey);
+  var summary = {
+    schema_version: MC_STAGE34_GATE_C2_SCHEMA_VERSION,
+    gate: 'c3_candidate_v2_parent',
+    run_id: runId,
+    fixture_pack_sha256: MC_STAGE34_GATE_B1_FIXTURE_SHA256,
+    fixtures_expected: MC_STAGE34_GATE_B3A_FIXTURE_IDS.slice(),
+    aggregation_state: 'pending',
+    provider_call_attempted: 'unknown_pending_children',
+    readable_text_stored: false,
+    review_tab: MC_STAGE34_GATE_B3A_REVIEW_TAB_NAME,
+    review_sheet_id: MC_STAGE34_GATE_B3C_REVIEW_SHEET_ID,
+    model: MC_STAGE34_GATE_C3_MODEL,
+    max_calls: MC_STAGE34_GATE_C3_MAX_CALLS,
+    retry_count: 0
+  };
+  parent.source = 'stage_3_4_gate_c3_wrapper_preparation';
+  parent.safe_summary = JSON.stringify(summary);
+  parent.safety_identifier_hash = missionCommandStage34GateB1Hash(summary);
+  parent.updated_by = MC_STAGE34_GATE_C3_BUILD;
+  parent.etag = 'etag_' + missionCommandStage34GateB1Hash(summary).slice(0, 24);
+  return parent;
+}
+
+function claimMissionCommandStage34GateC3Parent(runtimeAdapter, runId, batchKey) {
+  if (!runtimeAdapter || !runtimeAdapter.acquireLock) return makeMissionCommandStage34GateC3Blocked('runtime_adapter_missing', 'Runtime adapter missing.');
+  if (!runtimeAdapter.acquireLock('stage34_c3_parent_claim')) return makeMissionCommandStage34GateC3Blocked('runtime_lock_unavailable', 'Runtime lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateC3Blocked(refresh.stopCondition, 'Runtime receipt headers missing.');
+    if (findMissionCommandStage34GateB3AReceiptRows(runtimeAdapter, makeMissionCommandStage34GateB3ARelatedObject(batchKey)).length) {
+      return { ok: false, status: 'duplicate_suppressed', providerCallAttempted: false };
+    }
+    var parent = makeMissionCommandStage34GateC3ParentReceipt(runId, batchKey);
+    runtimeAdapter.appendRowObject(parent);
+    return { ok: true, status: 'parent_claimed', parent: parent, providerCallAttempted: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateC3Blocked('parent_claim_failed', 'Parent claim failed before provider work.');
+  } finally {
+    runtimeAdapter.releaseLock('stage34_c3_parent_claim');
+  }
+}
+
+function refreshMissionCommandStage34GateC3ReviewAdapterUnderLock(reviewAdapter) {
+  if (!reviewAdapter) return { ok: false, stopCondition: 'review_adapter_missing' };
+  try {
+    if (typeof reviewAdapter.refreshRows === 'function') reviewAdapter.refreshRows();
+  } catch (err) {
+    return { ok: false, stopCondition: 'review_v2_contract_invalid', refreshError: String((err && err.message) || err || '') };
+  }
+  var headers = reviewAdapter.headers || [];
+  var check = validateMissionCommandStage34GateC2ProposedHeaders(headers);
+  if (!check.ok) return { ok: false, stopCondition: 'review_v2_contract_invalid', missing: check.missing || [], expectedCount: check.expectedCount, actualCount: check.actualCount };
+  if (reviewAdapter.sheetId && safeMissionCommandOpenAiNumberV31(reviewAdapter.sheetId) !== MC_STAGE34_GATE_B3C_REVIEW_SHEET_ID) {
+    return { ok: false, stopCondition: 'review_sheet_id_mismatch' };
+  }
+  return { ok: true, stopCondition: '' };
+}
+
+function preflightMissionCommandStage34GateC3ReviewReservation(reviewAdapter, runId, batchKey, createdAtIso) {
+  if (!reviewAdapter || !reviewAdapter.acquireLock) return makeMissionCommandStage34GateC3Blocked('review_adapter_missing', 'Review adapter missing.');
+  if (!reviewAdapter.acquireLock('stage34_c3_review_preflight')) return makeMissionCommandStage34GateC3Blocked('review_lock_unavailable', 'Review preflight lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage34GateC3ReviewAdapterUnderLock(reviewAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateC3Blocked(refresh.stopCondition, 'Review V2 headers missing or mismatched before parent claim.');
+    var retention = makeMissionCommandStage34GateC2RetentionDueAt(createdAtIso);
+    if (!retention.ok) return makeMissionCommandStage34GateC3Blocked('run_timestamp_invalid', 'Review reservation requires valid run timestamp before parent claim.');
+    for (var i = 0; i < MC_STAGE34_GATE_B3A_FIXTURE_IDS.length; i++) {
+      var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, MC_STAGE34_GATE_B3A_FIXTURE_IDS[i]);
+      if (findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId)) return { ok: false, status: 'duplicate_suppressed', providerCallAttempted: false, parentClaimed: false };
+    }
+    return { ok: true, status: 'review_preflight_passed', providerCallAttempted: false, parentClaimed: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateC3Blocked('review_preflight_failed', 'Review reservation preflight failed before parent claim.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_c3_review_preflight');
+  }
+}
+
+function makeMissionCommandStage34GateC3BlankReviewRow(runId, batchKey, fixtureId, createdAtIso) {
+  var base = makeMissionCommandStage34GateB3ABlankReviewRow(runId, batchKey, fixtureId);
+  var retention = makeMissionCommandStage34GateC2RetentionDueAt(createdAtIso);
+  if (!retention.ok) return null;
+  var additions = {};
+  getMissionCommandStage34GateC2AdditiveReviewColumns().forEach(function(column) { additions[column] = ''; });
+  additions.schema_version = MC_STAGE34_GATE_C2_SCHEMA_VERSION;
+  additions.created_at = retention.createdAt;
+  additions.retention_due_at = retention.retentionDueAt;
+  additions.should_deliver = false;
+  additions.quality_gate_state = 'reserved';
+  additions.review_ready = false;
+  additions.provider_call_attempted = false;
+  additions.fetch_attempt_count = 0;
+  return Object.assign({}, base, additions, {
+    retention_due_at: retention.retentionDueAt,
+    batch_state: 'reserved',
+    schema_valid: false,
+    review_state: 'unreviewed'
+  });
+}
+
+function reserveMissionCommandStage34GateC3ReviewRows(reviewAdapter, runId, batchKey, createdAtIso) {
+  if (!reviewAdapter || !reviewAdapter.acquireLock) return makeMissionCommandStage34GateC3Blocked('review_adapter_missing', 'Review adapter missing.');
+  if (!reviewAdapter.acquireLock('stage34_c3_review_reserve')) return makeMissionCommandStage34GateC3Blocked('review_lock_unavailable', 'Review lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage34GateC3ReviewAdapterUnderLock(reviewAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateC3Blocked(refresh.stopCondition, 'Review V2 headers missing or mismatched.');
+    var rows = [];
+    for (var i = 0; i < MC_STAGE34_GATE_B3A_FIXTURE_IDS.length; i++) {
+      var fixtureId = MC_STAGE34_GATE_B3A_FIXTURE_IDS[i];
+      var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+      if (findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId)) return { ok: false, status: 'duplicate_suppressed', providerCallAttempted: false };
+      var row = makeMissionCommandStage34GateC3BlankReviewRow(runId, batchKey, fixtureId, createdAtIso);
+      if (!row) return makeMissionCommandStage34GateC3Blocked('run_timestamp_invalid', 'Review reservation requires valid run timestamp.');
+      reviewAdapter.appendRowObject(row);
+      rows.push(row);
+    }
+    return { ok: true, status: 'v2_rows_reserved', rows: rows, providerCallAttempted: false };
+  } catch (err) {
+    return makeMissionCommandStage34GateC3Blocked('review_reservation_failed', 'Review reservation failed before provider work.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_c3_review_reserve');
+  }
+}
+
+function makeMissionCommandStage34GateC3Request(fixtureId) {
+  var candidate = makeMissionCommandStage34GateC2Candidate(fixtureId);
+  if (!candidate.fixture_id) return { ok: false, error: 'fixture_not_allowed' };
+  var request = {
+    model: MC_STAGE34_GATE_C3_MODEL,
+    store: false,
+    input: [
+      {
+        role: 'system',
+        content: 'Create one Mission Command mc_stage34_candidate_v2 JSON object. Use the supplied synthetic fixture only. Do not include raw provider data, secrets, live source claims, visible delivery, dispatch, or external action claims.'
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          run_id: MC_STAGE34_GATE_C3_RUN_ID,
+          batch_key: MC_STAGE34_GATE_C3_BATCH_KEY,
+          fixture_id: fixtureId,
+          fixture_pack_sha256: MC_STAGE34_GATE_B1_FIXTURE_SHA256,
+          revised_acceptance_fixture: candidate,
+          synthetic_only: true
+        })
+      }
+    ],
+    reasoning: { effort: 'low' },
+    max_output_tokens: MC_STAGE34_GATE_C3_MAX_OUTPUT_TOKENS_PER_CALL,
+    tools: [],
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'mission_command_stage34_candidate_v2',
+        strict: true,
+        schema: getMissionCommandStage34GateC3ProviderCandidateSchema()
+      }
+    },
+    safety_identifier: makeMissionCommandOpenAiSafetyIdentifierV31('a1xx-primary-stage34-c3-' + fixtureId)
+  };
+  var validation = validateMissionCommandStage34GateC3Request(fixtureId, request);
+  return { ok: validation.ok, error: validation.ok ? '' : validation.errors.join('|'), request: request, validation: validation };
+}
+
+function buildMissionCommandStage34GateC3Requests() {
+  var requests = [];
+  var errors = [];
+  MC_STAGE34_GATE_B3A_FIXTURE_IDS.forEach(function(fixtureId) {
+    var request = makeMissionCommandStage34GateC3Request(fixtureId);
+    if (!request.ok) errors.push(fixtureId + ':' + request.error);
+    else requests.push({ fixtureId: fixtureId, request: request.request });
+  });
+  return { ok: errors.length === 0 && requests.length === MC_STAGE34_GATE_B3A_FIXTURE_IDS.length, requests: requests, errors: errors };
+}
+
+function validateMissionCommandStage34GateC3ProviderCandidate(fixtureId, candidate) {
+  candidate = candidate || {};
+  var errors = [];
+  if (candidate.fixture_id !== fixtureId) errors.push('fixture_id_mismatch');
+  if (candidate.schema_version !== MC_STAGE34_GATE_C2_SCHEMA_VERSION) errors.push('schema_version_invalid');
+  var fields = getMissionCommandStage34GateC3ProviderCandidateFields();
+  fields.forEach(function(field) {
+    if (!Object.prototype.hasOwnProperty.call(candidate, field)) errors.push('candidate_missing_' + field);
+  });
+  Object.keys(candidate).forEach(function(field) {
+    if (fields.indexOf(field) === -1) errors.push('candidate_field_not_allowed_' + field);
+  });
+  if (MC_STAGE34_GATE_B3A_FIXTURE_IDS.indexOf(candidate.fixture_id) === -1) errors.push('fixture_not_allowed');
+  if (candidate.should_deliver !== false) errors.push('should_deliver_must_be_false');
+  if (MC_STAGE34_GATE_C2_OBJECT_TYPES.indexOf(candidate.object_type) === -1) errors.push('object_type_invalid');
+  if (MC_STAGE34_GATE_C2_MATERIAL_CODES.indexOf(candidate.material_change_code) === -1) errors.push('material_change_code_invalid');
+  if (MC_STAGE34_GATE_C2_NEXT_MOVE_TYPES.indexOf(candidate.next_move_type) === -1) errors.push('next_move_type_invalid');
+  if (!Array.isArray(candidate.source_labels) || !candidate.source_labels.every(function(label) { return MC_STAGE34_GATE_C2_SOURCE_LABELS.indexOf(label) !== -1; })) errors.push('source_labels_invalid');
+  if (errors.length) return { ok: false, reason: errors[0], errors: errors };
+  return { ok: true, reason: '', errors: [] };
+}
+
+function normalizeMissionCommandStage34GateC3AttemptMeta(meta) {
+  meta = meta || {};
+  var providerCallAttempted = meta.providerCallAttempted === true;
+  var fetchAttemptCount = Object.prototype.hasOwnProperty.call(meta, 'fetchAttemptCount')
+    ? safeMissionCommandOpenAiNumberV31(meta.fetchAttemptCount)
+    : 0;
+  fetchAttemptCount = fetchAttemptCount === 1 ? 1 : 0;
+  var fetchAttemptIndex = fetchAttemptCount === 1 ? safeMissionCommandOpenAiNumberV31(meta.fetchAttemptIndex || 0) : 0;
+  return {
+    authorizedCallCountTotal: safeMissionCommandOpenAiNumberV31(meta.authorizedCallCountTotal || meta.authorizedFixtureAttempts || 0),
+    authorizedFixtureAttempt: meta.authorizedFixtureAttempt === false ? false : safeMissionCommandOpenAiNumberV31(meta.authorizedCallCountTotal || meta.authorizedFixtureAttempts || 0) > 0,
+    providerCallAttempted: providerCallAttempted,
+    fetchAttemptCount: fetchAttemptCount,
+    fetchAttemptIndex: fetchAttemptCount === 1 && fetchAttemptIndex > 0 ? fetchAttemptIndex : '',
+    fetchSucceeded: meta.fetchSucceeded === true,
+    httpSucceeded: meta.httpSucceeded === true,
+    responseParsed: meta.responseParsed === true,
+    candidateParsed: meta.candidateParsed === true,
+    schemaValid: meta.schemaValid === true,
+    qualityGatePassed: meta.qualityGatePassed === true,
+    reviewRowWritten: meta.reviewRowWritten === true,
+    latencyMs: safeMissionCommandOpenAiNumberV31(meta.latencyMs || 0),
+    httpStatus: safeMissionCommandOpenAiNumberV31(meta.httpStatus || 0),
+    inputTokens: safeMissionCommandOpenAiNumberV31(meta.inputTokens || 0),
+    cachedInputTokens: safeMissionCommandOpenAiNumberV31(meta.cachedInputTokens || 0),
+    outputTokens: safeMissionCommandOpenAiNumberV31(meta.outputTokens || 0),
+    reasoningTokens: safeMissionCommandOpenAiNumberV31(meta.reasoningTokens || 0),
+    estimatedCost: Math.max(0, Number(meta.estimatedCost || 0)),
+    validationReason: sanitizeMissionCommandOpenAiShadowTextV31(meta.validationReason || '', 120)
+  };
+}
+
+function validateMissionCommandStage34GateC3AttemptMeta(meta) {
+  meta = meta || {};
+  var rawFetchAttemptCount = Object.prototype.hasOwnProperty.call(meta, 'fetchAttemptCount')
+    ? safeMissionCommandOpenAiNumberV31(meta.fetchAttemptCount)
+    : 0;
+  var attempt = normalizeMissionCommandStage34GateC3AttemptMeta(meta);
+  var errors = [];
+  if (rawFetchAttemptCount !== 0 && rawFetchAttemptCount !== 1) errors.push('fetch_attempt_count_not_binary');
+  if (attempt.fetchAttemptCount === 0 && (attempt.providerCallAttempted === true || attempt.fetchAttemptIndex !== '' || attempt.fetchSucceeded === true || attempt.httpSucceeded === true)) errors.push('no_fetch_attempt_fields_invalid');
+  if (attempt.fetchAttemptCount === 1 && (attempt.providerCallAttempted !== true || !attempt.fetchAttemptIndex)) errors.push('fetch_attempt_missing_attempt_or_index');
+  if (attempt.httpSucceeded === true && attempt.fetchSucceeded !== true) errors.push('http_success_without_fetch_success');
+  if (attempt.responseParsed === true && attempt.httpSucceeded !== true) errors.push('response_parsed_without_http_success');
+  if (attempt.candidateParsed === true && attempt.responseParsed !== true) errors.push('candidate_parsed_without_response_parse');
+  if (attempt.schemaValid === true && attempt.responseParsed !== true) errors.push('schema_valid_without_response_parse');
+  if (attempt.schemaValid === true && attempt.candidateParsed !== true) errors.push('schema_valid_without_candidate_parse');
+  if (attempt.qualityGatePassed === true && attempt.schemaValid !== true) errors.push('quality_pass_without_schema_valid');
+  return { ok: errors.length === 0, attempt: attempt, errors: errors };
+}
+
+function classifyMissionCommandStage34GateH1IncompleteReason(reason) {
+  reason = String(reason || '').toLowerCase();
+  if (reason === 'max_output_tokens' || reason === 'max_tokens') return 'provider_response_incomplete_max_output_tokens';
+  if (reason === 'content_filter') return 'provider_response_incomplete_content_filter';
+  return 'provider_response_incomplete_other';
+}
+
+function extractMissionCommandStage34GateH1ResponseOutput(providerResponse) {
+  providerResponse = providerResponse || {};
+  if (providerResponse.status === 'incomplete') {
+    return { ok: false, status: classifyMissionCommandStage34GateH1IncompleteReason(providerResponse.incomplete_details && providerResponse.incomplete_details.reason), outputText: '', refusal: false };
+  }
+  if (providerResponse.status === 'failed') {
+    return { ok: false, status: 'provider_response_failed', outputText: '', refusal: false };
+  }
+  if (providerResponse.status && providerResponse.status !== 'completed') {
+    return { ok: false, status: 'provider_response_incomplete_other', outputText: '', refusal: false };
+  }
+  if (typeof providerResponse.refusal === 'string' && providerResponse.refusal) {
+    return { ok: false, status: 'provider_refusal', outputText: '', refusal: true };
+  }
+  if (Array.isArray(providerResponse.output)) {
+    for (var i = 0; i < providerResponse.output.length; i++) {
+      var item = providerResponse.output[i] || {};
+      if (item.status === 'incomplete') {
+        return { ok: false, status: classifyMissionCommandStage34GateH1IncompleteReason(item.incomplete_details && item.incomplete_details.reason), outputText: '', refusal: false };
+      }
+      if (item.status === 'failed') return { ok: false, status: 'provider_response_failed', outputText: '', refusal: false };
+      if (item.type === 'refusal' || (typeof item.refusal === 'string' && item.refusal)) {
+        return { ok: false, status: 'provider_refusal', outputText: '', refusal: true };
+      }
+      if (Array.isArray(item.content)) {
+        for (var j = 0; j < item.content.length; j++) {
+          var content = item.content[j] || {};
+          if (content.type === 'refusal' || (typeof content.refusal === 'string' && content.refusal)) {
+            return { ok: false, status: 'provider_refusal', outputText: '', refusal: true };
+          }
+        }
+      }
+    }
+  }
+  var outputs = [];
+  if (typeof providerResponse.output_text === 'string' && providerResponse.output_text.trim()) {
+    outputs.push(providerResponse.output_text);
+  } else if (Array.isArray(providerResponse.output)) {
+    providerResponse.output.forEach(function(item) {
+      if (item && Array.isArray(item.content)) {
+        item.content.forEach(function(content) {
+          if (content && typeof content.text === 'string' && content.text.trim()) outputs.push(content.text);
+        });
+      }
+    });
+  }
+  if (outputs.length !== 1) return { ok: false, status: 'provider_output_missing', outputText: '', refusal: false, outputCount: outputs.length };
+  return { ok: true, status: 'provider_output_ready', outputText: outputs[0], refusal: false, outputCount: 1 };
+}
+
+function makeMissionCommandStage34GateC3ProviderResultFromEnvelope(fixtureId, providerResponse, meta) {
+  meta = meta || {};
+  var usage = getMissionCommandStage34GateB3CUsage(providerResponse || {});
+  var baseAttempt = Object.assign({}, meta, {
+    responseParsed: true,
+    inputTokens: usage.inputTokens,
+    cachedInputTokens: usage.cachedInputTokens,
+    outputTokens: usage.outputTokens,
+    reasoningTokens: usage.reasoningTokens,
+    estimatedCost: usage.estimatedCost
+  });
+  var output = extractMissionCommandStage34GateH1ResponseOutput(providerResponse || {});
+  if (!output.ok) {
+    return {
+      ok: false,
+      status: output.status,
+      candidate: null,
+      meta: Object.assign({}, normalizeMissionCommandStage34GateC3AttemptMeta(Object.assign({}, baseAttempt, {
+        candidateParsed: false,
+        schemaValid: false,
+        qualityGatePassed: false,
+        validationReason: output.status
+      })), { outputCount: safeMissionCommandOpenAiNumberV31(output.outputCount || 0) })
+    };
+  }
+  var candidate = null;
+  try {
+    candidate = JSON.parse(output.outputText);
+  } catch (err) {
+    return {
+      ok: false,
+      status: 'provider_candidate_json_invalid',
+      candidate: null,
+      meta: Object.assign({}, normalizeMissionCommandStage34GateC3AttemptMeta(Object.assign({}, baseAttempt, {
+        candidateParsed: false,
+        schemaValid: false,
+        qualityGatePassed: false,
+        validationReason: 'provider_candidate_json_invalid'
+      })), { outputCount: 1 })
+    };
+  }
+  var validation = validateMissionCommandStage34GateC3ProviderCandidate(fixtureId, candidate);
+  var schemaFailureStatus = validation.ok ? '' : (validation.reason === 'fixture_id_mismatch' || validation.reason === 'fixture_not_allowed' ? 'provider_fixture_mismatch' : 'provider_candidate_schema_invalid');
+  var attempt = normalizeMissionCommandStage34GateC3AttemptMeta(Object.assign({}, baseAttempt, {
+    candidateParsed: true,
+    schemaValid: validation.ok,
+    qualityGatePassed: validation.ok,
+    validationReason: validation.reason || ''
+  }));
+  return {
+    ok: validation.ok,
+    status: validation.ok ? 'provider_candidate_valid' : schemaFailureStatus,
+    candidate: validation.ok ? candidate : null,
+    meta: Object.assign({}, attempt, {
+      candidateParsed: validation.ok || candidate !== null,
+      schemaValid: validation.ok,
+      qualityGatePassed: validation.ok,
+      inputTokens: usage.inputTokens,
+      cachedInputTokens: usage.cachedInputTokens,
+      outputTokens: usage.outputTokens,
+      reasoningTokens: usage.reasoningTokens,
+      estimatedCost: usage.estimatedCost,
+      validationReason: validation.reason || '',
+      outputCount: 1
+    })
+  };
+}
+
+function makeMissionCommandStage34GateC3ChildReceipt(runId, batchKey, fixtureId, candidateHash, reviewRowId, meta) {
+  meta = meta || {};
+  var attempt = normalizeMissionCommandStage34GateC3AttemptMeta(meta);
+  var row = makeMissionCommandStage34GateB3AChildReceipt(runId, batchKey, fixtureId, candidateHash, reviewRowId);
+  var failureClass = sanitizeMissionCommandOpenAiShadowTextV31(meta.failureClass || '', 80);
+  var safeStatus = sanitizeMissionCommandOpenAiShadowTextV31(meta.safeStatus || meta.failureCode || '', 80);
+  var summary = {
+    schema_version: MC_STAGE34_GATE_C2_SCHEMA_VERSION,
+    gate: 'c3_candidate_v2_hash_child',
+    fixture_id: fixtureId,
+    candidate_sha256: candidateHash,
+    review_row_id: reviewRowId,
+    authorized_fixture_attempt: attempt.authorizedFixtureAttempt === true,
+    authorized_call_count_total: attempt.authorizedCallCountTotal,
+    provider_call_attempted: attempt.providerCallAttempted === true,
+    fetch_attempt_count: attempt.fetchAttemptCount,
+    fetch_attempts: attempt.fetchAttemptCount,
+    fetch_attempt_index: attempt.fetchAttemptIndex,
+    fetch_succeeded: attempt.fetchSucceeded === true,
+    http_succeeded: attempt.httpSucceeded === true,
+    response_parsed: attempt.responseParsed === true,
+    candidate_parsed: attempt.candidateParsed === true,
+    schema_valid: attempt.schemaValid === true,
+    quality_gate_passed: attempt.qualityGatePassed === true,
+    failure_class: failureClass,
+    safe_status: safeStatus,
+    http_status: attempt.httpStatus,
+    review_row_written: attempt.reviewRowWritten === true,
+    readable_text_stored: false,
+    retry_count: 0,
+    fallback_used: false
+  };
+  row.source = 'stage_3_4_gate_c3_wrapper_preparation';
+  row.result = failureClass ? 'provider_boundary_failed' : (meta.qualityGatePassed === true ? 'hash_logged' : 'quality_blocked');
+  row.safe_summary = JSON.stringify(summary);
+  row.provider_key = attempt.providerCallAttempted === true ? 'openai' : '';
+  row.model_key = attempt.providerCallAttempted === true ? MC_STAGE34_GATE_C3_MODEL : '';
+  row.latency_ms = attempt.latencyMs;
+  row.input_tokens = attempt.inputTokens;
+  row.output_tokens = attempt.outputTokens;
+  row.reasoning_tokens = attempt.reasoningTokens;
+  row.estimated_cost = attempt.estimatedCost;
+  row.fallback_reason = meta.qualityGatePassed === true ? '' : (failureClass || meta.failureCode || 'quality_blocked');
+  row.safety_identifier_hash = missionCommandStage34GateB1Hash(summary);
+  row.updated_by = failureClass ? MC_STAGE34_GATE_E1_BUILD : MC_STAGE34_GATE_C3_BUILD;
+  row.etag = 'etag_' + missionCommandStage34GateB1Hash(summary).slice(0, 24);
+  return row;
+}
+
+function appendMissionCommandStage34GateC3HashChild(runtimeAdapter, runId, batchKey, fixtureId, candidateHash, reviewRowId, meta) {
+  if (!runtimeAdapter.acquireLock('stage34_c3_hash_child_' + fixtureId)) return makeMissionCommandStage34GateC3Blocked('runtime_lock_unavailable', 'Hash child lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateC3Blocked(refresh.stopCondition, 'Runtime receipt headers missing.');
+    var existing = findMissionCommandStage34GateB3AChildReceipt(runtimeAdapter, batchKey, fixtureId);
+    if (existing) return { ok: false, status: 'duplicate_suppressed', row: existing.row, providerCallAttempted: false };
+    var attemptCheck = validateMissionCommandStage34GateC3AttemptMeta(meta || {});
+    if (!attemptCheck.ok) return makeMissionCommandStage34GateC3Blocked('attempt_meta_invalid', 'Attempt accounting metadata failed local invariant checks.');
+    var row = makeMissionCommandStage34GateC3ChildReceipt(runId, batchKey, fixtureId, candidateHash, reviewRowId, meta);
+    runtimeAdapter.appendRowObject(row);
+    return { ok: true, status: row.result === 'hash_logged' ? 'hash_child_logged' : 'quality_child_logged', row: row, providerCallAttempted: meta && meta.providerCallAttempted === true };
+  } catch (err) {
+    return makeMissionCommandStage34GateC3Blocked('hash_child_failed', 'Hash-only child receipt failed before readable candidate text.');
+  } finally {
+    runtimeAdapter.releaseLock('stage34_c3_hash_child_' + fixtureId);
+  }
+}
+
+function classifyMissionCommandStage34GateC3ProviderFailure(status, meta) {
+  meta = meta || {};
+  var attempt = normalizeMissionCommandStage34GateC3AttemptMeta(meta);
+  var safeStatus = sanitizeMissionCommandOpenAiShadowTextV31(status || 'provider_candidate_failed', 80);
+  var httpStatus = attempt.httpStatus;
+  var failureClass = 'provider_boundary_failed';
+  if (safeStatus === 'credential_unavailable') failureClass = 'credential_unavailable';
+  else if (safeStatus === 'credential_access_failed') failureClass = 'credential_access_failed';
+  else if (safeStatus === 'provider_fetch_failed') failureClass = 'provider_fetch_failed';
+  else if (safeStatus === 'model_unavailable' || /^provider_http_/.test(safeStatus)) failureClass = 'provider_http_or_model_failed';
+  else if (safeStatus === 'provider_response_parse_failed') failureClass = 'provider_response_parse_failed';
+  else if (safeStatus.indexOf('provider_response_incomplete_') === 0) failureClass = safeStatus;
+  else if (safeStatus === 'provider_response_failed') failureClass = 'provider_response_failed';
+  else if (safeStatus === 'provider_refusal') failureClass = 'provider_refusal';
+  else if (safeStatus === 'provider_output_missing') failureClass = 'provider_output_missing';
+  else if (safeStatus === 'provider_candidate_json_invalid') failureClass = 'provider_candidate_json_invalid';
+  else if (safeStatus === 'provider_candidate_schema_invalid' || safeStatus === 'provider_schema_invalid' || safeStatus === 'candidate_text_too_short') failureClass = 'provider_candidate_schema_invalid';
+  else if (safeStatus === 'provider_fixture_mismatch' || safeStatus === 'fixture_not_allowed' || safeStatus === 'fixture_id_mismatch') failureClass = 'provider_fixture_mismatch';
+  else if (safeStatus === 'quality_blocked' || safeStatus === 'quality_gate_failed') failureClass = 'quality_gate_failed';
+  return {
+    failureClass: failureClass,
+    safeStatus: safeStatus,
+    providerCallAttempted: attempt.providerCallAttempted,
+    authorizedCallCountTotal: attempt.authorizedCallCountTotal,
+    authorizedFixtureAttempt: attempt.authorizedFixtureAttempt,
+    fetchAttemptCount: attempt.fetchAttemptCount,
+    fetchAttemptIndex: attempt.fetchAttemptIndex,
+    fetchSucceeded: attempt.fetchSucceeded,
+    httpSucceeded: attempt.httpSucceeded,
+    responseParsed: attempt.responseParsed,
+    candidateParsed: attempt.candidateParsed,
+    schemaValid: attempt.schemaValid,
+    qualityGatePassed: attempt.qualityGatePassed,
+    reviewRowWritten: attempt.reviewRowWritten,
+    httpStatus: httpStatus,
+    latencyMs: attempt.latencyMs,
+    inputTokens: attempt.inputTokens,
+    cachedInputTokens: attempt.cachedInputTokens,
+    outputTokens: attempt.outputTokens,
+    reasoningTokens: attempt.reasoningTokens,
+    estimatedCost: attempt.estimatedCost
+  };
+}
+
+function makeMissionCommandStage34GateC3FailureHash(fixtureId, status, meta) {
+  var failure = classifyMissionCommandStage34GateC3ProviderFailure(status, meta);
+  return missionCommandStage34GateB1Hash({
+    schema_version: MC_STAGE34_GATE_C2_SCHEMA_VERSION,
+    fixture_id: fixtureId,
+    failure_class: failure.failureClass,
+    safe_status: failure.safeStatus,
+    provider_call_attempted: failure.providerCallAttempted,
+    fetch_attempt_count: failure.fetchAttemptCount,
+    fetch_attempt_index: failure.fetchAttemptIndex,
+    fetch_succeeded: failure.fetchSucceeded,
+    http_succeeded: failure.httpSucceeded,
+    response_parsed: failure.responseParsed,
+    candidate_parsed: failure.candidateParsed,
+    schema_valid: failure.schemaValid,
+    quality_gate_passed: failure.qualityGatePassed,
+    http_status: failure.httpStatus,
+    retry_count: 0,
+    fallback_used: false,
+    readable_text_stored: false
+  });
+}
+
+function appendMissionCommandStage34GateC3FailureChild(runtimeAdapter, runId, batchKey, fixtureId, status, meta) {
+  meta = meta || {};
+  var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+  var parentRows = findMissionCommandStage34GateB3AReceiptRows(runtimeAdapter, relatedObject).filter(function(entry) {
+    return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_PARENT_TYPE;
+  });
+  if (parentRows.length !== 1) return makeMissionCommandStage34GateC3Blocked('parent_missing', 'Failure child requires an existing parent receipt draft.');
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+  var failure = classifyMissionCommandStage34GateC3ProviderFailure(status, meta);
+  var failureHash = makeMissionCommandStage34GateC3FailureHash(fixtureId, status, failure);
+  var child = appendMissionCommandStage34GateC3HashChild(runtimeAdapter, runId, batchKey, fixtureId, failureHash, reviewRowId, Object.assign({}, failure, {
+    failureCode: failure.failureClass
+  }));
+  if (child.ok && child.row) child.row.updated_by = MC_STAGE34_GATE_E1_BUILD;
+  return Object.assign({}, child, {
+    failureClass: failure.failureClass,
+    safeStatus: failure.safeStatus,
+    candidateHash: failureHash,
+    reviewRowId: reviewRowId
+  });
+}
+
+function updateMissionCommandStage34GateC3FailureReviewRow(reviewAdapter, runId, batchKey, fixtureId, childReceiptId, failureHash, status, meta) {
+  meta = meta || {};
+  var failure = classifyMissionCommandStage34GateC3ProviderFailure(status, meta);
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+  if (!reviewAdapter.acquireLock('stage34_c3_failure_review_' + fixtureId)) return makeMissionCommandStage34GateC3Blocked('review_lock_unavailable', 'Failure review-row lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage34GateC3ReviewAdapterUnderLock(reviewAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateC3Blocked(refresh.stopCondition, 'Review V2 headers missing or mismatched.');
+    var found = findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId);
+    if (!found) return makeMissionCommandStage34GateC3Blocked('review_reservation_missing', 'Failure status requires a reserved review row.');
+    if (String(found.row.receipt_child_id || '') || String(found.row.quality_gate_state || '') !== 'reserved') {
+      return { ok: false, status: 'duplicate_suppressed', row: found.row, providerCallAttempted: false };
+    }
+    var persistedHash = makeMissionCommandStage34GateB3CReviewSnapshotHash(found.row, reviewAdapter.headers);
+    var updated = Object.assign({}, found.row, {
+      receipt_child_id: childReceiptId || '',
+      candidate_sha256: failureHash || '',
+      why_now: '',
+      material_change: '',
+      next_move_type: '',
+      candidate_text: '',
+      object_type: '',
+      object_label: '',
+      source_labels: '',
+      grounding_state: '',
+      grounding_evidence: '',
+      material_change_code: '',
+      material_change_summary: '',
+      next_move_text: '',
+      chief_context_summary: '',
+      executive_decision_required: '',
+      schema_valid: false,
+      review_ready: false,
+      should_deliver: false,
+      batch_state: 'provider_boundary_failed',
+      review_state: 'provider_boundary_failed',
+      quality_gate_state: failure.failureClass,
+      quality_fail_codes: JSON.stringify([failure.failureClass]),
+      blocked_reason: failure.safeStatus,
+      provider_call_attempted: failure.providerCallAttempted,
+      fetch_attempt_count: failure.fetchAttemptCount,
+      fetch_attempt_index: failure.fetchAttemptIndex,
+      boundary_flags: JSON.stringify({ raw_prompt_stored: false, raw_provider_response_stored: false, visible_delivery: false, dispatch: false, external_write: false, route_created: false })
+    });
+    reviewAdapter.updateRowObject(found.index, updated, { persistedHash: persistedHash });
+    return { ok: true, status: 'failure_review_row_marked', row: updated, providerCallAttempted: failure.providerCallAttempted };
+  } catch (err) {
+    return makeMissionCommandStage34GateC3Blocked('failure_review_update_failed', 'Failure review row update failed; readable candidate text was not written.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_c3_failure_review_' + fixtureId);
+  }
+}
+
+function recordMissionCommandStage34GateC3FailureEvidence(runtimeAdapter, reviewAdapter, runId, batchKey, fixtureId, status, meta) {
+  meta = meta || {};
+  var failure = classifyMissionCommandStage34GateC3ProviderFailure(status, meta);
+  var child = appendMissionCommandStage34GateC3FailureChild(runtimeAdapter, runId, batchKey, fixtureId, failure.safeStatus, failure);
+  if (!child.ok && child.status !== 'duplicate_suppressed') {
+    return Object.assign({}, child, { failureClass: failure.failureClass, failureEvidenceWritten: false });
+  }
+  var childRow = child.row || {};
+  var review = updateMissionCommandStage34GateC3FailureReviewRow(reviewAdapter, runId, batchKey, fixtureId, childRow.receipt_id || '', child.candidateHash || '', failure.safeStatus, failure);
+  var relatedRows = findMissionCommandStage34GateB3AReceiptRows(runtimeAdapter, makeMissionCommandStage34GateB3ARelatedObject(batchKey));
+  var childRows = relatedRows.filter(function(entry) { return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE; }).map(function(entry) { return entry.row; });
+  return {
+    ok: review.ok === true || review.status === 'duplicate_suppressed',
+    status: review.ok === true ? 'failure_evidence_recorded' : (review.status || 'failure_evidence_interrupted'),
+    failureClass: failure.failureClass,
+    safeStatus: failure.safeStatus,
+    childStatus: child.status || '',
+    reviewStatus: review.status || '',
+    failureEvidenceWritten: child.ok === true,
+    duplicateSuppressed: child.status === 'duplicate_suppressed' || review.status === 'duplicate_suppressed',
+    child: child.row || null,
+    reviewRow: review.row || null,
+    aggregation: aggregateMissionCommandStage34GateC2ProviderAttempts(childRows),
+    providerCallAttempted: failure.providerCallAttempted,
+    actualFetchAttempts: failure.fetchAttemptCount
+  };
+}
+
+function updateMissionCommandStage34GateC3ReviewRow(reviewAdapter, runId, batchKey, candidate, candidateHash, childReceiptId, meta) {
+  var fixtureId = candidate.fixture_id;
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+  if (!reviewAdapter.acquireLock('stage34_c3_readable_' + fixtureId)) return makeMissionCommandStage34GateC3Blocked('review_lock_unavailable', 'Readable row lock unavailable.');
+  try {
+    var refresh = refreshMissionCommandStage34GateC3ReviewAdapterUnderLock(reviewAdapter);
+    if (!refresh.ok) return makeMissionCommandStage34GateC3Blocked(refresh.stopCondition, 'Review V2 headers missing or mismatched.');
+    var found = findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId);
+    if (!found) return makeMissionCommandStage34GateC3Blocked('review_reservation_missing', 'Readable row reservation missing.');
+    if (String(found.row.candidate_text || '') || String(found.row.candidate_sha256 || '')) return { ok: false, status: 'duplicate_suppressed', row: found.row, providerCallAttempted: false };
+    var c2Row = makeMissionCommandStage34GateC2ReviewRow(candidate, runId, batchKey, found.row.created_at || new Date().toISOString());
+    if (!c2Row.ok || c2Row.row.review_ready !== true) return makeMissionCommandStage34GateC3Blocked('quality_gate_failed', 'Readable row write requires review-ready V2 candidate.');
+    var persistedHash = makeMissionCommandStage34GateB3CReviewSnapshotHash(found.row, reviewAdapter.headers);
+    var updated = Object.assign({}, found.row, c2Row.row, {
+      receipt_child_id: childReceiptId,
+      candidate_sha256: candidateHash,
+      provider_call_attempted: meta.providerCallAttempted === true,
+      fetch_attempt_count: normalizeMissionCommandStage34GateC3AttemptMeta(meta).fetchAttemptCount,
+      fetch_attempt_index: meta.fetchAttemptIndex || '',
+      batch_state: 'partial'
+    });
+    reviewAdapter.updateRowObject(found.index, updated, { persistedHash: persistedHash });
+    return { ok: true, status: 'readable_candidate_written', row: updated, providerCallAttempted: meta.providerCallAttempted === true };
+  } catch (err) {
+    return makeMissionCommandStage34GateC3Blocked('review_write_failed', 'Readable candidate write failed after hash-only child.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_c3_readable_' + fixtureId);
+  }
+}
+
+function addMissionCommandStage34GateC3ProviderCandidate(runtimeAdapter, reviewAdapter, runId, batchKey, candidate, meta) {
+  var validation = validateMissionCommandStage34GateC2Candidate(candidate);
+  var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, candidate.fixture_id);
+  if (!validation.ok) {
+    var failure = makeMissionCommandStage34GateC2QualityFailureReceipt(runId, batchKey, candidate, validation);
+    var failureMeta = Object.assign({}, meta || {}, {
+      failureClass: 'quality_gate_failed',
+      safeStatus: 'quality_gate_failed',
+      schemaValid: validation.quality.schema_valid === true,
+      qualityGatePassed: false,
+      failureCode: (validation.quality.quality_fail_codes || [])[0] || 'quality_blocked'
+    });
+    var failureChild = appendMissionCommandStage34GateC3HashChild(runtimeAdapter, runId, batchKey, candidate.fixture_id, missionCommandStage34GateB1Hash(failure.safe_summary), reviewRowId, failureMeta);
+    var failureHash = failureChild.candidateHash || missionCommandStage34GateB1Hash(failure.safe_summary);
+    var reviewFailure = updateMissionCommandStage34GateC3FailureReviewRow(reviewAdapter, runId, batchKey, candidate.fixture_id, (failureChild.row || {}).receipt_id || '', failureHash, 'quality_blocked', failureMeta);
+    return { ok: false, status: 'quality_blocked', failureReceipt: failure, child: failureChild, reviewFailure: reviewFailure, providerCallAttempted: meta && meta.providerCallAttempted === true, actualFetchAttempts: normalizeMissionCommandStage34GateC3AttemptMeta(meta).fetchAttemptCount };
+  }
+  var candidateHash = makeMissionCommandStage34GateB3ACandidateHash(candidate);
+  var child = appendMissionCommandStage34GateC3HashChild(runtimeAdapter, runId, batchKey, candidate.fixture_id, candidateHash, reviewRowId, Object.assign({}, meta || {}, {
+    schemaValid: true,
+    qualityGatePassed: true,
+    reviewRowWritten: false
+  }));
+  if (!child.ok) return child;
+  var readable = updateMissionCommandStage34GateC3ReviewRow(reviewAdapter, runId, batchKey, candidate, candidateHash, child.row.receipt_id, Object.assign({}, meta || {}, {
+    reviewRowWritten: true
+  }));
+  return readable.ok ? { ok: true, status: 'candidate_v2_written', child: child.row, reviewRow: readable.row, providerCallAttempted: meta && meta.providerCallAttempted === true } : readable;
+}
+
+function finalizeMissionCommandStage34GateC3Batch(runtimeAdapter, reviewAdapter, runId, batchKey) {
+  if (!runtimeAdapter.acquireLock('stage34_c3_finalize_runtime')) return makeMissionCommandStage34GateC3Blocked('runtime_lock_unavailable', 'Finalize runtime lock unavailable.');
+  if (!reviewAdapter.acquireLock('stage34_c3_finalize_review')) {
+    runtimeAdapter.releaseLock('stage34_c3_finalize_runtime');
+    return makeMissionCommandStage34GateC3Blocked('review_lock_unavailable', 'Finalize review lock unavailable.');
+  }
+  try {
+    var runtimeRefresh = refreshMissionCommandStage33RAdapterUnderLock(runtimeAdapter);
+    if (!runtimeRefresh.ok) return makeMissionCommandStage34GateC3Blocked(runtimeRefresh.stopCondition, 'Runtime receipt headers missing.');
+    var reviewRefresh = refreshMissionCommandStage34GateC3ReviewAdapterUnderLock(reviewAdapter);
+    if (!reviewRefresh.ok) return makeMissionCommandStage34GateC3Blocked(reviewRefresh.stopCondition, 'Review V2 headers missing or mismatched.');
+    var relatedObject = makeMissionCommandStage34GateB3ARelatedObject(batchKey);
+    var receiptRows = findMissionCommandStage34GateB3AReceiptRows(runtimeAdapter, relatedObject);
+    var parentRows = receiptRows.filter(function(entry) { return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_PARENT_TYPE; });
+    var childRows = receiptRows.filter(function(entry) { return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE; });
+    var reviewRows = findMissionCommandStage34GateB3AReviewRows(reviewAdapter, batchKey);
+    var completeReviewRows = reviewRows.filter(function(entry) { return entry.row.review_ready === true && String(entry.row.candidate_text || '') !== ''; });
+    var expectedCount = MC_STAGE34_GATE_B3A_FIXTURE_IDS.length;
+    if (parentRows.length !== 1 || childRows.length !== expectedCount || reviewRows.length !== expectedCount || completeReviewRows.length !== expectedCount) return makeMissionCommandStage34GateC3Blocked('exact_fixture_set_required', 'Finalization requires one parent and the exact authorized child/review set.');
+    var childReceiptRows = childRows.map(function(entry) { return entry.row; });
+    var aggregation = aggregateMissionCommandStage34GateC2ProviderAttempts(childReceiptRows);
+    for (var i = 0; i < MC_STAGE34_GATE_B3A_FIXTURE_IDS.length; i++) {
+      var fixtureId = MC_STAGE34_GATE_B3A_FIXTURE_IDS[i];
+      var reviewRowId = makeMissionCommandStage34GateB3AReviewRowId(batchKey, fixtureId);
+      var reviewRow = findMissionCommandStage34GateB3AReviewRow(reviewAdapter, reviewRowId);
+      var child = findMissionCommandStage34GateB3AChildReceipt(runtimeAdapter, batchKey, fixtureId);
+      if (!reviewRow || !child) return makeMissionCommandStage34GateC3Blocked('deterministic_set_missing', 'Exact deterministic child/review set required.');
+      var summary = parseMissionCommandStage34GateB3ASafeSummary(child.row);
+      if (summary.fixture_id !== fixtureId || summary.candidate_sha256 !== reviewRow.row.candidate_sha256 || summary.review_row_id !== reviewRowId || reviewRow.row.receipt_child_id !== child.row.receipt_id) {
+        return makeMissionCommandStage34GateC3Blocked('hash_link_invalid', 'Child receipt and readable review row linkage must match.');
+      }
+    }
+    var parentEntry = parentRows[0];
+    var parentSummary = parseMissionCommandStage34GateB3ASafeSummary(parentEntry.row);
+    parentSummary.aggregation_state = 'complete';
+    parentSummary.provider_call_attempted = aggregation.provider_call_attempted;
+    parentSummary.provider_fetch_attempts_actual = aggregation.provider_fetch_attempts_actual;
+    parentSummary.provider_fetch_successes = aggregation.provider_fetch_successes;
+    parentSummary.provider_fetch_failures = aggregation.provider_fetch_failures;
+    parentSummary.http_successes = aggregation.http_successes;
+    parentSummary.response_parsed_count = aggregation.response_parsed_count;
+    parentSummary.schema_valid_count = aggregation.schema_valid_count;
+    parentSummary.quality_gate_passes = aggregation.quality_gate_passes;
+    parentSummary.review_rows_written = completeReviewRows.length;
+    parentSummary.deterministic_child_set_complete = aggregation.deterministic_child_set_complete === true;
+    var updatedParent = Object.assign({}, parentEntry.row, {
+      result: 'logged',
+      safe_summary: JSON.stringify(parentSummary),
+      version: safeMissionCommandOpenAiNumberV31(parentEntry.row.version) + 1,
+      etag: 'etag_' + missionCommandStage34GateB1Hash(parentEntry.row.receipt_id + ':c3_logged:' + batchKey).slice(0, 24),
+      updated_by: MC_STAGE34_GATE_C3_BUILD,
+      last_request_id: runId
+    });
+    runtimeAdapter.updateRowObject(parentEntry.index, updatedParent, { version: parentEntry.row.version, etag: parentEntry.row.etag });
+    for (var j = 0; j < reviewRows.length; j++) {
+      var reviewEntry = reviewRows[j];
+      var updatedReview = Object.assign({}, reviewEntry.row, { batch_state: 'review_ready' });
+      reviewAdapter.updateRowObject(reviewEntry.index, updatedReview, { persistedHash: makeMissionCommandStage34GateB3CReviewSnapshotHash(reviewEntry.row, reviewAdapter.headers) });
+    }
+    return { ok: true, status: 'ready_for_review', parentResult: 'logged', childrenWritten: childRows.length, reviewRowsComplete: completeReviewRows.length, aggregation: aggregation };
+  } catch (err) {
+    return makeMissionCommandStage34GateC3Blocked('finalize_failed', 'Finalization failed closed.');
+  } finally {
+    reviewAdapter.releaseLock('stage34_c3_finalize_review');
+    runtimeAdapter.releaseLock('stage34_c3_finalize_runtime');
+  }
+}
+
+function runMissionCommandStage34GateC3CandidateV2Batch(runtimeAdapter, reviewAdapter, providerAdapter, input) {
+  input = input || {};
+  var authorization = validateMissionCommandStage34GateC3Authorization(input);
+  if (!authorization.ok) return authorization;
+  var requests = buildMissionCommandStage34GateC3Requests();
+  if (!requests.ok) return makeMissionCommandStage34GateC3Blocked('request_contract_invalid', requests.errors.join(' | '));
+  var runTimestamp = input.runTimestamp || new Date().toISOString();
+  var reviewPreflight = preflightMissionCommandStage34GateC3ReviewReservation(reviewAdapter, input.runId, input.batchKey, runTimestamp);
+  if (!reviewPreflight.ok) return reviewPreflight;
+  var parent = claimMissionCommandStage34GateC3Parent(runtimeAdapter, input.runId, input.batchKey);
+  if (!parent.ok) return parent;
+  var reserve = reserveMissionCommandStage34GateC3ReviewRows(reviewAdapter, input.runId, input.batchKey, runTimestamp);
+  if (!reserve.ok) return reserve;
+  var results = [];
+  var cumulativeEstimatedCost = 0;
+  for (var i = 0; i < requests.requests.length; i++) {
+    if (i >= MC_STAGE34_GATE_C3_MAX_CALLS) return makeMissionCommandStage34GateC3Blocked('call_cap_exceeded', 'C3/C4 call cap exceeded.', { actualFetchAttempts: results.length });
+    var entry = requests.requests[i];
+    var providerResult = providerAdapter.responseFor(entry.fixtureId, entry.request);
+    if (!providerResult.ok) {
+      var failureEvidence = recordMissionCommandStage34GateC3FailureEvidence(runtimeAdapter, reviewAdapter, input.runId, input.batchKey, entry.fixtureId, providerResult.status || 'provider_candidate_failed', providerResult.meta || {});
+      return {
+        ok: false,
+        status: 'interrupted',
+        build: MC_STAGE34_GATE_C3_BUILD,
+        stopCondition: failureEvidence.ok === true ? (providerResult.status || 'provider_candidate_failed') : (failureEvidence.stopCondition || failureEvidence.status || 'failure_evidence_failed'),
+        failedFixtureId: entry.fixtureId,
+        childrenWritten: results.length,
+        parentResult: 'receipt_draft',
+        providerCallAttempted: providerResult.meta && providerResult.meta.providerCallAttempted === true,
+        actualFetchAttempts: normalizeMissionCommandStage34GateC3AttemptMeta(providerResult.meta || {}).fetchAttemptCount,
+        failureClass: failureEvidence.failureClass || '',
+        failureEvidenceStatus: failureEvidence.status || '',
+        failureEvidenceWritten: failureEvidence.failureEvidenceWritten === true,
+        failureReviewStatus: failureEvidence.reviewStatus || '',
+        parentAggregation: failureEvidence.aggregation || {},
+        retryCount: 0,
+        fallbackUsed: false
+      };
+    }
+    cumulativeEstimatedCost += Math.max(0, Number((providerResult.meta || {}).estimatedCost || 0));
+    if (cumulativeEstimatedCost > MC_STAGE34_GATE_C3_MAX_ESTIMATED_SPEND_USD) {
+      var costEvidence = recordMissionCommandStage34GateC3FailureEvidence(runtimeAdapter, reviewAdapter, input.runId, input.batchKey, entry.fixtureId, 'cost_cap_exceeded', Object.assign({}, providerResult.meta || {}, { failureClass: 'cost_cap_exceeded', safeStatus: 'cost_cap_exceeded' }));
+      return {
+        ok: false,
+        status: 'interrupted',
+        build: MC_STAGE34_GATE_C3_BUILD,
+        stopCondition: costEvidence.ok === true ? 'cost_cap_exceeded' : (costEvidence.stopCondition || costEvidence.status || 'failure_evidence_failed'),
+        failedFixtureId: entry.fixtureId,
+        childrenWritten: results.length,
+        parentResult: 'receipt_draft',
+        providerCallAttempted: providerResult.meta && providerResult.meta.providerCallAttempted === true,
+        actualFetchAttempts: normalizeMissionCommandStage34GateC3AttemptMeta(providerResult.meta || {}).fetchAttemptCount,
+        failureClass: costEvidence.failureClass || '',
+        failureEvidenceStatus: costEvidence.status || '',
+        failureEvidenceWritten: costEvidence.failureEvidenceWritten === true,
+        parentAggregation: costEvidence.aggregation || {},
+        retryCount: 0,
+        fallbackUsed: false
+      };
+    }
+    var add = addMissionCommandStage34GateC3ProviderCandidate(runtimeAdapter, reviewAdapter, input.runId, input.batchKey, providerResult.candidate, providerResult.meta || {});
+    if (!add.ok) {
+      return {
+        ok: false,
+        status: 'interrupted',
+        build: MC_STAGE34_GATE_C3_BUILD,
+        stopCondition: add.stopCondition || add.status || 'candidate_write_failed',
+        failedFixtureId: entry.fixtureId,
+        childrenWritten: results.length,
+        parentResult: 'receipt_draft',
+        providerCallAttempted: add.providerCallAttempted === true,
+        actualFetchAttempts: safeMissionCommandOpenAiNumberV31(add.actualFetchAttempts || 0),
+        failureClass: add.status === 'quality_blocked' ? 'quality_gate_failed' : '',
+        failureEvidenceStatus: add.status || '',
+        failureEvidenceWritten: add.child && add.child.ok === true,
+        failureReviewStatus: add.reviewFailure && add.reviewFailure.status || '',
+        retryCount: 0,
+        fallbackUsed: false
+      };
+    }
+    results.push(add);
+  }
+  var final = finalizeMissionCommandStage34GateC3Batch(runtimeAdapter, reviewAdapter, input.runId, input.batchKey);
+  if (!final.ok) return final;
+  return {
+    ok: true,
+    status: 'ready_for_review',
+    build: MC_STAGE34_GATE_C3_BUILD,
+    runId: input.runId,
+    batchKey: input.batchKey,
+    relatedObject: MC_STAGE34_GATE_C3_RELATED_OBJECT,
+    childrenWritten: results.length,
+    reviewRowsComplete: final.reviewRowsComplete,
+    providerCallAttempted: final.aggregation.provider_call_attempted === true,
+    actualFetchAttempts: final.aggregation.provider_fetch_attempts_actual,
+    cumulativeEstimatedCost: cumulativeEstimatedCost,
+    retryCount: 0,
+    fallbackUsed: false,
+    wrapperInvokedByIntegration: false
+  };
+}
+
+function makeMissionCommandStage34GateC3ReviewAdapter(headers, rows, options) {
+  return makeMissionCommandStage34GateB3CReviewAdapter(headers || getMissionCommandStage34GateC2ProposedReviewHeaders(), rows || [], options || {});
+}
+
+function makeMissionCommandStage34GateC3FakeProviderAdapter(options) {
+  options = options || {};
+  return {
+    calls: [],
+    fetchAttempts: 0,
+    responseFor: function(fixtureId, request) {
+      this.calls.push({ fixtureId: fixtureId, safeAttemptRecorded: true });
+      var authorizedCallCountTotal = this.calls.length;
+      if (options.failFixtureId === fixtureId) {
+        this.fetchAttempts += 1;
+        return { ok: false, status: 'provider_fetch_failed', meta: normalizeMissionCommandStage34GateC3AttemptMeta({ providerCallAttempted: true, authorizedCallCountTotal: authorizedCallCountTotal, fetchAttemptCount: 1, fetchAttemptIndex: this.fetchAttempts, fetchSucceeded: false, httpSucceeded: false, responseParsed: false, schemaValid: false, qualityGatePassed: false }) };
+      }
+      var candidate = makeMissionCommandStage34GateC2Candidate(fixtureId, options.overrideCandidate || {});
+      this.fetchAttempts += options.noFetch === true ? 0 : 1;
+      var attempted = options.noFetch !== true;
+      return {
+        ok: true,
+        status: 'provider_candidate_valid',
+        candidate: candidate,
+        meta: normalizeMissionCommandStage34GateC3AttemptMeta({
+          providerCallAttempted: attempted,
+          authorizedCallCountTotal: authorizedCallCountTotal,
+          fetchAttemptCount: attempted ? 1 : 0,
+          fetchAttemptIndex: attempted ? this.fetchAttempts : '',
+          fetchSucceeded: attempted,
+          httpSucceeded: attempted,
+          responseParsed: attempted,
+          candidateParsed: attempted,
+          schemaValid: true,
+          qualityGatePassed: true,
+          latencyMs: 10,
+          inputTokens: 1200,
+          outputTokens: 240,
+          estimatedCost: 0.006
+        })
+      };
+    }
+  };
+}
+
+function makeMissionCommandStage34GateC3OpenAiProviderAdapter() {
+  return {
+    calls: [],
+    fetchAttempts: 0,
+    responseFor: function(fixtureId, request) {
+      var requestValidation = validateMissionCommandStage34GateC3Request(fixtureId, request);
+      if (!requestValidation.ok) {
+        return {
+          ok: false,
+          status: 'request_contract_invalid',
+          candidate: null,
+          meta: Object.assign(normalizeMissionCommandStage34GateC3AttemptMeta({
+            providerCallAttempted: false,
+            authorizedCallCountTotal: this.calls.length,
+            fetchAttemptCount: 0,
+            latencyMs: 0,
+            estimatedCost: 0
+          }), {
+            requestValidationErrors: requestValidation.errors || []
+          })
+        };
+      }
+      this.calls.push({ fixtureId: fixtureId, safeAttemptRecorded: true });
+      var authorizedAttempts = this.calls.length;
+      var apiKey = '';
+      try {
+        apiKey = String(PropertiesService.getScriptProperties().getProperty(MC_OPENAI_STAGE32_SCRIPT_PROPERTY_KEY) || '').trim();
+      } catch (err) {
+        return { ok: false, status: 'credential_access_failed', candidate: null, meta: normalizeMissionCommandStage34GateC3AttemptMeta({ providerCallAttempted: false, authorizedCallCountTotal: authorizedAttempts, fetchAttemptCount: 0, latencyMs: 0, estimatedCost: 0 }) };
+      }
+      if (!apiKey) return { ok: false, status: 'credential_unavailable', candidate: null, meta: normalizeMissionCommandStage34GateC3AttemptMeta({ providerCallAttempted: false, authorizedCallCountTotal: authorizedAttempts, fetchAttemptCount: 0, latencyMs: 0, estimatedCost: 0 }) };
+      var started = new Date().getTime();
+      var response = null;
+      var fetchAttemptIndex = 0;
+      try {
+        this.fetchAttempts += 1;
+        fetchAttemptIndex = this.fetchAttempts;
+        response = UrlFetchApp.fetch(MC_OPENAI_STAGE32_ENDPOINT, makeMissionCommandStage34GateB3CFetchOptions(apiKey, request));
+      } catch (err) {
+        return { ok: false, status: 'provider_fetch_failed', candidate: null, meta: normalizeMissionCommandStage34GateC3AttemptMeta({ providerCallAttempted: true, authorizedCallCountTotal: authorizedAttempts, fetchAttemptCount: 1, fetchAttemptIndex: fetchAttemptIndex, fetchSucceeded: false, httpSucceeded: false, responseParsed: false, schemaValid: false, qualityGatePassed: false, latencyMs: new Date().getTime() - started, httpStatus: 0, estimatedCost: 0 }) };
+      }
+      var httpStatus = safeMissionCommandOpenAiNumberV31(response.getResponseCode && response.getResponseCode());
+      if (httpStatus < 200 || httpStatus >= 300) {
+        return { ok: false, status: httpStatus === 404 ? 'model_unavailable' : 'provider_http_' + httpStatus, candidate: null, meta: normalizeMissionCommandStage34GateC3AttemptMeta({ providerCallAttempted: true, authorizedCallCountTotal: authorizedAttempts, fetchAttemptCount: 1, fetchAttemptIndex: fetchAttemptIndex, fetchSucceeded: true, httpSucceeded: false, responseParsed: false, schemaValid: false, qualityGatePassed: false, latencyMs: new Date().getTime() - started, httpStatus: httpStatus, estimatedCost: 0 }) };
+      }
+      var parsed = {};
+      try {
+        parsed = JSON.parse(response.getContentText() || '{}');
+      } catch (err) {
+        return { ok: false, status: 'provider_response_parse_failed', candidate: null, meta: normalizeMissionCommandStage34GateC3AttemptMeta({ providerCallAttempted: true, authorizedCallCountTotal: authorizedAttempts, fetchAttemptCount: 1, fetchAttemptIndex: fetchAttemptIndex, fetchSucceeded: true, httpSucceeded: true, responseParsed: false, schemaValid: false, qualityGatePassed: false, latencyMs: new Date().getTime() - started, httpStatus: httpStatus, estimatedCost: 0 }) };
+      }
+      var result = makeMissionCommandStage34GateC3ProviderResultFromEnvelope(fixtureId, parsed, {
+        providerCallAttempted: true,
+        authorizedCallCountTotal: authorizedAttempts,
+        fetchAttemptCount: 1,
+        fetchAttemptIndex: fetchAttemptIndex,
+        fetchSucceeded: true,
+        httpSucceeded: true,
+        latencyMs: new Date().getTime() - started,
+        httpStatus: httpStatus
+      });
+      if (!result.ok) return { ok: false, status: result.status || 'provider_schema_invalid', candidate: null, meta: result.meta };
+      return { ok: true, status: 'provider_candidate_valid', candidate: result.candidate, meta: result.meta };
+    }
+  };
+}
+
+function makeMissionCommandStage34GateC3LiveReviewAdapter(options) {
+  options = Object.assign({}, options || {}, {
+    headerValidator: validateMissionCommandStage34GateC2ProposedHeaders,
+    headerInvalidCode: 'stage_3_4_gate_c3_review_v2_headers_invalid',
+    headerValidatorName: 'gate_c3_v2_exact_69'
+  });
+  return makeMissionCommandStage34GateB3CLiveReviewAdapter(options);
+}
+
+function verifyMissionCommandStage34GateC3LocalChecks() {
+  var c2 = verifyMissionCommandStage34GateC2LocalChecks();
+  var flags = getMissionCommandStage34GateC3Flags();
+  var callerFlags = getMissionCommandStage34GateC3Flags({ gateC3Enabled: true });
+  var directRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var directReview = makeMissionCommandStage34GateC3ReviewAdapter();
+  var directProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var directBlocked = runMissionCommandStage34GateC3CandidateV2Batch(directRuntime, directReview, directProvider, {});
+  var wrongToken = runMissionCommandStage34GateC3CandidateV2Batch(directRuntime, directReview, directProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), { authorizationToken: 'wrong' }));
+  var wrongIdentity = runMissionCommandStage34GateC3CandidateV2Batch(directRuntime, directReview, directProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), { runId: 'wrong' }));
+  var consumedC4 = runMissionCommandStage34GateC3CandidateV2Batch(directRuntime, directReview, directProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), {
+    authorizationToken: MC_STAGE34_GATE_C4_CONSUMED_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_C4_CONSUMED_RUN_ID,
+    batchKey: MC_STAGE34_GATE_C4_CONSUMED_BATCH_KEY
+  }));
+  var consumedD3 = runMissionCommandStage34GateC3CandidateV2Batch(directRuntime, directReview, directProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), {
+    authorizationToken: MC_STAGE34_GATE_D3_CONSUMED_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_D3_CONSUMED_RUN_ID,
+    batchKey: MC_STAGE34_GATE_D3_CONSUMED_BATCH_KEY
+  }));
+  var consumedE3 = runMissionCommandStage34GateC3CandidateV2Batch(directRuntime, directReview, directProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), {
+    authorizationToken: MC_STAGE34_GATE_E3_CONSUMED_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_E3_CONSUMED_RUN_ID,
+    batchKey: MC_STAGE34_GATE_E3_CONSUMED_BATCH_KEY
+  }));
+  var consumedF3 = runMissionCommandStage34GateC3CandidateV2Batch(directRuntime, directReview, directProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), {
+    authorizationToken: MC_STAGE34_GATE_F3_CONSUMED_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_F3_CONSUMED_RUN_ID,
+    batchKey: MC_STAGE34_GATE_F3_CONSUMED_BATCH_KEY
+  }));
+  var consumedG3 = runMissionCommandStage34GateC3CandidateV2Batch(directRuntime, directReview, directProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), {
+    authorizationToken: MC_STAGE34_GATE_G3_CONSUMED_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_G3_CONSUMED_RUN_ID,
+    batchKey: MC_STAGE34_GATE_G3_CONSUMED_BATCH_KEY
+  }));
+  var requests = buildMissionCommandStage34GateC3Requests();
+  var runtime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var review = makeMissionCommandStage34GateC3ReviewAdapter();
+  var provider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var success = runMissionCommandStage34GateC3CandidateV2Batch(runtime, review, provider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), { runTimestamp: '2026-07-12T19:00:00Z' }));
+  var duplicateProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var duplicate = runMissionCommandStage34GateC3CandidateV2Batch(runtime, review, duplicateProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), { runTimestamp: '2026-07-12T19:00:00Z' }));
+  var qualityRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var qualityReview = makeMissionCommandStage34GateC3ReviewAdapter();
+  var qualityProvider = makeMissionCommandStage34GateC3FakeProviderAdapter({ overrideCandidate: { object_label: 'item', candidate_text: 'Prepare a concise brief and route the matter for review.' } });
+  var qualityBlocked = runMissionCommandStage34GateC3CandidateV2Batch(qualityRuntime, qualityReview, qualityProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), { runTimestamp: '2026-07-12T19:00:00Z' }));
+  var qualityRows = findMissionCommandStage34GateB3AReviewRows(qualityReview, MC_STAGE34_GATE_C3_BATCH_KEY);
+  var interruptionRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var interruptionReview = makeMissionCommandStage34GateC3ReviewAdapter();
+  var interruptionProvider = makeMissionCommandStage34GateC3FakeProviderAdapter({ failFixtureId: 'MC34-F12' });
+  var interrupted = runMissionCommandStage34GateC3CandidateV2Batch(interruptionRuntime, interruptionReview, interruptionProvider, Object.assign({}, makeMissionCommandStage34GateC3WrapperAuthorization(), { runTimestamp: '2026-07-12T19:00:00Z' }));
+  var badHeaderReview = makeMissionCommandStage34GateC3ReviewAdapter(getMissionCommandStage34GateB3AReviewHeaders(), []);
+  var badHeader = reserveMissionCommandStage34GateC3ReviewRows(badHeaderReview, MC_STAGE34_GATE_C3_RUN_ID, MC_STAGE34_GATE_C3_BATCH_KEY, '2026-07-12T19:00:00Z');
+  var retentionOk = validateMissionCommandStage34GateC2Retention('2026-07-12T19:00:00Z', success.ok ? findMissionCommandStage34GateB3AReviewRows(review, MC_STAGE34_GATE_C3_BATCH_KEY)[0].row.retention_due_at : '');
+  var relatedRows = findMissionCommandStage34GateB3AReceiptRows(runtime, MC_STAGE34_GATE_C3_RELATED_OBJECT);
+  var childRows = relatedRows.filter(function(entry) { return entry.row.receipt_type === MC_STAGE34_GATE_B3A_RECEIPT_CHILD_TYPE; }).map(function(entry) { return entry.row; });
+  var aggregation = aggregateMissionCommandStage34GateC2ProviderAttempts(childRows);
+  return {
+    ok: c2.ok === true &&
+      flags.gateC3Enabled === false &&
+      flags.killSwitchEnabled === true &&
+      callerFlags.gateC3Enabled === false &&
+      directBlocked.stopCondition === 'run_id_mismatch' &&
+      directRuntime.rows.length === 0 &&
+      directProvider.calls.length === 0 &&
+      wrongToken.stopCondition === 'wrapper_authorization_missing' &&
+      wrongIdentity.stopCondition === 'run_id_mismatch' &&
+      consumedC4.stopCondition === 'run_id_mismatch' &&
+      consumedD3.stopCondition === 'run_id_mismatch' &&
+      consumedE3.stopCondition === 'run_id_mismatch' &&
+      consumedF3.stopCondition === 'run_id_mismatch' &&
+      consumedG3.stopCondition === 'run_id_mismatch' &&
+      requests.ok === true &&
+      requests.requests.length === 4 &&
+      requests.requests.map(function(entry) { return entry.fixtureId; }).join('|') === MC_STAGE34_GATE_B3A_FIXTURE_IDS.join('|') &&
+      requests.requests.every(function(entry) { return entry.request.store === false && entry.request.tools.length === 0 && !entry.request.previous_response_id && !entry.request.conversation; }) &&
+      success.ok === true &&
+      success.childrenWritten === 4 &&
+      success.reviewRowsComplete === 4 &&
+      success.actualFetchAttempts === 4 &&
+      duplicate.status === 'duplicate_suppressed' &&
+      duplicateProvider.calls.length === 0 &&
+      qualityBlocked.status === 'interrupted' &&
+      qualityRows.filter(function(entry) { return String(entry.row.candidate_text || '') !== ''; }).length === 0 &&
+      interrupted.status === 'interrupted' &&
+      interrupted.failedFixtureId === 'MC34-F12' &&
+      interrupted.retryCount === 0 &&
+      interrupted.fallbackUsed === false &&
+      badHeader.stopCondition === 'review_v2_contract_invalid' &&
+      retentionOk.ok === true &&
+      aggregation.provider_call_attempted === true &&
+      aggregation.provider_fetch_attempts_actual === 4 &&
+      success.reviewRowsComplete === 4,
+    build: MC_STAGE34_GATE_C3_BUILD,
+    wrapperName: MC_STAGE34_GATE_C3_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_C3_RUN_ID,
+    batchKey: MC_STAGE34_GATE_C3_BATCH_KEY,
+    relatedObject: MC_STAGE34_GATE_C3_RELATED_OBJECT,
+    model: MC_STAGE34_GATE_C3_MODEL,
+    maxCalls: MC_STAGE34_GATE_C3_MAX_CALLS,
+    timeoutSeconds: MC_STAGE34_GATE_C3_TIMEOUT_SECONDS,
+    maxInputTokensPerCall: MC_STAGE34_GATE_C3_MAX_INPUT_TOKENS_PER_CALL,
+    maxOutputTokensPerCall: MC_STAGE34_GATE_C3_MAX_OUTPUT_TOKENS_PER_CALL,
+    maxEstimatedSpendUsd: MC_STAGE34_GATE_C3_MAX_ESTIMATED_SPEND_USD,
+    flagsDefaultOff: flags.gateC3Enabled === false && flags.killSwitchEnabled === true,
+    callerCannotEnable: callerFlags.gateC3Enabled === false,
+    directBlocked: directBlocked.stopCondition === 'run_id_mismatch',
+    wrongTokenBlocked: wrongToken.stopCondition === 'wrapper_authorization_missing',
+    wrongIdentityBlocked: wrongIdentity.stopCondition === 'run_id_mismatch',
+    consumedC4IdentityRejected: consumedC4.stopCondition === 'run_id_mismatch',
+    consumedD3IdentityRejected: consumedD3.stopCondition === 'run_id_mismatch',
+    consumedE3IdentityRejected: consumedE3.stopCondition === 'run_id_mismatch',
+    consumedF3IdentityRejected: consumedF3.stopCondition === 'run_id_mismatch',
+    consumedG3IdentityRejected: consumedG3.stopCondition === 'run_id_mismatch',
+    requestCount: requests.requests.length,
+    fixtureOrderExact: requests.requests.map(function(entry) { return entry.fixtureId; }).join('|') === MC_STAGE34_GATE_B3A_FIXTURE_IDS.join('|'),
+    successChildren: success.childrenWritten || 0,
+    successReviewRows: success.reviewRowsComplete || 0,
+    duplicateSuppressedBeforeProvider: duplicate.status === 'duplicate_suppressed' && duplicateProvider.calls.length === 0,
+    qualityFailureReadableBlank: qualityRows.filter(function(entry) { return String(entry.row.candidate_text || '') !== ''; }).length === 0,
+    interruptionStopsWithoutRetry: interrupted.status === 'interrupted' && interrupted.retryCount === 0,
+    badHeaderBlocked: badHeader.stopCondition === 'review_v2_contract_invalid',
+    retentionValid: retentionOk.ok === true,
+    parentAggregationFromChildren: aggregation.provider_call_attempted === true && aggregation.provider_fetch_attempts_actual === 4,
+    wrapperPrepared: false,
+    wrapperRemovedAfterManualRun: true,
+    wrapperInvokedByIntegration: false,
+    liveSheetTouched: false,
+    scriptPropertiesAccessed: false,
+    providerCallAttemptedByIntegration: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false,
+    gateC4Started: false,
+    gateC4ManualRunConsumed: true,
+    gateC4SafeStatus: 'manual_run_completed_parent_draft_no_children_no_review_rows',
+    freshManualRunPrepared: true,
+    freshManualRunStarted: true,
+    gateD3ManualRunConsumed: true,
+    gateD3SafeStatus: 'manual_run_completed_four_reserved_rows_no_children_no_candidates',
+    gateE2PreparationReady: true,
+    gateE3ManualRunConsumed: true,
+    gateE3SafeStatus: 'manual_run_failed_safely_provider_http_400_one_failure_child_no_candidates',
+    gateF2PreparationReady: true,
+    gateF3ManualRunConsumed: true,
+    gateF3SafeStatus: 'manual_run_completed_four_review_ready_rows_with_attempt_aggregation_inconsistency',
+    gateF3AttemptAggregationTrust: 'counter_inconsistent_do_not_claim_truthful',
+    gateF3AuditInconsistency: {
+      parentProviderFetchAttemptsActual: 10,
+      childFetchAttemptCountShape: 'cumulative_1_2_3_4_not_per_child',
+      childFetchSucceededShape: 'false_despite_http_200_schema_valid_quality_pass',
+      childFetchAttemptIndexShape: 'blank'
+    },
+    gateG3ManualRunConsumed: true,
+    gateG3SafeStatus: 'manual_accounting_proof_partial_three_valid_one_schema_failure_accounting_truthful',
+    gateG3AccountingProof: {
+      parentFinalized: false,
+      parentResult: 'receipt_draft',
+      childFetchAttemptCountShape: 'per_child_1_1_1_1',
+      childFetchAttemptIndexShape: 'global_1_2_3_4',
+      successfulFixtures: ['MC34-F01', 'MC34-F04', 'MC34-F12'],
+      failedFixture: 'MC34-F15',
+      failedFixtureStatus: 'provider_schema_invalid',
+      retryCount: 0,
+      fallbackUsed: false
+    },
+    gateH2PreparationReady: true,
+    gateH3ManualRunStarted: true,
+    gateH3ManualRunConsumed: true,
+    gateH3SafeStatus: 'manual_run_appears_successful_parent_four_children_four_review_ready_rows_accounting_truthful_visible_evidence_only'
+  };
+}
+
+// Mission Command Stage 3.4 post-H3 Gate I5A Batch A local preparation only.
+// Only F26-F29 are active inside the scoped Batch A coordinator; the wrapper is editor-only and uninvoked.
+var MC_STAGE34_GATE_I5A_BUILD = 'mmos-20260713-stage3-4-post-h3-gate-i5a-batch-a-local-preparation';
+var MC_STAGE34_GATE_I5A_ENABLED = false;
+var MC_STAGE34_GATE_I5A_KILL_SWITCH = true;
+var MC_STAGE34_GATE_I5A_MANIFEST_SHA256 = '13118bddc89cc986f36e5066c0e090941dc859a8863202b3eaede2fda6d1df64';
+var MC_STAGE34_GATE_I5A_FIXTURE_IDS = ['MC34-I4-F26', 'MC34-I4-F27', 'MC34-I4-F28', 'MC34-I4-F29'];
+var MC_STAGE34_GATE_I5A_WRAPPER_NAME = 'runMissionCommandStage34GateI5AApprovedSyntheticBatchAOnce';
+var MC_STAGE34_GATE_I5A_RUN_ID = 'mc_stage34_gate_i5a_batch_a_20260713_manual_001';
+var MC_STAGE34_GATE_I5A_BATCH_KEY = '54e506c5f2e9d6a6c4042b6e5d8700c06ffda6fae9412bf9d2e810a0da439';
+var MC_STAGE34_GATE_I5A_RELATED_OBJECT = 'mc34b3:54e506c5f2e9d6a6c4042b6e5d8700c06ffda6fae9412bf9d2e810a0da439';
+var MC_STAGE34_GATE_I5A_AUTH_TOKEN = 'stage34_gate_i5a_batch_a_manual_001_87d09af73d254f65b703b4684689f31f51995da21250ce5cec6';
+
+function getMissionCommandStage34GateI5AFixtureMap() {
+  return {
+    'MC34-I4-F26': {
+      revised_id: 'MC34-I4-F26-A1',
+      role_owner: 'executive_assistant',
+      family: 'executive_assistant_critical',
+      priority: 'critical',
+      object_type: 'approval_packet',
+      object_label: 'Synthetic Vendor Kappa renewal approval',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'],
+      grounding_state: 'synthetic_fixture_only',
+      grounding_evidence: 'A synthetic renewal packet has a decision window that closes today.',
+      decision_needed: 'Choose approve or revise for the synthetic renewal packet.',
+      why_now: 'The synthetic renewal window closes today while downstream planning remains parked.',
+      material_change_code: 'new_eligible_event',
+      material_change_summary: 'The renewal packet entered its first eligible approval window today.',
+      next_move_type: 'approve_or_revise',
+      next_move_text: 'Review and approve or revise the renewal packet.',
+      next_move_count: 1,
+      candidate_text: 'Synthetic Vendor Kappa entered its first eligible renewal window today. Choose approve or revise while downstream planning remains parked.',
+      confidence: 0.86,
+      should_deliver: false,
+      escalated_from: '',
+      escalated_to: '',
+      chief_context_summary: '',
+      executive_decision_required: '',
+      companion_chief_candidate_state: '',
+      suppression_evidence_state: ''
+    },
+    'MC34-I4-F27': {
+      revised_id: 'MC34-I4-F27-A1',
+      role_owner: 'executive_assistant',
+      family: 'executive_assistant_critical',
+      priority: 'critical',
+      object_type: 'project_decision',
+      object_label: 'Synthetic Operator Lambda finalist decision',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'],
+      grounding_state: 'grounded_synthetic',
+      grounding_evidence: 'Two synthetic finalists remain in a locked comparison fixture.',
+      decision_needed: 'Choose one synthetic finalist for the next review stage.',
+      why_now: 'The synthetic comparison window moved to final review today.',
+      material_change_code: 'priority_changed',
+      material_change_summary: 'The finalist review changed from important comparison to critical final selection.',
+      next_move_type: 'choose_direction',
+      next_move_text: 'Choose one finalist for the next review stage.',
+      next_move_count: 1,
+      candidate_text: 'Synthetic Operator Lambda moved from comparison to critical final selection today. Choose one finalist for the next review stage.',
+      confidence: 0.85,
+      should_deliver: false,
+      escalated_from: '',
+      escalated_to: '',
+      chief_context_summary: '',
+      executive_decision_required: '',
+      companion_chief_candidate_state: '',
+      suppression_evidence_state: ''
+    },
+    'MC34-I4-F28': {
+      revised_id: 'MC34-I4-F28-A1',
+      role_owner: 'executive_assistant',
+      family: 'executive_assistant_critical',
+      priority: 'critical',
+      object_type: 'approval_packet',
+      object_label: 'Synthetic Initiative Mu allocation packet',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'],
+      grounding_state: 'grounded_hash_linked',
+      grounding_evidence: 'The synthetic allocation packet is linked to a fixed budget-cap receipt hash.',
+      decision_needed: 'Choose the approved synthetic allocation ceiling.',
+      why_now: 'The planned allocation crossed its synthetic review threshold today.',
+      material_change_code: 'blocker_changed',
+      material_change_summary: 'The allocation changed from within the synthetic cap to blocked pending A1XX review.',
+      next_move_type: 'review_decision_packet',
+      next_move_text: 'Review the synthetic allocation ceiling packet.',
+      next_move_count: 1,
+      candidate_text: 'Synthetic Initiative Mu crossed its allocation review threshold today. Review the ceiling packet and choose the approved synthetic allocation ceiling.',
+      confidence: 0.84,
+      should_deliver: false,
+      escalated_from: '',
+      escalated_to: '',
+      chief_context_summary: '',
+      executive_decision_required: '',
+      companion_chief_candidate_state: '',
+      suppression_evidence_state: ''
+    },
+    'MC34-I4-F29': {
+      revised_id: 'MC34-I4-F29-A1',
+      role_owner: 'chief_of_staff',
+      family: 'chief_coordination',
+      priority: 'important',
+      object_type: 'review_queue',
+      object_label: 'Synthetic Project Nu cross-lane review queue',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'],
+      grounding_state: 'synthetic_fixture_only',
+      grounding_evidence: 'Two synthetic lanes now depend on one coordination owner.',
+      decision_needed: 'Review the proposed owner for the synthetic cross-lane queue.',
+      why_now: 'Ownership changed while both synthetic lanes are waiting on the same review queue.',
+      material_change_code: 'owner_changed',
+      material_change_summary: 'The queue changed from separate lane owners to one proposed coordination owner.',
+      next_move_type: 'review_owner',
+      next_move_text: 'Review the proposed coordination owner.',
+      next_move_count: 1,
+      candidate_text: 'Synthetic Project Nu now has two lanes waiting on one review queue. Review the proposed coordination owner while both lanes remain parked.',
+      confidence: 0.83,
+      should_deliver: false,
+      escalated_from: '',
+      escalated_to: '',
+      chief_context_summary: '',
+      executive_decision_required: '',
+      companion_chief_candidate_state: '',
+      suppression_evidence_state: ''
+    }
+  };
+}
+
+function getMissionCommandStage34GateI5AFlags(input) {
+  input = input || {};
+  var authorized = input.approvedManualRun === true &&
+    input.wrapperAuthorization === true &&
+    input.authorizationToken === MC_STAGE34_GATE_I5A_AUTH_TOKEN &&
+    input.runId === MC_STAGE34_GATE_I5A_RUN_ID &&
+    input.batchKey === MC_STAGE34_GATE_I5A_BATCH_KEY &&
+    input.manifestSha256 === MC_STAGE34_GATE_I5A_MANIFEST_SHA256;
+  return {
+    enabled: MC_STAGE34_GATE_I5A_ENABLED === true && MC_STAGE34_GATE_I5A_KILL_SWITCH !== true,
+    killSwitchEnabled: MC_STAGE34_GATE_I5A_KILL_SWITCH === true,
+    wrapperAuthorized: authorized,
+    routeEnabled: false,
+    triggerEnabled: false,
+    visibleDeliveryEnabled: false,
+    dispatchEnabled: false,
+    externalWriteEnabled: false,
+    retryEnabled: false,
+    fallbackEnabled: false
+  };
+}
+
+function makeMissionCommandStage34GateI5AWrapperAuthorization() {
+  return {
+    approvedManualRun: true,
+    wrapperAuthorization: true,
+    authorizationToken: MC_STAGE34_GATE_I5A_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_I5A_RUN_ID,
+    batchKey: MC_STAGE34_GATE_I5A_BATCH_KEY,
+    manifestSha256: MC_STAGE34_GATE_I5A_MANIFEST_SHA256
+  };
+}
+
+function withMissionCommandStage34GateI5AScope(callback) {
+  var prior = {
+    fixtureIds: MC_STAGE34_GATE_B3A_FIXTURE_IDS,
+    build: MC_STAGE34_GATE_C3_BUILD,
+    wrapperName: MC_STAGE34_GATE_C3_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_C3_RUN_ID,
+    batchKey: MC_STAGE34_GATE_C3_BATCH_KEY,
+    relatedObject: MC_STAGE34_GATE_C3_RELATED_OBJECT,
+    authToken: MC_STAGE34_GATE_C3_AUTH_TOKEN
+  };
+  MC_STAGE34_GATE_B3A_FIXTURE_IDS = MC_STAGE34_GATE_I5A_FIXTURE_IDS.slice();
+  MC_STAGE34_GATE_C3_BUILD = MC_STAGE34_GATE_I5A_BUILD;
+  MC_STAGE34_GATE_C3_WRAPPER_NAME = MC_STAGE34_GATE_I5A_WRAPPER_NAME;
+  MC_STAGE34_GATE_C3_RUN_ID = MC_STAGE34_GATE_I5A_RUN_ID;
+  MC_STAGE34_GATE_C3_BATCH_KEY = MC_STAGE34_GATE_I5A_BATCH_KEY;
+  MC_STAGE34_GATE_C3_RELATED_OBJECT = MC_STAGE34_GATE_I5A_RELATED_OBJECT;
+  MC_STAGE34_GATE_C3_AUTH_TOKEN = MC_STAGE34_GATE_I5A_AUTH_TOKEN;
+  try {
+    return callback();
+  } finally {
+    MC_STAGE34_GATE_B3A_FIXTURE_IDS = prior.fixtureIds;
+    MC_STAGE34_GATE_C3_BUILD = prior.build;
+    MC_STAGE34_GATE_C3_WRAPPER_NAME = prior.wrapperName;
+    MC_STAGE34_GATE_C3_RUN_ID = prior.runId;
+    MC_STAGE34_GATE_C3_BATCH_KEY = prior.batchKey;
+    MC_STAGE34_GATE_C3_RELATED_OBJECT = prior.relatedObject;
+    MC_STAGE34_GATE_C3_AUTH_TOKEN = prior.authToken;
+  }
+}
+
+function runMissionCommandStage34GateI5ABatchA(runtimeAdapter, reviewAdapter, providerAdapter, input) {
+  input = input || {};
+  var flags = getMissionCommandStage34GateI5AFlags(input);
+  if (!flags.wrapperAuthorized) {
+    return makeMissionCommandStage34GateC3Blocked('i5a_wrapper_authorization_missing', 'Gate I5A Batch A requires the exact future editor-wrapper identity.');
+  }
+  return withMissionCommandStage34GateI5AScope(function() {
+    return runMissionCommandStage34GateC3CandidateV2Batch(runtimeAdapter, reviewAdapter, providerAdapter, {
+      approvedManualRun: true,
+      wrapperAuthorization: true,
+      authorizationToken: MC_STAGE34_GATE_I5A_AUTH_TOKEN,
+      runId: MC_STAGE34_GATE_I5A_RUN_ID,
+      batchKey: MC_STAGE34_GATE_I5A_BATCH_KEY,
+      runTimestamp: input.runTimestamp || ''
+    });
+  });
+}
+
+function verifyMissionCommandStage34GateI5ALocalChecks() {
+  var flags = getMissionCommandStage34GateI5AFlags();
+  var callerFlags = getMissionCommandStage34GateI5AFlags({ enabled: true });
+  var directRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var directReview = makeMissionCommandStage34GateC3ReviewAdapter();
+  var directProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var direct = runMissionCommandStage34GateI5ABatchA(directRuntime, directReview, directProvider, {});
+  var auth = makeMissionCommandStage34GateI5AWrapperAuthorization();
+  var wrongToken = runMissionCommandStage34GateI5ABatchA(directRuntime, directReview, directProvider, Object.assign({}, auth, { authorizationToken: 'wrong' }));
+  var consumedH3 = runMissionCommandStage34GateI5ABatchA(directRuntime, directReview, directProvider, {
+    approvedManualRun: true,
+    wrapperAuthorization: true,
+    authorizationToken: MC_STAGE34_GATE_C3_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_C3_RUN_ID,
+    batchKey: MC_STAGE34_GATE_C3_BATCH_KEY,
+    manifestSha256: MC_STAGE34_GATE_I5A_MANIFEST_SHA256
+  });
+  var successRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var successReview = makeMissionCommandStage34GateC3ReviewAdapter();
+  var successProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var success = runMissionCommandStage34GateI5ABatchA(successRuntime, successReview, successProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T15:45:33Z' }));
+  var duplicateProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var duplicate = runMissionCommandStage34GateI5ABatchA(successRuntime, successReview, duplicateProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T15:45:33Z' }));
+  var interruptedRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var interruptedReview = makeMissionCommandStage34GateC3ReviewAdapter();
+  var interruptedProvider = makeMissionCommandStage34GateC3FakeProviderAdapter({ failFixtureId: 'MC34-I4-F28' });
+  var interrupted = runMissionCommandStage34GateI5ABatchA(interruptedRuntime, interruptedReview, interruptedProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T15:45:33Z' }));
+  var futureFixtureRejected = withMissionCommandStage34GateI5AScope(function() {
+    return validateMissionCommandStage34GateC3Request('MC34-I4-F30', makeMissionCommandStage34GateC3Request('MC34-I4-F30').request || {});
+  });
+  var providerSchema = withMissionCommandStage34GateI5AScope(function() { return getMissionCommandStage34GateC3ProviderCandidateSchema(); });
+  return {
+    ok: flags.enabled === false &&
+      flags.killSwitchEnabled === true &&
+      callerFlags.enabled === false &&
+      direct.stopCondition === 'i5a_wrapper_authorization_missing' &&
+      wrongToken.stopCondition === 'i5a_wrapper_authorization_missing' &&
+      consumedH3.stopCondition === 'i5a_wrapper_authorization_missing' &&
+      directRuntime.rows.length === 0 &&
+      directProvider.calls.length === 0 &&
+      success.ok === true &&
+      success.childrenWritten === 4 &&
+      success.reviewRowsComplete === 4 &&
+      success.actualFetchAttempts === 4 &&
+      duplicate.status === 'duplicate_suppressed' &&
+      duplicateProvider.calls.length === 0 &&
+      interrupted.status === 'interrupted' &&
+      interrupted.failedFixtureId === 'MC34-I4-F28' &&
+      interrupted.retryCount === 0 &&
+      interrupted.fallbackUsed === false &&
+      futureFixtureRejected.ok === false &&
+      providerSchema.required.length === 28 &&
+      Object.keys(providerSchema.properties).length === 28 &&
+      providerSchema.additionalProperties === false &&
+      providerSchema.properties.fixture_id.enum.join('|') === MC_STAGE34_GATE_I5A_FIXTURE_IDS.join('|'),
+    build: MC_STAGE34_GATE_I5A_BUILD,
+    manifestSha256: MC_STAGE34_GATE_I5A_MANIFEST_SHA256,
+    fixtureIds: MC_STAGE34_GATE_I5A_FIXTURE_IDS.slice(),
+    wrapperName: MC_STAGE34_GATE_I5A_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_I5A_RUN_ID,
+    batchKey: MC_STAGE34_GATE_I5A_BATCH_KEY,
+    relatedObject: MC_STAGE34_GATE_I5A_RELATED_OBJECT,
+    model: MC_STAGE34_GATE_C3_MODEL,
+    maxCalls: MC_STAGE34_GATE_C3_MAX_CALLS,
+    timeoutSeconds: MC_STAGE34_GATE_C3_TIMEOUT_SECONDS,
+    maxInputTokensPerCall: MC_STAGE34_GATE_C3_MAX_INPUT_TOKENS_PER_CALL,
+    maxOutputTokensPerCall: MC_STAGE34_GATE_C3_MAX_OUTPUT_TOKENS_PER_CALL,
+    maxEstimatedSpendUsd: MC_STAGE34_GATE_C3_MAX_ESTIMATED_SPEND_USD,
+    flagsDefaultOff: flags.enabled === false && flags.killSwitchEnabled === true,
+    callerCannotEnable: callerFlags.enabled === false,
+    directBlocked: direct.stopCondition === 'i5a_wrapper_authorization_missing',
+    wrongTokenBlocked: wrongToken.stopCondition === 'i5a_wrapper_authorization_missing',
+    consumedH3IdentityRejected: consumedH3.stopCondition === 'i5a_wrapper_authorization_missing',
+    futureFixturesInactive: futureFixtureRejected.ok === false,
+    providerSchemaFieldCount: providerSchema.required.length,
+    successChildren: success.childrenWritten || 0,
+    successReviewRows: success.reviewRowsComplete || 0,
+    childFetchAttemptCountShape: 'per_child_1_1_1_1',
+    childFetchAttemptIndexShape: 'global_1_2_3_4',
+    duplicateSuppressedBeforeProvider: duplicate.status === 'duplicate_suppressed' && duplicateProvider.calls.length === 0,
+    interruptionDurable: interrupted.status === 'interrupted' && interrupted.retryCount === 0 && interrupted.fallbackUsed === false,
+    wrapperPrepared: false,
+    wrapperRemovedAfterManualRun: true,
+    manualRunConsumed: true,
+    manualRunSafeStatus: 'manual_run_appears_successful_parent_four_children_four_batch_a_review_rows_visible_evidence_only',
+    wrapperInvokedByIntegration: false,
+    liveServicesTouched: false,
+    routeCreated: false,
+    triggerInstall: false,
+    visibleDelivery: false,
+    dispatch: false,
+    externalWrite: false,
+    readyForOneRunDecision: false
+  };
+}
+
+// Mission Command Stage 3.4 post-H3 Gate I5B Batch B local preparation only.
+// Only F30-F33 are active inside the scoped Batch B coordinator; the wrapper is editor-only and uninvoked.
+var MC_STAGE34_GATE_I5B_BUILD = 'mmos-20260713-stage3-4-post-h3-gate-i5b-batch-b-local-preparation';
+var MC_STAGE34_GATE_I5B_ENABLED = false;
+var MC_STAGE34_GATE_I5B_KILL_SWITCH = true;
+var MC_STAGE34_GATE_I5B_MANIFEST_SHA256 = '13118bddc89cc986f36e5066c0e090941dc859a8863202b3eaede2fda6d1df64';
+var MC_STAGE34_GATE_I5B_FIXTURE_IDS = ['MC34-I4-F30', 'MC34-I4-F31', 'MC34-I4-F32', 'MC34-I4-F33'];
+var MC_STAGE34_GATE_I5B_WRAPPER_NAME = 'runMissionCommandStage34GateI5BApprovedSyntheticBatchBOnce';
+var MC_STAGE34_GATE_I5B_RUN_ID = 'mc_stage34_gate_i5b_batch_b_20260713_manual_001';
+var MC_STAGE34_GATE_I5B_BATCH_KEY = '9ec1cb85d68ea76c1b3f8ce827fa79b82095362a71b8bee6c2590e93b23b3e48';
+var MC_STAGE34_GATE_I5B_RELATED_OBJECT = 'mc34b3:9ec1cb85d68ea76c1b3f8ce827fa79b82095362a71b8bee6c2590e93b23b3e48';
+var MC_STAGE34_GATE_I5B_AUTH_TOKEN = 'stage34_gate_i5b_batch_b_manual_001_8b6fe152d09023c364c2730d0344817c538ccf899f657a7f';
+
+function getMissionCommandStage34GateI5BFixtureMap() {
+  return {
+    'MC34-I4-F30': {
+      revised_id: 'MC34-I4-F30-B1', role_owner: 'chief_of_staff', family: 'chief_coordination', priority: 'important',
+      object_type: 'meeting_brief', object_label: 'Synthetic Review Sigma schedule brief',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'], grounding_state: 'grounded_synthetic',
+      grounding_evidence: 'Two synthetic review windows now overlap in the fixed schedule fixture.',
+      decision_needed: 'Review which synthetic dependency should retain the shared review window.',
+      why_now: 'A new synthetic dependency caused the two review windows to overlap today.',
+      material_change_code: 'dependency_changed', material_change_summary: 'The schedule changed from independent windows to one shared dependency window.',
+      next_move_type: 'review_dependency', next_move_text: 'Review which dependency should retain the shared review window.', next_move_count: 1,
+      candidate_text: 'Synthetic Review Sigma now has two review windows sharing one dependency window. Review which dependency should retain that window.',
+      confidence: 0.84, should_deliver: false, escalated_from: '', escalated_to: '', chief_context_summary: '', executive_decision_required: '', companion_chief_candidate_state: '', suppression_evidence_state: ''
+    },
+    'MC34-I4-F31': {
+      revised_id: 'MC34-I4-F31-B1', role_owner: 'chief_of_staff', family: 'chief_coordination', priority: 'important',
+      object_type: 'handoff_dependency', object_label: 'Synthetic Handoff Tau sequence review',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'], grounding_state: 'grounded_hash_linked',
+      grounding_evidence: 'The synthetic handoff has a fixed sequence-state receipt hash.',
+      decision_needed: 'Review the proposed owner for the next synthetic handoff step.',
+      why_now: 'The handoff state changed from parked to ready for one ownership review.',
+      material_change_code: 'state_changed', material_change_summary: 'The handoff changed from parked dependency to ready-for-owner-review.',
+      next_move_type: 'review_owner', next_move_text: 'Review the proposed owner for the next handoff step.', next_move_count: 1,
+      candidate_text: 'Synthetic Handoff Tau changed from parked to ready for owner review. Review the proposed owner for the next handoff step.',
+      confidence: 0.83, should_deliver: false, escalated_from: '', escalated_to: '', chief_context_summary: '', executive_decision_required: '', companion_chief_candidate_state: '', suppression_evidence_state: ''
+    },
+    'MC34-I4-F32': {
+      revised_id: 'MC34-I4-F32-B1', role_owner: 'chief_of_staff', family: 'material_change_reopen', priority: 'critical',
+      object_type: 'project_decision', object_label: 'Synthetic Release Upsilon due-window review',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'], grounding_state: 'synthetic_fixture_only',
+      grounding_evidence: 'The synthetic release fixture records a due-window change from later to today.',
+      decision_needed: 'Review the dependency reopened by the changed synthetic due window.',
+      why_now: 'The synthetic due window moved to today, invalidating the prior quiet state.',
+      material_change_code: 'due_date_changed', material_change_summary: 'The release due window changed from next week to today.',
+      next_move_type: 'review_changed_due_date', next_move_text: 'Review the dependency reopened by the changed due date.', next_move_count: 1,
+      candidate_text: 'Synthetic Release Upsilon moved its due window from next week to today. Review the dependency reopened by that change.',
+      confidence: 0.86, should_deliver: false, escalated_from: '', escalated_to: '', chief_context_summary: '', executive_decision_required: '', companion_chief_candidate_state: '', suppression_evidence_state: ''
+    },
+    'MC34-I4-F33': {
+      revised_id: 'MC34-I4-F33-B1', role_owner: 'chief_of_staff', family: 'material_change_reopen', priority: 'important',
+      object_type: 'handoff_dependency', object_label: 'Synthetic Dependency Phi blocker review',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'], grounding_state: 'grounded_synthetic',
+      grounding_evidence: 'The synthetic blocker fixture changed after an approved dependency became unavailable.',
+      decision_needed: 'Review the newly blocked synthetic dependency.',
+      why_now: 'The dependency changed from available to blocked during the current review window.',
+      material_change_code: 'blocker_changed', material_change_summary: 'The handoff changed from dependency-available to blocked on a new synthetic condition.',
+      next_move_type: 'review_dependency', next_move_text: 'Review the newly blocked synthetic dependency.', next_move_count: 1,
+      candidate_text: 'Synthetic Dependency Phi changed from available to blocked during the current review window. Review the newly blocked dependency.',
+      confidence: 0.82, should_deliver: false, escalated_from: '', escalated_to: '', chief_context_summary: '', executive_decision_required: '', companion_chief_candidate_state: '', suppression_evidence_state: ''
+    }
+  };
+}
+
+function getMissionCommandStage34GateI5BFlags(input) {
+  input = input || {};
+  var authorized = input.approvedManualRun === true && input.wrapperAuthorization === true &&
+    input.authorizationToken === MC_STAGE34_GATE_I5B_AUTH_TOKEN && input.runId === MC_STAGE34_GATE_I5B_RUN_ID &&
+    input.batchKey === MC_STAGE34_GATE_I5B_BATCH_KEY && input.manifestSha256 === MC_STAGE34_GATE_I5B_MANIFEST_SHA256;
+  return {
+    enabled: MC_STAGE34_GATE_I5B_ENABLED === true && MC_STAGE34_GATE_I5B_KILL_SWITCH !== true,
+    killSwitchEnabled: MC_STAGE34_GATE_I5B_KILL_SWITCH === true,
+    wrapperAuthorized: authorized,
+    routeEnabled: false, triggerEnabled: false, visibleDeliveryEnabled: false, dispatchEnabled: false,
+    externalWriteEnabled: false, retryEnabled: false, fallbackEnabled: false
+  };
+}
+
+function makeMissionCommandStage34GateI5BWrapperAuthorization() {
+  return { approvedManualRun: true, wrapperAuthorization: true, authorizationToken: MC_STAGE34_GATE_I5B_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_I5B_RUN_ID, batchKey: MC_STAGE34_GATE_I5B_BATCH_KEY, manifestSha256: MC_STAGE34_GATE_I5B_MANIFEST_SHA256 };
+}
+
+function withMissionCommandStage34GateI5BScope(callback) {
+  var prior = { fixtureIds: MC_STAGE34_GATE_B3A_FIXTURE_IDS, build: MC_STAGE34_GATE_C3_BUILD,
+    wrapperName: MC_STAGE34_GATE_C3_WRAPPER_NAME, runId: MC_STAGE34_GATE_C3_RUN_ID,
+    batchKey: MC_STAGE34_GATE_C3_BATCH_KEY, relatedObject: MC_STAGE34_GATE_C3_RELATED_OBJECT,
+    authToken: MC_STAGE34_GATE_C3_AUTH_TOKEN };
+  MC_STAGE34_GATE_B3A_FIXTURE_IDS = MC_STAGE34_GATE_I5B_FIXTURE_IDS.slice();
+  MC_STAGE34_GATE_C3_BUILD = MC_STAGE34_GATE_I5B_BUILD;
+  MC_STAGE34_GATE_C3_WRAPPER_NAME = MC_STAGE34_GATE_I5B_WRAPPER_NAME;
+  MC_STAGE34_GATE_C3_RUN_ID = MC_STAGE34_GATE_I5B_RUN_ID;
+  MC_STAGE34_GATE_C3_BATCH_KEY = MC_STAGE34_GATE_I5B_BATCH_KEY;
+  MC_STAGE34_GATE_C3_RELATED_OBJECT = MC_STAGE34_GATE_I5B_RELATED_OBJECT;
+  MC_STAGE34_GATE_C3_AUTH_TOKEN = MC_STAGE34_GATE_I5B_AUTH_TOKEN;
+  try { return callback(); }
+  finally {
+    MC_STAGE34_GATE_B3A_FIXTURE_IDS = prior.fixtureIds; MC_STAGE34_GATE_C3_BUILD = prior.build;
+    MC_STAGE34_GATE_C3_WRAPPER_NAME = prior.wrapperName; MC_STAGE34_GATE_C3_RUN_ID = prior.runId;
+    MC_STAGE34_GATE_C3_BATCH_KEY = prior.batchKey; MC_STAGE34_GATE_C3_RELATED_OBJECT = prior.relatedObject;
+    MC_STAGE34_GATE_C3_AUTH_TOKEN = prior.authToken;
+  }
+}
+
+function runMissionCommandStage34GateI5BBatchB(runtimeAdapter, reviewAdapter, providerAdapter, input) {
+  input = input || {};
+  var flags = getMissionCommandStage34GateI5BFlags(input);
+  if (!flags.wrapperAuthorized) return makeMissionCommandStage34GateC3Blocked('i5b_wrapper_authorization_missing', 'Gate I5B Batch B requires the exact future editor-wrapper identity.');
+  return withMissionCommandStage34GateI5BScope(function() {
+    return runMissionCommandStage34GateC3CandidateV2Batch(runtimeAdapter, reviewAdapter, providerAdapter, {
+      approvedManualRun: true, wrapperAuthorization: true, authorizationToken: MC_STAGE34_GATE_I5B_AUTH_TOKEN,
+      runId: MC_STAGE34_GATE_I5B_RUN_ID, batchKey: MC_STAGE34_GATE_I5B_BATCH_KEY, runTimestamp: input.runTimestamp || ''
+    });
+  });
+}
+
+function verifyMissionCommandStage34GateI5BLocalChecks() {
+  var flags = getMissionCommandStage34GateI5BFlags();
+  var directRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var directProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var direct = runMissionCommandStage34GateI5BBatchB(directRuntime, makeMissionCommandStage34GateC3ReviewAdapter(), directProvider, {});
+  var auth = makeMissionCommandStage34GateI5BWrapperAuthorization();
+  var consumedI5A = runMissionCommandStage34GateI5BBatchB(directRuntime, makeMissionCommandStage34GateC3ReviewAdapter(), directProvider,
+    Object.assign({}, auth, { authorizationToken: MC_STAGE34_GATE_I5A_AUTH_TOKEN, runId: MC_STAGE34_GATE_I5A_RUN_ID, batchKey: MC_STAGE34_GATE_I5A_BATCH_KEY }));
+  var successRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var successReview = makeMissionCommandStage34GateC3ReviewAdapter();
+  var successProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var success = runMissionCommandStage34GateI5BBatchB(successRuntime, successReview, successProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T18:00:00Z' }));
+  var duplicateProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var duplicate = runMissionCommandStage34GateI5BBatchB(successRuntime, successReview, duplicateProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T18:00:00Z' }));
+  var interruptedProvider = makeMissionCommandStage34GateC3FakeProviderAdapter({ failFixtureId: 'MC34-I4-F32' });
+  var interrupted = runMissionCommandStage34GateI5BBatchB(makeMissionCommandStage34GateB3AFakeRuntimeAdapter(), makeMissionCommandStage34GateC3ReviewAdapter(), interruptedProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T18:00:00Z' }));
+  var futureRejected = withMissionCommandStage34GateI5BScope(function() { return validateMissionCommandStage34GateC3Request('MC34-I4-F34', makeMissionCommandStage34GateC3Request('MC34-I4-F34').request || {}); });
+  var schema = withMissionCommandStage34GateI5BScope(function() { return getMissionCommandStage34GateC3ProviderCandidateSchema(); });
+  return {
+    ok: flags.enabled === false && flags.killSwitchEnabled === true && direct.stopCondition === 'i5b_wrapper_authorization_missing' &&
+      consumedI5A.stopCondition === 'i5b_wrapper_authorization_missing' && directRuntime.rows.length === 0 && directProvider.calls.length === 0 &&
+      success.ok === true && success.childrenWritten === 4 && success.reviewRowsComplete === 4 && success.actualFetchAttempts === 4 &&
+      duplicate.status === 'duplicate_suppressed' && duplicateProvider.calls.length === 0 && interrupted.status === 'interrupted' &&
+      interrupted.failedFixtureId === 'MC34-I4-F32' && interrupted.retryCount === 0 && interrupted.fallbackUsed === false &&
+      futureRejected.ok === false && schema.required.length === 28 && Object.keys(schema.properties).length === 28 &&
+      schema.additionalProperties === false && schema.properties.fixture_id.enum.join('|') === MC_STAGE34_GATE_I5B_FIXTURE_IDS.join('|'),
+    build: MC_STAGE34_GATE_I5B_BUILD, fixtureIds: MC_STAGE34_GATE_I5B_FIXTURE_IDS.slice(), wrapperName: MC_STAGE34_GATE_I5B_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_I5B_RUN_ID, batchKey: MC_STAGE34_GATE_I5B_BATCH_KEY, relatedObject: MC_STAGE34_GATE_I5B_RELATED_OBJECT,
+    flagsDefaultOff: flags.enabled === false && flags.killSwitchEnabled === true, directBlocked: direct.stopCondition === 'i5b_wrapper_authorization_missing',
+    consumedI5AIdentityRejected: consumedI5A.stopCondition === 'i5b_wrapper_authorization_missing', futureFixturesInactive: futureRejected.ok === false,
+    successStatus: success.status || '', successStopCondition: success.stopCondition || '', successFailedFixtureId: success.failedFixtureId || '', successChildren: success.childrenWritten || 0, successReviewRows: success.reviewRowsComplete || 0,
+    duplicateSuppressedBeforeProvider: duplicate.status === 'duplicate_suppressed' && duplicateProvider.calls.length === 0,
+    interruptionDurable: interrupted.status === 'interrupted' && interrupted.retryCount === 0 && interrupted.fallbackUsed === false,
+    wrapperPrepared: false, wrapperRemovedAfterManualRun: true, manualRunConsumed: true,
+    manualRunSafeStatus: 'manual_run_appears_successful_parent_four_children_four_batch_b_review_rows_visible_evidence_only',
+    wrapperInvokedByIntegration: false, liveServicesTouched: false, routeCreated: false,
+    triggerInstall: false, visibleDelivery: false, dispatch: false, externalWrite: false, readyForOneRunDecision: false
+  };
+}
+
+// Mission Command Stage 3.4 post-H3 Gate I5C Batch C local preparation only.
+// Only F34-F37 are active inside the scoped Batch C coordinator; F38 remains inactive.
+var MC_STAGE34_GATE_I5C_BUILD = 'mmos-20260713-stage3-4-post-h3-gate-i5c-batch-c-local-preparation';
+var MC_STAGE34_GATE_I5C_ENABLED = false;
+var MC_STAGE34_GATE_I5C_KILL_SWITCH = true;
+var MC_STAGE34_GATE_I5C_MANIFEST_SHA256 = '13118bddc89cc986f36e5066c0e090941dc859a8863202b3eaede2fda6d1df64';
+var MC_STAGE34_GATE_I5C_FIXTURE_IDS = ['MC34-I4-F34', 'MC34-I4-F35', 'MC34-I4-F36', 'MC34-I4-F37'];
+var MC_STAGE34_GATE_I5C_WRAPPER_NAME = 'runMissionCommandStage34GateI5CApprovedSyntheticBatchCOnce';
+var MC_STAGE34_GATE_I5C_RUN_ID = 'mc_stage34_gate_i5c_batch_c_20260713_manual_001';
+var MC_STAGE34_GATE_I5C_BATCH_KEY = 'b8af4cb63d5cfa9d3a7fd2c115ac3d4cd7597f5b89f4f7fd4d0c93510f79ec36';
+var MC_STAGE34_GATE_I5C_RELATED_OBJECT = 'mc34b3:b8af4cb63d5cfa9d3a7fd2c115ac3d4cd7597f5b89f4f7fd4d0c93510f79ec36';
+var MC_STAGE34_GATE_I5C_AUTH_TOKEN = 'stage34_gate_i5c_batch_c_manual_001_1becb1e8e5c8bd88ff6ad07fbf01216d17558aafe18e44c546b76a63c';
+
+function getMissionCommandStage34GateI5CFixtureMap() {
+  return {
+    'MC34-I4-F34': {
+      revised_id: 'MC34-I4-F34-C1', role_owner: 'chief_of_staff', family: 'material_change_reopen', priority: 'important',
+      object_type: 'review_queue', object_label: 'Synthetic Queue Chi reopened review',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'], grounding_state: 'grounded_hash_linked',
+      grounding_evidence: 'A prior synthetic suppression hash is linked to a newly eligible review state.',
+      decision_needed: 'Review whether the newly changed synthetic queue should reopen.',
+      why_now: 'A material queue change invalidated the prior suppression decision today.',
+      material_change_code: 'suppression_reopen', material_change_summary: 'The queue changed from unchanged-suppressed to newly eligible after its review state moved.',
+      next_move_type: 'review', next_move_text: 'Review whether the newly changed synthetic queue should reopen.', next_move_count: 1,
+      candidate_text: 'Synthetic Queue Chi changed from suppressed to newly eligible after its review state moved. Review whether the queue should reopen.',
+      confidence: 0.84, should_deliver: false, escalated_from: '', escalated_to: '', chief_context_summary: '', executive_decision_required: '', companion_chief_candidate_state: '', suppression_evidence_state: ''
+    },
+    'MC34-I4-F35': {
+      revised_id: 'MC34-I4-F35-C1', role_owner: 'executive_assistant', family: 'attributed_chief_escalation', priority: 'important',
+      object_type: 'campaign_direction', object_label: 'Synthetic Campaign Psi tradeoff decision',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link', 'chief_escalation_context'], grounding_state: 'synthetic_fixture_only',
+      grounding_evidence: 'Chief context identifies two synthetic campaign paths competing for one review window.',
+      decision_needed: 'Choose which synthetic campaign path receives the review window.',
+      why_now: 'Chief moved the competing campaign paths into one A1XX decision today.',
+      material_change_code: 'chief_escalation_required', material_change_summary: 'Chief coordination changed into an A1XX tradeoff because only one campaign path can use the review window.',
+      next_move_type: 'choose_approval_path', next_move_text: 'Choose which campaign path receives the review window.', next_move_count: 1,
+      candidate_text: 'Chief moved two Synthetic Campaign Psi paths into one decision because they compete for one review window. Choose which path receives it.',
+      confidence: 0.86, should_deliver: false, escalated_from: 'chief_of_staff', escalated_to: 'executive_assistant',
+      chief_context_summary: 'Chief identified two synthetic campaign paths competing for one review window.',
+      executive_decision_required: 'Choose which synthetic campaign path receives the review window.',
+      companion_chief_candidate_state: 'merged_into_escalation', suppression_evidence_state: 'verified_hash_link'
+    },
+    'MC34-I4-F36': {
+      revised_id: 'MC34-I4-F36-C1', role_owner: 'executive_assistant', family: 'attributed_chief_escalation', priority: 'critical',
+      object_type: 'project_decision', object_label: 'Synthetic Launch Omega window decision',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link', 'chief_escalation_context'], grounding_state: 'grounded_hash_linked',
+      grounding_evidence: 'Chief context links two synthetic launch windows to one fixed readiness receipt hash.',
+      decision_needed: 'Choose the synthetic launch window to retain.',
+      why_now: 'Chief identified that the two launch windows now compete for the same readiness slot today.',
+      material_change_code: 'chief_escalation_required', material_change_summary: 'Chief coordination changed into an A1XX launch-window decision after the readiness slots converged.',
+      next_move_type: 'choose_direction', next_move_text: 'Choose the synthetic launch window to retain.', next_move_count: 1,
+      candidate_text: 'Chief linked two Synthetic Launch Omega windows to one readiness slot. Choose the launch window to retain.',
+      confidence: 0.88, should_deliver: false, escalated_from: 'chief_of_staff', escalated_to: 'executive_assistant',
+      chief_context_summary: 'Chief linked two synthetic launch windows to one fixed readiness receipt hash.',
+      executive_decision_required: 'Choose the synthetic launch window to retain.',
+      companion_chief_candidate_state: 'suppressed_same_family', suppression_evidence_state: 'verified_hash_link'
+    },
+    'MC34-I4-F37': {
+      revised_id: 'MC34-I4-F37-C1', role_owner: 'chief_of_staff', family: 'chief_coordination', priority: 'important',
+      object_type: 'other_synthetic', object_label: 'Synthetic Return Rho current-priority review',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'], grounding_state: 'synthetic_fixture_only',
+      grounding_evidence: 'The synthetic return fixture exposes one current Chief priority and suppresses historical backlog.',
+      decision_needed: 'Review the one current synthetic priority retained after return.',
+      why_now: 'The return state moved from dormant to one current review item while older items remain parked.',
+      material_change_code: 'review_transition_changed', material_change_summary: 'The return changed from dormant to one current Chief review item without backlog replay.',
+      next_move_type: 'review', next_move_text: 'Review the one current synthetic priority retained after return.', next_move_count: 1,
+      candidate_text: 'Synthetic Return Rho moved from dormant to one current Chief priority while historical backlog remains parked. Review the retained priority.',
+      confidence: 0.83, should_deliver: false, escalated_from: '', escalated_to: '', chief_context_summary: '', executive_decision_required: '', companion_chief_candidate_state: '', suppression_evidence_state: ''
+    }
+  };
+}
+
+function getMissionCommandStage34GateI5CFlags(input) {
+  input = input || {};
+  var authorized = input.approvedManualRun === true && input.wrapperAuthorization === true &&
+    input.authorizationToken === MC_STAGE34_GATE_I5C_AUTH_TOKEN && input.runId === MC_STAGE34_GATE_I5C_RUN_ID &&
+    input.batchKey === MC_STAGE34_GATE_I5C_BATCH_KEY && input.manifestSha256 === MC_STAGE34_GATE_I5C_MANIFEST_SHA256;
+  return {
+    enabled: MC_STAGE34_GATE_I5C_ENABLED === true && MC_STAGE34_GATE_I5C_KILL_SWITCH !== true,
+    killSwitchEnabled: MC_STAGE34_GATE_I5C_KILL_SWITCH === true, wrapperAuthorized: authorized,
+    routeEnabled: false, triggerEnabled: false, visibleDeliveryEnabled: false, dispatchEnabled: false,
+    externalWriteEnabled: false, retryEnabled: false, fallbackEnabled: false
+  };
+}
+
+function makeMissionCommandStage34GateI5CWrapperAuthorization() {
+  return { approvedManualRun: true, wrapperAuthorization: true, authorizationToken: MC_STAGE34_GATE_I5C_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_I5C_RUN_ID, batchKey: MC_STAGE34_GATE_I5C_BATCH_KEY, manifestSha256: MC_STAGE34_GATE_I5C_MANIFEST_SHA256 };
+}
+
+function withMissionCommandStage34GateI5CScope(callback) {
+  var prior = { fixtureIds: MC_STAGE34_GATE_B3A_FIXTURE_IDS, build: MC_STAGE34_GATE_C3_BUILD,
+    wrapperName: MC_STAGE34_GATE_C3_WRAPPER_NAME, runId: MC_STAGE34_GATE_C3_RUN_ID,
+    batchKey: MC_STAGE34_GATE_C3_BATCH_KEY, relatedObject: MC_STAGE34_GATE_C3_RELATED_OBJECT, authToken: MC_STAGE34_GATE_C3_AUTH_TOKEN };
+  MC_STAGE34_GATE_B3A_FIXTURE_IDS = MC_STAGE34_GATE_I5C_FIXTURE_IDS.slice();
+  MC_STAGE34_GATE_C3_BUILD = MC_STAGE34_GATE_I5C_BUILD; MC_STAGE34_GATE_C3_WRAPPER_NAME = MC_STAGE34_GATE_I5C_WRAPPER_NAME;
+  MC_STAGE34_GATE_C3_RUN_ID = MC_STAGE34_GATE_I5C_RUN_ID; MC_STAGE34_GATE_C3_BATCH_KEY = MC_STAGE34_GATE_I5C_BATCH_KEY;
+  MC_STAGE34_GATE_C3_RELATED_OBJECT = MC_STAGE34_GATE_I5C_RELATED_OBJECT; MC_STAGE34_GATE_C3_AUTH_TOKEN = MC_STAGE34_GATE_I5C_AUTH_TOKEN;
+  try { return callback(); }
+  finally {
+    MC_STAGE34_GATE_B3A_FIXTURE_IDS = prior.fixtureIds; MC_STAGE34_GATE_C3_BUILD = prior.build;
+    MC_STAGE34_GATE_C3_WRAPPER_NAME = prior.wrapperName; MC_STAGE34_GATE_C3_RUN_ID = prior.runId;
+    MC_STAGE34_GATE_C3_BATCH_KEY = prior.batchKey; MC_STAGE34_GATE_C3_RELATED_OBJECT = prior.relatedObject; MC_STAGE34_GATE_C3_AUTH_TOKEN = prior.authToken;
+  }
+}
+
+function runMissionCommandStage34GateI5CBatchC(runtimeAdapter, reviewAdapter, providerAdapter, input) {
+  input = input || {};
+  var flags = getMissionCommandStage34GateI5CFlags(input);
+  if (!flags.wrapperAuthorized) return makeMissionCommandStage34GateC3Blocked('i5c_wrapper_authorization_missing', 'Gate I5C Batch C requires the exact future editor-wrapper identity.');
+  return withMissionCommandStage34GateI5CScope(function() {
+    return runMissionCommandStage34GateC3CandidateV2Batch(runtimeAdapter, reviewAdapter, providerAdapter, {
+      approvedManualRun: true, wrapperAuthorization: true, authorizationToken: MC_STAGE34_GATE_I5C_AUTH_TOKEN,
+      runId: MC_STAGE34_GATE_I5C_RUN_ID, batchKey: MC_STAGE34_GATE_I5C_BATCH_KEY, runTimestamp: input.runTimestamp || ''
+    });
+  });
+}
+
+function verifyMissionCommandStage34GateI5CLocalChecks() {
+  var flags = getMissionCommandStage34GateI5CFlags();
+  var directRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var directProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var direct = runMissionCommandStage34GateI5CBatchC(directRuntime, makeMissionCommandStage34GateC3ReviewAdapter(), directProvider, {});
+  var auth = makeMissionCommandStage34GateI5CWrapperAuthorization();
+  var consumedI5B = runMissionCommandStage34GateI5CBatchC(directRuntime, makeMissionCommandStage34GateC3ReviewAdapter(), directProvider,
+    Object.assign({}, auth, { authorizationToken: MC_STAGE34_GATE_I5B_AUTH_TOKEN, runId: MC_STAGE34_GATE_I5B_RUN_ID, batchKey: MC_STAGE34_GATE_I5B_BATCH_KEY }));
+  var successRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var successReview = makeMissionCommandStage34GateC3ReviewAdapter();
+  var successProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var success = runMissionCommandStage34GateI5CBatchC(successRuntime, successReview, successProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T19:30:00Z' }));
+  var duplicateProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var duplicate = runMissionCommandStage34GateI5CBatchC(successRuntime, successReview, duplicateProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T19:30:00Z' }));
+  var interruptedProvider = makeMissionCommandStage34GateC3FakeProviderAdapter({ failFixtureId: 'MC34-I4-F36' });
+  var interrupted = runMissionCommandStage34GateI5CBatchC(makeMissionCommandStage34GateB3AFakeRuntimeAdapter(), makeMissionCommandStage34GateC3ReviewAdapter(), interruptedProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T19:30:00Z' }));
+  var f38Rejected = withMissionCommandStage34GateI5CScope(function() { return validateMissionCommandStage34GateC3Request('MC34-I4-F38', makeMissionCommandStage34GateC3Request('MC34-I4-F38').request || {}); });
+  var schema = withMissionCommandStage34GateI5CScope(function() { return getMissionCommandStage34GateC3ProviderCandidateSchema(); });
+  return {
+    ok: flags.enabled === false && flags.killSwitchEnabled === true && direct.stopCondition === 'i5c_wrapper_authorization_missing' &&
+      consumedI5B.stopCondition === 'i5c_wrapper_authorization_missing' && directRuntime.rows.length === 0 && directProvider.calls.length === 0 &&
+      success.ok === true && success.childrenWritten === 4 && success.reviewRowsComplete === 4 && success.actualFetchAttempts === 4 &&
+      duplicate.status === 'duplicate_suppressed' && duplicateProvider.calls.length === 0 && interrupted.status === 'interrupted' &&
+      interrupted.failedFixtureId === 'MC34-I4-F36' && interrupted.retryCount === 0 && interrupted.fallbackUsed === false &&
+      f38Rejected.ok === false && schema.required.length === 28 && Object.keys(schema.properties).length === 28 &&
+      schema.additionalProperties === false && schema.properties.fixture_id.enum.join('|') === MC_STAGE34_GATE_I5C_FIXTURE_IDS.join('|'),
+    build: MC_STAGE34_GATE_I5C_BUILD, fixtureIds: MC_STAGE34_GATE_I5C_FIXTURE_IDS.slice(), wrapperName: MC_STAGE34_GATE_I5C_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_I5C_RUN_ID, batchKey: MC_STAGE34_GATE_I5C_BATCH_KEY, relatedObject: MC_STAGE34_GATE_I5C_RELATED_OBJECT,
+    flagsDefaultOff: flags.enabled === false && flags.killSwitchEnabled === true, directBlocked: direct.stopCondition === 'i5c_wrapper_authorization_missing',
+    consumedI5BIdentityRejected: consumedI5B.stopCondition === 'i5c_wrapper_authorization_missing', f38Inactive: f38Rejected.ok === false,
+    successChildren: success.childrenWritten || 0, successReviewRows: success.reviewRowsComplete || 0,
+    duplicateSuppressedBeforeProvider: duplicate.status === 'duplicate_suppressed' && duplicateProvider.calls.length === 0,
+    interruptionDurable: interrupted.status === 'interrupted' && interrupted.retryCount === 0 && interrupted.fallbackUsed === false,
+    wrapperPrepared: false, wrapperRemovedAfterManualRun: true, manualRunConsumed: true,
+    manualRunSafeStatus: 'manual_run_appears_successful_parent_four_children_four_batch_c_review_rows_visible_evidence_only',
+    wrapperInvokedByIntegration: false, liveServicesTouched: false, routeCreated: false,
+    triggerInstall: false, visibleDelivery: false, dispatch: false, externalWrite: false, readyForOneRunDecision: false
+  };
+}
+
+// Mission Command Stage 3.4 post-H3 Gate I5D Batch D local preparation only.
+// Only final frozen fixture F38 is active inside the scoped coordinator; the wrapper is editor-only and uninvoked.
+var MC_STAGE34_GATE_I5D_BUILD = 'mmos-20260713-stage3-4-post-h3-gate-i5d-batch-d-local-preparation';
+var MC_STAGE34_GATE_I5D_ENABLED = false;
+var MC_STAGE34_GATE_I5D_KILL_SWITCH = true;
+var MC_STAGE34_GATE_I5D_MANIFEST_SHA256 = '13118bddc89cc986f36e5066c0e090941dc859a8863202b3eaede2fda6d1df64';
+var MC_STAGE34_GATE_I5D_FIXTURE_IDS = ['MC34-I4-F38'];
+var MC_STAGE34_GATE_I5D_WRAPPER_NAME = 'runMissionCommandStage34GateI5DApprovedSyntheticBatchDOnce';
+var MC_STAGE34_GATE_I5D_RUN_ID = 'mc_stage34_gate_i5d_batch_d_20260713_manual_001';
+var MC_STAGE34_GATE_I5D_BATCH_KEY = '790a46a38f3936d93fd7ca265588d76622cdab0d2739838135b9d1cf761306c2';
+var MC_STAGE34_GATE_I5D_RELATED_OBJECT = 'mc34b3:790a46a38f3936d93fd7ca265588d76622cdab0d2739838135b9d1cf761306c2';
+var MC_STAGE34_GATE_I5D_AUTH_TOKEN = 'stage34_gate_i5d_batch_d_manual_001_6a1b94a7d1d78e97ace28fd11c53052f09566fa4ef43cd8ac0798b7eb75635c2';
+
+function getMissionCommandStage34GateI5DFixtureMap() {
+  return {
+    'MC34-I4-F38': {
+      revised_id: 'MC34-I4-F38-D1', role_owner: 'executive_assistant', family: 'executive_assistant_critical', priority: 'critical',
+      object_type: 'project_decision', object_label: 'Synthetic Project Eta risk-threshold decision',
+      source_labels: ['synthetic_shadow_fixture', 'runtime_receipt_hash_link'], grounding_state: 'grounded_synthetic',
+      grounding_evidence: 'The synthetic project fixture records a risk-state change above its review threshold.',
+      decision_needed: 'Choose approve or revise for the synthetic risk response.',
+      why_now: 'The synthetic risk state crossed its review threshold today while downstream work remains parked.',
+      material_change_code: 'state_changed', material_change_summary: 'The project changed from below-threshold monitoring to above-threshold A1XX review.',
+      next_move_type: 'approve_or_revise', next_move_text: 'Choose approve or revise for the synthetic risk response.', next_move_count: 1,
+      candidate_text: 'Synthetic Project Eta crossed its risk review threshold while downstream work remains parked. Choose approve or revise for the synthetic response.',
+      confidence: 0.89, should_deliver: false, escalated_from: '', escalated_to: '', chief_context_summary: '', executive_decision_required: '', companion_chief_candidate_state: '', suppression_evidence_state: ''
+    }
+  };
+}
+
+function getMissionCommandStage34GateI5DFlags(input) {
+  input = input || {};
+  var authorized = input.approvedManualRun === true && input.wrapperAuthorization === true &&
+    input.authorizationToken === MC_STAGE34_GATE_I5D_AUTH_TOKEN && input.runId === MC_STAGE34_GATE_I5D_RUN_ID &&
+    input.batchKey === MC_STAGE34_GATE_I5D_BATCH_KEY && input.manifestSha256 === MC_STAGE34_GATE_I5D_MANIFEST_SHA256;
+  return {
+    enabled: MC_STAGE34_GATE_I5D_ENABLED === true && MC_STAGE34_GATE_I5D_KILL_SWITCH !== true,
+    killSwitchEnabled: MC_STAGE34_GATE_I5D_KILL_SWITCH === true, wrapperAuthorized: authorized,
+    routeEnabled: false, triggerEnabled: false, visibleDeliveryEnabled: false, dispatchEnabled: false,
+    externalWriteEnabled: false, retryEnabled: false, fallbackEnabled: false
+  };
+}
+
+function makeMissionCommandStage34GateI5DWrapperAuthorization() {
+  return { approvedManualRun: true, wrapperAuthorization: true, authorizationToken: MC_STAGE34_GATE_I5D_AUTH_TOKEN,
+    runId: MC_STAGE34_GATE_I5D_RUN_ID, batchKey: MC_STAGE34_GATE_I5D_BATCH_KEY, manifestSha256: MC_STAGE34_GATE_I5D_MANIFEST_SHA256 };
+}
+
+function withMissionCommandStage34GateI5DScope(callback) {
+  var prior = { fixtureIds: MC_STAGE34_GATE_B3A_FIXTURE_IDS, build: MC_STAGE34_GATE_C3_BUILD,
+    wrapperName: MC_STAGE34_GATE_C3_WRAPPER_NAME, runId: MC_STAGE34_GATE_C3_RUN_ID,
+    batchKey: MC_STAGE34_GATE_C3_BATCH_KEY, relatedObject: MC_STAGE34_GATE_C3_RELATED_OBJECT, authToken: MC_STAGE34_GATE_C3_AUTH_TOKEN };
+  MC_STAGE34_GATE_B3A_FIXTURE_IDS = MC_STAGE34_GATE_I5D_FIXTURE_IDS.slice();
+  MC_STAGE34_GATE_C3_BUILD = MC_STAGE34_GATE_I5D_BUILD; MC_STAGE34_GATE_C3_WRAPPER_NAME = MC_STAGE34_GATE_I5D_WRAPPER_NAME;
+  MC_STAGE34_GATE_C3_RUN_ID = MC_STAGE34_GATE_I5D_RUN_ID; MC_STAGE34_GATE_C3_BATCH_KEY = MC_STAGE34_GATE_I5D_BATCH_KEY;
+  MC_STAGE34_GATE_C3_RELATED_OBJECT = MC_STAGE34_GATE_I5D_RELATED_OBJECT; MC_STAGE34_GATE_C3_AUTH_TOKEN = MC_STAGE34_GATE_I5D_AUTH_TOKEN;
+  try { return callback(); }
+  finally {
+    MC_STAGE34_GATE_B3A_FIXTURE_IDS = prior.fixtureIds; MC_STAGE34_GATE_C3_BUILD = prior.build;
+    MC_STAGE34_GATE_C3_WRAPPER_NAME = prior.wrapperName; MC_STAGE34_GATE_C3_RUN_ID = prior.runId;
+    MC_STAGE34_GATE_C3_BATCH_KEY = prior.batchKey; MC_STAGE34_GATE_C3_RELATED_OBJECT = prior.relatedObject; MC_STAGE34_GATE_C3_AUTH_TOKEN = prior.authToken;
+  }
+}
+
+function runMissionCommandStage34GateI5DBatchD(runtimeAdapter, reviewAdapter, providerAdapter, input) {
+  input = input || {};
+  var flags = getMissionCommandStage34GateI5DFlags(input);
+  if (!flags.wrapperAuthorized) return makeMissionCommandStage34GateC3Blocked('i5d_wrapper_authorization_missing', 'Gate I5D Batch D requires the exact future editor-wrapper identity.');
+  return withMissionCommandStage34GateI5DScope(function() {
+    return runMissionCommandStage34GateC3CandidateV2Batch(runtimeAdapter, reviewAdapter, providerAdapter, {
+      approvedManualRun: true, wrapperAuthorization: true, authorizationToken: MC_STAGE34_GATE_I5D_AUTH_TOKEN,
+      runId: MC_STAGE34_GATE_I5D_RUN_ID, batchKey: MC_STAGE34_GATE_I5D_BATCH_KEY, runTimestamp: input.runTimestamp || ''
+    });
+  });
+}
+
+function verifyMissionCommandStage34GateI5DLocalChecks() {
+  var flags = getMissionCommandStage34GateI5DFlags();
+  var directRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var directProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var direct = runMissionCommandStage34GateI5DBatchD(directRuntime, makeMissionCommandStage34GateC3ReviewAdapter(), directProvider, {});
+  var auth = makeMissionCommandStage34GateI5DWrapperAuthorization();
+  var consumedI5C = runMissionCommandStage34GateI5DBatchD(directRuntime, makeMissionCommandStage34GateC3ReviewAdapter(), directProvider,
+    Object.assign({}, auth, { authorizationToken: MC_STAGE34_GATE_I5C_AUTH_TOKEN, runId: MC_STAGE34_GATE_I5C_RUN_ID, batchKey: MC_STAGE34_GATE_I5C_BATCH_KEY }));
+  var successRuntime = makeMissionCommandStage34GateB3AFakeRuntimeAdapter();
+  var successReview = makeMissionCommandStage34GateC3ReviewAdapter();
+  var successProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var success = runMissionCommandStage34GateI5DBatchD(successRuntime, successReview, successProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T20:00:00Z' }));
+  var duplicateProvider = makeMissionCommandStage34GateC3FakeProviderAdapter();
+  var duplicate = runMissionCommandStage34GateI5DBatchD(successRuntime, successReview, duplicateProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T20:00:00Z' }));
+  var interruptedProvider = makeMissionCommandStage34GateC3FakeProviderAdapter({ failFixtureId: 'MC34-I4-F38' });
+  var interrupted = runMissionCommandStage34GateI5DBatchD(makeMissionCommandStage34GateB3AFakeRuntimeAdapter(), makeMissionCommandStage34GateC3ReviewAdapter(), interruptedProvider, Object.assign({}, auth, { runTimestamp: '2026-07-13T20:00:00Z' }));
+  var priorRejected = withMissionCommandStage34GateI5DScope(function() { return validateMissionCommandStage34GateC3Request('MC34-I4-F37', makeMissionCommandStage34GateC3Request('MC34-I4-F37').request || {}); });
+  var schema = withMissionCommandStage34GateI5DScope(function() { return getMissionCommandStage34GateC3ProviderCandidateSchema(); });
+  return {
+    ok: flags.enabled === false && flags.killSwitchEnabled === true && direct.stopCondition === 'i5d_wrapper_authorization_missing' &&
+      consumedI5C.stopCondition === 'i5d_wrapper_authorization_missing' && directRuntime.rows.length === 0 && directProvider.calls.length === 0 &&
+      success.ok === true && success.childrenWritten === 1 && success.reviewRowsComplete === 1 && success.actualFetchAttempts === 1 &&
+      duplicate.status === 'duplicate_suppressed' && duplicateProvider.calls.length === 0 && interrupted.status === 'interrupted' &&
+      interrupted.failedFixtureId === 'MC34-I4-F38' && interrupted.retryCount === 0 && interrupted.fallbackUsed === false &&
+      priorRejected.ok === false && schema.required.length === 28 && Object.keys(schema.properties).length === 28 &&
+      schema.additionalProperties === false && schema.properties.fixture_id.enum.join('|') === MC_STAGE34_GATE_I5D_FIXTURE_IDS.join('|'),
+    build: MC_STAGE34_GATE_I5D_BUILD, fixtureIds: MC_STAGE34_GATE_I5D_FIXTURE_IDS.slice(), wrapperName: MC_STAGE34_GATE_I5D_WRAPPER_NAME,
+    runId: MC_STAGE34_GATE_I5D_RUN_ID, batchKey: MC_STAGE34_GATE_I5D_BATCH_KEY, relatedObject: MC_STAGE34_GATE_I5D_RELATED_OBJECT,
+    flagsDefaultOff: flags.enabled === false && flags.killSwitchEnabled === true, directBlocked: direct.stopCondition === 'i5d_wrapper_authorization_missing',
+    consumedI5CIdentityRejected: consumedI5C.stopCondition === 'i5d_wrapper_authorization_missing', priorFixturesInactive: priorRejected.ok === false,
+    successChildren: success.childrenWritten || 0, successReviewRows: success.reviewRowsComplete || 0,
+    duplicateSuppressedBeforeProvider: duplicate.status === 'duplicate_suppressed' && duplicateProvider.calls.length === 0,
+    interruptionDurable: interrupted.status === 'interrupted' && interrupted.retryCount === 0 && interrupted.fallbackUsed === false,
+    wrapperPrepared: false, wrapperRemovedAfterManualRun: true, manualRunConsumed: true,
+    manualRunSafeStatus: 'manual_run_appears_successful_parent_one_child_one_batch_d_f38_review_row_visible_evidence_only',
+    accountingCaution: 'parent_safe_summary_max_calls_4_while_exact_active_fixture_and_actual_authorized_attempt_count_are_1_preserve_history',
+    wrapperInvokedByIntegration: false, liveServicesTouched: false, routeCreated: false,
+    triggerInstall: false, visibleDelivery: false, dispatch: false, externalWrite: false, readyForOneRunDecision: false
   };
 }
 
@@ -11678,4 +19072,477 @@ function testCycleArchiveSync() {
   var notion = syncCycleArchiveToNotion(row, payload);
   logActivity('Cycle archive manual test — code: ' + (notion && notion.code ? notion.code : 'unknown'));
   Logger.log(JSON.stringify({ row: row, notion: notion }));
+}
+
+// ── MISSION COMMAND STAGE 4 ROUTE-UNEXPOSED PREPARATION ────
+// Local fake/stubbed preparation only. This section is intentionally absent from
+// doGet/doPost, editor wrappers, menus, triggers, workers, HTML, and live adapters.
+var MC_STAGE4_LOCAL_BUILD = 'mmos-20260713-stage4-route-unexposed-fake-stubbed-preparation';
+var MC_STAGE4_CONTRACT_VERSION = 'mc_stage_4_read_stage_v1';
+var MC_STAGE4_LOCK_TIMEOUT_MS = 3000;
+var MC_STAGE4_SESSION_TTL_SECONDS = 900;
+var MC_STAGE4_TRUST_FRESHNESS_SECONDS = 300;
+var MC_STAGE4_IDEMPOTENCY_RETENTION_DAYS = 90;
+var MC_STAGE4_JOURNAL_OBJECT = 'Mission Command Stage 4 Mutation Journal';
+var MC_STAGE4_SESSION_OBJECT = 'Mission Command Stage 4 Sessions';
+var MC_STAGE4_TRUST_OBJECT = 'Mission Command Stage 4 Trust Summary';
+var MC_STAGE4_FLAGS = {
+  mc_stage_4_master_enabled: false,
+  mc_stage_4_presence_enabled: false,
+  mc_stage_4_runtime_controls_enabled: false,
+  mc_stage_4_inbox_enabled: false,
+  mc_stage_4_staged_work_enabled: false,
+  mc_stage_4_return_brief_enabled: false,
+  mc_stage_4_mentions_labeled_turns_enabled: false,
+  mc_stage_4_receipts_enabled: false,
+  mc_stage_4_model_composition_enabled: false
+};
+var MC_STAGE4_LEGACY_GUARDS = [
+  'mc_phase_4_runtime_visible_controls',
+  'mc_phase_4_inbox_visible_mutations',
+  'mc_phase_4_staged_work_mutations',
+  'mc_phase_4_read_and_stage_beta'
+];
+var MC_STAGE4_SESSION_HEADERS = [
+  'session_id', 'token_hash', 'token_hash_algorithm', 'profile_id', 'device_id',
+  'trust_revision', 'capability_set', 'issued_at', 'expires_at', 'revoked_at',
+  'revoked_reason', 'last_nonce', 'created_by', 'contract_version'
+];
+var MC_STAGE4_TRUST_HEADERS = [
+  'profile_id', 'device_id', 'profile_status', 'device_status', 'trust_state',
+  'trust_revision', 'capability_ceiling', 'source_profile_etag', 'source_device_etag',
+  'materialized_at', 'fresh_until', 'revoked_at', 'updated_by', 'contract_version'
+];
+var MC_STAGE4_JOURNAL_HEADERS = [
+  'journal_id', 'request_id', 'request_fingerprint_sha256', 'profile_id', 'device_id',
+  'session_id', 'capability', 'target_type', 'target_id', 'source_version', 'source_etag',
+  'destination_version', 'destination_etag', 'source_state', 'destination_state',
+  'safe_state_delta_json', 'receipt_type', 'safe_result_json', 'result_code',
+  'contract_version', 'created_at', 'retention_due_at'
+];
+var MC_STAGE4_CAPABILITY_FLAGS = {
+  mc_stage_4_presence_heartbeat: 'mc_stage_4_presence_enabled',
+  stage4_runtime_control: 'mc_stage_4_runtime_controls_enabled',
+  stage4_inbox_mutate: 'mc_stage_4_inbox_enabled',
+  stage4_staged_work_confirm_or_park: 'mc_stage_4_staged_work_enabled'
+};
+var MC_STAGE4_TRANSITIONS = {
+  runtime: {
+    off: ['configuring'], configuring: ['error_safe_mode', 'off'],
+    active: ['sleeping', 'snoozed', 'error_safe_mode', 'off'],
+    sleeping: ['active', 'error_safe_mode', 'off'], snoozed: ['active', 'error_safe_mode', 'off'],
+    returning: ['active', 'error_safe_mode', 'off'], error_safe_mode: ['off', 'sleeping'],
+    disabled_by_kill_switch: ['off']
+  },
+  inbox: {
+    unread: ['read', 'snoozed', 'resolved'], read: ['snoozed', 'resolved'],
+    snoozed: ['unread', 'read', 'resolved']
+  },
+  staged_work: { draft: ['ready', 'parked'], ready: ['parked'], parked: ['ready', 'parked'] }
+};
+var MC_STAGE4_DENIED_SAFE_FIELDS = [
+  'token', 'nonce', 'credential', 'raw_content', 'prompt', 'transcript', 'private_payload',
+  'provider_data', 'hidden_reasoning', 'raw_error_body', 'related_job_id'
+];
+
+function canonicalizeMissionCommandStage4Local(value) {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(canonicalizeMissionCommandStage4Local);
+  var out = {};
+  Object.keys(value).sort().forEach(function(key) {
+    out[key] = canonicalizeMissionCommandStage4Local(value[key]);
+  });
+  return out;
+}
+
+function makeMissionCommandStage4LocalBlocked(code, detail, extra) {
+  var out = { ok: false, code: code, safe_message: detail || code, retry_later: false };
+  Object.keys(extra || {}).forEach(function(key) { out[key] = extra[key]; });
+  return out;
+}
+
+function resolveMissionCommandStage4LocalGuard(capability, suppliedFlags) {
+  suppliedFlags = suppliedFlags || {};
+  var keys = Object.keys(suppliedFlags);
+  if (keys.some(function(key) { return MC_STAGE4_LEGACY_GUARDS.indexOf(key) !== -1; })) {
+    return makeMissionCommandStage4LocalBlocked('legacy_guard_denied', 'Legacy Stage 4 guards confer no authority.', { adapter_calls: 0 });
+  }
+  var capabilityFlag = MC_STAGE4_CAPABILITY_FLAGS[capability];
+  if (!capabilityFlag) return makeMissionCommandStage4LocalBlocked('unknown_capability', 'Unknown Stage 4 capability.', { adapter_calls: 0 });
+  if (suppliedFlags.mc_stage_4_master_enabled !== true || suppliedFlags[capabilityFlag] !== true) {
+    return makeMissionCommandStage4LocalBlocked('feature_disabled', 'Stage 4 capability is disabled.', { adapter_calls: 0 });
+  }
+  return { ok: true, capability_flag: capabilityFlag };
+}
+
+function validateMissionCommandStage4LocalExactHeaders(actual, expected) {
+  if (!Array.isArray(actual) || actual.length !== expected.length) return false;
+  for (var i = 0; i < expected.length; i++) if (actual[i] !== expected[i]) return false;
+  return true;
+}
+
+function preflightMissionCommandStage4Local(input, adapters, immutableHeadersOnly) {
+  if (!input || input.contract_version !== MC_STAGE4_CONTRACT_VERSION) return makeMissionCommandStage4LocalBlocked('schema_upgrade_required', 'Exact Stage 4 contract version required.');
+  var required = ['request_id', 'profile_id', 'device_id', 'session_id', 'capability', 'target_type', 'target_id', 'expected_version', 'expected_etag', 'source_state', 'destination_state'];
+  for (var i = 0; i < required.length; i++) if (input[required[i]] === undefined || input[required[i]] === '') return makeMissionCommandStage4LocalBlocked('invalid_request', 'Missing required Stage 4 field: ' + required[i]);
+  var headerBundle = immutableHeadersOnly ? {
+    sessions: MC_STAGE4_SESSION_HEADERS,
+    trust: MC_STAGE4_TRUST_HEADERS,
+    journal: MC_STAGE4_JOURNAL_HEADERS
+  } : adapters.schema.getHeaders();
+  if (!headerBundle || !validateMissionCommandStage4LocalExactHeaders(headerBundle.sessions, MC_STAGE4_SESSION_HEADERS) ||
+      !validateMissionCommandStage4LocalExactHeaders(headerBundle.trust, MC_STAGE4_TRUST_HEADERS) ||
+      !validateMissionCommandStage4LocalExactHeaders(headerBundle.journal, MC_STAGE4_JOURNAL_HEADERS)) {
+    return makeMissionCommandStage4LocalBlocked('schema_upgrade_required', 'Exact Stage 4 headers required.');
+  }
+  return { ok: true };
+}
+
+function validateMissionCommandStage4LocalTrust(input, trustRows, nowMs) {
+  if (!Array.isArray(trustRows) || trustRows.length !== 1) return makeMissionCommandStage4LocalBlocked('untrusted_device', 'Unique Trust Summary row required.');
+  var row = trustRows[0];
+  var ceiling = Array.isArray(row.capability_ceiling) ? row.capability_ceiling : [];
+  if (row.profile_id !== input.profile_id || row.device_id !== input.device_id || row.profile_status !== 'active' || row.device_status !== 'active' ||
+      row.trust_state !== 'trusted' || row.revoked_at || Number(new Date(row.fresh_until)) <= nowMs || row.trust_revision !== input.trust_revision || ceiling.indexOf(input.capability) === -1) {
+    return makeMissionCommandStage4LocalBlocked('untrusted_device', 'Fresh trusted Stage 4 summary required.');
+  }
+  return { ok: true, row: row };
+}
+
+function validateMissionCommandStage4LocalSession(input, record, tokenHash, nowMs) {
+  if (!record || record.token_hash !== tokenHash || record.profile_id !== input.profile_id || record.device_id !== input.device_id ||
+      record.trust_revision !== input.trust_revision || Number(new Date(record.expires_at)) <= nowMs || record.revoked_at ||
+      (record.capability_set || []).indexOf(input.capability) === -1) {
+    return makeMissionCommandStage4LocalBlocked('auth_invalid', 'Valid Stage 4 session required.');
+  }
+  return { ok: true };
+}
+
+function validateMissionCommandStage4LocalTransition(targetType, sourceState, destinationState) {
+  var allowed = MC_STAGE4_TRANSITIONS[targetType] && MC_STAGE4_TRANSITIONS[targetType][sourceState];
+  return !!allowed && allowed.indexOf(destinationState) !== -1;
+}
+
+function validateMissionCommandStage4LocalSafeDelta(delta) {
+  if (!delta || typeof delta !== 'object' || Array.isArray(delta)) return false;
+  var serialized = JSON.stringify(delta);
+  if (MC_STAGE4_DENIED_SAFE_FIELDS.some(function(key) { return Object.prototype.hasOwnProperty.call(delta, key); })) return false;
+  return !/dispatch|agent[_ ]?job|agent[_ ]?return|provider|source[_ ]?read|external[_ ]?write/i.test(serialized);
+}
+
+function fingerprintMissionCommandStage4Local(input, adapters) {
+  var stable = {
+    contract_version: input.contract_version, capability: input.capability,
+    profile_id: input.profile_id, device_id: input.device_id, session_id: input.session_id,
+    target_type: input.target_type, target_id: input.target_id,
+    expected_version: input.expected_version, expected_etag: input.expected_etag,
+    allowed_mutation_fields: canonicalizeMissionCommandStage4Local(input.allowed_mutation_fields || {})
+  };
+  return adapters.crypto.sha256(JSON.stringify(canonicalizeMissionCommandStage4Local(stable)));
+}
+
+function foldMissionCommandStage4LocalJournal(base, rows, targetType, targetId) {
+  var current = { version: Number(base.version || 0), etag: String(base.etag || ''), state: String(base.state || '') };
+  var applicable = (rows || []).filter(function(row) { return row.target_type === targetType && row.target_id === targetId; }).slice();
+  applicable.sort(function(a, b) {
+    return Number(a.destination_version) - Number(b.destination_version) || String(a.created_at).localeCompare(String(b.created_at)) || String(a.journal_id).localeCompare(String(b.journal_id));
+  });
+  var seen = {};
+  for (var i = 0; i < applicable.length; i++) {
+    var row = applicable[i];
+    if (!row.journal_id || seen[row.journal_id] || row.contract_version !== MC_STAGE4_CONTRACT_VERSION ||
+        Number(row.source_version) !== current.version || String(row.source_etag) !== current.etag ||
+        Number(row.destination_version) !== current.version + 1 || !row.destination_etag) {
+      return makeMissionCommandStage4LocalBlocked('reconciliation_required', 'Journal discontinuity detected.', { affected_target: targetType + ':' + targetId });
+    }
+    seen[row.journal_id] = true;
+    current = { version: Number(row.destination_version), etag: String(row.destination_etag), state: String(row.destination_state) };
+  }
+  return { ok: true, state: current, rows_folded: applicable.length };
+}
+
+function mintMissionCommandStage4LocalSession(input, adapters) {
+  if (!input || input.same_origin_assertion !== true) return makeMissionCommandStage4LocalBlocked('auth_missing', 'Trusted same-origin assertion required.');
+  var nowMs = adapters.clock.nowMs();
+  var trust = validateMissionCommandStage4LocalTrust(input, adapters.trust.lookup(input.profile_id, input.device_id), nowMs);
+  if (!trust.ok) return trust;
+  var bytes = adapters.random.bytes(32);
+  if (!bytes || bytes.length < 32) return makeMissionCommandStage4LocalBlocked('randomness_insufficient', 'At least 256 random bits required.');
+  var rawToken = adapters.crypto.encodeToken(bytes);
+  var record = {
+    session_id: adapters.random.id('stage4_session'), token_hash: adapters.crypto.sha256(rawToken), token_hash_algorithm: 'SHA-256',
+    profile_id: input.profile_id, device_id: input.device_id, trust_revision: input.trust_revision,
+    capability_set: (input.capability_set || []).slice(), issued_at: new Date(nowMs).toISOString(),
+    expires_at: new Date(nowMs + MC_STAGE4_SESSION_TTL_SECONDS * 1000).toISOString(), revoked_at: '', revoked_reason: '',
+    last_nonce: '', created_by: MC_STAGE4_LOCAL_BUILD, contract_version: MC_STAGE4_CONTRACT_VERSION
+  };
+  adapters.sessions.append(record);
+  return { ok: true, code: 'session_minted', session_id: record.session_id, raw_token: rawToken, expires_at: record.expires_at };
+}
+
+function coordinateMissionCommandStage4LocalMutation(input, adapters) {
+  var guard = resolveMissionCommandStage4LocalGuard(input && input.capability, input && input.flags);
+  if (!guard.ok) return guard;
+  if (input.capability === 'mc_presence_heartbeat' || input.phase_3_heartbeat_selected === true) return makeMissionCommandStage4LocalBlocked('heartbeat_phase_ambiguity', 'Historical Phase 3 heartbeat is non-selectable.', { adapter_calls: 0 });
+  var preflight = preflightMissionCommandStage4Local(input, adapters, true);
+  if (!preflight.ok) return preflight;
+  var nowMs = adapters.clock.nowMs();
+  var tokenHash = adapters.crypto.sha256(input.raw_token || '');
+  var session = validateMissionCommandStage4LocalSession(input, adapters.sessions.lookup(input.session_id), tokenHash, nowMs);
+  if (!session.ok) return session;
+  var trust = validateMissionCommandStage4LocalTrust(input, adapters.trust.lookup(input.profile_id, input.device_id), nowMs);
+  if (!trust.ok) return trust;
+  if (!validateMissionCommandStage4LocalSafeDelta(input.allowed_mutation_fields || {})) return makeMissionCommandStage4LocalBlocked('invalid_request', 'Unsafe Stage 4 mutation fields denied.');
+  if (!validateMissionCommandStage4LocalTransition(input.target_type, input.source_state, input.destination_state)) return makeMissionCommandStage4LocalBlocked('state_conflict', 'Stage 4 transition denied.');
+  var fingerprint = fingerprintMissionCommandStage4Local(input, adapters);
+  var existing = adapters.journal.findRequest(input.request_id);
+  if (existing) {
+    if (existing.request_fingerprint_sha256 === fingerprint) return JSON.parse(existing.safe_result_json);
+    return makeMissionCommandStage4LocalBlocked('idempotency_key_reused', 'Request ID already used with different content.');
+  }
+  if (adapters.journal.findNonce(input.nonce)) return makeMissionCommandStage4LocalBlocked('replay_blocked', 'Nonce replay blocked.');
+  var folded = foldMissionCommandStage4LocalJournal(adapters.baseState.get(input.target_type, input.target_id), adapters.journal.listTarget(input.target_type, input.target_id), input.target_type, input.target_id);
+  if (!folded.ok) return folded;
+  if (folded.state.version !== Number(input.expected_version) || folded.state.etag !== String(input.expected_etag) || folded.state.state !== input.source_state) {
+    return makeMissionCommandStage4LocalBlocked('state_conflict', 'Refetch required.', {
+      http_status: 409, current_version: folded.state.version, current_etag: folded.state.etag,
+      conflict_code: 'etag_or_version_mismatch', refetch_required: true, request_id: input.request_id
+    });
+  }
+  var locked = false;
+  try {
+    locked = adapters.lock.tryLock(MC_STAGE4_LOCK_TIMEOUT_MS) === true;
+    if (!locked) return makeMissionCommandStage4LocalBlocked('runtime_busy', 'Runtime busy.', { retry_later: true });
+    existing = adapters.journal.findRequest(input.request_id);
+    if (existing) {
+      if (existing.request_fingerprint_sha256 === fingerprint) return JSON.parse(existing.safe_result_json);
+      return makeMissionCommandStage4LocalBlocked('idempotency_key_reused', 'Request ID already used with different content.');
+    }
+    if (adapters.journal.findNonce(input.nonce)) return makeMissionCommandStage4LocalBlocked('replay_blocked', 'Nonce replay blocked.');
+    folded = foldMissionCommandStage4LocalJournal(adapters.baseState.get(input.target_type, input.target_id), adapters.journal.listTarget(input.target_type, input.target_id), input.target_type, input.target_id);
+    if (!folded.ok) return folded;
+    if (folded.state.version !== Number(input.expected_version) || folded.state.etag !== String(input.expected_etag)) return makeMissionCommandStage4LocalBlocked('state_conflict', 'Refetch required.', { http_status: 409, refetch_required: true });
+    var destinationVersion = folded.state.version + 1;
+    var destinationEtag = adapters.random.id('etag');
+    var result = { ok: true, code: 'staged', request_id: input.request_id, target_type: input.target_type, target_id: input.target_id, state: input.destination_state, version: destinationVersion, etag: destinationEtag };
+    var row = {
+      journal_id: adapters.random.id('journal'), request_id: input.request_id, request_fingerprint_sha256: fingerprint,
+      profile_id: input.profile_id, device_id: input.device_id, session_id: input.session_id, capability: input.capability,
+      target_type: input.target_type, target_id: input.target_id, source_version: folded.state.version, source_etag: folded.state.etag,
+      destination_version: destinationVersion, destination_etag: destinationEtag, source_state: input.source_state,
+      destination_state: input.destination_state, safe_state_delta_json: JSON.stringify(canonicalizeMissionCommandStage4Local(input.allowed_mutation_fields || {})),
+      receipt_type: input.receipt_type, safe_result_json: JSON.stringify(result), result_code: 'staged',
+      contract_version: MC_STAGE4_CONTRACT_VERSION, created_at: new Date(nowMs).toISOString(),
+      retention_due_at: new Date(nowMs + MC_STAGE4_IDEMPOTENCY_RETENTION_DAYS * 86400000).toISOString()
+    };
+    adapters.journal.append(row);
+    var readback = adapters.journal.readExact(row.journal_id);
+    if (JSON.stringify(canonicalizeMissionCommandStage4Local(readback || {})) !== JSON.stringify(canonicalizeMissionCommandStage4Local(row))) {
+      return makeMissionCommandStage4LocalBlocked('reconciliation_required', 'Exact journal readback failed.');
+    }
+    return result;
+  } catch (err) {
+    return makeMissionCommandStage4LocalBlocked('runtime_busy', 'Injected Stage 4 adapter failed safely.');
+  } finally {
+    if (locked) adapters.lock.release();
+  }
+}
+
+// ── MISSION COMMAND STAGE 4 ROUTE-UNEXPOSED PRODUCTION-ADAPTER PREPARATION ────
+// Inert contract and injected interfaces only. No route, wrapper, UI, trigger,
+// global service lookup, live object access, retry, fallback, or second write.
+var MC_STAGE4_PRODUCTION_ADAPTER_VERSION = 'mc_stage_4_production_adapter_v1';
+var MC_STAGE4_PRODUCTION_ASSERTION = {
+  issuer: 'a1xx_same_origin_host_session',
+  audience: 'money_mission_os_stage_4',
+  required_fields: ['issuer', 'audience', 'origin', 'assertion_id', 'profile_id', 'device_id', 'trust_revision', 'capability_set', 'issued_at', 'expires_at'],
+  maximum_seconds: 60,
+  single_use: true,
+  bind_profile_device_trust_revision: true
+};
+var MC_STAGE4_PRODUCTION_CRYPTO = {
+  token_bytes: 32,
+  id_nonce_bytes: 16,
+  encoding: 'base64url_unpadded',
+  token_hash: 'SHA-256',
+  token_storage: 'hash_only',
+  etag_rule: 'sha256_base64url_of_16_random_bytes'
+};
+var MC_STAGE4_PRODUCTION_LIMITS = {
+  session_ttl_seconds: 900,
+  session_retention_days: 90,
+  trust_refresh_target_seconds: 120,
+  trust_freshness_max_seconds: 300,
+  journal_target_rows: 500,
+  journal_candidate_rows: 2000,
+  journal_pages: 4,
+  journal_page_rows: 500,
+  prelock_deadline_ms: 1500,
+  under_lock_deadline_ms: 1500,
+  trusted_profile_device_pairs: 25,
+  retained_journal_rows: 25000,
+  lock_timeout_ms: 3000,
+  safe_delta_utf8_bytes: 8192,
+  safe_result_utf8_bytes: 4096
+};
+var MC_STAGE4_PRODUCTION_HEADERS = {
+  sessions: MC_STAGE4_SESSION_HEADERS.slice(),
+  trust: MC_STAGE4_TRUST_HEADERS.slice(),
+  journal: MC_STAGE4_JOURNAL_HEADERS.slice()
+};
+var MC_STAGE4_PRODUCTION_SAFE_DELTA_FIELDS = [
+  'runtime_id', 'visible_surface', 'selected_mission_label', 'selected_project_label',
+  'approved_status_counts', 'meaningful_interaction_at', 'last_seen_inbox_cursor',
+  'last_seen_return_cursor', 'message_id', 'snooze_until', 'answer_summary',
+  'staged_work_id', 'title', 'safe_summary', 'scope', 'origin_agent', 'target_agent'
+];
+var MC_STAGE4_PRODUCTION_SAFE_RESULT_FIELDS = [
+  'ok', 'code', 'safe_message', 'retry_later', 'http_status', 'request_id',
+  'target_type', 'target_id', 'state', 'version', 'etag', 'current_version',
+  'current_etag', 'conflict_code', 'refetch_required', 'session_id', 'expires_at'
+];
+var MC_STAGE4_PRODUCTION_FAILURE_HTTP = {
+  auth_missing: 401, auth_invalid: 401, untrusted_device: 403,
+  feature_disabled: 403, invalid_request: 400, schema_upgrade_required: 409,
+  state_conflict: 409, idempotency_key_reused: 409, replay_blocked: 409,
+  runtime_busy: 503, capacity_exceeded: 503, reconciliation_required: 503,
+  adapter_unavailable: 503, randomness_insufficient: 503
+};
+var MC_STAGE4_PRODUCTION_BOUNDARIES = {
+  flags_default_off: true,
+  master_false_dominates: true,
+  legacy_guards_deny: true,
+  dispatch_allowed: false,
+  second_durable_write_allowed: false,
+  automatic_retry_allowed: false,
+  route_exposed: false
+};
+
+function makeMissionCommandStage4ProductionUnavailable(name) {
+  return function() { throw new Error('stage4_adapter_unavailable:' + name); };
+}
+
+function validateMissionCommandStage4ProductionHeaders(bundle) {
+  return !!bundle &&
+    validateMissionCommandStage4LocalExactHeaders(bundle.sessions, MC_STAGE4_PRODUCTION_HEADERS.sessions) &&
+    validateMissionCommandStage4LocalExactHeaders(bundle.trust, MC_STAGE4_PRODUCTION_HEADERS.trust) &&
+    validateMissionCommandStage4LocalExactHeaders(bundle.journal, MC_STAGE4_PRODUCTION_HEADERS.journal);
+}
+
+function verifyMissionCommandStage4ProductionAssertion(assertion, expected, handles) {
+  if (!handles || !handles.assertions || typeof handles.assertions.verify !== 'function') {
+    return makeMissionCommandStage4LocalBlocked('adapter_unavailable', 'Assertion verifier unavailable.');
+  }
+  var claim;
+  try { claim = handles.assertions.verify(assertion); }
+  catch (err) { return makeMissionCommandStage4LocalBlocked('auth_invalid', 'Host assertion denied.'); }
+  if (!claim || typeof claim !== 'object') return makeMissionCommandStage4LocalBlocked('auth_invalid', 'Host assertion denied.');
+  for (var i = 0; i < MC_STAGE4_PRODUCTION_ASSERTION.required_fields.length; i++) {
+    var field = MC_STAGE4_PRODUCTION_ASSERTION.required_fields[i];
+    if (claim[field] === undefined || claim[field] === '') return makeMissionCommandStage4LocalBlocked('auth_invalid', 'Host assertion denied.');
+  }
+  var nowMs = handles.clock.nowMs();
+  var issuedMs = Number(new Date(claim.issued_at));
+  var expiresMs = Number(new Date(claim.expires_at));
+  if (claim.issuer !== MC_STAGE4_PRODUCTION_ASSERTION.issuer || claim.audience !== MC_STAGE4_PRODUCTION_ASSERTION.audience ||
+      claim.origin !== expected.origin || claim.profile_id !== expected.profile_id || claim.device_id !== expected.device_id ||
+      claim.trust_revision !== expected.trust_revision || issuedMs > nowMs || expiresMs <= nowMs ||
+      expiresMs - issuedMs > MC_STAGE4_PRODUCTION_ASSERTION.maximum_seconds * 1000) {
+    return makeMissionCommandStage4LocalBlocked('auth_invalid', 'Host assertion denied.');
+  }
+  if (!handles.assertions.consumeOnce(claim.assertion_id)) return makeMissionCommandStage4LocalBlocked('replay_blocked', 'Host assertion replay denied.');
+  return { ok: true, claim: claim };
+}
+
+function makeMissionCommandStage4ProductionMaterial(kind, handles) {
+  var bytesRequired = kind === 'token' ? MC_STAGE4_PRODUCTION_CRYPTO.token_bytes : MC_STAGE4_PRODUCTION_CRYPTO.id_nonce_bytes;
+  if (!handles || !handles.random || !handles.crypto) return makeMissionCommandStage4LocalBlocked('adapter_unavailable', 'Secure random adapter unavailable.');
+  var bytes;
+  try { bytes = handles.random.bytes(bytesRequired); }
+  catch (err) { return makeMissionCommandStage4LocalBlocked('randomness_insufficient', 'Secure random generation failed.'); }
+  if (!bytes || bytes.length !== bytesRequired) return makeMissionCommandStage4LocalBlocked('randomness_insufficient', 'Exact secure random length required.');
+  var encoded;
+  try { encoded = handles.crypto.base64url(bytes); }
+  catch (err2) { return makeMissionCommandStage4LocalBlocked('randomness_insufficient', 'Secure encoding failed.'); }
+  if (!encoded || !/^[A-Za-z0-9_-]+$/.test(encoded) || /=/.test(encoded)) return makeMissionCommandStage4LocalBlocked('randomness_insufficient', 'Unpadded base64url required.');
+  var hash = handles.crypto.sha256(encoded);
+  if (!hash || !/^[a-f0-9]{64}$/i.test(hash)) return makeMissionCommandStage4LocalBlocked('randomness_insufficient', 'SHA-256 hash required.');
+  return { ok: true, raw_once: encoded, hash: hash, bytes: bytesRequired };
+}
+
+function makeMissionCommandStage4ProductionEtag(handles) {
+  var material = makeMissionCommandStage4ProductionMaterial('id', handles);
+  if (!material.ok) return material;
+  return { ok: true, etag: material.hash };
+}
+
+function missionCommandStage4Utf8Bytes(value) {
+  var text = String(value);
+  var bytes = 0;
+  for (var i = 0; i < text.length; i++) {
+    var code = text.charCodeAt(i);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xD800 && code <= 0xDBFF && i + 1 < text.length) { bytes += 4; i += 1; }
+    else bytes += 3;
+  }
+  return bytes;
+}
+
+function validateMissionCommandStage4ProductionSafeJson(value, allowlist, maxBytes) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  var keys = Object.keys(value);
+  for (var i = 0; i < keys.length; i++) if (allowlist.indexOf(keys[i]) === -1) return false;
+  return missionCommandStage4Utf8Bytes(JSON.stringify(value)) <= maxBytes;
+}
+
+function createMissionCommandStage4ProductionAdapters(handles) {
+  handles = handles || {};
+  var unavailable = makeMissionCommandStage4ProductionUnavailable;
+  return {
+    assertions: handles.assertions || { verify: unavailable('assertion.verify'), consumeOnce: unavailable('assertion.consumeOnce') },
+    random: handles.random || { bytes: unavailable('random.bytes') },
+    crypto: handles.crypto || { base64url: unavailable('crypto.base64url'), sha256: unavailable('crypto.sha256') },
+    sessions: handles.sessions || { validateHeaders: unavailable('sessions.validateHeaders'), lookupExact: unavailable('sessions.lookupExact'), appendHashOnly: unavailable('sessions.appendHashOnly'), lookupRevocation: unavailable('sessions.lookupRevocation') },
+    trust: handles.trust || { validateHeaders: unavailable('trust.validateHeaders'), lookupExactReadOnly: unavailable('trust.lookupExactReadOnly') },
+    baseState: handles.baseState || { getBoundedReadOnly: unavailable('baseState.getBoundedReadOnly') },
+    journal: handles.journal || { validateHeaders: unavailable('journal.validateHeaders'), findRequestExact: unavailable('journal.findRequestExact'), findNonceExact: unavailable('journal.findNonceExact'), listTargetPage: unavailable('journal.listTargetPage'), appendOne: unavailable('journal.appendOne'), readExact: unavailable('journal.readExact') },
+    lock: handles.lock || { tryLock: unavailable('lock.tryLock'), release: unavailable('lock.release') },
+    response: handles.response || { safe: makeMissionCommandStage4ProductionSafeResponse },
+    bridge: handles.bridge || { readFoldedTarget: unavailable('bridge.readFoldedTarget') },
+    clock: handles.clock || { nowMs: unavailable('clock.nowMs') }
+  };
+}
+
+function makeMissionCommandStage4ProductionSafeResponse(code, extra) {
+  var out = { ok: false, code: code, safe_message: code, retry_later: code === 'runtime_busy' };
+  out.http_status = MC_STAGE4_PRODUCTION_FAILURE_HTTP[code] || 503;
+  Object.keys(extra || {}).forEach(function(key) {
+    if (MC_STAGE4_PRODUCTION_SAFE_RESULT_FIELDS.indexOf(key) !== -1) out[key] = extra[key];
+  });
+  return out;
+}
+
+function validateMissionCommandStage4ProductionSession(record, expected, nowMs) {
+  return !!record && record.profile_id === expected.profile_id && record.device_id === expected.device_id &&
+    record.trust_revision === expected.trust_revision && !record.revoked_at &&
+    Number(new Date(record.expires_at)) > nowMs && Number(new Date(record.expires_at)) - Number(new Date(record.issued_at)) === MC_STAGE4_PRODUCTION_LIMITS.session_ttl_seconds * 1000 &&
+    record.token_hash_algorithm === MC_STAGE4_PRODUCTION_CRYPTO.token_hash;
+}
+
+function validateMissionCommandStage4ProductionJournalBounds(meta) {
+  return !!meta && meta.target_rows <= MC_STAGE4_PRODUCTION_LIMITS.journal_target_rows &&
+    meta.candidate_rows <= MC_STAGE4_PRODUCTION_LIMITS.journal_candidate_rows &&
+    meta.pages <= MC_STAGE4_PRODUCTION_LIMITS.journal_pages &&
+    meta.page_rows <= MC_STAGE4_PRODUCTION_LIMITS.journal_page_rows &&
+    meta.profile_device_pairs <= MC_STAGE4_PRODUCTION_LIMITS.trusted_profile_device_pairs &&
+    meta.retained_rows <= MC_STAGE4_PRODUCTION_LIMITS.retained_journal_rows && meta.complete === true;
+}
+
+function readMissionCommandStage4ProductionBridge(targetRef, adapters) {
+  if (!targetRef || !adapters || !adapters.bridge || typeof adapters.bridge.readFoldedTarget !== 'function') {
+    return makeMissionCommandStage4LocalBlocked('adapter_unavailable', 'Read-only bridge unavailable.');
+  }
+  var result = adapters.bridge.readFoldedTarget(targetRef);
+  return { ok: true, mode: 'folded_read_only', target: result };
 }
