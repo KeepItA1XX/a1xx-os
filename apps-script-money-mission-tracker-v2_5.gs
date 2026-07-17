@@ -528,7 +528,7 @@ function getLiveReadPacketV1(e) {
   var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
   if (secret) {
     try {
-      var projectsResult = notionQuery(NOTION_PROJECTS_DB, {page_size:50}, 'live_projects_v1');
+      var projectsResult = notionDataSourceQuery(NOTION_PROJECTS_DB, {page_size:50}, 'live_projects_v1');
       if (projectsResult.code >= 400) throw new Error('Projects ' + projectsResult.code);
       var projectsData = JSON.parse(projectsResult.text || '{}');
       packet.projects = (projectsData.results || []).map(normalizeLiveProjectV1).filter(function(row){ return row.id && row.title; });
@@ -565,11 +565,35 @@ function getLiveReadPacketV1(e) {
 function normalizeLiveProjectV1(page) {
   var props = page.properties || {};
   var title = readNotionTitle(props.Name || props['Project Name'] || props.Title);
-  return { id:page.id, objectType:'project', title:title, status:readNotionStatus(props.Status),
+  return { id:page.id, objectType:'project', title:title, projectType:readNotionSelect(props['Project Type'] || props.Type), status:readNotionStatus(props.Status),
     priority:readNotionSelect(props.Priority), summary:readNotionText(props.Summary || props.Description),
     nextAction:readNotionText(props['Current Next Move'] || props['Next Action'] || props['Next Move']),
     needsA1XX:readNotionCheckbox(props['Needs A1XX']), closestToMoney:readNotionCheckbox(props['Closest To Money']),
     url:page.url, source:'Notion Projects', updatedAt:page.last_edited_time || page.created_time || '' };
+}
+
+// Current Notion data-source query path. Kept separate from the legacy CRM
+// database query helper so the proven relationships read remains unchanged.
+function notionDataSourceQuery(dataSourceId, payload, cacheKey) {
+  var cache = CacheService.getScriptCache();
+  if (cacheKey) {
+    var hit = cache.get(cacheKey);
+    if (hit) { logActivity('Cache hit — ' + cacheKey); return { text: hit, code: 200 }; }
+  }
+  var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
+  var opts = { method: 'post',
+    headers: { Authorization: 'Bearer ' + secret, 'Notion-Version': '2025-09-03', 'Content-Type': 'application/json' },
+    payload: JSON.stringify(payload), muteHttpExceptions: true };
+  var res = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + dataSourceId + '/query', opts);
+  var code = res.getResponseCode();
+  if (code >= 500) {
+    Utilities.sleep(2000);
+    res = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + dataSourceId + '/query', opts);
+    code = res.getResponseCode();
+  }
+  var text = res.getContentText();
+  if (cacheKey && code < 400) { try { if (text.length < 90000) cache.put(cacheKey, text, 600); } catch (e) {} }
+  return { text: text, code: code };
 }
 
 function normalizeLiveRelationshipV1(page) {
