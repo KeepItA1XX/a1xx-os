@@ -612,7 +612,7 @@ function getLiveReadPacketV1(e) {
   var started = new Date().toISOString();
   var packet = { packet:'live_read_packet_v1', status:'partial', generatedAt:started, freshness:{state:'fresh',maxAgeMs:300000},
     sources:{notion:{status:'unknown',recordCount:0,fetchedAt:''},sheets:{status:'unknown',fetchedAt:''},drive:{status:'deferred',fetchedAt:''}},
-    projects:[], relationships:[], files:[], sheets:{status:'unknown',tabs:[],scorecards:[],ledgers:[],indexes:[],sync:[]}, warnings:[], errors:[] };
+    projects:[], relationships:[], files:[], durableMemory:{status:'deferred',folders:[],files:[],fetchedAt:''}, sheets:{status:'unknown',tabs:[],scorecards:[],ledgers:[],indexes:[],sync:[]}, warnings:[], errors:[] };
   var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
   if (secret) {
     try {
@@ -671,6 +671,7 @@ function getLiveReadPacketV1(e) {
       return project;
     });
     packet.files = driveRead.files;
+    packet.durableMemory = readDurableMemoryMetadataV1(driveRead.parentFolderId);
     packet.sources.drive = {status:driveRead.status,recordCount:driveRead.files.length,fetchedAt:new Date().toISOString(),parentFolderId:driveRead.parentFolderId};
     if (driveRead.warning) packet.warnings.push(driveRead.warning);
   } catch (driveErr) {
@@ -752,6 +753,28 @@ function readLiveProjectDriveMetadataV1(projects) {
   if (matched === (projects || []).length && matched > 0) result.status = 'live';
   else if (matched > 0) result.status = 'partial';
   else result.warning = 'drive_project_folders_not_found';
+  return result;
+}
+
+function readDurableMemoryMetadataV1(parentId) {
+  var result = {status:'empty',folders:[],files:[],fetchedAt:new Date().toISOString(),parentFolderId:parentId || ''};
+  if (!parentId) return result;
+  var parent = DriveApp.getFolderById(parentId);
+  var folders = parent.getFolders();
+  while (folders.hasNext() && result.folders.length < 20) {
+    var folder = folders.next();
+    if (!/memory|vault|archive|index|brain|backup/i.test(folder.getName())) continue;
+    var folderRef = {id:folder.getId(),name:folder.getName(),url:folder.getUrl(),kind:'folder',files:[]};
+    var files = folder.getFiles();
+    while (files.hasNext() && folderRef.files.length < 50) {
+      var file = files.next();
+      folderRef.files.push({id:file.getId(),name:file.getName(),url:file.getUrl(),mimeType:file.getMimeType(),updatedAt:file.getLastUpdated().toISOString(),kind:'file'});
+      result.files.push(folderRef.files[folderRef.files.length - 1]);
+    }
+    result.folders.push(folderRef);
+  }
+  if (result.folders.length) result.status='partial';
+  if (result.files.length) result.status='live';
   return result;
 }
 
