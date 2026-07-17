@@ -687,7 +687,7 @@ function getLiveReadPacketV1(e) {
 // it never creates tabs, changes cells, or treats Sheets as a source of truth
 // for project meaning.
 function readLiveSheetsSnapshotV1(ss) {
-  var snapshot = {status:'live', fetchedAt:new Date().toISOString(), tabs:[], scorecards:[], ledgers:[], indexes:[], sync:[]};
+  var snapshot = {status:'live', fetchedAt:new Date().toISOString(), tabs:[], scorecards:[], ledgers:[], indexes:[], sync:[], metrics:{}};
   var sheets = ss.getSheets ? ss.getSheets() : [];
   sheets.slice(0,50).forEach(function(sheet) {
     var name = String(sheet.getName() || '');
@@ -713,6 +713,17 @@ function readLiveSheetsSnapshotV1(ss) {
     if (/ledger|close|payment|revenue|cash|dpc/.test(key)) snapshot.ledgers.push(row);
     if (/index|directory|lookup|pointer|map/.test(key)) snapshot.indexes.push(row);
     if (/sync|runtime|health|status|receipt/.test(key)) snapshot.sync.push(row);
+  });
+  var candidates = snapshot.scorecards.concat(snapshot.ledgers);
+  candidates.forEach(function(tab){
+    (tab.sampleRows || []).forEach(function(sample){
+      Object.keys(sample).forEach(function(key){
+        var normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g,'');
+        var metric = normalizedKey === 'dms' || normalizedKey === 'dmssent' ? 'dms' : normalizedKey === 'calls' || normalizedKey === 'callsbooked' ? 'calls' : normalizedKey === 'closes' ? 'closes' : normalizedKey === 'money' || normalizedKey === 'revenue' || normalizedKey === 'cashcollected' ? 'revenue' : '';
+        var value = Number(String(sample[key]).replace(/[$,]/g,''));
+        if (metric && isFinite(value) && !Object.prototype.hasOwnProperty.call(snapshot.metrics, metric)) snapshot.metrics[metric] = {value:value,tab:tab.name,field:key};
+      });
+    });
   });
   return snapshot;
 }
