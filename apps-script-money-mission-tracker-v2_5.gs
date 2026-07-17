@@ -260,7 +260,7 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'mission_llm_chat') {
-      var llmResult = getMissionCommandLlmChatV1(data);
+      var llmResult = getMissionCommandOpenAiAdvisorV1(data);
       return missionLlmJsonV1(llmResult);
     }
     if (data.type === 'mission_chat_session_sync') {
@@ -320,6 +320,76 @@ function doPost(e) {
     logActivity('POST ERROR: ' + err.toString());
     return error(err.toString());
   }
+}
+
+// Read-only OpenAI advisor path for the Mission Command UI. The existing
+// client-side adapter remains default-off; when explicitly enabled it can
+// request analysis of the sanitized context packet, but no tools or writes
+// are ever passed to the model.
+function getMissionCommandOpenAiAdvisorV1(data) {
+  var started = Date.now();
+  data = data || {};
+  var endpoint = 'https://api.openai.com/v1/responses';
+  // Use a public Responses API model by default. An explicitly configured
+  // OPENAI_LLM_MODEL property still wins, so existing private pilots remain
+  // untouched until deliberately changed.
+  var defaultModel = 'gpt-5.1';
+  var timeoutSeconds = 30;
+  var question = sanitizeMissionCommandLlmTextV1(data.question || '', 700);
+  var contextPacket = sanitizeMissionCommandLlmContextV1(data.contextPacket || {});
+  var props = PropertiesService.getScriptProperties();
+  var apiKey = String(props.getProperty('OPENAI_API_KEY') || '').trim();
+  var model = String(props.getProperty('OPENAI_LLM_MODEL') || defaultModel).trim();
+
+  if (!question) return missionLlmContractV1({ ok:false, status:'blocked', provider:'openai', model:model, fallbackReason:'missing_question', latencyMs:Date.now()-started });
+  if (!apiKey) return missionLlmContractV1({ ok:false, status:'blocked', provider:'openai', model:model, fallbackReason:'missing_openai_api_key', latencyMs:Date.now()-started });
+
+  var instructions = [
+    'You are Mission Command inside Money Mission OS for A1XX.',
+    'You are a real Executive Assistant: perceptive, concise, warm, and candid. Respond naturally to the user\'s actual words, not to a menu of canned prompts.',
+    'Use the recent conversation and safe context to maintain continuity. Acknowledge what you understand, state the most useful answer first, then suggest one practical next move when appropriate.',
+    'Show self-awareness: distinguish what you know from what is missing, say when you are making an inference, and ask one focused clarifying question only when it materially changes the recommendation.',
+    'Advisor-only mode. Give one useful, specific answer grounded only in the supplied context.',
+    'Never claim an action was completed, saved, synced, logged, paid, booked, shipped, approved, or sent.',
+    'Never expose secrets, IDs, provider details, endpoints, storage names, or implementation details.',
+    'Do not call tools, create tool calls, write data, dispatch work, send messages, or change app state.',
+    'If context is insufficient, say what is missing and recommend the safest next step. Do not repeat the same generic project-selection advice when the user has supplied a different question.'
+  ].join(' ');
+  var payload = {
+    model: model,
+    instructions: instructions,
+    input: 'User question: ' + question + '\nSafe context packet: ' + JSON.stringify(contextPacket),
+    tools: [],
+    max_output_tokens: 420,
+    store: false
+  };
+  var response;
+  try {
+    response = UrlFetchApp.fetch(endpoint, {
+      method:'post', contentType:'application/json',
+      headers:{ Authorization:'Bearer '+apiKey, Accept:'application/json' },
+      payload:JSON.stringify(payload), muteHttpExceptions:true,
+      timeoutSeconds:timeoutSeconds
+    });
+  } catch (err) {
+    return missionLlmContractV1({ ok:false, status:'error', provider:'openai', model:model, fallbackReason:'provider_fetch_error', latencyMs:Date.now()-started });
+  }
+  var code = Number(response.getResponseCode() || 0);
+  var body = String(response.getContentText() || '');
+  if (code < 200 || code >= 300) return missionLlmContractV1({ ok:false, status:'error', provider:'openai', model:model, httpStatus:code, fallbackReason:getMissionCommandLlmHttpReasonV1(code, body), latencyMs:Date.now()-started });
+  var parsed;
+  try { parsed = JSON.parse(body || '{}'); } catch (err2) { parsed = null; }
+  var answer = parsed && typeof parsed.output_text === 'string' ? parsed.output_text : '';
+  if (!answer && parsed && Array.isArray(parsed.output)) {
+    parsed.output.forEach(function(item){
+      if (!item || !Array.isArray(item.content)) return;
+      item.content.forEach(function(part){ if (part && typeof part.text === 'string') answer += (answer?'\n':'') + part.text; });
+    });
+  }
+  if (missionCommandLlmTextIsUnsafeV1(answer)) return missionLlmContractV1({ ok:false, status:'blocked', provider:'openai', model:model, fallbackReason:'unsafe_answer_blocked', latencyMs:Date.now()-started });
+  answer = sanitizeMissionCommandLlmTextV1(answer, 1200);
+  if (!answer) return missionLlmContractV1({ ok:false, status:'empty', provider:'openai', model:model, fallbackReason:'provider_empty_answer', latencyMs:Date.now()-started });
+  return missionLlmContractV1({ ok:true, status:'ready', provider:'openai', model:model, mode:'advisor_only', answerText:answer, latencyMs:Date.now()-started });
 }
 
 function doGet(e) {
@@ -589,7 +659,7 @@ function missionLlmContractV1(payload) {
   return {
     ok: payload.ok === true,
     status: payload.status || (payload.ok === true ? 'ready' : 'blocked'),
-    provider: 'nvidia',
+    provider: payload.provider || 'nvidia',
     relay: 'apps_script',
     action: 'mission_llm_chat',
     model: payload.model || 'z-ai/glm-5.1',
