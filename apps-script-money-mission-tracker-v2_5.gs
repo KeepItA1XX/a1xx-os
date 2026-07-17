@@ -82,6 +82,7 @@ var NOTION_CONTENT_DB    = '1a061152-81da-81bc-b7ec-cecbcba9ed8e';
 var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18: was incorrectly set to the data source ID (...8188...). Notion /v1/databases/{id}/query expects the DATABASE ID (URL slug). Parent database "Master Beat Catalog" lives at notion.so/1a76115281da8199a5dffc423d447f31. */
 var NOTION_RESOURCE_DB   = '35861152-81da-8053-8d5e-c5e6c5042e6c';
 var NOTION_CRM_DB        = 'b82e7140-b3b0-48d1-915d-34e4cdf9f65a';
+var NOTION_PROJECTS_DB   = '19f61152-81da-8141-86a7-000b43a05c39';
 var NOTION_OPS_DAILY_DB  = '36461152-81da-809d-baa7-d6638dd2077b';
 var NOTION_OPS_WEEKLY_DB = '515171aa-890f-405f-a035-a37c09348f35';
 var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
@@ -509,11 +510,69 @@ function doGet(e) {
     if (e.parameter.action === 'health')              return getHealthCheck(e);
     if (e.parameter.action === 'instagram')           return getInstagramData(e);
     if (e.parameter.action === 'search_resources')    return searchResources(e);
+    if (e.parameter.action === 'live_read_packet_v1') return getLiveReadPacketV1(e);
     return ok('A1XX Money Mission Tracker Backend is live.');
   } catch (err) {
     logActivity('GET ERROR: ' + err.toString());
     return error(err.toString());
   }
+}
+
+// Read-only normalized packet for the existing Directory V3 and Projects surfaces.
+// This endpoint intentionally performs no writes, dispatch, or source mutation.
+function getLiveReadPacketV1(e) {
+  var started = new Date().toISOString();
+  var packet = { packet:'live_read_packet_v1', status:'partial', generatedAt:started,
+    sources:{notion:{status:'unknown',recordCount:0},sheets:{status:'unknown'},drive:{status:'pointer_only'}},
+    projects:[], relationships:[], files:[], warnings:[] };
+  var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
+  if (secret) {
+    try {
+      var projectsResult = notionQuery(NOTION_PROJECTS_DB, {page_size:50}, 'live_projects_v1');
+      if (projectsResult.code >= 400) throw new Error('Projects ' + projectsResult.code);
+      var projectsData = JSON.parse(projectsResult.text || '{}');
+      packet.projects = (projectsData.results || []).map(normalizeLiveProjectV1).filter(function(row){ return row.id && row.title; });
+      packet.sources.notion.status = 'live';
+      packet.sources.notion.recordCount += packet.projects.length;
+    } catch (err) { packet.warnings.push('projects_unavailable'); }
+    try {
+      var leadsResult = notionQuery(NOTION_CRM_DB, {page_size:50}, 'live_relationships_v1');
+      if (leadsResult.code >= 400) throw new Error('CRM ' + leadsResult.code);
+      var leadsData = JSON.parse(leadsResult.text || '{}');
+      packet.relationships = (leadsData.results || []).map(normalizeLiveRelationshipV1).filter(function(row){ return row.id && row.label; });
+      packet.sources.notion.status = packet.sources.notion.status === 'live' ? 'live' : 'partial';
+      packet.sources.notion.recordCount += packet.relationships.length;
+    } catch (err2) { packet.warnings.push('relationships_unavailable'); }
+  } else { packet.warnings.push('notion_secret_missing'); }
+  try {
+    var ss = getMoneyMissionSpreadsheet();
+    packet.sources.sheets.status = ss ? 'live' : 'unavailable';
+    packet.sources.sheets.workbookId = ss ? ss.getId() : '';
+    packet.sources.sheets.updatedAt = new Date().toISOString();
+  } catch (sheetErr) { packet.warnings.push('sheets_unavailable'); }
+  // Drive remains metadata-only in this first pass; no Drive search or mutation is performed.
+  packet.warnings.push('drive_metadata_deferred');
+  packet.status = packet.projects.length || packet.relationships.length ? (packet.warnings.length ? 'partial' : 'live') : 'empty';
+  return jsonResponseV20(packet);
+}
+
+function normalizeLiveProjectV1(page) {
+  var props = page.properties || {};
+  var title = readNotionTitle(props.Name || props['Project Name'] || props.Title);
+  return { id:page.id, objectType:'project', title:title, status:readNotionStatus(props.Status),
+    priority:readNotionSelect(props.Priority), summary:readNotionText(props.Summary || props.Description),
+    nextAction:readNotionText(props['Current Next Move'] || props['Next Action'] || props['Next Move']),
+    needsA1XX:readNotionCheckbox(props['Needs A1XX']), closestToMoney:readNotionCheckbox(props['Closest To Money']),
+    url:page.url, source:'Notion Projects', updatedAt:page.last_edited_time || page.created_time || '' };
+}
+
+function normalizeLiveRelationshipV1(page) {
+  var props = page.properties || {};
+  var label = readNotionTitle(props.Name || props['Real Name'] || props.Title);
+  return { id:page.id, objectType:'relationship', label:label, type:'Lead', status:readNotionSelect(props['Lead Status'] || props.Status),
+    description:readNotionText(props['Recent Activity'] || props.Notes || props.Description), source:'Notion CRM',
+    url:page.url, updatedAt:page.last_edited_time || page.created_time || '',
+    fields:{Email:readNotionEmail(props.Email),Instagram:readNotionText(props.Instagram),Stage:readNotionSelect(props['Pipeline Stage'])} };
 }
 
 function getMissionCommandLlmChatV1(data) {
