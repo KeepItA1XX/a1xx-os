@@ -522,9 +522,9 @@ function doGet(e) {
 // This endpoint intentionally performs no writes, dispatch, or source mutation.
 function getLiveReadPacketV1(e) {
   var started = new Date().toISOString();
-  var packet = { packet:'live_read_packet_v1', status:'partial', generatedAt:started,
-    sources:{notion:{status:'unknown',recordCount:0},sheets:{status:'unknown'},drive:{status:'pointer_only'}},
-    projects:[], relationships:[], files:[], warnings:[] };
+  var packet = { packet:'live_read_packet_v1', status:'partial', generatedAt:started, freshness:{state:'fresh',maxAgeMs:300000},
+    sources:{notion:{status:'unknown',recordCount:0,fetchedAt:''},sheets:{status:'unknown',fetchedAt:''},drive:{status:'deferred',fetchedAt:''}},
+    projects:[], relationships:[], files:[], warnings:[], errors:[] };
   var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
   if (secret) {
     try {
@@ -533,26 +533,28 @@ function getLiveReadPacketV1(e) {
       var projectsData = JSON.parse(projectsResult.text || '{}');
       packet.projects = (projectsData.results || []).map(normalizeLiveProjectV1).filter(function(row){ return row.id && row.title; });
       packet.sources.notion.status = 'live';
+      packet.sources.notion.fetchedAt = new Date().toISOString();
       packet.sources.notion.recordCount += packet.projects.length;
-    } catch (err) { packet.warnings.push('projects_unavailable'); }
+    } catch (err) { packet.warnings.push('projects_unavailable'); packet.errors.push('projects_read_failed'); }
     try {
       var leadsResult = notionQuery(NOTION_CRM_DB, {page_size:50}, 'live_relationships_v1');
       if (leadsResult.code >= 400) throw new Error('CRM ' + leadsResult.code);
       var leadsData = JSON.parse(leadsResult.text || '{}');
       packet.relationships = (leadsData.results || []).map(normalizeLiveRelationshipV1).filter(function(row){ return row.id && row.label; });
       packet.sources.notion.status = packet.sources.notion.status === 'live' ? 'live' : 'partial';
+      packet.sources.notion.fetchedAt = packet.sources.notion.fetchedAt || new Date().toISOString();
       packet.sources.notion.recordCount += packet.relationships.length;
-    } catch (err2) { packet.warnings.push('relationships_unavailable'); }
-  } else { packet.warnings.push('notion_secret_missing'); }
+    } catch (err2) { packet.warnings.push('relationships_unavailable'); packet.errors.push('relationships_read_failed'); }
+  } else { packet.warnings.push('notion_secret_missing'); packet.errors.push('notion_auth_unavailable'); }
   try {
     var ss = getMoneyMissionSpreadsheet();
     packet.sources.sheets.status = ss ? 'live' : 'unavailable';
     packet.sources.sheets.workbookId = ss ? ss.getId() : '';
-    packet.sources.sheets.updatedAt = new Date().toISOString();
-  } catch (sheetErr) { packet.warnings.push('sheets_unavailable'); }
+    packet.sources.sheets.fetchedAt = new Date().toISOString();
+  } catch (sheetErr) { packet.warnings.push('sheets_unavailable'); packet.errors.push('sheets_read_failed'); }
   // Drive remains metadata-only in this first pass; no Drive search or mutation is performed.
   packet.warnings.push('drive_metadata_deferred');
-  packet.status = packet.projects.length || packet.relationships.length ? (packet.warnings.length ? 'partial' : 'live') : 'empty';
+  packet.status = packet.projects.length || packet.relationships.length ? (packet.errors.length ? 'partial' : 'live') : 'empty';
   return jsonResponseV20(packet);
 }
 
