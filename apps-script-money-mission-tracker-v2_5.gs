@@ -622,7 +622,7 @@ function getLiveReadPacketV1(e) {
 function normalizeLiveProjectV1(page) {
   var props = page.properties || {};
   var title = readNotionTitle(props.Name || props['Project Name'] || props['Project name'] || props.Title);
-  return { id:page.id, objectType:'project', title:title, projectType:readNotionSelect(props['Project Type'] || props.Type), status:readNotionStatus(props.Status),
+  return { id:page.id, objectType:'project', title:title, artist:readNotionText(props.Artist), clientEmail:readNotionEmail(props['Client Email']), clientPhone:readNotionPhone(props['Client Phone']), projectType:readNotionSelect(props['Project Type'] || props.Type), status:readNotionStatus(props.Status),
     priority:readNotionSelect(props.Priority), summary:readNotionText(props.Summary || props.Description),
     nextAction:readNotionText(props['Current Next Move'] || props['Next Action'] || props['Next Move']),
     needsA1XX:readNotionCheckbox(props['Needs A1XX']), closestToMoney:readNotionCheckbox(props['Closest To Money']),
