@@ -271,6 +271,9 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', row: sessionRow }))
         .setMimeType(ContentService.MimeType.JSON);
     }
+    if (data.type === 'project_create_v1') {
+      return createProjectWithDriveFolderV1(data);
+    }
     if (isMissionCommandEventTypeV18(data.type)) {
       var eventRow = saveMissionCommandEventV18(data);
       logActivity('Mission Command event — ' + data.type + ' — ' + String(eventRow.action || eventRow.summary || '').slice(0, 80));
@@ -322,6 +325,43 @@ function doPost(e) {
     logActivity('POST ERROR: ' + err.toString());
     return error(err.toString());
   }
+}
+
+// Creates one Notion Projects record and its standard client Drive workspace.
+// This is an explicit user-invoked write; it never runs during a read refresh.
+function createProjectWithDriveFolderV1(data) {
+  data = data || {};
+  var title = String(data.title || '').trim();
+  if (!title) return jsonResponseV20({ok:false,status:'blocked',error:'Project title is required.'});
+  var artist = String(data.artist || data.stage_name || '').trim();
+  var driveParentId = '1AFV9BW9rpe0aTtKHYL0lJSJ_mJtBSsOA';
+  var folderName = (artist ? artist + ' — ' : '') + title;
+  var parent = DriveApp.getFolderById(driveParentId);
+  var folders = parent.getFoldersByName(folderName);
+  var projectFolder = folders.hasNext() ? folders.next() : parent.createFolder(folderName);
+  var standardFolders = ['01_ADMIN_AND_AGREEMENTS','02_BRIEF_AND_NOTES','03_SESSION_FILES','04_AUDIO_EXPORTS','05_VIDEO_OR_CREATIVE_ASSETS','06_DELIVERABLES','07_FEEDBACK_AND_REVISIONS','99_ARCHIVE_DO_NOT_DELETE'];
+  var childFolderIds = {};
+  standardFolders.forEach(function(name){
+    var matches = projectFolder.getFoldersByName(name);
+    childFolderIds[name] = matches.hasNext() ? matches.next().getId() : projectFolder.createFolder(name).getId();
+  });
+  var properties = {
+    'Project name': notionTitle(title),
+    'Project Type': {select:{name:String(data.projectType || 'Client').trim()}},
+    'Artist': notionText(artist),
+    'Client Email': {email:String(data.clientEmail || '').trim() || null},
+    'Client Phone': {phone_number:String(data.clientPhone || '').trim() || null},
+    'Executive Producer': notionText(String(data.executiveProducer || 'A1XX').trim()),
+    'Status': {select:{name:String(data.status || 'Not started').trim()}},
+    'Priority': {select:{name:String(data.priority || 'Medium').trim()}},
+    'Summary': notionText(String(data.summary || '').trim()),
+    'Current Next Move': notionText(String(data.nextAction || 'Define the first production move.').trim())
+  };
+  var result = notionRequest('post','https://api.notion.com/v1/pages',{parent:{data_source_id:NOTION_PROJECTS_DB},properties:properties});
+  if (result.code >= 400) return jsonResponseV20({ok:false,status:'error',stage:'notion_create',code:result.code,driveFolder:{id:projectFolder.getId(),url:projectFolder.getUrl(),name:folderName},error:String(result.text||'Notion create failed').slice(0,300)});
+  var page = JSON.parse(result.text || '{}');
+  logActivity('Project created — ' + title + ' — Drive folder ' + projectFolder.getId());
+  return jsonResponseV20({ok:true,status:'created',project:{id:page.id,url:page.url,title:title},driveFolder:{id:projectFolder.getId(),url:projectFolder.getUrl(),name:folderName,children:childFolderIds}});
 }
 
 // Stable provider boundary for Mission Command. Providers may change behind
