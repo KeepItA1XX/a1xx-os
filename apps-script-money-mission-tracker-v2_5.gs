@@ -260,7 +260,7 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     if (data.type === 'mission_llm_chat') {
-      var llmResult = getMissionCommandOpenAiAdvisorV1(data);
+      var llmResult = getMissionCommandLlmAdapterV1(data);
       return missionLlmJsonV1(llmResult);
     }
     if (data.type === 'mission_chat_session_sync') {
@@ -322,27 +322,53 @@ function doPost(e) {
   }
 }
 
+// Stable provider boundary for Mission Command. Providers may change behind
+// this adapter, but the client always receives missionLlmContractV1().
+var MC_LLM_PROVIDER_REGISTRY_V1 = {
+  openai: { keyProperty:'OPENAI_API_KEY', modelProperty:'OPENAI_LLM_MODEL', defaultModel:'gpt-5.1', mode:'responses', endpoint:'https://api.openai.com/v1/responses' },
+  moonshot: { keyProperty:'MOONSHOT_API_KEY', modelProperty:'MOONSHOT_LLM_MODEL', defaultModel:'kimi-k2.6', mode:'chat_completions', endpoint:'https://api.moonshot.ai/v1/chat/completions' },
+  nvidia: { keyProperty:'NVIDIA_API_KEY', modelProperty:'NVIDIA_LLM_MODEL', defaultModel:'z-ai/glm-5.1', mode:'chat_completions', endpoint:'https://integrate.api.nvidia.com/v1/chat/completions' }
+};
+
+function getMissionCommandProviderConfigV1(data) {
+  data = data || {};
+  var props = PropertiesService.getScriptProperties();
+  var requested = String(data.provider || props.getProperty('MISSION_LLM_PROVIDER') || 'openai').trim().toLowerCase();
+  var provider = MC_LLM_PROVIDER_REGISTRY_V1[requested] ? requested : 'openai';
+  var entry = MC_LLM_PROVIDER_REGISTRY_V1[provider];
+  var model = String(props.getProperty(entry.modelProperty) || entry.defaultModel).trim();
+  var endpointProperty = provider.toUpperCase() + '_LLM_BASE_URL';
+  return { provider:provider, keyProperty:entry.keyProperty, model:model, mode:entry.mode,
+    endpoint:String(props.getProperty(endpointProperty) || entry.endpoint).trim(),
+    apiKey:String(props.getProperty(entry.keyProperty) || '').trim() };
+}
+
+function getMissionCommandLlmAdapterV1(data) {
+  var config = getMissionCommandProviderConfigV1(data);
+  if (config.mode === 'responses') return getMissionCommandOpenAiAdvisorV1(data, config);
+  return getMissionCommandChatCompletionsAdvisorV1(data, config);
+}
+
 // Read-only OpenAI advisor path for the Mission Command UI. The existing
 // client-side adapter remains default-off; when explicitly enabled it can
 // request analysis of the sanitized context packet, but no tools or writes
 // are ever passed to the model.
-function getMissionCommandOpenAiAdvisorV1(data) {
+function getMissionCommandOpenAiAdvisorV1(data, config) {
   var started = Date.now();
   data = data || {};
-  var endpoint = 'https://api.openai.com/v1/responses';
+  config = config || getMissionCommandProviderConfigV1({ provider:'openai' });
+  var endpoint = config.endpoint;
   // Use a public Responses API model by default. An explicitly configured
   // OPENAI_LLM_MODEL property still wins, so existing private pilots remain
   // untouched until deliberately changed.
-  var defaultModel = 'gpt-5.1';
   var timeoutSeconds = 30;
   var question = sanitizeMissionCommandLlmTextV1(data.question || '', 700);
   var contextPacket = sanitizeMissionCommandLlmContextV1(data.contextPacket || {});
-  var props = PropertiesService.getScriptProperties();
-  var apiKey = String(props.getProperty('OPENAI_API_KEY') || '').trim();
-  var model = String(props.getProperty('OPENAI_LLM_MODEL') || defaultModel).trim();
+  var apiKey = config.apiKey;
+  var model = config.model;
 
-  if (!question) return missionLlmContractV1({ ok:false, status:'blocked', provider:'openai', model:model, fallbackReason:'missing_question', latencyMs:Date.now()-started });
-  if (!apiKey) return missionLlmContractV1({ ok:false, status:'blocked', provider:'openai', model:model, fallbackReason:'missing_openai_api_key', latencyMs:Date.now()-started });
+  if (!question) return missionLlmContractV1({ ok:false, status:'blocked', provider:config.provider, model:model, fallbackReason:'missing_question', latencyMs:Date.now()-started });
+  if (!apiKey) return missionLlmContractV1({ ok:false, status:'blocked', provider:config.provider, model:model, fallbackReason:'missing_'+config.provider+'_api_key', latencyMs:Date.now()-started });
 
   var instructions = [
     'You are Mission Command inside Money Mission OS for A1XX.',
@@ -372,11 +398,11 @@ function getMissionCommandOpenAiAdvisorV1(data) {
       timeoutSeconds:timeoutSeconds
     });
   } catch (err) {
-    return missionLlmContractV1({ ok:false, status:'error', provider:'openai', model:model, fallbackReason:'provider_fetch_error', latencyMs:Date.now()-started });
+    return missionLlmContractV1({ ok:false, status:'error', provider:config.provider, model:model, fallbackReason:'provider_fetch_error', latencyMs:Date.now()-started });
   }
   var code = Number(response.getResponseCode() || 0);
   var body = String(response.getContentText() || '');
-  if (code < 200 || code >= 300) return missionLlmContractV1({ ok:false, status:'error', provider:'openai', model:model, httpStatus:code, fallbackReason:getMissionCommandLlmHttpReasonV1(code, body), latencyMs:Date.now()-started });
+  if (code < 200 || code >= 300) return missionLlmContractV1({ ok:false, status:'error', provider:config.provider, model:model, httpStatus:code, fallbackReason:getMissionCommandLlmHttpReasonV1(code, body), latencyMs:Date.now()-started });
   var parsed;
   try { parsed = JSON.parse(body || '{}'); } catch (err2) { parsed = null; }
   var answer = parsed && typeof parsed.output_text === 'string' ? parsed.output_text : '';
@@ -386,10 +412,31 @@ function getMissionCommandOpenAiAdvisorV1(data) {
       item.content.forEach(function(part){ if (part && typeof part.text === 'string') answer += (answer?'\n':'') + part.text; });
     });
   }
-  if (missionCommandLlmTextIsUnsafeV1(answer)) return missionLlmContractV1({ ok:false, status:'blocked', provider:'openai', model:model, fallbackReason:'unsafe_answer_blocked', latencyMs:Date.now()-started });
+  if (missionCommandLlmTextIsUnsafeV1(answer)) return missionLlmContractV1({ ok:false, status:'blocked', provider:config.provider, model:model, fallbackReason:'unsafe_answer_blocked', latencyMs:Date.now()-started });
   answer = sanitizeMissionCommandLlmTextV1(answer, 3200);
-  if (!answer) return missionLlmContractV1({ ok:false, status:'empty', provider:'openai', model:model, fallbackReason:'provider_empty_answer', latencyMs:Date.now()-started });
-  return missionLlmContractV1({ ok:true, status:'ready', provider:'openai', model:model, mode:'advisor_only', answerText:answer, latencyMs:Date.now()-started });
+  if (!answer) return missionLlmContractV1({ ok:false, status:'empty', provider:config.provider, model:model, fallbackReason:'provider_empty_answer', latencyMs:Date.now()-started });
+  return missionLlmContractV1({ ok:true, status:'ready', provider:config.provider, model:model, mode:'advisor_only', answerText:answer, latencyMs:Date.now()-started });
+}
+
+function getMissionCommandChatCompletionsAdvisorV1(data, config) {
+  var started = Date.now(); data = data || {}; config = config || getMissionCommandProviderConfigV1(data);
+  var question = sanitizeMissionCommandLlmTextV1(data.question || '', 700);
+  var contextPacket = sanitizeMissionCommandLlmContextV1(data.contextPacket || {});
+  if (!question) return missionLlmContractV1({ok:false,status:'blocked',provider:config.provider,model:config.model,fallbackReason:'missing_question',latencyMs:Date.now()-started});
+  if (!config.apiKey) return missionLlmContractV1({ok:false,status:'blocked',provider:config.provider,model:config.model,fallbackReason:'missing_'+config.provider+'_api_key',latencyMs:Date.now()-started});
+  var systemPrompt = 'You are Mission Command inside Money Mission OS for A1XX. Be perceptive, concise, warm, candid, self-aware, and grounded in the supplied safe context. Answer the user\'s actual words, never claim writes or external actions, never expose secrets or implementation details, and ask one focused question only when necessary. Advisor-only: no tools, writes, or dispatch.';
+  var payload = {model:config.model,messages:[{role:'system',content:systemPrompt},{role:'user',content:'User question: '+question+'\nSafe context packet: '+JSON.stringify(contextPacket)}],temperature:0.35,top_p:0.9,max_tokens:800,stream:false};
+  var response;
+  try { response=UrlFetchApp.fetch(config.endpoint,{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+config.apiKey,Accept:'application/json'},payload:JSON.stringify(payload),muteHttpExceptions:true,timeoutSeconds:30}); }
+  catch(err) { return missionLlmContractV1({ok:false,status:'error',provider:config.provider,model:config.model,fallbackReason:'provider_fetch_error',latencyMs:Date.now()-started}); }
+  var code=Number(response.getResponseCode()||0), body=String(response.getContentText()||'');
+  if(code<200||code>=300)return missionLlmContractV1({ok:false,status:'error',provider:config.provider,model:config.model,httpStatus:code,fallbackReason:getMissionCommandLlmHttpReasonV1(code,body),latencyMs:Date.now()-started});
+  var parsed; try{parsed=JSON.parse(body||'{}');}catch(err2){parsed=null;}
+  var answer=parsed&&parsed.choices&&parsed.choices[0]&&parsed.choices[0].message?parsed.choices[0].message.content:'';
+  if(missionCommandLlmTextIsUnsafeV1(answer))return missionLlmContractV1({ok:false,status:'blocked',provider:config.provider,model:config.model,fallbackReason:'unsafe_answer_blocked',latencyMs:Date.now()-started});
+  answer=sanitizeMissionCommandLlmTextV1(answer,3200);
+  if(!answer)return missionLlmContractV1({ok:false,status:'empty',provider:config.provider,model:config.model,fallbackReason:'provider_empty_answer',latencyMs:Date.now()-started});
+  return missionLlmContractV1({ok:true,status:'ready',provider:config.provider,model:config.model,mode:'advisor_only',answerText:answer,latencyMs:Date.now()-started});
 }
 
 function doGet(e) {
@@ -659,10 +706,10 @@ function missionLlmContractV1(payload) {
   return {
     ok: payload.ok === true,
     status: payload.status || (payload.ok === true ? 'ready' : 'blocked'),
-    provider: payload.provider || 'nvidia',
+    provider: payload.provider || 'openai',
     relay: 'apps_script',
     action: 'mission_llm_chat',
-    model: payload.model || 'z-ai/glm-5.1',
+    model: payload.model || 'gpt-5.1',
     mode: payload.mode || 'advisor_only',
     answerText: payload.answerText || '',
     fallbackReason: payload.fallbackReason || '',
