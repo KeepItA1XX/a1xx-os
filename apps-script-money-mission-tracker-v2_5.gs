@@ -360,7 +360,7 @@ function getMissionCommandOpenAiAdvisorV1(data) {
     instructions: instructions,
     input: 'User question: ' + question + '\nSafe context packet: ' + JSON.stringify(contextPacket),
     tools: [],
-    max_output_tokens: 420,
+    max_output_tokens: 800,
     store: false
   };
   var response;
@@ -387,7 +387,7 @@ function getMissionCommandOpenAiAdvisorV1(data) {
     });
   }
   if (missionCommandLlmTextIsUnsafeV1(answer)) return missionLlmContractV1({ ok:false, status:'blocked', provider:'openai', model:model, fallbackReason:'unsafe_answer_blocked', latencyMs:Date.now()-started });
-  answer = sanitizeMissionCommandLlmTextV1(answer, 1200);
+  answer = sanitizeMissionCommandLlmTextV1(answer, 3200);
   if (!answer) return missionLlmContractV1({ ok:false, status:'empty', provider:'openai', model:model, fallbackReason:'provider_empty_answer', latencyMs:Date.now()-started });
   return missionLlmContractV1({ ok:true, status:'ready', provider:'openai', model:model, mode:'advisor_only', answerText:answer, latencyMs:Date.now()-started });
 }
