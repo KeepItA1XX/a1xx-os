@@ -535,7 +535,11 @@ function getLiveReadPacketV1(e) {
       packet.sources.notion.status = 'live';
       packet.sources.notion.fetchedAt = new Date().toISOString();
       packet.sources.notion.recordCount += packet.projects.length;
-    } catch (err) { packet.warnings.push('projects_unavailable'); packet.errors.push('projects_read_failed'); }
+    } catch (err) {
+      packet.warnings.push('projects_unavailable');
+      packet.errors.push('projects_read_failed');
+      packet.sources.notion.projectsError = String(err && err.message || err || 'unknown').slice(0, 180);
+    }
     try {
       var leadsResult = notionQuery(NOTION_CRM_DB, {page_size:50}, 'live_relationships_v1');
       if (leadsResult.code >= 400) throw new Error('CRM ' + leadsResult.code);
