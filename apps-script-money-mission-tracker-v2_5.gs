@@ -274,6 +274,9 @@ function doPost(e) {
     if (data.type === 'project_create_v1') {
       return createProjectWithDriveFolderV1(data);
     }
+    if (data.type === 'project_drive_upload_v1') {
+      return uploadProjectDriveFileV1(data);
+    }
     if (isMissionCommandEventTypeV18(data.type)) {
       var eventRow = saveMissionCommandEventV18(data);
       logActivity('Mission Command event — ' + data.type + ' — ' + String(eventRow.action || eventRow.summary || '').slice(0, 80));
@@ -325,6 +328,27 @@ function doPost(e) {
     logActivity('POST ERROR: ' + err.toString());
     return error(err.toString());
   }
+}
+
+// Explicit, user-invoked Drive upload scoped to an existing project folder.
+// The browser supplies base64 bytes; this endpoint never creates folders or
+// changes existing files. Size is capped before decoding to keep the relay safe.
+function uploadProjectDriveFileV1(data) {
+  data = data || {};
+  var folderId = String(data.folderId || '').trim();
+  var fileName = String(data.fileName || '').trim();
+  var mimeType = String(data.mimeType || 'application/octet-stream').trim();
+  var encoded = String(data.base64 || '').trim();
+  if (!folderId || !fileName || !encoded) return jsonResponseV20({ok:false,status:'blocked',error:'folderId, fileName, and base64 are required.'});
+  if (encoded.length > 12000000) return jsonResponseV20({ok:false,status:'blocked',error:'File exceeds the 8 MB upload limit.'});
+  if (!/^[a-zA-Z0-9._()\- ]+$/.test(fileName) || fileName.length > 180) return jsonResponseV20({ok:false,status:'blocked',error:'File name contains unsupported characters or is too long.'});
+  var allowed = ['image/png','image/jpeg','image/webp','image/gif','application/pdf','audio/mpeg','audio/wav','audio/x-wav','audio/mp4','video/mp4','text/plain'];
+  if (allowed.indexOf(mimeType) < 0) return jsonResponseV20({ok:false,status:'blocked',error:'File type is not allowed for this project upload.'});
+  var folder = DriveApp.getFolderById(folderId);
+  var blob = Utilities.newBlob(Utilities.base64Decode(encoded), mimeType, fileName);
+  var file = folder.createFile(blob);
+  logActivity('Project Drive upload — ' + fileName + ' — folder ' + folderId);
+  return jsonResponseV20({ok:true,status:'uploaded',file:{id:file.getId(),name:file.getName(),mimeType:file.getMimeType(),url:file.getUrl(),updatedAt:file.getLastUpdated().toISOString()}});
 }
 
 // Creates one Notion Projects record and its standard client Drive workspace.
