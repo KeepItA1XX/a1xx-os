@@ -83,6 +83,7 @@ var NOTION_PRODUCTION_DB = '1a761152-81da-8199-a5df-fc423d447f31'; /* 2026-05-18
 var NOTION_RESOURCE_DB   = '35861152-81da-8053-8d5e-c5e6c5042e6c';
 var NOTION_CRM_DB        = 'b82e7140-b3b0-48d1-915d-34e4cdf9f65a';
 var NOTION_PROJECTS_DB   = '19f61152-81da-8141-86a7-000b43a05c39';
+var NOTION_PROJECTS_CONTAINER = '19f61152-81da-811e-aee9-c36dee866ec9';
 var NOTION_OPS_DAILY_DB  = '36461152-81da-809d-baa7-d6638dd2077b';
 var NOTION_OPS_WEEKLY_DB = '515171aa-890f-405f-a035-a37c09348f35';
 var NOTION_OPS_CYCLE_DB  = 'e84314ae-e99a-4619-8c91-368fbfa38a63';
@@ -531,7 +532,23 @@ function getLiveReadPacketV1(e) {
       var projectsResult = notionDataSourceQuery(NOTION_PROJECTS_DB, {page_size:50}, 'live_projects_v1');
       if (projectsResult.code >= 400) throw new Error('Projects ' + projectsResult.code);
       var projectsData = JSON.parse(projectsResult.text || '{}');
-      packet.projects = (projectsData.results || []).map(normalizeLiveProjectV1).filter(function(row){ return row.id && row.title; });
+      var projectRows = projectsData.results || [];
+      if (!projectRows.length) {
+        var discovery = discoverProjectsDataSourcesV1();
+        packet.sources.notion.projectsDiscovery = { containerCode: discovery.code, dataSources: discovery.sources };
+        var discovered = discovery.sources;
+        for (var di = 0; di < discovered.length && !projectRows.length; di++) {
+          var discoveredResult = notionDataSourceQuery(discovered[di].id, {page_size:50}, 'live_projects_v1_' + discovered[di].id);
+          if (discoveredResult.code >= 400) continue;
+          var discoveredData = JSON.parse(discoveredResult.text || '{}');
+          projectRows = discoveredData.results || [];
+          if (projectRows.length) {
+            packet.sources.notion.projectsDataSource = discovered[di];
+            packet.warnings.push('projects_source_discovered');
+          }
+        }
+      }
+      packet.projects = projectRows.map(normalizeLiveProjectV1).filter(function(row){ return row.id && row.title; });
       packet.sources.notion.status = 'live';
       packet.sources.notion.fetchedAt = new Date().toISOString();
       packet.sources.notion.recordCount += packet.projects.length;
@@ -572,6 +589,15 @@ function normalizeLiveProjectV1(page) {
     url:page.url, source:'Notion Projects', updatedAt:page.last_edited_time || page.created_time || '' };
 }
 
+function discoverProjectsDataSourcesV1() {
+  var result = notionRequestV25('get', 'https://api.notion.com/v1/databases/' + NOTION_PROJECTS_CONTAINER, null, '2025-09-03');
+  if (result.code >= 400) return { code:result.code, sources:[] };
+  var data = JSON.parse(result.text || '{}');
+  return { code:result.code, sources:(data.data_sources || []).map(function(source) {
+    return { id:source.id, name:source.name || '' };
+  }).filter(function(source){ return source.id; }) };
+}
+
 // Current Notion data-source query path. Kept separate from the legacy CRM
 // database query helper so the proven relationships read remains unchanged.
 function notionDataSourceQuery(dataSourceId, payload, cacheKey) {
@@ -594,6 +620,16 @@ function notionDataSourceQuery(dataSourceId, payload, cacheKey) {
   var text = res.getContentText();
   if (cacheKey && code < 400) { try { if (text.length < 90000) cache.put(cacheKey, text, 600); } catch (e) {} }
   return { text: text, code: code };
+}
+
+function notionRequestV25(method, url, payload, notionVersion) {
+  var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
+  var opts = { method: method,
+    headers: { Authorization: 'Bearer ' + secret, 'Notion-Version': notionVersion || '2025-09-03', 'Content-Type': 'application/json' },
+    muteHttpExceptions: true };
+  if (payload) opts.payload = JSON.stringify(payload);
+  var res = UrlFetchApp.fetch(url, opts);
+  return { text:res.getContentText(), code:res.getResponseCode() };
 }
 
 function normalizeLiveRelationshipV1(page) {
