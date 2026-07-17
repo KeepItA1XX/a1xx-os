@@ -277,6 +277,9 @@ function doPost(e) {
     if (data.type === 'project_drive_upload_v1') {
       return uploadProjectDriveFileV1(data);
     }
+    if (data.type === 'project_drive_move_v1') {
+      return moveProjectDriveFileV1(data);
+    }
     if (isMissionCommandEventTypeV18(data.type)) {
       var eventRow = saveMissionCommandEventV18(data);
       logActivity('Mission Command event — ' + data.type + ' — ' + String(eventRow.action || eventRow.summary || '').slice(0, 80));
@@ -349,6 +352,26 @@ function uploadProjectDriveFileV1(data) {
   var file = folder.createFile(blob);
   logActivity('Project Drive upload — ' + fileName + ' — folder ' + folderId);
   return jsonResponseV20({ok:true,status:'uploaded',file:{id:file.getId(),name:file.getName(),mimeType:file.getMimeType(),url:file.getUrl(),updatedAt:file.getLastUpdated().toISOString()}});
+}
+
+function moveProjectDriveFileV1(data) {
+  data = data || {};
+  var fileId = String(data.fileId || '').trim();
+  var destinationId = String(data.destinationFolderId || '').trim();
+  var projectRootId = String(data.projectRootId || '').trim();
+  if (!fileId || !destinationId || !projectRootId) return jsonResponseV20({ok:false,status:'blocked',error:'fileId, destinationFolderId, and projectRootId are required.'});
+  var root = DriveApp.getFolderById(projectRootId);
+  var destination = destinationId === projectRootId ? root : null;
+  var rootFolders = root.getFolders();
+  while (rootFolders.hasNext()) { var candidate = rootFolders.next(); if (candidate.getId() === destinationId) { destination = candidate; break; } }
+  if (!destination) return jsonResponseV20({ok:false,status:'blocked',error:'Destination must be a folder in the selected project workspace.'});
+  var file = DriveApp.getFileById(fileId);
+  var parents = file.getParents(), allowedSource = false;
+  while (parents.hasNext()) { var source = parents.next(); if (source.getId() === projectRootId || source.getParents().hasNext()) { allowedSource = source.getId() === projectRootId; if (!allowedSource) { var sourceParent = source.getParents(); while (sourceParent.hasNext()) { if (sourceParent.next().getId() === projectRootId) allowedSource = true; } } } }
+  if (!allowedSource) return jsonResponseV20({ok:false,status:'blocked',error:'File is not inside the selected project workspace.'});
+  file.moveTo(destination);
+  logActivity('Project Drive move — ' + file.getName() + ' — destination ' + destinationId);
+  return jsonResponseV20({ok:true,status:'moved',file:{id:file.getId(),name:file.getName(),url:file.getUrl(),destinationFolderId:destinationId}});
 }
 
 // Creates one Notion Projects record and its standard client Drive workspace.
