@@ -613,10 +613,64 @@ function getLiveReadPacketV1(e) {
     packet.sources.sheets.workbookId = ss ? ss.getId() : '';
     packet.sources.sheets.fetchedAt = new Date().toISOString();
   } catch (sheetErr) { packet.warnings.push('sheets_unavailable'); packet.errors.push('sheets_read_failed'); }
-  // Drive remains metadata-only in this first pass; no Drive search or mutation is performed.
-  packet.warnings.push('drive_metadata_deferred');
+  // Drive is read-only here: resolve an existing client workspace and expose
+  // bounded folder/file metadata without creating, moving, or changing files.
+  try {
+    var driveRead = readLiveProjectDriveMetadataV1(packet.projects);
+    packet.projects = packet.projects.map(function(project){
+      var meta = driveRead.byProjectId[project.id];
+      if (meta) project.driveFolder = meta;
+      return project;
+    });
+    packet.files = driveRead.files;
+    packet.sources.drive = {status:driveRead.status,recordCount:driveRead.files.length,fetchedAt:new Date().toISOString(),parentFolderId:driveRead.parentFolderId};
+    if (driveRead.warning) packet.warnings.push(driveRead.warning);
+  } catch (driveErr) {
+    packet.sources.drive = {status:'unavailable',recordCount:0,fetchedAt:new Date().toISOString()};
+    packet.warnings.push('drive_unavailable');
+    packet.errors.push('drive_read_failed');
+  }
   packet.status = packet.projects.length || packet.relationships.length ? (packet.errors.length ? 'partial' : 'live') : 'empty';
   return jsonResponseV20(packet);
+}
+
+function readLiveProjectDriveMetadataV1(projects) {
+  var parentId = '1AFV9BW9rpe0aTtKHYL0lJSJ_mJtBSsOA';
+  var parent = DriveApp.getFolderById(parentId);
+  var result = {status:'partial',parentFolderId:parentId,byProjectId:{},files:[],warning:''};
+  var matched = 0;
+  (projects || []).forEach(function(project){
+    var candidates = [];
+    var artist = String(project.artist || '').trim();
+    var title = String(project.title || '').trim();
+    if (artist && title) candidates.push(artist + ' — ' + title);
+    if (title) candidates.push(title);
+    var folder = null;
+    for (var ci = 0; ci < candidates.length && !folder; ci++) {
+      var folders = parent.getFoldersByName(candidates[ci]);
+      if (folders.hasNext()) folder = folders.next();
+    }
+    if (!folder) return;
+    matched++;
+    var children = [], foldersIt = folder.getFolders(), filesIt = folder.getFiles(), count = 0;
+    while (foldersIt.hasNext() && count < 100) {
+      var childFolder = foldersIt.next();
+      children.push({id:childFolder.getId(),name:childFolder.getName(),kind:'folder',mimeType:'application/vnd.google-apps.folder',url:childFolder.getUrl()});
+      count++;
+    }
+    while (filesIt.hasNext() && count < 100) {
+      var file = filesIt.next();
+      var fileRef = {id:file.getId(),name:file.getName(),kind:'file',mimeType:file.getMimeType(),url:file.getUrl(),updatedAt:file.getLastUpdated().toISOString()};
+      children.push(fileRef);
+      result.files.push({projectId:project.id,folderId:folder.getId(),id:fileRef.id,name:fileRef.name,mimeType:fileRef.mimeType,url:fileRef.url,updatedAt:fileRef.updatedAt});
+      count++;
+    }
+    result.byProjectId[project.id] = {id:folder.getId(),name:folder.getName(),url:folder.getUrl(),status:'live',children:children,fileCount:children.filter(function(item){return item.kind==='file';}).length,folderCount:children.filter(function(item){return item.kind==='folder';}).length};
+  });
+  if (matched === (projects || []).length && matched > 0) result.status = 'live';
+  else if (matched > 0) result.status = 'partial';
+  else result.warning = 'drive_project_folders_not_found';
+  return result;
 }
 
 function normalizeLiveProjectV1(page) {
