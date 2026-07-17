@@ -699,25 +699,30 @@ function readLiveProjectDriveMetadataV1(projects) {
     }
     if (!folder) return;
     matched++;
-    var children = [], foldersIt = folder.getFolders(), filesIt = folder.getFiles(), count = 0;
-    while (foldersIt.hasNext() && count < 100) {
-      var childFolder = foldersIt.next();
-      children.push({id:childFolder.getId(),name:childFolder.getName(),kind:'folder',mimeType:'application/vnd.google-apps.folder',url:childFolder.getUrl()});
-      count++;
-    }
-    while (filesIt.hasNext() && count < 100) {
-      var file = filesIt.next();
-      var fileRef = {id:file.getId(),name:file.getName(),kind:'file',mimeType:file.getMimeType(),url:file.getUrl(),updatedAt:file.getLastUpdated().toISOString()};
-      children.push(fileRef);
-      result.files.push({projectId:project.id,folderId:folder.getId(),id:fileRef.id,name:fileRef.name,mimeType:fileRef.mimeType,url:fileRef.url,updatedAt:fileRef.updatedAt});
-      count++;
-    }
+    var children = readDriveFolderChildrenV1(folder, 0, project.id, result);
     result.byProjectId[project.id] = {id:folder.getId(),name:folder.getName(),url:folder.getUrl(),status:'live',children:children,fileCount:children.filter(function(item){return item.kind==='file';}).length,folderCount:children.filter(function(item){return item.kind==='folder';}).length};
   });
   if (matched === (projects || []).length && matched > 0) result.status = 'live';
   else if (matched > 0) result.status = 'partial';
   else result.warning = 'drive_project_folders_not_found';
   return result;
+}
+
+function readDriveFolderChildrenV1(folder, depth, projectId, result) {
+  var children = [], foldersIt = folder.getFolders(), filesIt = folder.getFiles();
+  while (foldersIt.hasNext() && children.length < 100) {
+    var childFolder = foldersIt.next();
+    var child = {id:childFolder.getId(),name:childFolder.getName(),kind:'folder',mimeType:'application/vnd.google-apps.folder',url:childFolder.getUrl(),children:[]};
+    if (depth < 2) child.children = readDriveFolderChildrenV1(childFolder, depth + 1, projectId, result);
+    children.push(child);
+  }
+  while (filesIt.hasNext() && children.length < 100) {
+    var file = filesIt.next();
+    var fileRef = {id:file.getId(),name:file.getName(),kind:'file',mimeType:file.getMimeType(),url:file.getUrl(),updatedAt:file.getLastUpdated().toISOString()};
+    children.push(fileRef);
+    result.files.push({projectId:projectId,folderId:folder.getId(),id:fileRef.id,name:fileRef.name,mimeType:fileRef.mimeType,url:fileRef.url,updatedAt:fileRef.updatedAt});
+  }
+  return children;
 }
 
 function normalizeLiveProjectV1(page) {
