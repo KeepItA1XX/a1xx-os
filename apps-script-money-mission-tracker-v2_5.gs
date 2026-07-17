@@ -612,7 +612,7 @@ function getLiveReadPacketV1(e) {
   var started = new Date().toISOString();
   var packet = { packet:'live_read_packet_v1', status:'partial', generatedAt:started, freshness:{state:'fresh',maxAgeMs:300000},
     sources:{notion:{status:'unknown',recordCount:0,fetchedAt:''},sheets:{status:'unknown',fetchedAt:''},drive:{status:'deferred',fetchedAt:''}},
-    projects:[], relationships:[], files:[], warnings:[], errors:[] };
+    projects:[], relationships:[], files:[], sheets:{status:'unknown',tabs:[],scorecards:[],ledgers:[],indexes:[],sync:[]}, warnings:[], errors:[] };
   var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
   if (secret) {
     try {
@@ -659,6 +659,7 @@ function getLiveReadPacketV1(e) {
     packet.sources.sheets.status = ss ? 'live' : 'unavailable';
     packet.sources.sheets.workbookId = ss ? ss.getId() : '';
     packet.sources.sheets.fetchedAt = new Date().toISOString();
+    if (ss) packet.sheets = readLiveSheetsSnapshotV1(ss);
   } catch (sheetErr) { packet.warnings.push('sheets_unavailable'); packet.errors.push('sheets_read_failed'); }
   // Drive is read-only here: resolve an existing client workspace and expose
   // bounded folder/file metadata without creating, moving, or changing files.
@@ -679,6 +680,41 @@ function getLiveReadPacketV1(e) {
   }
   packet.status = packet.projects.length || packet.relationships.length ? (packet.errors.length ? 'partial' : 'live') : 'empty';
   return jsonResponseV20(packet);
+}
+
+// Bounded read-only workbook snapshot. It exposes existing tab headers and
+// small row counts for scorecards, ledgers, indexes, and sync/runtime tabs;
+// it never creates tabs, changes cells, or treats Sheets as a source of truth
+// for project meaning.
+function readLiveSheetsSnapshotV1(ss) {
+  var snapshot = {status:'live', fetchedAt:new Date().toISOString(), tabs:[], scorecards:[], ledgers:[], indexes:[], sync:[]};
+  var sheets = ss.getSheets ? ss.getSheets() : [];
+  sheets.slice(0,50).forEach(function(sheet) {
+    var name = String(sheet.getName() || '');
+    var lastRow = Math.min(Number(sheet.getLastRow() || 0), 5000);
+    var lastColumn = Math.min(Number(sheet.getLastColumn() || 0), 40);
+    var headers = [];
+    if (lastRow > 0 && lastColumn > 0) headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0].map(function(value){ return String(value || '').trim(); });
+    var row = {name:name, rowCount:Math.max(0,lastRow - (headers.length ? 1 : 0)), columnCount:lastColumn, headers:headers.slice(0,40), sampleRows:[]};
+    if (lastRow > 1 && lastColumn > 0) {
+      var sampleCount = Math.min(lastRow - 1, 25);
+      var values = sheet.getRange(2, 1, sampleCount, lastColumn).getDisplayValues();
+      row.sampleRows = values.map(function(valuesRow) {
+        var normalized = {};
+        headers.forEach(function(header, index) {
+          if (header) normalized[header] = String(valuesRow[index] || '').slice(0, 500);
+        });
+        return normalized;
+      });
+    }
+    snapshot.tabs.push(row);
+    var key = name.toLowerCase();
+    if (/score|metric|kpi|goal/.test(key)) snapshot.scorecards.push(row);
+    if (/ledger|close|payment|revenue|cash|dpc/.test(key)) snapshot.ledgers.push(row);
+    if (/index|directory|lookup|pointer|map/.test(key)) snapshot.indexes.push(row);
+    if (/sync|runtime|health|status|receipt/.test(key)) snapshot.sync.push(row);
+  });
+  return snapshot;
 }
 
 function readLiveProjectDriveMetadataV1(projects) {
