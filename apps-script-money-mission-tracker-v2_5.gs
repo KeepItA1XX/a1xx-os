@@ -689,7 +689,7 @@ function readLinearIntelSnapshotV1(health) {
   if (!key) { health.warnings.push('linear_api_key_missing'); return {status:'deferred',workspace:'',teams:[],projects:[],issues:[],activity:[]}; }
   var responseCode = 0, failureDetail = '';
   try {
-    var query = 'query IntelRead { organization { id name } teams(first:50) { nodes { id name key } } projects(first:50) { nodes { id name state } } issues(first:100) { nodes { id identifier title priority state assignee { name } project { id name } updatedAt url } } }';
+    var query = 'query IntelRead { organization { id name } teams(first:50) { nodes { id name key } } projects(first:50) { nodes { id name } } issues(first:100) { nodes { id identifier title priority state { name } assignee { name } project { id name } updatedAt url } } }';
     var response = UrlFetchApp.fetch('https://api.linear.app/graphql', {method:'post',contentType:'application/json',headers:{Authorization:key},payload:JSON.stringify({query:query}),muteHttpExceptions:true});
     responseCode = response.getResponseCode();
     var body = JSON.parse(response.getContentText() || '{}');
