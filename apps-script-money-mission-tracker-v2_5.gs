@@ -734,7 +734,9 @@ function intelDedupeRowsV1(rows, kind, health) {
   var seen={}, kept=[], duplicates=[];
   (rows || []).forEach(function(row){
     var id=String(row && row.id || '');
-    if(!id || !row.title) { if(health) health.warnings.push('malformed_' + kind + '_row'); return; }
+    if(!id) { if(health) health.warnings.push('malformed_' + kind + '_row'); return; }
+    if(!row.title && kind === 'outputs') row.title = row.summary || ('Output ' + id.slice(0,8));
+    if(!row.title) { if(health) health.warnings.push('malformed_' + kind + '_row'); return; }
     if(seen[id]) { duplicates.push(id); return; }
     seen[id]=true; kept.push(row);
   });
