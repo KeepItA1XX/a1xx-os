@@ -664,6 +664,12 @@ function getIntelReadPacketV1(e) {
 }
 
 function intelCanonicalKeyV1(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '); }
+var INTEL_LINEAR_SETUP_ISSUES_V1 = {
+  'get familiar with linear': true,
+  'connect your tools': true,
+  'import your data': true,
+  'set up your teams': true
+};
 function linkLinearIntelRecordsV1(packet) {
   var projects=[];
   try {
@@ -676,10 +682,17 @@ function linkLinearIntelRecordsV1(packet) {
   (packet.linear.issues||[]).forEach(function(issue){
     var issueKey=intelCanonicalKeyV1(issue.title), match=null;
     jobs.some(function(job){ if((job.linearIssueId&&job.linearIssueId===issue.id)||intelCanonicalKeyV1(job.title)===issueKey){match=job;return true;} return false; });
+    if(!match && INTEL_LINEAR_SETUP_ISSUES_V1[issueKey]){
+      match=jobs.filter(function(job){return intelCanonicalKeyV1(job.title)==='linear integration read contract';})[0]||null;
+    }
     if(match){ issue.notionJobId=match.id; issue.jobTitle=match.title; issue.matchType=match.linearIssueId?'linear_issue_id':'title'; }
     var projectName=issue.project&&issue.project.name||'';
     var project=projects.filter(function(row){return intelCanonicalKeyV1(row.title)===intelCanonicalKeyV1(projectName);})[0];
     if(project){ issue.notionProjectId=project.id; issue.projectTitle=project.title; issue.projectMatchType='title'; }
+    if(!project && INTEL_LINEAR_SETUP_ISSUES_V1[issueKey]){
+      var linkedProject=projects.filter(function(row){return intelCanonicalKeyV1(row.title)==='money mission os';})[0];
+      if(linkedProject){ issue.notionProjectId=linkedProject.id; issue.projectTitle=linkedProject.title; issue.projectMatchType='setup_issue_project_fallback'; }
+    }
   });
   packet.linear.projects=(packet.linear.projects||[]).map(function(project){
     var match=projects.filter(function(row){return intelCanonicalKeyV1(row.title)===intelCanonicalKeyV1(project.name);})[0];
