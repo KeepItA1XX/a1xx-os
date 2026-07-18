@@ -685,7 +685,9 @@ function linkLinearIntelRecordsV1(packet) {
     var match=projects.filter(function(row){return intelCanonicalKeyV1(row.title)===intelCanonicalKeyV1(project.name);})[0];
     return match?Object.assign({},project,{notionProjectId:match.id,notionProjectTitle:match.title,matchType:'title'}):project;
   });
-  packet.health.linearMappings={issuesLinked:(packet.linear.issues||[]).filter(function(row){return row.notionJobId||row.notionProjectId;}).length,issuesUnlinked:(packet.linear.issues||[]).filter(function(row){return !row.notionJobId&&!row.notionProjectId;}).length,projectsLinked:(packet.linear.projects||[]).filter(function(row){return row.notionProjectId;}).length};
+  packet.health.linearMappings={issuesLinked:(packet.linear.issues||[]).filter(function(row){return row.notionJobId||row.notionProjectId;}).length,issuesUnlinked:(packet.linear.issues||[]).filter(function(row){return !row.notionJobId&&!row.notionProjectId;}).length,projectsLinked:(packet.linear.projects||[]).filter(function(row){return row.notionProjectId;}).length,
+    linearProjectNames:(packet.linear.projects||[]).map(function(row){return row.name||'';}).filter(Boolean),
+    notionProjectTitles:projects.map(function(row){return row.title||'';}).filter(Boolean)};
 }
 
 function normalizeIntelAgencyRowV1(page, kind) {
