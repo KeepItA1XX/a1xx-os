@@ -648,8 +648,15 @@ function getIntelReadPacketV1(e) {
   }
   packet.library.outputs = readIntelOptionalDataSourceV1('c6337637-98eb-47ea-8396-982e72f2637d','outputs',packet.health);
   packet.library.memory = readIntelOptionalDataSourceV1('50920839-9733-4938-b85e-d1def6383102','memory',packet.health);
-  packet.health.duplicates = intelDuplicateIdsV1(packet.agents.departments.concat(packet.agents.captains,packet.agents.jobs,packet.agents.skills,packet.agents.workers));
+  var graphCollections = ['departments','captains','jobs','skills','workers'];
+  graphCollections.forEach(function(kind){
+    var deduped = intelDedupeRowsV1(packet.agents[kind] || [], kind, packet.health);
+    packet.agents[kind] = deduped.rows;
+  });
+  packet.library.outputs = intelDedupeRowsV1(packet.library.outputs || [], 'outputs', packet.health).rows;
   packet.health.missingIds = intelMissingRelationIdsV1(packet.agents);
+  packet.health.graph = intelGraphDiagnosticsV1(packet.agents, packet.library.outputs);
+  packet.health.duplicates = Array.from(new Set(packet.health.duplicates || []));
   packet.linear = readLinearIntelSnapshotV1(packet.health);
   linkLinearIntelRecordsV1(packet);
   packet.today.brief = packet.agents.jobs.filter(function(row){ return /active|building|review|working|blocked/i.test(row.status); }).slice(0,12);
@@ -658,8 +665,8 @@ function getIntelReadPacketV1(e) {
   packet.today.risks = packet.agents.workers.filter(function(row){ return /review|paused|planned/i.test(row.status); }).slice(0,12);
   packet.today.recent = packet.agents.workers.concat(packet.linear.activity).slice(0,12);
   var notionCount = Object.keys(packet.agents).reduce(function(sum,key){ return sum + (packet.agents[key]||[]).length; },0);
-  packet.status = notionCount || packet.linear.issues.length ? (packet.health.errors.length ? 'partial' : 'live') : 'empty';
-  packet.health.status = packet.health.errors.length ? 'partial' : (notionCount ? 'live' : 'unavailable');
+  packet.status = notionCount || packet.linear.issues.length ? (packet.health.errors.length || packet.health.duplicates.length || packet.health.missingIds.length ? 'partial' : 'live') : 'empty';
+  packet.health.status = packet.health.errors.length || packet.health.duplicates.length || packet.health.missingIds.length ? 'partial' : (notionCount ? 'live' : 'unavailable');
   return jsonResponseV20(packet);
 }
 
@@ -722,7 +729,25 @@ function readIntelOptionalDataSourceV1(dataSourceId, kind, health) {
   } catch (err) { health.warnings.push('notion_' + kind + '_unavailable'); return []; }
 }
 
-function intelDuplicateIdsV1(rows) { var seen={},dupes=[]; (rows||[]).forEach(function(row){ if(seen[row.id]) dupes.push(row.id); seen[row.id]=true; }); return dupes; }
+function intelDuplicateIdsV1(rows) { var seen={},dupes=[]; (rows||[]).forEach(function(row){ var id=String(row && row.id || ''); if(!id) return; if(seen[id]) dupes.push(id); seen[id]=true; }); return dupes; }
+function intelDedupeRowsV1(rows, kind, health) {
+  var seen={}, kept=[], duplicates=[];
+  (rows || []).forEach(function(row){
+    var id=String(row && row.id || '');
+    if(!id || !row.title) { if(health) health.warnings.push('malformed_' + kind + '_row'); return; }
+    if(seen[id]) { duplicates.push(id); return; }
+    seen[id]=true; kept.push(row);
+  });
+  if(duplicates.length && health) health.duplicates = (health.duplicates || []).concat(duplicates.map(function(id){ return kind + ':' + id; }));
+  return {rows:kept,duplicates:duplicates};
+}
+function intelGraphDiagnosticsV1(agents, outputs) {
+  var known={}; Object.keys(agents || {}).forEach(function(kind){ (agents[kind] || []).forEach(function(row){ known[row.id]=kind; }); });
+  var relationCounts={resolved:0,missing:0};
+  Object.keys(agents || {}).forEach(function(kind){ (agents[kind] || []).forEach(function(row){ ['department','captain','job','skill','worker'].forEach(function(rel){ (row[rel] || []).forEach(function(id){ if(known[id]) relationCounts.resolved++; else relationCounts.missing++; }); }); }); });
+  var outputIds={}; (outputs || []).forEach(function(row){ if(row && row.id) outputIds[row.id]=true; });
+  return {collections:Object.keys(agents || {}).reduce(function(out,key){ out[key]=(agents[key]||[]).length; return out; },{}),outputs:Object.keys(outputIds).length,relationsResolved:relationCounts.resolved,relationsMissing:relationCounts.missing,canonicalIdsUnique:true};
+}
 function intelMissingRelationIdsV1(agents) { var known={}; Object.keys(agents||{}).forEach(function(key){ (agents[key]||[]).forEach(function(row){known[row.id]=true;}); }); var missing=[]; Object.keys(agents||{}).forEach(function(key){ (agents[key]||[]).forEach(function(row){ ['department','captain','job','skill','worker'].forEach(function(rel){ (row[rel]||[]).forEach(function(id){if(!known[id])missing.push(id);}); }); }); }); return Array.from(new Set(missing)); }
 
 function readLinearIntelSnapshotV1(health) {
