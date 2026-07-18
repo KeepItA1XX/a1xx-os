@@ -599,11 +599,103 @@ function doGet(e) {
     if (e.parameter.action === 'instagram')           return getInstagramData(e);
     if (e.parameter.action === 'search_resources')    return searchResources(e);
     if (e.parameter.action === 'live_read_packet_v1') return getLiveReadPacketV1(e);
+    if (e.parameter.action === 'intel_read_packet_v1') return getIntelReadPacketV1(e);
     return ok('A1XX Money Mission Tracker Backend is live.');
   } catch (err) {
     logActivity('GET ERROR: ' + err.toString());
     return error(err.toString());
   }
+}
+
+// Read-only Intel operating graph packet. Notion owns agency meaning and
+// relations; Linear is optional execution telemetry. No write endpoint is
+// exposed from this packet.
+function getIntelReadPacketV1(e) {
+  var now = new Date().toISOString();
+  var packet = {packet:'intel_read_packet_v1',status:'empty',generatedAt:now,
+    freshness:{state:'fresh',maxAgeMs:300000},
+    today:{brief:[],queues:[],approvals:[],risks:[],recent:[]},
+    agents:{departments:[],captains:[],jobs:[],skills:[],workers:[]},
+    library:{outputs:[],sources:[],files:[],memory:[]},
+    linear:{status:'deferred',workspace:'',teams:[],projects:[],issues:[],activity:[]},
+    health:{status:'partial',sources:{},duplicates:[],missingIds:[],warnings:[],errors:[]},
+    blocked:{writesEnabled:false,notionWrite:false,linearWrite:false,workerExecution:false,automationExecution:false}
+  };
+  var notionSets = [
+    ['departments','2778042e-8a89-4d92-9a3a-8e1add3bc27a'],
+    ['captains','497bd066-df47-4d57-a335-ce50cbf497ce'],
+    ['jobs','c2b1f3b1-cc55-4bfa-9bcc-0f78ab26f0f9'],
+    ['skills','b4bc8a03-6d00-4b90-b5eb-4d5ff16270c0'],
+    ['workers','4787a95b-8046-45f6-8808-aff36be5b91e']
+  ];
+  var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
+  if (secret) {
+    notionSets.forEach(function(set) {
+      try {
+        var result = notionDataSourceQuery(set[1], {page_size:100}, 'intel_' + set[0] + '_v1');
+        if (result.code >= 400) throw new Error(String(result.code));
+        var rows = (JSON.parse(result.text || '{}').results || []).map(function(page){ return normalizeIntelAgencyRowV1(page, set[0]); });
+        packet.agents[set[0]] = rows.filter(function(row){ return row.id && row.title; });
+        packet.health.sources['notion_' + set[0]] = {status:'live',recordCount:packet.agents[set[0]].length,fetchedAt:now,dataSourceId:set[1]};
+      } catch (err) {
+        packet.health.sources['notion_' + set[0]] = {status:'unavailable',recordCount:0,fetchedAt:now,dataSourceId:set[1],error:String(err && err.message || err).slice(0,160)};
+        packet.health.errors.push('notion_' + set[0] + '_read_failed');
+      }
+    });
+  } else {
+    packet.health.warnings.push('notion_secret_missing');
+    packet.health.errors.push('notion_auth_unavailable');
+  }
+  packet.library.outputs = readIntelOptionalDataSourceV1('c6337637-98eb-47ea-8396-982e72f2637d','outputs',packet.health);
+  packet.library.memory = readIntelOptionalDataSourceV1('50920839-9733-4938-b85e-d1def6383102','memory',packet.health);
+  packet.health.duplicates = intelDuplicateIdsV1(packet.agents.departments.concat(packet.agents.captains,packet.agents.jobs,packet.agents.skills,packet.agents.workers));
+  packet.health.missingIds = intelMissingRelationIdsV1(packet.agents);
+  packet.linear = readLinearIntelSnapshotV1(packet.health);
+  packet.today.brief = packet.agents.jobs.filter(function(row){ return /active|building|review|working|blocked/i.test(row.status); }).slice(0,12);
+  packet.today.approvals = packet.agents.captains.filter(function(row){ return row.approvalRequired || /review/i.test(row.status); }).slice(0,12);
+  packet.today.queues = packet.linear.issues.slice(0,12);
+  packet.today.risks = packet.agents.workers.filter(function(row){ return /review|paused|planned/i.test(row.status); }).slice(0,12);
+  packet.today.recent = packet.agents.workers.concat(packet.linear.activity).slice(0,12);
+  var notionCount = Object.keys(packet.agents).reduce(function(sum,key){ return sum + (packet.agents[key]||[]).length; },0);
+  packet.status = notionCount || packet.linear.issues.length ? (packet.health.errors.length ? 'partial' : 'live') : 'empty';
+  packet.health.status = packet.health.errors.length ? 'partial' : (notionCount ? 'live' : 'unavailable');
+  return jsonResponseV20(packet);
+}
+
+function normalizeIntelAgencyRowV1(page, kind) {
+  var p = page.properties || {};
+  var title = readNotionTitle(p['Department Name'] || p['Captain Name'] || p['Job Name'] || p['Skill Name'] || p['Worker Name'] || p.Name || p.Title || p.title);
+  var status = readNotionSelect(p.Status) || 'Planned';
+  var relationIds = {};
+  Object.keys(p).forEach(function(key){ if (p[key] && p[key].relation) relationIds[key] = p[key].relation.map(function(item){ return String(item.id || ''); }).filter(Boolean); });
+  return {id:String(page.id || ''),title:title,status:status,kind:kind,summary:readNotionText(p.Description || p.Purpose || p.Instructions),owner:readNotionText(p.Owner),department:relationIds.Department || [],captain:relationIds.Captain || [],job:relationIds.Job || [],skill:relationIds.Skill || [],worker:relationIds.Worker || [],tools:readNotionMultiSelect(p['Tool Access'] || p['Integration Needed']),model:readNotionSelect(p.Model),approvalRequired:readNotionCheckbox(p['A1XX Approval Required']),source:'Notion',sourceUrl:page.url || '',updatedAt:page.last_edited_time || page.created_time || ''};
+}
+
+function readIntelOptionalDataSourceV1(dataSourceId, kind, health) {
+  try {
+    var result = notionDataSourceQuery(dataSourceId, {page_size:100}, 'intel_' + kind + '_v1');
+    if (result.code >= 400) throw new Error(String(result.code));
+    var rows = (JSON.parse(result.text || '{}').results || []).map(function(page){ return normalizeIntelAgencyRowV1(page, kind); });
+    health.sources['notion_' + kind] = {status:'live',recordCount:rows.length,fetchedAt:new Date().toISOString(),dataSourceId:dataSourceId};
+    return rows;
+  } catch (err) { health.warnings.push('notion_' + kind + '_unavailable'); return []; }
+}
+
+function intelDuplicateIdsV1(rows) { var seen={},dupes=[]; (rows||[]).forEach(function(row){ if(seen[row.id]) dupes.push(row.id); seen[row.id]=true; }); return dupes; }
+function intelMissingRelationIdsV1(agents) { var known={}; Object.keys(agents||{}).forEach(function(key){ (agents[key]||[]).forEach(function(row){known[row.id]=true;}); }); var missing=[]; Object.keys(agents||{}).forEach(function(key){ (agents[key]||[]).forEach(function(row){ ['department','captain','job','skill','worker'].forEach(function(rel){ (row[rel]||[]).forEach(function(id){if(!known[id])missing.push(id);}); }); }); }); return Array.from(new Set(missing)); }
+
+function readLinearIntelSnapshotV1(health) {
+  var key = PropertiesService.getScriptProperties().getProperty('LINEAR_API_KEY');
+  if (!key) { health.warnings.push('linear_api_key_missing'); return {status:'deferred',workspace:'',teams:[],projects:[],issues:[],activity:[]}; }
+  try {
+    var query = 'query IntelRead { organization { id name url } teams { nodes { id name key } } projects { nodes { id name identifier state { name } } } issues(first:100) { nodes { id identifier title priority state { name } assignee { name } project { id name identifier } updatedAt url } } }';
+    var response = UrlFetchApp.fetch('https://api.linear.app/graphql', {method:'post',contentType:'application/json',headers:{Authorization:key},payload:JSON.stringify({query:query}),muteHttpExceptions:true});
+    var body = JSON.parse(response.getContentText() || '{}');
+    if (response.getResponseCode() >= 400 || body.errors) throw new Error('Linear read failed');
+    var data = body.data || {}, issues = data.issues && data.issues.nodes || [];
+    health.sources.linear = {status:'live',recordCount:issues.length,fetchedAt:new Date().toISOString()};
+    return {status:'live',workspace:data.organization || {},teams:data.teams && data.teams.nodes || [],projects:data.projects && data.projects.nodes || [],issues:issues.map(function(issue){ return {id:issue.id,title:issue.title,identifier:issue.identifier,status:issue.state && issue.state.name || 'Unknown',priority:issue.priority,assignee:issue.assignee && issue.assignee.name || '',project:issue.project || null,url:issue.url || '',updatedAt:issue.updatedAt || '',source:'Linear'}; }),activity:[]};
+  } catch (err) { health.warnings.push('linear_read_failed'); health.sources.linear={status:'unavailable',recordCount:0,fetchedAt:new Date().toISOString()}; return {status:'unavailable',workspace:'',teams:[],projects:[],issues:[],activity:[]}; }
 }
 
 // Read-only normalized packet for the existing Directory V3 and Projects surfaces.
@@ -18285,6 +18377,7 @@ function readNotionMulti(p) { if (!p || !p.multi_select || !p.multi_select.lengt
 function readNotionUrl(p) { if (!p || !p.url) return ''; return p.url; }
 function readNotionDate(p) { if (!p || !p.date) return ''; return p.date.start || ''; }
 function readNotionCheckbox(p) { if (!p) return false; return p.checkbox === true; }
+function readNotionMultiSelect(p) { if (!p || !p.multi_select) return []; return p.multi_select.map(function(item){ return item && item.name || ''; }).filter(Boolean); }
 function readNotionNumber(p) { if (!p || typeof p.number !== 'number') return 0; return p.number; }
 function readNotionPhone(p) { if (!p) return ''; return p.phone_number || ''; }
 function readNotionEmail(p) { if (!p) return ''; return p.email || ''; }
