@@ -687,15 +687,20 @@ function intelMissingRelationIdsV1(agents) { var known={}; Object.keys(agents||{
 function readLinearIntelSnapshotV1(health) {
   var key = PropertiesService.getScriptProperties().getProperty('LINEAR_API_KEY');
   if (!key) { health.warnings.push('linear_api_key_missing'); return {status:'deferred',workspace:'',teams:[],projects:[],issues:[],activity:[]}; }
+  var responseCode = 0, failureDetail = '';
   try {
-    var query = 'query IntelRead { organization { id name url } teams { nodes { id name key } } projects { nodes { id name identifier state { name } } } issues(first:100) { nodes { id identifier title priority state { name } assignee { name } project { id name identifier } updatedAt url } } }';
+    var query = 'query IntelRead { organization { id name } teams(first:50) { nodes { id name key } } projects(first:50) { nodes { id name state { name } } } issues(first:100) { nodes { id identifier title priority state { name } assignee { name } project { id name } updatedAt url } } }';
     var response = UrlFetchApp.fetch('https://api.linear.app/graphql', {method:'post',contentType:'application/json',headers:{Authorization:key},payload:JSON.stringify({query:query}),muteHttpExceptions:true});
+    responseCode = response.getResponseCode();
     var body = JSON.parse(response.getContentText() || '{}');
-    if (response.getResponseCode() >= 400 || body.errors) throw new Error('Linear read failed');
+    if (responseCode >= 400 || body.errors) {
+      failureDetail = body.errors && body.errors[0] && (body.errors[0].message || body.errors[0].extensions && body.errors[0].extensions.code) || 'http_' + responseCode;
+      throw new Error('Linear read failed: ' + failureDetail);
+    }
     var data = body.data || {}, issues = data.issues && data.issues.nodes || [];
     health.sources.linear = {status:'live',recordCount:issues.length,fetchedAt:new Date().toISOString()};
     return {status:'live',workspace:data.organization || {},teams:data.teams && data.teams.nodes || [],projects:data.projects && data.projects.nodes || [],issues:issues.map(function(issue){ return {id:issue.id,title:issue.title,identifier:issue.identifier,status:issue.state && issue.state.name || 'Unknown',priority:issue.priority,assignee:issue.assignee && issue.assignee.name || '',project:issue.project || null,url:issue.url || '',updatedAt:issue.updatedAt || '',source:'Linear'}; }),activity:[]};
-  } catch (err) { health.warnings.push('linear_read_failed'); health.sources.linear={status:'unavailable',recordCount:0,fetchedAt:new Date().toISOString()}; return {status:'unavailable',workspace:'',teams:[],projects:[],issues:[],activity:[]}; }
+  } catch (err) { var safeDetail=String(failureDetail || err && err.message || err || 'unknown').replace(/https?:\/\/[^\s]+/g,'[url]').slice(0,180); health.warnings.push('linear_read_failed'); health.sources.linear={status:'unavailable',recordCount:0,fetchedAt:new Date().toISOString(),httpCode:responseCode,error:safeDetail}; return {status:'unavailable',workspace:'',teams:[],projects:[],issues:[],activity:[]}; }
 }
 
 // Read-only normalized packet for the existing Directory V3 and Projects surfaces.
