@@ -651,6 +651,7 @@ function getIntelReadPacketV1(e) {
   packet.health.duplicates = intelDuplicateIdsV1(packet.agents.departments.concat(packet.agents.captains,packet.agents.jobs,packet.agents.skills,packet.agents.workers));
   packet.health.missingIds = intelMissingRelationIdsV1(packet.agents);
   packet.linear = readLinearIntelSnapshotV1(packet.health);
+  linkLinearIntelRecordsV1(packet);
   packet.today.brief = packet.agents.jobs.filter(function(row){ return /active|building|review|working|blocked/i.test(row.status); }).slice(0,12);
   packet.today.approvals = packet.agents.captains.filter(function(row){ return row.approvalRequired || /review/i.test(row.status); }).slice(0,12);
   packet.today.queues = packet.linear.issues.slice(0,12);
@@ -660,6 +661,31 @@ function getIntelReadPacketV1(e) {
   packet.status = notionCount || packet.linear.issues.length ? (packet.health.errors.length ? 'partial' : 'live') : 'empty';
   packet.health.status = packet.health.errors.length ? 'partial' : (notionCount ? 'live' : 'unavailable');
   return jsonResponseV20(packet);
+}
+
+function intelCanonicalKeyV1(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '); }
+function linkLinearIntelRecordsV1(packet) {
+  var projects=[];
+  try {
+    var result=notionDataSourceQuery(NOTION_PROJECTS_DB,{page_size:100},'intel_projects_v1');
+    if(result.code>=400) throw new Error(String(result.code));
+    projects=(JSON.parse(result.text||'{}').results||[]).map(normalizeLiveProjectV1).filter(function(row){return row.id&&row.title;});
+    packet.health.sources.notion_projects={status:'live',recordCount:projects.length,fetchedAt:new Date().toISOString(),dataSourceId:NOTION_PROJECTS_DB};
+  } catch(err) { packet.health.warnings.push('notion_projects_link_unavailable'); }
+  var jobs=packet.agents.jobs||[];
+  (packet.linear.issues||[]).forEach(function(issue){
+    var issueKey=intelCanonicalKeyV1(issue.title), match=null;
+    jobs.some(function(job){ if((job.linearIssueId&&job.linearIssueId===issue.id)||intelCanonicalKeyV1(job.title)===issueKey){match=job;return true;} return false; });
+    if(match){ issue.notionJobId=match.id; issue.jobTitle=match.title; issue.matchType=match.linearIssueId?'linear_issue_id':'title'; }
+    var projectName=issue.project&&issue.project.name||'';
+    var project=projects.filter(function(row){return intelCanonicalKeyV1(row.title)===intelCanonicalKeyV1(projectName);})[0];
+    if(project){ issue.notionProjectId=project.id; issue.projectTitle=project.title; issue.projectMatchType='title'; }
+  });
+  packet.linear.projects=(packet.linear.projects||[]).map(function(project){
+    var match=projects.filter(function(row){return intelCanonicalKeyV1(row.title)===intelCanonicalKeyV1(project.name);})[0];
+    return match?Object.assign({},project,{notionProjectId:match.id,notionProjectTitle:match.title,matchType:'title'}):project;
+  });
+  packet.health.linearMappings={issuesLinked:(packet.linear.issues||[]).filter(function(row){return row.notionJobId||row.notionProjectId;}).length,issuesUnlinked:(packet.linear.issues||[]).filter(function(row){return !row.notionJobId&&!row.notionProjectId;}).length,projectsLinked:(packet.linear.projects||[]).filter(function(row){return row.notionProjectId;}).length};
 }
 
 function normalizeIntelAgencyRowV1(page, kind) {
