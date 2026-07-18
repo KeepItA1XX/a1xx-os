@@ -612,7 +612,7 @@ function getLiveReadPacketV1(e) {
   var started = new Date().toISOString();
   var packet = { packet:'live_read_packet_v1', status:'partial', generatedAt:started, freshness:{state:'fresh',maxAgeMs:300000},
     sources:{notion:{status:'unknown',recordCount:0,fetchedAt:''},sheets:{status:'unknown',fetchedAt:''},drive:{status:'deferred',fetchedAt:''}},
-    projects:[], relationships:[], files:[], projectDesk:{outputs:[],timeline:[],notes:[],activity:[],tasks:[]}, durableMemory:{status:'deferred',folders:[],files:[],fetchedAt:''}, sheets:{status:'unknown',tabs:[],scorecards:[],ledgers:[],indexes:[],sync:[]}, warnings:[], errors:[] };
+    projects:[], relationships:[], files:[], durableMemory:{status:'deferred',folders:[],files:[],fetchedAt:''}, sheets:{status:'unknown',tabs:[],scorecards:[],ledgers:[],indexes:[],sync:[]}, warnings:[], errors:[] };
   var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
   if (secret) {
     try {
@@ -639,21 +639,6 @@ function getLiveReadPacketV1(e) {
       packet.sources.notion.status = 'live';
       packet.sources.notion.fetchedAt = new Date().toISOString();
       packet.sources.notion.recordCount += packet.projects.length;
-      packet.projectDesk.tasks = readProjectDeskRowsV1('11161152-81da-80da-891f-000b711d93d8', packet.projects, 'task');
-      packet.projectDesk.outputs = readProjectDeskRowsV1('ee4c3e58-684c-428a-bb32-5914abb279d0', packet.projects, 'output');
-      packet.projectDesk.timeline = readProjectDeskRowsV1('4de56b97-dd2f-4b51-b5e9-40aa7ebe4fa0', packet.projects, 'timeline');
-      packet.projectDesk.notes = readProjectDeskRowsV1('5b87c494-f172-42cb-b727-495540845839', packet.projects, 'note');
-      packet.projectDesk.activity = readProjectDeskRowsV1('b175eb15-f538-4a26-b229-1b7bc0cfe83a', packet.projects, 'activity');
-      packet.sources.notion.projectDesk = {outputs:packet.projectDesk.outputs.length,timeline:packet.projectDesk.timeline.length,notes:packet.projectDesk.notes.length,activity:packet.projectDesk.activity.length,tasks:packet.projectDesk.tasks.length};
-      packet.projects.forEach(function(project){
-        project.projectDesk = {
-          tasks: packet.projectDesk.tasks.filter(function(row){return row.projectId===project.id;}),
-          outputs: packet.projectDesk.outputs.filter(function(row){return row.projectId===project.id;}),
-          timeline: packet.projectDesk.timeline.filter(function(row){return row.projectId===project.id;}),
-          notes: packet.projectDesk.notes.filter(function(row){return row.projectId===project.id;}),
-          activity: packet.projectDesk.activity.filter(function(row){return row.projectId===project.id;})
-        };
-      });
     } catch (err) {
       packet.warnings.push('projects_unavailable');
       packet.errors.push('projects_read_failed');
@@ -696,28 +681,6 @@ function getLiveReadPacketV1(e) {
   }
   packet.status = packet.projects.length || packet.relationships.length ? (packet.errors.length ? 'partial' : 'live') : 'empty';
   return jsonResponseV20(packet);
-}
-
-function readProjectDeskRowsV1(dataSourceId, projects, kind) {
-  try {
-    var result = notionDataSourceQuery(dataSourceId, {page_size:100}, 'live_project_desk_' + kind);
-    if (result.code >= 400) return [];
-    var rows = (JSON.parse(result.text || '{}').results || []);
-    return rows.map(function(page){
-      var p = page.properties || {};
-      var relationIds = (p.Project && p.Project.relation || []).map(function(item){ return String(item.id || ''); });
-      var project = (projects || []).filter(function(item){ return relationIds.indexOf(String(item.id)) > -1; })[0];
-      if (!project) return null;
-      var title = readNotionTitle(p['Output Name'] || p['Timeline Item'] || p['Note Title'] || p.Activity || p.Name || p.Title);
-      var row = {id:page.id, projectId:project.id, title:title, summary:readNotionText(p.Summary || p['Note Body'] || p.Description), status:readNotionSelect(p.Status), sourceUrl:page.url, updatedAt:page.last_edited_time || page.created_time || ''};
-      if (kind === 'output') { row.type=readNotionSelect(p['Output Type']); row.needsA1XXReview=readNotionCheckbox(p['Needs A1XX Review']); }
-      if (kind === 'timeline') { row.milestone=readNotionSelect(p.Milestone); row.needsA1XXReview=readNotionCheckbox(p['Needs A1XX Review']); }
-      if (kind === 'note') { row.type=readNotionSelect(p['Note Type']); row.needsA1XXReview=readNotionCheckbox(p['Needs A1XX Review']); }
-      if (kind === 'activity') { row.type=readNotionSelect(p['Activity Type']); }
-      if (kind === 'task') { row.type=readNotionSelect(p['Move Type']); row.priority=readNotionSelect(p.Priority); row.nextAction=readNotionText(p.Notes || p['Result Needed']); }
-      return row;
-    }).filter(function(row){ return row && row.title; });
-  } catch (err) { return []; }
 }
 
 // Bounded read-only workbook snapshot. It exposes existing tab headers and
