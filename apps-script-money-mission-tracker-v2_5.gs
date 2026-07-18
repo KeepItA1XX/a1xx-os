@@ -599,6 +599,7 @@ function doGet(e) {
     if (e.parameter.action === 'instagram')           return getInstagramData(e);
     if (e.parameter.action === 'search_resources')    return searchResources(e);
     if (e.parameter.action === 'live_read_packet_v1') return getLiveReadPacketV1(e);
+    if (e.parameter.action === 'planning_live_context_v1') return getPlanningLiveContextV1(e);
     if (e.parameter.action === 'intel_read_packet_v1') {
       var intelPacket = getIntelReadPacketV1(e);
       var callback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
@@ -610,6 +611,105 @@ function doGet(e) {
     logActivity('GET ERROR: ' + err.toString());
     return error(err.toString());
   }
+}
+
+// Milestone 01: a deliberately narrow read-only Notion relay for Planning.
+// This is intentionally separate from live_read_packet_v1: it neither joins
+// CRM, Drive, Sheets, nor Project Desk sources, and it never returns contact
+// details, raw Notion URLs, attachments, page content, or relation expansions.
+function planningLiveRelationIdsV1(prop) {
+  return ((prop && prop.relation) || []).map(function(item) {
+    return String(item && item.id || '');
+  }).filter(Boolean);
+}
+
+function normalizePlanningLiveProjectV1(page) {
+  var props = page.properties || {};
+  return {
+    id: String(page.id || ''),
+    title: readNotionTitle(props.Name || props['Project Name'] || props['Project name'] || props.Title),
+    project_type: readNotionSelect(props['Project Type'] || props.Type),
+    status: readNotionStatus(props.Status),
+    priority: readNotionSelect(props.Priority),
+    current_next_move: readNotionText(props['Current Next Move'] || props['Next Action'] || props['Next Move']),
+    outcome: readNotionText(props['Outcome / Definition of Done'] || props.Outcome),
+    needs_a1xx_review: readNotionCheckbox(props['Needs A1XX'] || props['Need for A1XX']),
+    closest_to_money: readNotionCheckbox(props['Closest To Money'] || props['Closest to Money']),
+    last_edited_at: page.last_edited_time || page.created_time || ''
+  };
+}
+
+function normalizePlanningLiveTaskV1(page) {
+  var props = page.properties || {};
+  return {
+    id: String(page.id || ''),
+    title: readNotionTitle(props.Name || props.Title || props['Task name']),
+    status: readNotionStatus(props.Status),
+    due_date: readNotionDate(props['Due date'] || props['Due Date'] || props.Due),
+    priority: readNotionSelect(props.Priority),
+    project_ids: planningLiveRelationIdsV1(props.Project || props.Projects),
+    result_needed: readNotionText(props['Result Needed']),
+    last_edited_at: page.last_edited_time || page.created_time || ''
+  };
+}
+
+function getPlanningLiveContextV1(e) {
+  var now = new Date().toISOString();
+  var packet = {
+    packet: 'planning_live_context_v1',
+    ok: false,
+    source_mode: 'live_read_only',
+    generated_at: now,
+    freshness: { state: 'unavailable', max_age_ms: 300000, last_verified_at: '', sources: { projects: 'unavailable', task_master: 'unavailable' } },
+    projects: [],
+    tasks: [],
+    warnings: [],
+    errors: [],
+    write_blocked: {
+      writes_enabled: false,
+      notion_write: false,
+      app_write: false,
+      reminder_dispatch: false,
+      webhook_dispatch: false,
+      agent_execution: false
+    }
+  };
+  var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
+  if (!secret) {
+    packet.errors.push('notion_read_unavailable');
+    return jsonResponseV20(packet);
+  }
+  try {
+    var projectsResult = notionDataSourceQuery(NOTION_PROJECTS_DB, { page_size: 50 }, 'planning_live_projects_v1');
+    if (projectsResult.code >= 400) throw new Error('projects_read_failed');
+    packet.projects = (JSON.parse(projectsResult.text || '{}').results || []).map(normalizePlanningLiveProjectV1).filter(function(row) {
+      return row.id && row.title;
+    }).slice(0, 50);
+    packet.freshness.sources.projects = 'fresh';
+  } catch (err) {
+    packet.errors.push('projects_read_failed');
+    packet.freshness.sources.projects = 'unavailable';
+  }
+  try {
+    var tasksResult = notionDataSourceQuery(PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25, {
+      page_size: 20,
+      filter: { property: 'App Read Eligible', checkbox: { equals: true } }
+    }, 'planning_live_task_master_v1');
+    if (tasksResult.code >= 400) throw new Error('task_master_read_failed');
+    packet.tasks = (JSON.parse(tasksResult.text || '{}').results || []).map(normalizePlanningLiveTaskV1).filter(function(row) {
+      return row.id && row.title;
+    }).slice(0, 20);
+    packet.freshness.sources.task_master = 'fresh';
+  } catch (err2) {
+    packet.errors.push('task_master_read_failed');
+    packet.freshness.sources.task_master = 'unavailable';
+  }
+  var available = (packet.freshness.sources.projects === 'fresh' ? 1 : 0) + (packet.freshness.sources.task_master === 'fresh' ? 1 : 0);
+  packet.ok = available > 0;
+  packet.freshness.state = available === 2 ? 'fresh' : (available === 1 ? 'partial' : 'unavailable');
+  packet.freshness.last_verified_at = available ? now : '';
+  if (available === 1) packet.warnings.push('one_planning_source_unavailable');
+  return jsonResponseV20(packet);
 }
 
 // Read-only Intel operating graph packet. Notion owns agency meaning and
