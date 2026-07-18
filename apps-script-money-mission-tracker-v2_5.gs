@@ -689,7 +689,7 @@ function readLinearIntelSnapshotV1(health) {
   if (!key) { health.warnings.push('linear_api_key_missing'); return {status:'deferred',workspace:'',teams:[],projects:[],issues:[],activity:[]}; }
   var responseCode = 0, failureDetail = '';
   try {
-    var query = 'query IntelRead { organization { id name } teams(first:50) { nodes { id name key } } projects(first:50) { nodes { id name state { name } } } issues(first:100) { nodes { id identifier title priority state { name } assignee { name } project { id name } updatedAt url } } }';
+    var query = 'query IntelRead { organization { id name } teams(first:50) { nodes { id name key } } projects(first:50) { nodes { id name state } } issues(first:100) { nodes { id identifier title priority state assignee { name } project { id name } updatedAt url } } }';
     var response = UrlFetchApp.fetch('https://api.linear.app/graphql', {method:'post',contentType:'application/json',headers:{Authorization:key},payload:JSON.stringify({query:query}),muteHttpExceptions:true});
     responseCode = response.getResponseCode();
     var body = JSON.parse(response.getContentText() || '{}');
@@ -699,7 +699,7 @@ function readLinearIntelSnapshotV1(health) {
     }
     var data = body.data || {}, issues = data.issues && data.issues.nodes || [];
     health.sources.linear = {status:'live',recordCount:issues.length,fetchedAt:new Date().toISOString()};
-    return {status:'live',workspace:data.organization || {},teams:data.teams && data.teams.nodes || [],projects:data.projects && data.projects.nodes || [],issues:issues.map(function(issue){ return {id:issue.id,title:issue.title,identifier:issue.identifier,status:issue.state && issue.state.name || 'Unknown',priority:issue.priority,assignee:issue.assignee && issue.assignee.name || '',project:issue.project || null,url:issue.url || '',updatedAt:issue.updatedAt || '',source:'Linear'}; }),activity:[]};
+    return {status:'live',workspace:data.organization || {},teams:data.teams && data.teams.nodes || [],projects:data.projects && data.projects.nodes || [],issues:issues.map(function(issue){ return {id:issue.id,title:issue.title,identifier:issue.identifier,status:typeof issue.state==='string'?issue.state:(issue.state && issue.state.name || 'Unknown'),priority:issue.priority,assignee:issue.assignee && issue.assignee.name || '',project:issue.project || null,url:issue.url || '',updatedAt:issue.updatedAt || '',source:'Linear'}; }),activity:[]};
   } catch (err) { var safeDetail=String(failureDetail || err && err.message || err || 'unknown').replace(/https?:\/\/[^\s]+/g,'[url]').slice(0,180); health.warnings.push('linear_read_failed'); health.sources.linear={status:'unavailable',recordCount:0,fetchedAt:new Date().toISOString(),httpCode:responseCode,error:safeDetail}; return {status:'unavailable',workspace:'',teams:[],projects:[],issues:[],activity:[]}; }
 }
 
