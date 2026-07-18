@@ -599,7 +599,12 @@ function doGet(e) {
     if (e.parameter.action === 'instagram')           return getInstagramData(e);
     if (e.parameter.action === 'search_resources')    return searchResources(e);
     if (e.parameter.action === 'live_read_packet_v1') return getLiveReadPacketV1(e);
-    if (e.parameter.action === 'intel_read_packet_v1') return getIntelReadPacketV1(e);
+    if (e.parameter.action === 'intel_read_packet_v1') {
+      var intelPacket = getIntelReadPacketV1(e);
+      var callback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
+      if (callback) return ContentService.createTextOutput(callback[0] + '(' + intelPacket.getContent() + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+      return intelPacket;
+    }
     return ok('A1XX Money Mission Tracker Backend is live.');
   } catch (err) {
     logActivity('GET ERROR: ' + err.toString());
