@@ -617,6 +617,7 @@ function getIntelReadPacketV1(e) {
     today:{brief:[],queues:[],approvals:[],risks:[],recent:[]},
     agents:{departments:[],captains:[],jobs:[],skills:[],workers:[]},
     library:{outputs:[],sources:[],files:[],memory:[]},
+    projects:[],
     linear:{status:'deferred',workspace:'',teams:[],projects:[],issues:[],activity:[]},
     health:{status:'partial',sources:{},duplicates:[],missingIds:[],warnings:[],errors:[]},
     blocked:{writesEnabled:false,notionWrite:false,linearWrite:false,workerExecution:false,automationExecution:false}
@@ -683,6 +684,7 @@ function linkLinearIntelRecordsV1(packet) {
     var result=notionDataSourceQuery(NOTION_PROJECTS_DB,{page_size:100},'intel_projects_v1');
     if(result.code>=400) throw new Error(String(result.code));
     projects=(JSON.parse(result.text||'{}').results||[]).map(normalizeLiveProjectV1).filter(function(row){return row.id&&row.title;});
+    packet.projects=projects;
     packet.health.sources.notion_projects={status:'live',recordCount:projects.length,fetchedAt:new Date().toISOString(),dataSourceId:NOTION_PROJECTS_DB};
   } catch(err) { packet.health.warnings.push('notion_projects_link_unavailable'); }
   var jobs=packet.agents.jobs||[];
