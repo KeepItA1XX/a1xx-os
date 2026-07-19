@@ -601,6 +601,7 @@ function doGet(e) {
     if (e.parameter.action === 'live_read_packet_v1') return getLiveReadPacketV1(e);
     if (e.parameter.action === 'planning_live_context_v1') return getPlanningLiveContextV1(e);
     if (e.parameter.action === 'project_desk_core_context_v1') return getProjectDeskCoreContextV1(e);
+    if (e.parameter.action === 'project_desk_task_context_v1') return getProjectDeskTaskContextV1(e);
     if (e.parameter.action === 'intel_read_packet_v1') {
       var intelPacket = getIntelReadPacketV1(e);
       var callback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
@@ -797,6 +798,100 @@ function getProjectDeskCoreContextV1(e) {
     packet.freshness = { state: 'fresh', max_age_ms: 300000, last_verified_at: now, sources: { projects: 'fresh' } };
   } catch (err) {
     packet.errors.push('project_read_failed');
+  }
+  return jsonResponseV20(packet);
+}
+
+// Milestone 02 Stage 2: a project-bound Task Master read for the same pilot.
+// The canonical Project page ID is resolved and used only inside this relay;
+// the browser receives no page IDs, relation values, URLs, people, notes, or
+// attachments. Task Master is queried only after exact project identity passes.
+function emptyProjectDeskTaskContextPacketV1(now) {
+  return {
+    packet: 'project_desk_task_context_v1',
+    ok: false,
+    source_mode: 'live_read_only',
+    generated_at: now,
+    freshness: { state: 'unavailable', max_age_ms: 300000, last_verified_at: '', sources: { projects: 'unavailable', task_master: 'unavailable' } },
+    tasks: [],
+    warnings: [],
+    errors: [],
+    write_blocked: {
+      writes_enabled: false,
+      notion_write: false,
+      app_write: false,
+      calendar_write: false,
+      drive_write: false,
+      webhook_dispatch: false,
+      agent_execution: false
+    }
+  };
+}
+
+function normalizeProjectDeskTaskContextV1(page) {
+  var props = page.properties || {};
+  return {
+    title: readNotionTitle(props.Name || props.Title || props['Task name']),
+    status: readNotionStatus(props.Status),
+    due_date: readNotionDate(props['Due date'] || props['Due Date'] || props.Due),
+    priority: readNotionSelect(props.Priority),
+    result_needed: readNotionText(props['Result Needed']),
+    last_edited_at: page.last_edited_time || page.created_time || ''
+  };
+}
+
+function getProjectDeskTaskContextV1(e) {
+  var now = new Date().toISOString();
+  var packet = emptyProjectDeskTaskContextPacketV1(now);
+  var requestedKey = String(e && e.parameter && e.parameter.project || '');
+  var pilot = PROJECT_DESK_CORE_CONTEXT_PILOTS_V1[requestedKey];
+  if (!pilot) {
+    packet.errors.push('project_not_authorized');
+    return jsonResponseV20(packet);
+  }
+  if (!PropertiesService.getScriptProperties().getProperty('NOTION_SECRET')) {
+    packet.errors.push('notion_read_unavailable');
+    return jsonResponseV20(packet);
+  }
+  try {
+    // The two-row Project cap detects a duplicate identity before any
+    // cross-source relation read. The resulting ID never leaves this function.
+    var projectResult = notionDataSourceQuery(NOTION_PROJECTS_DB, {
+      page_size: 2,
+      filter: { and: [
+        { property: 'Project name', title: { equals: pilot.title } },
+        { property: 'Project Type', select: { equals: pilot.projectType } }
+      ] }
+    });
+    if (projectResult.code >= 400) throw new Error('project_read_failed');
+    var projectRows = JSON.parse(projectResult.text || '{}').results || [];
+    if (projectRows.length !== 1) {
+      packet.errors.push(projectRows.length ? 'project_identity_ambiguous' : 'project_identity_unavailable');
+      return jsonResponseV20(packet);
+    }
+    var canonicalProject = normalizeProjectDeskCoreContextV1(projectRows[0]);
+    if (!canonicalProject.title || canonicalProject.title !== pilot.title || canonicalProject.project_type !== pilot.projectType) {
+      packet.errors.push('project_identity_unavailable');
+      return jsonResponseV20(packet);
+    }
+    packet.freshness.sources.projects = 'fresh';
+    var taskResult = notionDataSourceQuery(PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25, {
+      page_size: 20,
+      filter: { and: [
+        { property: 'App Read Eligible', checkbox: { equals: true } },
+        { property: 'Project', relation: { contains: String(projectRows[0].id || '') } }
+      ] }
+    });
+    if (taskResult.code >= 400) throw new Error('task_master_read_failed');
+    packet.tasks = (JSON.parse(taskResult.text || '{}').results || []).map(normalizeProjectDeskTaskContextV1).filter(function(task) {
+      return task.title;
+    }).slice(0, 20);
+    packet.ok = true;
+    packet.freshness = { state: 'fresh', max_age_ms: 300000, last_verified_at: now, sources: { projects: 'fresh', task_master: 'fresh' } };
+  } catch (err) {
+    packet.errors.push('task_master_read_failed');
+    if (packet.freshness.sources.projects !== 'fresh') packet.freshness.sources.projects = 'unavailable';
+    packet.freshness.sources.task_master = 'unavailable';
   }
   return jsonResponseV20(packet);
 }
