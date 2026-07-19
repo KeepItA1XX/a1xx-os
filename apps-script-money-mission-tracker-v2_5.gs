@@ -602,6 +602,7 @@ function doGet(e) {
     if (e.parameter.action === 'planning_live_context_v1') return getPlanningLiveContextV1(e);
     if (e.parameter.action === 'project_desk_core_context_v1') return getProjectDeskCoreContextV1(e);
     if (e.parameter.action === 'project_desk_task_context_v1') return getProjectDeskTaskContextV1(e);
+    if (e.parameter.action === 'project_desk_artifacts_context_v1') return getProjectDeskArtifactsContextV1(e);
     if (e.parameter.action === 'intel_read_packet_v1') {
       var intelPacket = getIntelReadPacketV1(e);
       var callback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
@@ -892,6 +893,143 @@ function getProjectDeskTaskContextV1(e) {
     packet.errors.push('task_master_read_failed');
     if (packet.freshness.sources.projects !== 'fresh') packet.freshness.sources.projects = 'unavailable';
     packet.freshness.sources.task_master = 'unavailable';
+  }
+  return jsonResponseV20(packet);
+}
+
+// Milestone 02 Stage 3: a Drive-owned, read-only artifact context for the
+// approved ETC-E / Runnin Outta Love pilot. The browser receives only safe
+// artifact labels, category, type, and modification time: never Drive IDs,
+// URLs, attachment data, file bodies, contact data, or folder permissions.
+var PROJECT_DESK_ARTIFACTS_CONTEXT_PILOTS_V1 = {
+  'etc-e-runnin-outta-love': {
+    title: 'Runnin Outta Love',
+    projectType: 'Client',
+    driveParentId: '1AFV9BW9rpe0aTtKHYL0lJSJ_mJtBSsOA',
+    driveFolderName: 'ETC-E — Runnin Outta Love'
+  }
+};
+
+var PROJECT_DESK_ARTIFACTS_FOLDERS_V1 = [
+  {name: '01_ADMIN_AND_AGREEMENTS', label: 'Admin'},
+  {name: '02_BRIEF_AND_NOTES', label: 'Briefs and notes', bucket: 'documents'},
+  {name: '03_SESSION_FILES', label: 'Session files'},
+  {name: '04_AUDIO_EXPORTS', label: 'Audio exports'},
+  {name: '05_VIDEO_OR_CREATIVE_ASSETS', label: 'Creative assets'},
+  {name: '06_DELIVERABLES', label: 'Deliverables', bucket: 'outputs'},
+  {name: '07_FEEDBACK_AND_REVISIONS', label: 'Feedback and revisions'}
+];
+
+function emptyProjectDeskArtifactsContextPacketV1(now) {
+  return {
+    packet: 'project_desk_artifacts_context_v1',
+    ok: false,
+    source_mode: 'live_read_only',
+    generated_at: now,
+    freshness: { state: 'unavailable', max_age_ms: 300000, last_verified_at: '', sources: { projects: 'unavailable', drive: 'unavailable' } },
+    outputs: [],
+    documents: [],
+    files: [],
+    warnings: [],
+    errors: [],
+    write_blocked: {
+      writes_enabled: false,
+      notion_write: false,
+      app_write: false,
+      calendar_write: false,
+      drive_write: false,
+      webhook_dispatch: false,
+      agent_execution: false
+    }
+  };
+}
+
+function projectDeskArtifactTypeV1(file) {
+  var mime = String(file && file.getMimeType && file.getMimeType() || '').toLowerCase();
+  if (mime === 'application/pdf') return 'PDF';
+  if (mime.indexOf('google-apps.document') > -1) return 'Document';
+  if (mime.indexOf('google-apps.spreadsheet') > -1) return 'Spreadsheet';
+  if (mime.indexOf('google-apps.presentation') > -1) return 'Presentation';
+  if (mime.indexOf('audio/') === 0) return 'Audio';
+  if (mime.indexOf('video/') === 0) return 'Video';
+  if (mime.indexOf('image/') === 0) return 'Image';
+  return 'File';
+}
+
+function projectDeskArtifactRowV1(file, location) {
+  return {
+    title: String(file.getName() || '').slice(0, 240),
+    artifact_type: projectDeskArtifactTypeV1(file),
+    location: location,
+    updated_at: file.getLastUpdated ? file.getLastUpdated().toISOString() : ''
+  };
+}
+
+function projectDeskProjectIdentityPassesV1(pilot) {
+  var result = notionDataSourceQuery(NOTION_PROJECTS_DB, {
+    page_size: 2,
+    filter: { and: [
+      { property: 'Project name', title: { equals: pilot.title } },
+      { property: 'Project Type', select: { equals: pilot.projectType } }
+    ] }
+  });
+  if (result.code >= 400) throw new Error('project_read_failed');
+  var rows = JSON.parse(result.text || '{}').results || [];
+  if (rows.length !== 1) return false;
+  var projected = normalizeProjectDeskCoreContextV1(rows[0]);
+  return projected.title === pilot.title && projected.project_type === pilot.projectType;
+}
+
+function getProjectDeskArtifactsContextV1(e) {
+  var now = new Date().toISOString();
+  var packet = emptyProjectDeskArtifactsContextPacketV1(now);
+  var requestedKey = String(e && e.parameter && e.parameter.project || '');
+  var pilot = PROJECT_DESK_ARTIFACTS_CONTEXT_PILOTS_V1[requestedKey];
+  if (!pilot) {
+    packet.errors.push('project_not_authorized');
+    return jsonResponseV20(packet);
+  }
+  if (!PropertiesService.getScriptProperties().getProperty('NOTION_SECRET')) {
+    packet.errors.push('notion_read_unavailable');
+    return jsonResponseV20(packet);
+  }
+  try {
+    if (!projectDeskProjectIdentityPassesV1(pilot)) {
+      packet.errors.push('project_identity_unavailable');
+      return jsonResponseV20(packet);
+    }
+    packet.freshness.sources.projects = 'fresh';
+    var parent = DriveApp.getFolderById(pilot.driveParentId);
+    var roots = parent.getFoldersByName(pilot.driveFolderName);
+    var root = roots.hasNext() ? roots.next() : null;
+    if (!root || roots.hasNext()) {
+      packet.errors.push('drive_workspace_identity_unavailable');
+      return jsonResponseV20(packet);
+    }
+    PROJECT_DESK_ARTIFACTS_FOLDERS_V1.forEach(function(spec) {
+      var folders = root.getFoldersByName(spec.name);
+      var folder = folders.hasNext() ? folders.next() : null;
+      if (!folder || folders.hasNext()) {
+        packet.warnings.push('drive_category_unavailable_' + spec.name.toLowerCase());
+        return;
+      }
+      if (packet.files.length < 20) packet.files.push({ title: spec.label, artifact_type: 'Folder', location: 'Project files', updated_at: '' });
+      var iterator = folder.getFiles();
+      var rows = [];
+      while (iterator.hasNext() && rows.length < 20) {
+        var row = projectDeskArtifactRowV1(iterator.next(), spec.label);
+        if (row.title) rows.push(row);
+      }
+      if (spec.bucket === 'outputs') packet.outputs = rows.slice(0, 20);
+      else if (spec.bucket === 'documents') packet.documents = rows.slice(0, 20);
+      else rows.forEach(function(row) { if (packet.files.length < 20) packet.files.push(row); });
+    });
+    packet.ok = true;
+    packet.freshness = { state: 'fresh', max_age_ms: 300000, last_verified_at: now, sources: { projects: 'fresh', drive: 'fresh' } };
+  } catch (err) {
+    packet.errors.push('drive_artifacts_read_failed');
+    if (packet.freshness.sources.projects !== 'fresh') packet.freshness.sources.projects = 'unavailable';
+    packet.freshness.sources.drive = 'unavailable';
   }
   return jsonResponseV20(packet);
 }
