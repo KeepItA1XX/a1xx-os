@@ -603,6 +603,7 @@ function doGet(e) {
     if (e.parameter.action === 'project_desk_core_context_v1') return getProjectDeskCoreContextV1(e);
     if (e.parameter.action === 'project_desk_task_context_v1') return getProjectDeskTaskContextV1(e);
     if (e.parameter.action === 'project_desk_artifacts_context_v1') return getProjectDeskArtifactsContextV1(e);
+    if (e.parameter.action === 'project_desk_schedule_context_v1') return getProjectDeskScheduleContextV1(e);
     if (e.parameter.action === 'intel_read_packet_v1') {
       var intelPacket = getIntelReadPacketV1(e);
       var callback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
@@ -1031,6 +1032,199 @@ function getProjectDeskArtifactsContextV1(e) {
     if (packet.freshness.sources.projects !== 'fresh') packet.freshness.sources.projects = 'unavailable';
     packet.freshness.sources.drive = 'unavailable';
   }
+  return jsonResponseV20(packet);
+}
+
+// Milestone 02 Stage 4: read-only calendar, Timeline, and content-schedule
+// context for the ETC-E / Runnin Outta Love desk. The browser receives only
+// bounded operator-safe timing fields. Source IDs, event titles, descriptions,
+// attendees, locations, URLs, relations, and record bodies stay in the relay.
+var PROJECT_DESK_SCHEDULE_CONTEXT_PILOTS_V1 = {
+  'etc-e-runnin-outta-love': {
+    title: 'Runnin Outta Love',
+    projectType: 'Client',
+    calendarNames: ['Business', 'HoneyBook Calendar - 100 drums'],
+    timelineDataSourceId: '4de56b97-dd2f-4b51-b5e9-40aa7ebe4fa0'
+  }
+};
+
+function emptyProjectDeskScheduleContextPacketV1(now) {
+  return {
+    packet: 'project_desk_schedule_context_v1',
+    ok: false,
+    source_mode: 'live_read_only',
+    generated_at: now,
+    freshness: {
+      state: 'unavailable', max_age_ms: 300000, last_verified_at: '',
+      sources: { projects: 'unavailable', calendar: 'unavailable', timeline: 'unavailable', content_schedule: 'unavailable' }
+    },
+    calendar_events: [],
+    timeline_items: [],
+    content_schedule_items: [],
+    warnings: [],
+    errors: [],
+    write_blocked: {
+      writes_enabled: false,
+      notion_write: false,
+      calendar_write: false,
+      sheets_write: false,
+      app_write: false,
+      webhook_dispatch: false,
+      agent_execution: false
+    }
+  };
+}
+
+function resolveProjectDeskScheduleProjectV1(pilot) {
+  var result = notionDataSourceQuery(NOTION_PROJECTS_DB, {
+    page_size: 2,
+    filter: { and: [
+      { property: 'Project name', title: { equals: pilot.title } },
+      { property: 'Project Type', select: { equals: pilot.projectType } }
+    ] }
+  });
+  if (result.code >= 400) throw new Error('project_read_failed');
+  var rows = JSON.parse(result.text || '{}').results || [];
+  if (rows.length !== 1) return null;
+  var projected = normalizeProjectDeskCoreContextV1(rows[0]);
+  if (!projected.title || projected.title !== pilot.title || projected.project_type !== pilot.projectType) return null;
+  return { page: rows[0], project: projected };
+}
+
+function projectDeskScheduleDateV1(value) {
+  if (!value) return '';
+  var date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) return '';
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+function projectDeskScheduleTimeV1(value, allDay) {
+  if (allDay) return 'All day';
+  var date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) return '';
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'h:mm a');
+}
+
+function projectDeskCalendarEventMatchesPilotV1(event, pilot) {
+  // Calendar has no approved Project relation. A deliberately strict title
+  // convention is used only inside this relay as the scoped project marker;
+  // the title is never returned to the browser.
+  var title = String(event && event.getTitle && event.getTitle() || '').trim().toLowerCase();
+  var marker = String(pilot && pilot.title || '').trim().toLowerCase();
+  return !!marker && (title === marker || title.indexOf(marker + ' -') === 0 || title.indexOf(marker + ' —') === 0);
+}
+
+function readProjectDeskCalendarScheduleV1(pilot) {
+  var start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - 7);
+  var end = new Date(start.getTime()); end.setDate(end.getDate() + 37);
+  var rows = [];
+  (pilot.calendarNames || []).forEach(function(name) {
+    var calendars = CalendarApp.getCalendarsByName(name);
+    if (calendars.length !== 1) throw new Error('calendar_identity_unavailable');
+    calendars[0].getEvents(start, end).forEach(function(event) {
+      if (!projectDeskCalendarEventMatchesPilotV1(event, pilot) || rows.length >= 20) return;
+      var allDay = event.isAllDayEvent();
+      var when = event.getStartTime();
+      rows.push({
+        effective_date: projectDeskScheduleDateV1(when),
+        time: projectDeskScheduleTimeV1(when, allDay),
+        title: pilot.title,
+        event_type: 'Calendar',
+        status: 'Scheduled',
+        last_edited_at: ''
+      });
+    });
+  });
+  return rows.sort(function(a, b) { return String(a.effective_date + a.time).localeCompare(String(b.effective_date + b.time)); });
+}
+
+function normalizeProjectDeskTimelineScheduleV1(page) {
+  var props = page.properties || {};
+  return {
+    title: readNotionTitle(props['Timeline Item'] || props.Name || props.Title),
+    event_type: readNotionSelect(props.Type || props['Event Type']) || 'Timeline',
+    milestone: readNotionSelect(props.Milestone),
+    status: readNotionStatus(props.Status),
+    effective_date: readNotionDate(props.Date || props['Timeline Date'] || props['Due Date'] || props['Target Date']),
+    last_edited_at: page.last_edited_time || page.created_time || ''
+  };
+}
+
+function normalizeProjectDeskContentScheduleV1(page) {
+  var props = page.properties || {};
+  return {
+    title: readNotionTitle(props.Title || props.Name || props['Content Title']),
+    production_date: readNotionDate(props['Production Date']),
+    publish_date: readNotionDate(props['Publish Date']),
+    platform: readNotionMulti(props.Platform) || readNotionSelect(props.Platform),
+    status: readNotionStatus(props.Status || props['Ready To']),
+    last_edited_at: page.last_edited_time || page.created_time || ''
+  };
+}
+
+function getProjectDeskScheduleContextV1(e) {
+  var now = new Date().toISOString();
+  var packet = emptyProjectDeskScheduleContextPacketV1(now);
+  var requestedKey = String(e && e.parameter && e.parameter.project || '');
+  var pilot = PROJECT_DESK_SCHEDULE_CONTEXT_PILOTS_V1[requestedKey];
+  if (!pilot) {
+    packet.errors.push('project_not_authorized');
+    return jsonResponseV20(packet);
+  }
+  if (!PropertiesService.getScriptProperties().getProperty('NOTION_SECRET')) {
+    packet.errors.push('notion_read_unavailable');
+    return jsonResponseV20(packet);
+  }
+  var canonical;
+  try {
+    canonical = resolveProjectDeskScheduleProjectV1(pilot);
+    if (!canonical) {
+      packet.errors.push('project_identity_unavailable');
+      return jsonResponseV20(packet);
+    }
+    packet.freshness.sources.projects = 'fresh';
+  } catch (err) {
+    packet.errors.push('project_read_failed');
+    return jsonResponseV20(packet);
+  }
+  try {
+    packet.calendar_events = readProjectDeskCalendarScheduleV1(pilot);
+    packet.freshness.sources.calendar = 'fresh';
+  } catch (err2) {
+    packet.errors.push('calendar_read_failed');
+  }
+  try {
+    var timelineResult = notionDataSourceQuery(pilot.timelineDataSourceId, {
+      page_size: 20,
+      filter: { property: 'Project', relation: { contains: String(canonical.page.id || '') } }
+    });
+    if (timelineResult.code >= 400) throw new Error('timeline_read_failed');
+    packet.timeline_items = (JSON.parse(timelineResult.text || '{}').results || []).map(normalizeProjectDeskTimelineScheduleV1).filter(function(row) {
+      return row.title;
+    }).slice(0, 20);
+    packet.freshness.sources.timeline = 'fresh';
+  } catch (err3) {
+    packet.errors.push('timeline_read_failed');
+  }
+  try {
+    var contentResult = notionQuery(NOTION_CONTENT_DB, {
+      page_size: 20,
+      filter: { property: 'Related Project', relation: { contains: String(canonical.page.id || '') } }
+    });
+    if (contentResult.code >= 400) throw new Error('content_schedule_read_failed');
+    packet.content_schedule_items = (JSON.parse(contentResult.text || '{}').results || []).map(normalizeProjectDeskContentScheduleV1).filter(function(row) {
+      return row.title;
+    }).slice(0, 20);
+    packet.freshness.sources.content_schedule = 'fresh';
+  } catch (err4) {
+    packet.errors.push('content_schedule_read_failed');
+  }
+  var fresh = Object.keys(packet.freshness.sources).filter(function(key) { return packet.freshness.sources[key] === 'fresh'; }).length;
+  var allFresh = fresh === 4;
+  packet.ok = fresh > 1;
+  packet.freshness.state = allFresh ? 'fresh' : (packet.ok ? 'partial' : 'unavailable');
+  packet.freshness.last_verified_at = packet.ok ? now : '';
+  if (!allFresh && packet.ok) packet.warnings.push('one_or_more_schedule_sources_unavailable');
   return jsonResponseV20(packet);
 }
 
