@@ -600,6 +600,7 @@ function doGet(e) {
     if (e.parameter.action === 'search_resources')    return searchResources(e);
     if (e.parameter.action === 'live_read_packet_v1') return getLiveReadPacketV1(e);
     if (e.parameter.action === 'planning_live_context_v1') return getPlanningLiveContextV1(e);
+    if (e.parameter.action === 'project_desk_core_context_v1') return getProjectDeskCoreContextV1(e);
     if (e.parameter.action === 'intel_read_packet_v1') {
       var intelPacket = getIntelReadPacketV1(e);
       var callback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
@@ -709,6 +710,94 @@ function getPlanningLiveContextV1(e) {
   packet.freshness.state = available === 2 ? 'fresh' : (available === 1 ? 'partial' : 'unavailable');
   packet.freshness.last_verified_at = available ? now : '';
   if (available === 1) packet.warnings.push('one_planning_source_unavailable');
+  return jsonResponseV20(packet);
+}
+
+// Milestone 02 Stage 1: an exact, read-only Project Desk context for the
+// ETC-E / Runnin Outta Love pilot. This intentionally does not reuse the
+// Planning packet because the Project Desk must not receive page IDs, URLs,
+// relationships, contact data, or a wider project collection.
+var PROJECT_DESK_CORE_CONTEXT_PILOTS_V1 = {
+  'etc-e-runnin-outta-love': { title: 'Runnin Outta Love', projectType: 'Client' }
+};
+
+function emptyProjectDeskCoreContextPacketV1(now) {
+  return {
+    packet: 'project_desk_core_context_v1',
+    ok: false,
+    source_mode: 'live_read_only',
+    generated_at: now,
+    freshness: { state: 'unavailable', max_age_ms: 300000, last_verified_at: '', sources: { projects: 'unavailable' } },
+    project: null,
+    warnings: [],
+    errors: [],
+    write_blocked: {
+      writes_enabled: false,
+      notion_write: false,
+      app_write: false,
+      calendar_write: false,
+      drive_write: false,
+      webhook_dispatch: false,
+      agent_execution: false
+    }
+  };
+}
+
+function normalizeProjectDeskCoreContextV1(page) {
+  var props = page.properties || {};
+  return {
+    title: readNotionTitle(props.Name || props['Project Name'] || props['Project name'] || props.Title),
+    project_type: readNotionSelect(props['Project Type'] || props.Type),
+    status: readNotionStatus(props.Status),
+    priority: readNotionSelect(props.Priority),
+    current_next_move: readNotionText(props['Current Next Move'] || props['Next Action'] || props['Next Move']),
+    outcome: readNotionText(props['Outcome / Definition of Done'] || props.Outcome),
+    needs_a1xx_review: readNotionCheckbox(props['Needs A1XX'] || props['Need for A1XX']),
+    closest_to_money: readNotionCheckbox(props['Closest To Money'] || props['Closest to Money']),
+    last_edited_at: page.last_edited_time || page.created_time || ''
+  };
+}
+
+function getProjectDeskCoreContextV1(e) {
+  var now = new Date().toISOString();
+  var packet = emptyProjectDeskCoreContextPacketV1(now);
+  var requestedKey = String(e && e.parameter && e.parameter.project || '');
+  var pilot = PROJECT_DESK_CORE_CONTEXT_PILOTS_V1[requestedKey];
+  if (!pilot) {
+    packet.errors.push('project_not_authorized');
+    return jsonResponseV20(packet);
+  }
+  if (!PropertiesService.getScriptProperties().getProperty('NOTION_SECRET')) {
+    packet.errors.push('notion_read_unavailable');
+    return jsonResponseV20(packet);
+  }
+  try {
+    // A two-row cap permits ambiguity detection. The page ID remains in relay
+    // memory only; a successful response projects exactly one allowlisted row.
+    var result = notionDataSourceQuery(NOTION_PROJECTS_DB, {
+      page_size: 2,
+      filter: { and: [
+        { property: 'Project name', title: { equals: pilot.title } },
+        { property: 'Project Type', select: { equals: pilot.projectType } }
+      ] }
+    });
+    if (result.code >= 400) throw new Error('project_read_failed');
+    var rows = JSON.parse(result.text || '{}').results || [];
+    if (rows.length !== 1) {
+      packet.errors.push(rows.length ? 'project_identity_ambiguous' : 'project_identity_unavailable');
+      return jsonResponseV20(packet);
+    }
+    var projected = normalizeProjectDeskCoreContextV1(rows[0]);
+    if (!projected.title || projected.title !== pilot.title || projected.project_type !== pilot.projectType) {
+      packet.errors.push('project_identity_unavailable');
+      return jsonResponseV20(packet);
+    }
+    packet.project = projected;
+    packet.ok = true;
+    packet.freshness = { state: 'fresh', max_age_ms: 300000, last_verified_at: now, sources: { projects: 'fresh' } };
+  } catch (err) {
+    packet.errors.push('project_read_failed');
+  }
   return jsonResponseV20(packet);
 }
 
