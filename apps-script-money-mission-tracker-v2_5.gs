@@ -610,6 +610,12 @@ function doGet(e) {
       if (intelTodayCallback) return ContentService.createTextOutput(intelTodayCallback[0] + '(' + intelTodayPacket.getContent() + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
       return intelTodayPacket;
     }
+    if (e.parameter.action === 'intel_agency_context_v1') {
+      var intelAgencyPacket = getIntelAgencyContextV1(e);
+      var intelAgencyCallback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
+      if (intelAgencyCallback) return ContentService.createTextOutput(intelAgencyCallback[0] + '(' + intelAgencyPacket.getContent() + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+      return intelAgencyPacket;
+    }
     if (e.parameter.action === 'intel_read_packet_v1') {
       var intelPacket = getIntelReadPacketV1(e);
       var callback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
@@ -1371,6 +1377,142 @@ function getIntelTodayContextV1(e) {
     },
     warnings:safeCodes(health.warnings),
     errors:safeCodes(health.errors),
+    write_blocked:{writes_enabled:blocked.writesEnabled !== true,notion_write:blocked.notionWrite !== true,linear_write:blocked.linearWrite !== true,worker_execution:blocked.workerExecution !== true,automation_execution:blocked.automationExecution !== true}
+  });
+}
+
+// Milestone 02 Phase 6: narrow, read-only agency projection for the existing
+// Intel Agents workspace. It transforms the broad graph into a nested display
+// hierarchy without exposing canonical IDs, URLs, raw relation arrays, owners,
+// tools, models, source bodies, or execution controls.
+function intelAgencySafeRowsV1(rows, prefix, limit) {
+  var count = 0;
+  return (rows || []).reduce(function(out, row) {
+    if (count >= (limit || 100)) return out;
+    row = row || {};
+    var title = intelTodaySafeTextV1(row.title || '', 160);
+    if (!title) return out;
+    count += 1;
+    out.push({
+      row_key:String(prefix || 'agency') + '-' + String(count),
+      title:title,
+      status:intelTodaySafeTextV1(row.status || 'Planned', 80),
+      summary:intelTodaySafeTextV1(row.summary || '', 280)
+    });
+    return out;
+  }, []);
+}
+
+function intelAgencySafeSourceHealthV1(sources) {
+  var names=['notion_departments','notion_captains','notion_jobs','notion_skills','notion_workers'];
+  var states=names.map(function(name){ return intelTodaySafeSourceStateV1(sources && sources[name]); });
+  if (states.some(function(state){ return state === 'unavailable'; })) return 'unavailable';
+  if (states.some(function(state){ return state === 'partial'; })) return 'partial';
+  return states.every(function(state){ return state === 'live'; }) ? 'live' : 'unknown';
+}
+
+function getIntelAgencyContextV1(e) {
+  var upstream={};
+  try {
+    upstream=JSON.parse(getIntelReadPacketV1(e).getContent() || '{}');
+  } catch (err) {
+    upstream={packet:'intel_read_packet_v1',status:'unavailable',generatedAt:new Date().toISOString(),freshness:{state:'unavailable',maxAgeMs:300000},agents:{},health:{warnings:['intel_agency_upstream_unreadable'],errors:['intel_agency_upstream_unreadable'],sources:{}},blocked:{writesEnabled:false,notionWrite:false,linearWrite:false,workerExecution:false,automationExecution:false}};
+  }
+  var agents=upstream.agents || {};
+  var departments=Array.isArray(agents.departments) ? agents.departments : [];
+  var captains=Array.isArray(agents.captains) ? agents.captains : [];
+  var jobs=Array.isArray(agents.jobs) ? agents.jobs : [];
+  var skills=Array.isArray(agents.skills) ? agents.skills : [];
+  var workers=Array.isArray(agents.workers) ? agents.workers : [];
+  var relationIds=function(value){ return Array.isArray(value) ? value.map(function(id){ return String(id || ''); }).filter(Boolean) : []; };
+  var byId=function(rows){
+    return (rows || []).reduce(function(out,row){
+      if (row && row.id) out[String(row.id)]=row;
+      return out;
+    },{});
+  };
+  var captainById=byId(captains);
+  var captainByDepartment={};
+  captains.forEach(function(captain){
+    var departmentIds=relationIds(captain.department);
+    if (departmentIds.length === 1 && !captainByDepartment[departmentIds[0]]) captainByDepartment[departmentIds[0]]=captain;
+  });
+  var safeDepartments=[];
+  var includedJobIds={};
+  var includedSkillIds={};
+  var excludedJobs=0;
+  departments.forEach(function(department, departmentIndex){
+    var departmentId=String(department && department.id || '');
+    var captain=captainByDepartment[departmentId] || null;
+    if (!departmentId || !captain) return;
+    var safeDepartment=intelAgencySafeRowsV1([department],'department',1)[0];
+    var safeCaptain=intelAgencySafeRowsV1([captain],'captain',1)[0];
+    if (!safeDepartment || !safeCaptain) return;
+    safeDepartment.row_key='department-' + String(safeDepartments.length + 1);
+    safeCaptain.row_key=safeDepartment.row_key + '-captain';
+    safeDepartment.captain=safeCaptain;
+    safeDepartment.jobs=[];
+    jobs.forEach(function(job){
+      var jobDepartmentIds=relationIds(job.department);
+      var jobCaptainIds=relationIds(job.captain);
+      if (jobDepartmentIds.length !== 1 || jobCaptainIds.length !== 1 || jobDepartmentIds[0] !== departmentId || jobCaptainIds[0] !== String(captain.id || '')) return;
+      var safeJob=intelAgencySafeRowsV1([job],'job',1)[0];
+      if (!safeJob) return;
+      safeJob.row_key=safeDepartment.row_key + '-job-' + String(safeDepartment.jobs.length + 1);
+      safeJob.skills=[];
+      safeDepartment.jobs.push(safeJob);
+      includedJobIds[String(job.id)]=safeJob;
+    });
+    safeDepartments.push(safeDepartment);
+  });
+  jobs.forEach(function(job){ if (!includedJobIds[String(job && job.id || '')]) excludedJobs += 1; });
+  skills.forEach(function(skill){
+    var jobIds=relationIds(skill.job);
+    if (jobIds.length !== 1 || !includedJobIds[jobIds[0]]) return;
+    var safeSkill=intelAgencySafeRowsV1([skill],'skill',1)[0];
+    if (!safeSkill) return;
+    var parentJob=includedJobIds[jobIds[0]];
+    safeSkill.row_key=parentJob.row_key + '-skill-' + String(parentJob.skills.length + 1);
+    safeSkill.workers=[];
+    parentJob.skills.push(safeSkill);
+    includedSkillIds[String(skill.id)]=safeSkill;
+  });
+  workers.forEach(function(worker){
+    var skillIds=relationIds(worker.skill);
+    if (skillIds.length !== 1 || !includedSkillIds[skillIds[0]]) return;
+    var safeWorker=intelAgencySafeRowsV1([worker],'worker',1)[0];
+    if (!safeWorker) return;
+    var parentSkill=includedSkillIds[skillIds[0]];
+    safeWorker.row_key=parentSkill.row_key + '-worker-' + String(parentSkill.workers.length + 1);
+    parentSkill.workers.push(safeWorker);
+  });
+  var health=upstream.health || {};
+  var sources=health.sources || {};
+  var blocked=upstream.blocked || {};
+  var warnings=(health.warnings || []).map(function(value){ return intelTodaySafeTextV1(value,120); }).filter(Boolean).slice(0,20);
+  if (excludedJobs) warnings.push('unparented_job_excluded');
+  if ((upstream.library && upstream.library.outputs || []).length) warnings.push('outputs_without_agency_parent_excluded');
+  var visibleJobs=Object.keys(includedJobIds).length;
+  var visibleSkills=Object.keys(includedSkillIds).length;
+  var visibleWorkers=safeDepartments.reduce(function(total,department){
+    return total + department.jobs.reduce(function(jobTotal,job){
+      return jobTotal + job.skills.reduce(function(skillTotal,skill){ return skillTotal + (skill.workers || []).length; },0);
+    },0);
+  },0);
+  var sourceHealth=intelAgencySafeSourceHealthV1(sources);
+  var status=sourceHealth === 'live' && safeDepartments.length ? 'live' : (sourceHealth === 'partial' && safeDepartments.length ? 'partial' : 'unavailable');
+  return jsonResponseV20({
+    packet:'intel_agency_context_v1',
+    ok:status === 'live' || status === 'partial',
+    status:status,
+    source_mode:'live_read_only',
+    generated_at:intelTodaySafeTextV1(upstream.generatedAt,80),
+    freshness:{state:intelTodaySafeTextV1(upstream.freshness && upstream.freshness.state || status,20),max_age_ms:Number(upstream.freshness && upstream.freshness.maxAgeMs || 300000)},
+    source_health:{notion:intelAgencySafeSourceHealthV1(sources)},
+    counts:{departments:safeDepartments.length,jobs:visibleJobs,skills:visibleSkills,workers:visibleWorkers},
+    agency:{departments:safeDepartments},
+    warnings:warnings.slice(0,20),
+    errors:(health.errors || []).map(function(value){ return intelTodaySafeTextV1(value,120); }).filter(Boolean).slice(0,20),
     write_blocked:{writes_enabled:blocked.writesEnabled !== true,notion_write:blocked.notionWrite !== true,linear_write:blocked.linearWrite !== true,worker_execution:blocked.workerExecution !== true,automation_execution:blocked.automationExecution !== true}
   });
 }
