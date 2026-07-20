@@ -604,6 +604,12 @@ function doGet(e) {
     if (e.parameter.action === 'project_desk_task_context_v1') return getProjectDeskTaskContextV1(e);
     if (e.parameter.action === 'project_desk_artifacts_context_v1') return getProjectDeskArtifactsContextV1(e);
     if (e.parameter.action === 'project_desk_schedule_context_v1') return getProjectDeskScheduleContextV1(e);
+    if (e.parameter.action === 'intel_today_context_v1') {
+      var intelTodayPacket = getIntelTodayContextV1(e);
+      var intelTodayCallback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
+      if (intelTodayCallback) return ContentService.createTextOutput(intelTodayCallback[0] + '(' + intelTodayPacket.getContent() + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+      return intelTodayPacket;
+    }
     if (e.parameter.action === 'intel_read_packet_v1') {
       var intelPacket = getIntelReadPacketV1(e);
       var callback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
@@ -1290,6 +1296,83 @@ function getIntelReadPacketV1(e) {
   packet.status = notionCount || packet.linear.issues.length ? (packet.health.errors.length || packet.health.duplicates.length || packet.health.missingIds.length ? 'partial' : 'live') : 'empty';
   packet.health.status = packet.health.errors.length || packet.health.duplicates.length || packet.health.missingIds.length ? 'partial' : (notionCount ? 'live' : 'unavailable');
   return jsonResponseV20(packet);
+}
+
+// Milestone 02 Phase 5: narrow, read-only projection for the existing Intel
+// Today workspace. It deliberately does not expose the canonical IDs, URLs,
+// relation arrays, or source-detail fields used by the broader Intel graph.
+function intelTodaySafeTextV1(value, limit) {
+  return String(value == null ? '' : value)
+    .replace(/https?:\/\/[^\s]+/gi, '')
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '')
+    .replace(/\b[0-9a-f]{32}\b/gi, '')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '')
+    .replace(/\+?\d[\d(). -]{7,}\d/g, '')
+    .replace(/\s+/g, ' ').trim().slice(0, Number(limit) || 0);
+}
+
+function intelTodaySafeRowsV1(rows, section) {
+  var count = 0;
+  return (rows || []).reduce(function(out, row) {
+    if (count >= 12) return out;
+    row = row || {};
+    var title = intelTodaySafeTextV1(row.title || row.name || '', 160);
+    if (!title) return out;
+    count += 1;
+    var item = {
+      row_key: String(section || 'today') + '-' + String(count),
+      title: title,
+      status: intelTodaySafeTextV1(row.status, 80),
+      summary: intelTodaySafeTextV1(row.summary || row.description || '', 280),
+      updated_at: intelTodaySafeTextV1(row.updatedAt || row.updated_at || '', 80)
+    };
+    if (section === 'brief' || section === 'approvals' || section === 'risks') item.owner = intelTodaySafeTextV1(row.owner || row.assignee || row.captain || row.department || '', 120);
+    if (section === 'queues') item.priority = intelTodaySafeTextV1(row.priority, 40);
+    out.push(item);
+    return out;
+  }, []);
+}
+
+function intelTodaySafeSourceStateV1(source) {
+  var status = String(source && source.status || 'unknown').toLowerCase();
+  return /^(live|partial|unavailable|deferred|unknown)$/.test(status) ? status : 'unknown';
+}
+
+function getIntelTodayContextV1(e) {
+  var upstream = {};
+  try {
+    upstream = JSON.parse(getIntelReadPacketV1(e).getContent() || '{}');
+  } catch (err) {
+    upstream = {packet:'intel_read_packet_v1',status:'unavailable',generatedAt:new Date().toISOString(),freshness:{state:'unavailable',maxAgeMs:300000},today:{},health:{warnings:['intel_today_upstream_unreadable'],errors:['intel_today_upstream_unreadable'],sources:{}},blocked:{writesEnabled:false,notionWrite:false,linearWrite:false,workerExecution:false,automationExecution:false}};
+  }
+  var status = String(upstream.status || 'unavailable').toLowerCase();
+  if (!/^(live|partial|empty|unavailable)$/.test(status)) status = 'unavailable';
+  var today = upstream.today || {};
+  var health = upstream.health || {};
+  var sources = health.sources || {};
+  var blocked = upstream.blocked || {};
+  var safeCodes = function(values) {
+    return (values || []).map(function(value) { return intelTodaySafeTextV1(value, 120); }).filter(Boolean).slice(0, 20);
+  };
+  return jsonResponseV20({
+    packet:'intel_today_context_v1',
+    ok:status === 'live' || status === 'partial',
+    status:status,
+    source_mode:'live_read_only',
+    generated_at:intelTodaySafeTextV1(upstream.generatedAt, 80),
+    freshness:{state:intelTodaySafeTextV1(upstream.freshness && upstream.freshness.state || status, 20),max_age_ms:Number(upstream.freshness && upstream.freshness.maxAgeMs || 300000)},
+    source_health:{notion:intelTodaySafeSourceStateV1(sources.notion_jobs || sources.notion_captains || sources.notion_workers),linear:intelTodaySafeSourceStateV1(sources.linear)},
+    today:{
+      brief:intelTodaySafeRowsV1(today.brief, 'brief'),
+      queues:intelTodaySafeRowsV1(today.queues, 'queues'),
+      approvals:intelTodaySafeRowsV1(today.approvals, 'approvals'),
+      risks:intelTodaySafeRowsV1(today.risks, 'risks'),
+      recent:intelTodaySafeRowsV1(today.recent, 'recent')
+    },
+    warnings:safeCodes(health.warnings),
+    errors:safeCodes(health.errors),
+    write_blocked:{writes_enabled:blocked.writesEnabled !== true,notion_write:blocked.notionWrite !== true,linear_write:blocked.linearWrite !== true,worker_execution:blocked.workerExecution !== true,automation_execution:blocked.automationExecution !== true}
+  });
 }
 
 function intelCanonicalKeyV1(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '); }
