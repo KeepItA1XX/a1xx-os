@@ -616,6 +616,12 @@ function doGet(e) {
       if (intelAgencyCallback) return ContentService.createTextOutput(intelAgencyCallback[0] + '(' + intelAgencyPacket.getContent() + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
       return intelAgencyPacket;
     }
+    if (e.parameter.action === 'intel_library_context_v1') {
+      var intelLibraryPacket = getIntelLibraryContextV1(e);
+      var intelLibraryCallback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
+      if (intelLibraryCallback) return ContentService.createTextOutput(intelLibraryCallback[0] + '(' + intelLibraryPacket.getContent() + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+      return intelLibraryPacket;
+    }
     if (e.parameter.action === 'intel_read_packet_v1') {
       var intelPacket = getIntelReadPacketV1(e);
       var callback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
@@ -1513,6 +1519,82 @@ function getIntelAgencyContextV1(e) {
     agency:{departments:safeDepartments},
     warnings:warnings.slice(0,20),
     errors:(health.errors || []).map(function(value){ return intelTodaySafeTextV1(value,120); }).filter(Boolean).slice(0,20),
+    write_blocked:{writes_enabled:blocked.writesEnabled !== true,notion_write:blocked.notionWrite !== true,linear_write:blocked.linearWrite !== true,worker_execution:blocked.workerExecution !== true,automation_execution:blocked.automationExecution !== true}
+  });
+}
+
+// Milestone 02 Phase 7: the existing Intel Library receives a separate,
+// read-only Output projection.  It deliberately never exposes source IDs,
+// URLs, relation arrays, raw source bodies, attachment/contact data, or
+// execution/write metadata from the broader Intel read packet.
+function intelLibraryOutputKeyV1(row, index) {
+  row = row || {};
+  var seed = String(row.id || '') + '|' + String(row.title || '') + '|' + String(row.updatedAt || '') + '|' + String(index || 0);
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, seed);
+  var hex = bytes.map(function(value) {
+    var normalized = (value + 256) % 256;
+    return ('0' + normalized.toString(16)).slice(-2);
+  }).join('');
+  return 'output-' + hex.slice(0, 12);
+}
+
+function intelLibrarySafeOutputRowsV1(rows, limit) {
+  var count = 0;
+  return (rows || []).reduce(function(out, row, index) {
+    if (count >= (limit || 50)) return out;
+    row = row || {};
+    var title = intelTodaySafeTextV1(row.title || row.name || row.summary || '', 160);
+    if (!title) return out;
+    count += 1;
+    out.push({
+      row_key:intelLibraryOutputKeyV1(row, index),
+      title:title,
+      type:'Output',
+      status:intelTodaySafeTextV1(row.status || 'Ready', 80),
+      summary:intelTodaySafeTextV1(row.summary || row.description || '', 280),
+      owner:intelTodaySafeTextV1(row.owner || row.assignee || row.captain || row.department || '', 120),
+      updated_at:intelTodaySafeTextV1(row.updatedAt || row.updated_at || '', 80)
+    });
+    return out;
+  }, []);
+}
+
+function getIntelLibraryContextV1(e) {
+  var upstream = {};
+  try {
+    upstream = JSON.parse(getIntelReadPacketV1(e).getContent() || '{}');
+  } catch (err) {
+    upstream = {packet:'intel_read_packet_v1',status:'unavailable',generatedAt:new Date().toISOString(),freshness:{state:'unavailable',maxAgeMs:300000},library:{outputs:[]},health:{warnings:['intel_library_upstream_unreadable'],errors:['intel_library_upstream_unreadable'],sources:{}},blocked:{writesEnabled:false,notionWrite:false,linearWrite:false,workerExecution:false,automationExecution:false}};
+  }
+  var health = upstream.health || {};
+  var sources = health.sources || {};
+  var blocked = upstream.blocked || {};
+  var sourceState = intelTodaySafeSourceStateV1(sources.notion_outputs);
+  var outputs = upstream.library && Array.isArray(upstream.library.outputs) ? upstream.library.outputs : [];
+  var safeOutputs = intelLibrarySafeOutputRowsV1(outputs, 50);
+  var upstreamStatus = String(upstream.status || 'unavailable').toLowerCase();
+  var status = 'unavailable';
+  if (sourceState === 'live') {
+    status = safeOutputs.length ? (upstreamStatus === 'partial' ? 'partial' : 'live') : 'empty';
+  } else if (sourceState === 'partial' && safeOutputs.length) {
+    status = 'partial';
+  }
+  var warnings = [];
+  if (sourceState !== 'live') warnings.push('output_source_' + (sourceState === 'unknown' ? 'unavailable' : sourceState));
+  if (outputs.length > safeOutputs.length) warnings.push('output_rows_capped_or_malformed');
+  if (upstreamStatus === 'unavailable') warnings.push('intel_library_upstream_unreadable');
+  return jsonResponseV20({
+    packet:'intel_library_context_v1',
+    ok:status === 'live' || status === 'partial' || status === 'empty',
+    status:status,
+    source_mode:'live_read_only',
+    generated_at:intelTodaySafeTextV1(upstream.generatedAt, 80),
+    freshness:{state:intelTodaySafeTextV1(upstream.freshness && upstream.freshness.state || status, 20),max_age_ms:Number(upstream.freshness && upstream.freshness.maxAgeMs || 300000)},
+    source_health:{outputs:sourceState},
+    counts:{outputs:safeOutputs.length,source_records:Number(sources.notion_outputs && sources.notion_outputs.recordCount || 0)},
+    library:{outputs:safeOutputs},
+    warnings:warnings.slice(0, 8),
+    errors:status === 'unavailable' ? ['output_source_unavailable'] : [],
     write_blocked:{writes_enabled:blocked.writesEnabled !== true,notion_write:blocked.notionWrite !== true,linear_write:blocked.linearWrite !== true,worker_execution:blocked.workerExecution !== true,automation_execution:blocked.automationExecution !== true}
   });
 }
