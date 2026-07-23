@@ -1433,6 +1433,13 @@ function todayCoreSafeTextV2(value, limit) {
     .replace(/\s+/g, ' ').trim().slice(0, Number(limit) || 0);
 }
 
+function todayCoreSafeTimestampV2(value) {
+  var text = String(value == null ? '' : value).trim();
+  var parsed = Date.parse(text);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(text) || isNaN(parsed)) return '';
+  return new Date(parsed).toISOString();
+}
+
 function todayCorePropertyTextV2(property) {
   return todayCoreSafeTextV2(readNotionSelect(property) || readNotionText(property) || readNotionTitle(property), 180);
 }
@@ -1480,7 +1487,7 @@ function todayCoreNormalizeQueueRowV2(page) {
   var properties = page.properties || {};
   var sourceId = String(page.id || '').trim();
   var title = todayCoreSafeTextV2(readNotionTitle(properties['Action Name'] || properties.Name || properties.Title), 160);
-  var sourceUpdatedAt = todayCoreSafeTextV2(page.last_edited_time || '', 80);
+  var sourceUpdatedAt = todayCoreSafeTimestampV2(page.last_edited_time || '');
   var decisionState = todayCoreNormalizeDecisionStateV2(properties);
   var priority = todayCorePropertyTextV2(properties.Priority);
   var order = readNotionNumber(properties.Order);
@@ -1548,7 +1555,8 @@ function todayCoreQueueCountsV2(records) {
 
 function todayCoreExceptionPacketV2(coreState, code, options) {
   options = options || {};
-  var now = String(options.generated_at || new Date().toISOString());
+  var now = todayCoreSafeTimestampV2(options.generated_at) || new Date().toISOString();
+  var lastVerifiedAt = todayCoreSafeTimestampV2(options.last_verified_at) || now;
   var sourceState = String(options.source_state || coreState || 'unavailable');
   return {
     packet:'today_core_packet_v2',
@@ -1561,7 +1569,7 @@ function todayCoreExceptionPacketV2(coreState, code, options) {
     action:null,
     queue_counts:{needs_a1xx:0, blocked:0, ready_to_use:0},
     exception:{code:todayCoreSafeTextV2(code, 120), route:'settings_data_health'},
-    freshness:{state:sourceState, max_age_ms:M03_TODAY_CORE_FRESHNESS_MAX_AGE_MS_V2, last_verified_at:todayCoreSafeTextV2(options.last_verified_at || now, 80), sources:{notion_weekly_queue:sourceState}},
+    freshness:{state:sourceState, max_age_ms:M03_TODAY_CORE_FRESHNESS_MAX_AGE_MS_V2, last_verified_at:lastVerifiedAt, sources:{notion_weekly_queue:sourceState}},
     warnings:(options.warnings || []).map(function(item){ return todayCoreSafeTextV2(item, 120); }).filter(Boolean).slice(0, 12),
     errors:(options.errors || []).map(function(item){ return todayCoreSafeTextV2(item, 120); }).filter(Boolean).slice(0, 12),
     write_blocked:todayCoreWriteBlockedV2()
@@ -1623,7 +1631,8 @@ function todayCoreBuildPacketFromRowsV2(pages, options) {
     source_mode:options.source_mode,
     source_state:'conflict'
   });
-  var now = String(options.generated_at || new Date().toISOString());
+  var now = todayCoreSafeTimestampV2(options.generated_at) || new Date().toISOString();
+  var lastVerifiedAt = todayCoreSafeTimestampV2(options.last_verified_at) || now;
   return {
     packet:'today_core_packet_v2',
     packet_version:2,
@@ -1645,7 +1654,7 @@ function todayCoreBuildPacketFromRowsV2(pages, options) {
       updated_at:selected.updated_at
     },
     queue_counts:todayCoreQueueCountsV2(candidates),
-    freshness:{state:'fresh', max_age_ms:M03_TODAY_CORE_FRESHNESS_MAX_AGE_MS_V2, last_verified_at:todayCoreSafeTextV2(options.last_verified_at || now, 80), sources:{notion_weekly_queue:'fresh'}},
+    freshness:{state:'fresh', max_age_ms:M03_TODAY_CORE_FRESHNESS_MAX_AGE_MS_V2, last_verified_at:lastVerifiedAt, sources:{notion_weekly_queue:'fresh'}},
     warnings:[],
     errors:[],
     write_blocked:todayCoreWriteBlockedV2()
@@ -1903,6 +1912,8 @@ function runTodayCorePacketV2FixtureChecks() {
   var second = todayCoreFixturePageV2({id:'22222222-2222-2222-2222-222222222222', title:'Open sales follow-up', priority:'Medium', order:1, needs_a1xx:false, status:'Ready'});
   var actionPacket = todayCoreBuildPacketFromRowsV2([second, first], fixtureOptions);
   check('action_packet_selected', actionPacket.core_state === 'action' && actionPacket.action && actionPacket.action.title === 'Review launch brief');
+  check('freshness_timestamp_preserved', actionPacket.freshness && actionPacket.freshness.last_verified_at === fixtureOptions.last_verified_at && actionPacket.action.updated_at === first.last_edited_time);
+  check('malformed_timestamp_rejected', todayCoreSafeTimestampV2('T18:00:00.000Z') === '');
   check('source_identity_not_exposed', JSON.stringify(actionPacket).indexOf(first.id) === -1 && JSON.stringify(actionPacket).indexOf(second.id) === -1);
   check('write_blocked', actionPacket.write_blocked && actionPacket.write_blocked.notion_write === false && actionPacket.write_blocked.agent_execution === false);
   check('active_queue_only_rejected', todayCoreBuildPacketFromRowsV2([todayCoreFixturePageV2({show_in_today:false})], fixtureOptions).core_state === 'empty');
