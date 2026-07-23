@@ -1435,9 +1435,20 @@ function todayCoreSafeTextV2(value, limit) {
 
 function todayCoreSafeTimestampV2(value) {
   var text = String(value == null ? '' : value).trim();
+  var match = text.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/);
   var parsed = Date.parse(text);
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(text) || isNaN(parsed)) return '';
-  return new Date(parsed).toISOString();
+  if (!match || isNaN(parsed)) return '';
+  var normalized = new Date(parsed);
+  if (
+    normalized.getUTCFullYear() !== Number(match[1]) ||
+    normalized.getUTCMonth() + 1 !== Number(match[2]) ||
+    normalized.getUTCDate() !== Number(match[3]) ||
+    normalized.getUTCHours() !== Number(match[4]) ||
+    normalized.getUTCMinutes() !== Number(match[5]) ||
+    normalized.getUTCSeconds() !== Number(match[6]) ||
+    normalized.getUTCMilliseconds() !== Number(match[7] || 0)
+  ) return '';
+  return normalized.toISOString();
 }
 
 function todayCorePropertyTextV2(property) {
@@ -1914,6 +1925,7 @@ function runTodayCorePacketV2FixtureChecks() {
   check('action_packet_selected', actionPacket.core_state === 'action' && actionPacket.action && actionPacket.action.title === 'Review launch brief');
   check('freshness_timestamp_preserved', actionPacket.freshness && actionPacket.freshness.last_verified_at === fixtureOptions.last_verified_at && actionPacket.action.updated_at === first.last_edited_time);
   check('malformed_timestamp_rejected', todayCoreSafeTimestampV2('T18:00:00.000Z') === '');
+  check('impossible_calendar_timestamp_rejected', todayCoreSafeTimestampV2('2026-02-29T00:00:00Z') === '');
   check('source_identity_not_exposed', JSON.stringify(actionPacket).indexOf(first.id) === -1 && JSON.stringify(actionPacket).indexOf(second.id) === -1);
   check('write_blocked', actionPacket.write_blocked && actionPacket.write_blocked.notion_write === false && actionPacket.write_blocked.agent_execution === false);
   check('active_queue_only_rejected', todayCoreBuildPacketFromRowsV2([todayCoreFixturePageV2({show_in_today:false})], fixtureOptions).core_state === 'empty');
