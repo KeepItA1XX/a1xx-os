@@ -102,6 +102,21 @@ var PHASE103_MISSION_OS_CONTEXT_NORMALIZATION_BUILD_V25 = 'mmos-20260619-phase10
 var PHASE25_NOTION_TASK_MASTER_SOURCE_ID_V25 = '11161152-81da-80da-891f-000b711d93d8';
 var PHASE25_NOTION_TASK_MASTER_VIEW_ID_V25 = '37761152-81da-81fa-98b3-000cedc52d4f';
 var PHASE25_NOTION_LIVE_EVENTS_SOURCE_ID_V25 = 'f32424f4-9966-4aaf-a387-ff985f4be95e';
+// Milestone 03 Phase 2: default-off local prototype for the Action Queue-only
+// Today Core relay. It is intentionally isolated from the broad Intel packet
+// and will not call Notion unless later approval configures both release gates.
+var M03_TODAY_CORE_PACKET_V2_BUILD = 'mmos-20260722-today-core-direct-notion-local-prototype';
+var M03_TODAY_CORE_PACKET_V2_ENABLED_PROPERTY = 'MMOS_TODAY_CORE_PACKET_V2_ENABLED';
+var M03_TODAY_CORE_QUERY_CONTRACT_PROPERTY = 'MMOS_TODAY_CORE_QUERY_CONTRACT_V2';
+var M03_TODAY_CORE_NOTION_TOKEN_PROPERTY = 'MMOS_NOTION_READ_TOKEN';
+var M03_TODAY_CORE_QUERY_CONTRACT_VALUE = 'verified_action_queue_filter_sort';
+var M03_TODAY_CORE_DIRECT_READ_RELEASED_V2 = true;
+var M03_TODAY_CORE_QUEUE_SOURCE_ID_V2 = '9d733af2-6e41-49a7-b324-4c75e112a18b';
+var M03_TODAY_CORE_QUERY_CAP_V2 = 25;
+var M03_TODAY_CORE_SOURCE_SHAPE_PROOF_CAP_V2 = 3;
+var M03_TODAY_CORE_FRESHNESS_MAX_AGE_MS_V2 = 300000;
+var M03_TODAY_CORE_ROUTE_CACHE_PREFIX_V2 = 'mmos_today_core_route_v2_';
+var M03_TODAY_CORE_ROUTE_TTL_SECONDS_V2 = 600;
 var PHASE25_NOTION_LIVE_EVENTS_VIEW_IDS_V25 = {
   upcoming_events: 'b5d5adeb-306a-4293-a7f2-8dca0f10ec21',
   events_by_campaign: '8d9b8d77-e7e1-4a35-b22f-1d47f3a99ffa',
@@ -609,6 +624,12 @@ function doGet(e) {
       var intelTodayCallback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
       if (intelTodayCallback) return ContentService.createTextOutput(intelTodayCallback[0] + '(' + intelTodayPacket.getContent() + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
       return intelTodayPacket;
+    }
+    if (e.parameter.action === 'today_core_packet_v2') {
+      var todayCorePacket = getTodayCorePacketV2(e);
+      var todayCoreCallback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
+      if (todayCoreCallback) return ContentService.createTextOutput(todayCoreCallback[0] + '(' + todayCorePacket.getContent() + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+      return todayCorePacket;
     }
     if (e.parameter.action === 'intel_agency_context_v1') {
       var intelAgencyPacket = getIntelAgencyContextV1(e);
@@ -1385,6 +1406,515 @@ function getIntelTodayContextV1(e) {
     errors:safeCodes(health.errors),
     write_blocked:{writes_enabled:blocked.writesEnabled !== true,notion_write:blocked.notionWrite !== true,linear_write:blocked.linearWrite !== true,worker_execution:blocked.workerExecution !== true,automation_execution:blocked.automationExecution !== true}
   });
+}
+
+// Milestone 03 Phase 2 — Today Core direct Notion adapter (local prototype).
+// This block is intentionally default-off. It does not alter Intel Today V1,
+// does not configure a token, and does not perform a direct Notion read until
+// a later bounded configuration and source-shape gate explicitly enable it.
+function todayCoreWriteBlockedV2() {
+  return {
+    writes_enabled:false,
+    notion_write:false,
+    app_write:false,
+    reminder_dispatch:false,
+    webhook_dispatch:false,
+    agent_execution:false
+  };
+}
+
+function todayCoreSafeTextV2(value, limit) {
+  return String(value == null ? '' : value)
+    .replace(/https?:\/\/[^\s]+/gi, '')
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '')
+    .replace(/\b[0-9a-f]{32}\b/gi, '')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '')
+    .replace(/\+?\d[\d(). -]{7,}\d/g, '')
+    .replace(/\s+/g, ' ').trim().slice(0, Number(limit) || 0);
+}
+
+function todayCorePropertyTextV2(property) {
+  return todayCoreSafeTextV2(readNotionSelect(property) || readNotionText(property) || readNotionTitle(property), 180);
+}
+
+function todayCorePropertyDoneV2(property) {
+  if (readNotionCheckbox(property)) return true;
+  var value = todayCorePropertyTextV2(property).toLowerCase();
+  return /^(done|complete|completed|posted|sent|closed|yes|true)$/.test(value);
+}
+
+function todayCoreNormalizeDecisionStateV2(properties) {
+  var status = todayCorePropertyTextV2(properties.Status).toLowerCase();
+  var review = todayCorePropertyTextV2(properties['Review Action']).toLowerCase();
+  var blockedReason = todayCoreSafeTextV2(readNotionText(properties['Blocked Reason']), 280);
+  if (todayCorePropertyDoneV2(properties['Posted / Sent / Done']) || /done|complete|closed|cancelled/.test(status)) return 'completed';
+  if (blockedReason || /blocked|waiting on source|waiting on client/.test(status)) return 'blocked';
+  if (readNotionCheckbox(properties['Needs A1XX Approval'])) return 'needs_a1xx';
+  if (/approval|needs review|review/.test(status) || /approval|review/.test(review)) return 'approval_requested';
+  if (/ready/.test(status)) return 'ready_to_use';
+  return 'working';
+}
+
+function todayCorePriorityWeightV2(value) {
+  var normalized = todayCoreSafeTextV2(value, 48).toLowerCase();
+  if (/urgent|critical|p0/.test(normalized)) return 4;
+  if (/high|p1/.test(normalized)) return 3;
+  if (/medium|normal|p2/.test(normalized)) return 2;
+  if (/low|p3/.test(normalized)) return 1;
+  return 0;
+}
+
+function todayCoreDestinationKindV2(properties) {
+  // The direct source-shape proof must verify the actual App Surface values.
+  // Until then, only these exact canonical labels are routable.
+  var surface = todayCorePropertyTextV2(properties['App Surface']).toLowerCase();
+  if (surface === 'output review') return 'output_review';
+  if (surface === 'today') return 'intel_today';
+  if (surface === 'mission command') return 'mission_command';
+  if (surface === 'directory') return 'directory';
+  return '';
+}
+
+function todayCoreNormalizeQueueRowV2(page) {
+  page = page || {};
+  var properties = page.properties || {};
+  var sourceId = String(page.id || '').trim();
+  var title = todayCoreSafeTextV2(readNotionTitle(properties['Action Name'] || properties.Name || properties.Title), 160);
+  var sourceUpdatedAt = todayCoreSafeTextV2(page.last_edited_time || '', 80);
+  var decisionState = todayCoreNormalizeDecisionStateV2(properties);
+  var priority = todayCorePropertyTextV2(properties.Priority);
+  var order = readNotionNumber(properties.Order);
+  var dueAt = todayCoreSafeTextV2(readNotionDate(properties['Due Date']), 80);
+  var activeQueue = readNotionCheckbox(properties['Active Queue']);
+  var showInToday = readNotionCheckbox(properties['Show In Today']);
+  var destinationKind = todayCoreDestinationKindV2(properties);
+  var blockedReason = todayCoreSafeTextV2(readNotionText(properties['Blocked Reason']), 280);
+  var summary = todayCoreSafeTextV2(readNotionText(properties['Mission Command Brief Line']) || readNotionText(properties['Do This']) || blockedReason, 280);
+  var ownerLabel = todayCoreSafeTextV2(todayCorePropertyTextV2(properties['Source Agent']), 120);
+  var valid = true;
+  var invalidReasons = [];
+  if (!sourceId) { valid = false; invalidReasons.push('missing_source_identity'); }
+  if (!title) { valid = false; invalidReasons.push('missing_action_title'); }
+  if (!sourceUpdatedAt) { valid = false; invalidReasons.push('missing_source_updated_at'); }
+  // A row is actionable only when the source has explicitly placed it in both
+  // the active queue and the Today surface. Do not widen this to an OR gate.
+  if (!(activeQueue && showInToday)) { valid = false; invalidReasons.push('not_queue_eligible'); }
+  if (decisionState === 'completed') { valid = false; invalidReasons.push('terminal_action'); }
+  if (!destinationKind) { valid = false; invalidReasons.push('unverified_destination'); }
+  return {
+    source_id:sourceId,
+    title:title,
+    decision_state:decisionState,
+    priority:priority,
+    priority_weight:todayCorePriorityWeightV2(priority),
+    order:order > 0 ? order : Number.MAX_SAFE_INTEGER,
+    due_at:dueAt,
+    due_at_ms:isNaN(Date.parse(dueAt)) ? Number.MAX_SAFE_INTEGER : Date.parse(dueAt),
+    queue_eligible:activeQueue && showInToday,
+    owner_label:ownerLabel,
+    summary:summary,
+    blocked_reason:blockedReason,
+    destination_kind:destinationKind,
+    updated_at:sourceUpdatedAt,
+    updated_at_ms:isNaN(Date.parse(sourceUpdatedAt)) ? 0 : Date.parse(sourceUpdatedAt),
+    valid:valid,
+    invalid_reasons:invalidReasons
+  };
+}
+
+function todayCoreAttentionWeightV2(decisionState) {
+  return /^(needs_a1xx|blocked|approval_requested)$/.test(String(decisionState || '')) ? 1 : 0;
+}
+
+function todayCoreCompareCandidatesV2(left, right) {
+  var leftAttention = todayCoreAttentionWeightV2(left.decision_state);
+  var rightAttention = todayCoreAttentionWeightV2(right.decision_state);
+  if (leftAttention !== rightAttention) return rightAttention - leftAttention;
+  if (left.priority_weight !== right.priority_weight) return right.priority_weight - left.priority_weight;
+  if (left.due_at_ms !== right.due_at_ms) return left.due_at_ms - right.due_at_ms;
+  if (left.order !== right.order) return left.order - right.order;
+  if (left.updated_at_ms !== right.updated_at_ms) return right.updated_at_ms - left.updated_at_ms;
+  return left.source_id < right.source_id ? -1 : (left.source_id > right.source_id ? 1 : 0);
+}
+
+function todayCoreQueueCountsV2(records) {
+  return (records || []).reduce(function(counts, record) {
+    if (record.decision_state === 'needs_a1xx' || record.decision_state === 'approval_requested') counts.needs_a1xx += 1;
+    if (record.decision_state === 'blocked') counts.blocked += 1;
+    if (record.decision_state === 'ready_to_use') counts.ready_to_use += 1;
+    return counts;
+  }, {needs_a1xx:0, blocked:0, ready_to_use:0});
+}
+
+function todayCoreExceptionPacketV2(coreState, code, options) {
+  options = options || {};
+  var now = String(options.generated_at || new Date().toISOString());
+  var sourceState = String(options.source_state || coreState || 'unavailable');
+  return {
+    packet:'today_core_packet_v2',
+    packet_version:2,
+    build:M03_TODAY_CORE_PACKET_V2_BUILD,
+    ok:coreState === 'empty',
+    source_mode:options.source_mode || 'local_prototype_read_only',
+    generated_at:now,
+    core_state:coreState,
+    action:null,
+    queue_counts:{needs_a1xx:0, blocked:0, ready_to_use:0},
+    exception:{code:todayCoreSafeTextV2(code, 120), route:'settings_data_health'},
+    freshness:{state:sourceState, max_age_ms:M03_TODAY_CORE_FRESHNESS_MAX_AGE_MS_V2, last_verified_at:todayCoreSafeTextV2(options.last_verified_at || now, 80), sources:{notion_weekly_queue:sourceState}},
+    warnings:(options.warnings || []).map(function(item){ return todayCoreSafeTextV2(item, 120); }).filter(Boolean).slice(0, 12),
+    errors:(options.errors || []).map(function(item){ return todayCoreSafeTextV2(item, 120); }).filter(Boolean).slice(0, 12),
+    write_blocked:todayCoreWriteBlockedV2()
+  };
+}
+
+function todayCoreCreateOpaqueRouteV2(record) {
+  var token = 'today-core-' + Utilities.getUuid();
+  var payload = {
+    source_page_id:String(record && record.source_id || ''),
+    destination_kind:String(record && record.destination_kind || ''),
+    issued_at:new Date().toISOString(),
+    expires_in_seconds:M03_TODAY_CORE_ROUTE_TTL_SECONDS_V2
+  };
+  if (!payload.source_page_id || !/^(intel_today|output_review|mission_command|directory)$/.test(payload.destination_kind)) return '';
+  CacheService.getScriptCache().put(M03_TODAY_CORE_ROUTE_CACHE_PREFIX_V2 + token, JSON.stringify(payload), M03_TODAY_CORE_ROUTE_TTL_SECONDS_V2);
+  return token;
+}
+
+function todayCoreBuildPacketFromRowsV2(pages, options) {
+  options = options || {};
+  var sourceState = String(options.source_state || 'fresh');
+  if (/^(unavailable|stale|placeholder)$/.test(sourceState)) return todayCoreExceptionPacketV2(sourceState, 'notion_weekly_queue_' + sourceState, options);
+  if (sourceState !== 'fresh') return todayCoreExceptionPacketV2('unavailable', 'notion_weekly_queue_source_state_unknown', options);
+  var seen = {};
+  var candidates = [];
+  var invalidEligible = [];
+  (pages || []).slice(0, M03_TODAY_CORE_QUERY_CAP_V2).forEach(function(page) {
+    var record = todayCoreNormalizeQueueRowV2(page);
+    if (record.source_id && seen[record.source_id]) {
+      invalidEligible.push('duplicate_source_identity');
+      return;
+    }
+    if (record.source_id) seen[record.source_id] = true;
+    if (record.valid) candidates.push(record);
+    else if (record.queue_eligible && record.decision_state !== 'completed') invalidEligible = invalidEligible.concat(record.invalid_reasons || []);
+  });
+  if (!candidates.length) {
+    if (invalidEligible.length) return todayCoreExceptionPacketV2('conflict', 'action_queue_contract_conflict', {
+      generated_at:options.generated_at,
+      last_verified_at:options.last_verified_at,
+      source_mode:options.source_mode,
+      source_state:'conflict',
+      warnings:Array.from(new Set(invalidEligible))
+    });
+    return todayCoreExceptionPacketV2('empty', 'action_queue_empty', {
+      generated_at:options.generated_at,
+      last_verified_at:options.last_verified_at,
+      source_mode:options.source_mode,
+      source_state:'fresh'
+    });
+  }
+  candidates.sort(todayCoreCompareCandidatesV2);
+  var selected = candidates[0];
+  var routeKey = typeof options.route_key_factory === 'function' ? options.route_key_factory(selected) : todayCoreCreateOpaqueRouteV2(selected);
+  if (!routeKey) return todayCoreExceptionPacketV2('conflict', 'route_registry_unavailable', {
+    generated_at:options.generated_at,
+    last_verified_at:options.last_verified_at,
+    source_mode:options.source_mode,
+    source_state:'conflict'
+  });
+  var now = String(options.generated_at || new Date().toISOString());
+  return {
+    packet:'today_core_packet_v2',
+    packet_version:2,
+    build:M03_TODAY_CORE_PACKET_V2_BUILD,
+    ok:true,
+    source_mode:options.source_mode || 'direct_notion_read_only',
+    generated_at:now,
+    core_state:'action',
+    action:{
+      route_key:todayCoreSafeTextV2(routeKey, 120),
+      title:selected.title,
+      decision_state:selected.decision_state,
+      priority:selected.priority,
+      owner_label:selected.owner_label,
+      due_or_rank:selected.due_at || (selected.order === Number.MAX_SAFE_INTEGER ? '' : String(selected.order)),
+      summary:selected.summary,
+      next_action_label:selected.decision_state === 'blocked' ? 'Review blocker' : (selected.decision_state === 'needs_a1xx' || selected.decision_state === 'approval_requested' ? 'Open review' : 'Open action'),
+      destination_kind:selected.destination_kind,
+      updated_at:selected.updated_at
+    },
+    queue_counts:todayCoreQueueCountsV2(candidates),
+    freshness:{state:'fresh', max_age_ms:M03_TODAY_CORE_FRESHNESS_MAX_AGE_MS_V2, last_verified_at:todayCoreSafeTextV2(options.last_verified_at || now, 80), sources:{notion_weekly_queue:'fresh'}},
+    warnings:[],
+    errors:[],
+    write_blocked:todayCoreWriteBlockedV2()
+  };
+}
+
+function todayCoreBuildNotionQueryV2() {
+  // The fixed contract was source-proved as two checkbox conditions and one
+  // native edit-time sort. Keep it local and exact; do not add a fallback.
+  return {
+    page_size:M03_TODAY_CORE_QUERY_CAP_V2,
+    filter:{
+      and:[
+        {property:'Active Queue', checkbox:{equals:true}},
+        {property:'Show In Today', checkbox:{equals:true}}
+      ]
+    },
+    sorts:[{timestamp:'last_edited_time', direction:'descending'}]
+  };
+}
+
+function todayCoreReadActionQueueV2() {
+  // Code-level release lock: a Script Property alone cannot make a local
+  // prototype query Notion. The later direct-read gate must change this lock
+  // only after the fixed filter/sort contract is proved against the source.
+  if (M03_TODAY_CORE_DIRECT_READ_RELEASED_V2 !== true) {
+    return {ok:false, core_state:'unavailable', code:'local_prototype_direct_read_locked', source_state:'unavailable'};
+  }
+  var properties = PropertiesService.getScriptProperties();
+  if (String(properties.getProperty(M03_TODAY_CORE_QUERY_CONTRACT_PROPERTY) || '') !== M03_TODAY_CORE_QUERY_CONTRACT_VALUE) {
+    return {ok:false, core_state:'unavailable', code:'direct_query_contract_unverified', source_state:'unavailable'};
+  }
+  var token = String(properties.getProperty(M03_TODAY_CORE_NOTION_TOKEN_PROPERTY) || '').trim();
+  if (!token) return {ok:false, core_state:'unavailable', code:'read_token_missing', source_state:'unavailable'};
+  var response;
+  try {
+    response = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + M03_TODAY_CORE_QUEUE_SOURCE_ID_V2 + '/query', {
+      method:'post',
+      headers:{Authorization:'Bearer ' + token, 'Notion-Version':'2025-09-03', 'Content-Type':'application/json'},
+      payload:JSON.stringify(todayCoreBuildNotionQueryV2()),
+      muteHttpExceptions:true
+    });
+  } catch (err) {
+    return {ok:false, core_state:'unavailable', code:'notion_queue_read_transport_failed', source_state:'unavailable'};
+  }
+  var code = response.getResponseCode();
+  if (code >= 400) return {ok:false, core_state:'unavailable', code:'notion_queue_read_failed_' + String(code), source_state:'unavailable'};
+  var body = {};
+  try { body = JSON.parse(response.getContentText() || '{}'); } catch (err) { return {ok:false, core_state:'unavailable', code:'notion_queue_response_invalid', source_state:'unavailable'}; }
+  return {ok:true, source_state:'fresh', pages:Array.isArray(body.results) ? body.results.slice(0, M03_TODAY_CORE_QUERY_CAP_V2) : [], last_verified_at:new Date().toISOString()};
+}
+
+// Gate C only: manually runnable, non-routed direct read for three metadata
+// shapes. It never enables or calls the Today packet route, emits no record
+// values, raw Notion IDs, URLs, relations, page bodies, or credentials, and
+// makes no write-capable request. A later gate must separately prove the
+// filter/sort contract before the packet route can be released.
+function todayCoreThreeRecordSourceShapeProofV2() {
+  var proof = {
+    proof:'today_core_three_record_source_shape_v2',
+    ok:false,
+    source:'notion_weekly_queue',
+    read_cap:M03_TODAY_CORE_SOURCE_SHAPE_PROOF_CAP_V2,
+    query:{page_size:M03_TODAY_CORE_SOURCE_SHAPE_PROOF_CAP_V2, filter_applied:false, sorts_applied:false},
+    records_returned:0,
+    response_has_more:false,
+    record_shapes:[],
+    write_blocked:todayCoreWriteBlockedV2()
+  };
+  var token = String(PropertiesService.getScriptProperties().getProperty(M03_TODAY_CORE_NOTION_TOKEN_PROPERTY) || '').trim();
+  if (!token) {
+    proof.code = 'read_token_missing';
+    return proof;
+  }
+  var response;
+  try {
+    response = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + M03_TODAY_CORE_QUEUE_SOURCE_ID_V2 + '/query', {
+      method:'post',
+      headers:{Authorization:'Bearer ' + token, 'Notion-Version':'2025-09-03', 'Content-Type':'application/json'},
+      payload:JSON.stringify({page_size:M03_TODAY_CORE_SOURCE_SHAPE_PROOF_CAP_V2}),
+      muteHttpExceptions:true
+    });
+  } catch (err) {
+    proof.code = 'notion_queue_read_transport_failed';
+    return proof;
+  }
+  var responseCode = response.getResponseCode();
+  if (responseCode >= 400) {
+    proof.code = 'notion_queue_read_failed_' + String(responseCode);
+    return proof;
+  }
+  var body = {};
+  try {
+    body = JSON.parse(response.getContentText() || '{}');
+  } catch (err) {
+    proof.code = 'notion_queue_response_invalid';
+    return proof;
+  }
+  var fieldNames = [
+    'Action Name', 'Status', 'Needs A1XX Approval', 'Review Action',
+    'Posted / Sent / Done', 'Priority', 'Order', 'Due Date',
+    'Active Queue', 'Show In Today', 'Mission Command Brief Line',
+    'Do This', 'Blocked Reason', 'Source Agent', 'App Surface',
+    'Open Output', 'Open Source'
+  ];
+  var pages = Array.isArray(body.results) ? body.results.slice(0, M03_TODAY_CORE_SOURCE_SHAPE_PROOF_CAP_V2) : [];
+  proof.records_returned = pages.length;
+  proof.response_has_more = body.has_more === true;
+  proof.record_shapes = pages.map(function(page) {
+    var properties = page && page.properties ? page.properties : {};
+    var fieldTypes = {};
+    fieldNames.forEach(function(fieldName) {
+      fieldTypes[fieldName] = properties[fieldName] && properties[fieldName].type ? String(properties[fieldName].type) : 'missing';
+    });
+    return {
+      stable_identity_present:!!(page && page.id),
+      last_edited_time_present:!!(page && page.last_edited_time),
+      last_edited_time_type:page && page.last_edited_time ? typeof page.last_edited_time : 'missing',
+      field_types:fieldTypes
+    };
+  });
+  proof.ok = true;
+  proof.code = 'source_shape_observed';
+  return proof;
+}
+
+// Manually runnable source-contract proof. It reads the exact eligible query
+// shape but returns only the distinct App Surface labels and their canonical
+// mapping status: never pages, raw IDs, URLs, source bodies, or credentials.
+function todayCoreDestinationMappingProofV2() {
+  var proof = {
+    proof:'today_core_destination_mapping_v2',
+    ok:false,
+    source:'notion_weekly_queue',
+    query:{filter:'active_queue_and_show_in_today',sort:'last_edited_time_desc',page_size:M03_TODAY_CORE_QUERY_CAP_V2},
+    records_returned:0,
+    destination_values:[],
+    unknown_destination_values:[],
+    write_blocked:todayCoreWriteBlockedV2()
+  };
+  var token = String(PropertiesService.getScriptProperties().getProperty(M03_TODAY_CORE_NOTION_TOKEN_PROPERTY) || '').trim();
+  if (!token) { proof.code = 'read_token_missing'; return proof; }
+  var response;
+  try {
+    response = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + M03_TODAY_CORE_QUEUE_SOURCE_ID_V2 + '/query', {
+      method:'post',
+      headers:{Authorization:'Bearer ' + token, 'Notion-Version':'2025-09-03', 'Content-Type':'application/json'},
+      payload:JSON.stringify(todayCoreBuildNotionQueryV2()),
+      muteHttpExceptions:true
+    });
+  } catch (err) {
+    proof.code = 'notion_queue_read_transport_failed';
+    return proof;
+  }
+  if (response.getResponseCode() >= 400) {
+    proof.code = 'notion_queue_read_failed_' + String(response.getResponseCode());
+    return proof;
+  }
+  var body = {};
+  try { body = JSON.parse(response.getContentText() || '{}'); }
+  catch (err) { proof.code = 'notion_queue_response_invalid'; return proof; }
+  var values = {};
+  (Array.isArray(body.results) ? body.results : []).slice(0, M03_TODAY_CORE_QUERY_CAP_V2).forEach(function(page) {
+    var label = todayCorePropertyTextV2(page && page.properties && page.properties['App Surface']);
+    if (label) values[label] = todayCoreDestinationKindV2(page.properties || '');
+  });
+  proof.records_returned = Array.isArray(body.results) ? Math.min(body.results.length, M03_TODAY_CORE_QUERY_CAP_V2) : 0;
+  proof.destination_values = Object.keys(values).sort().map(function(label) { return {label:label, destination_kind:values[label] || ''}; });
+  proof.unknown_destination_values = proof.destination_values.filter(function(item) { return !item.destination_kind; }).map(function(item) { return item.label; });
+  proof.ok = proof.records_returned > 0 && proof.unknown_destination_values.length === 0;
+  proof.code = proof.records_returned === 0 ? 'destination_mapping_empty' : (proof.ok ? 'destination_mapping_verified' : 'destination_mapping_unverified');
+  console.log(JSON.stringify(proof));
+  return proof;
+}
+
+function getTodayCorePacketV2(e) {
+  var properties = PropertiesService.getScriptProperties();
+  if (String(properties.getProperty(M03_TODAY_CORE_PACKET_V2_ENABLED_PROPERTY) || '').toLowerCase() !== 'true') {
+    return jsonResponseV20(todayCoreExceptionPacketV2('unavailable', 'local_prototype_disabled', {source_mode:'local_prototype_read_only', source_state:'unavailable'}));
+  }
+  var source = todayCoreReadActionQueueV2();
+  if (!source.ok) return jsonResponseV20(todayCoreExceptionPacketV2(source.core_state || 'unavailable', source.code || 'notion_weekly_queue_unavailable', {source_mode:'direct_notion_read_only', source_state:source.source_state || 'unavailable'}));
+  return jsonResponseV20(todayCoreBuildPacketFromRowsV2(source.pages, {source_mode:'direct_notion_read_only', source_state:source.source_state, last_verified_at:source.last_verified_at}));
+}
+
+// Manually runnable post-release receipt. It performs the same fixed direct
+// read used by the public route, but logs only the safe packet contract.
+// No page IDs, URLs, raw properties, tokens, or write actions are returned.
+function todayCoreLiveReadReceiptV2() {
+  var source = todayCoreReadActionQueueV2();
+  var packet = !source.ok
+    ? todayCoreExceptionPacketV2(source.core_state || 'unavailable', source.code || 'notion_weekly_queue_unavailable', {source_mode:'direct_notion_read_only', source_state:source.source_state || 'unavailable'})
+    : todayCoreBuildPacketFromRowsV2(source.pages, {source_mode:'direct_notion_read_only', source_state:source.source_state, last_verified_at:source.last_verified_at});
+  console.log(JSON.stringify(packet));
+  return packet;
+}
+
+// One-time release configuration for the approved Today Core direct-read
+// route. This writes only its two non-secret feature-contract properties;
+// it never reads, changes, logs, or clears any credential or existing key.
+function configureTodayCoreReleaseV2() {
+  PropertiesService.getScriptProperties().setProperties({
+    MMOS_TODAY_CORE_PACKET_V2_ENABLED:'true',
+    MMOS_TODAY_CORE_QUERY_CONTRACT_V2:M03_TODAY_CORE_QUERY_CONTRACT_VALUE
+  }, false);
+  var receipt = {
+    receipt:'today_core_release_configuration_v2',
+    ok:true,
+    properties_configured:[M03_TODAY_CORE_PACKET_V2_ENABLED_PROPERTY, M03_TODAY_CORE_QUERY_CONTRACT_PROPERTY],
+    credential_properties_touched:false,
+    writes_to_notion:false,
+    writes_to_app:false,
+    agent_execution:false
+  };
+  console.log(JSON.stringify(receipt));
+  return receipt;
+}
+
+function todayCoreFixturePageV2(overrides) {
+  overrides = overrides || {};
+  var textProperty = function(value) { return {rich_text:[{plain_text:String(value || '')}]}; };
+  var titleProperty = function(value) { return {title:[{plain_text:String(value || '')}]}; };
+  var selectProperty = function(value) { return {select:value ? {name:String(value)} : null}; };
+  var checkboxProperty = function(value) { return {checkbox:value === true}; };
+  var numberProperty = function(value) { return {number:typeof value === 'number' ? value : null}; };
+  var dateProperty = function(value) { return {date:value ? {start:String(value)} : null}; };
+  return {
+    id:overrides.id || '11111111-1111-1111-1111-111111111111',
+    last_edited_time:overrides.last_edited_time || '2026-07-22T18:00:00.000Z',
+    properties:{
+      'Action Name':titleProperty(overrides.title || 'Review launch brief'),
+      'Status':selectProperty(overrides.status || 'Needs Review'),
+      'Needs A1XX Approval':checkboxProperty(overrides.needs_a1xx !== false),
+      'Review Action':selectProperty(overrides.review_action || 'Review'),
+      'Posted / Sent / Done':checkboxProperty(overrides.done === true),
+      'Priority':selectProperty(overrides.priority || 'High'),
+      'Order':numberProperty(typeof overrides.order === 'number' ? overrides.order : 1),
+      'Due Date':dateProperty(overrides.due_at || '2026-07-23'),
+      'Active Queue':checkboxProperty(overrides.active_queue !== false),
+      'Show In Today':checkboxProperty(overrides.show_in_today !== false),
+      'Blocked Reason':textProperty(overrides.blocked_reason || ''),
+      'Mission Command Brief Line':textProperty(overrides.summary || 'A decision-ready brief.'),
+      'Do This':textProperty(overrides.do_this || ''),
+      'Source Agent':selectProperty(overrides.source_agent || 'Chief of Staff'),
+      'App Surface':selectProperty(overrides.app_surface || 'Output Review')
+    }
+  };
+}
+
+function runTodayCorePacketV2FixtureChecks() {
+  var fixtureOptions = {source_mode:'local_fixture_read_only', source_state:'fresh', generated_at:'2026-07-22T18:00:00.000Z', last_verified_at:'2026-07-22T18:00:00.000Z', route_key_factory:function(){ return 'fixture-route-001'; }};
+  var checks = [];
+  var check = function(name, passed) { checks.push({name:name, passed:passed === true}); };
+  var first = todayCoreFixturePageV2({id:'11111111-1111-1111-1111-111111111111', title:'Review launch brief', priority:'High', order:2});
+  var second = todayCoreFixturePageV2({id:'22222222-2222-2222-2222-222222222222', title:'Open sales follow-up', priority:'Medium', order:1, needs_a1xx:false, status:'Ready'});
+  var actionPacket = todayCoreBuildPacketFromRowsV2([second, first], fixtureOptions);
+  check('action_packet_selected', actionPacket.core_state === 'action' && actionPacket.action && actionPacket.action.title === 'Review launch brief');
+  check('source_identity_not_exposed', JSON.stringify(actionPacket).indexOf(first.id) === -1 && JSON.stringify(actionPacket).indexOf(second.id) === -1);
+  check('write_blocked', actionPacket.write_blocked && actionPacket.write_blocked.notion_write === false && actionPacket.write_blocked.agent_execution === false);
+  check('active_queue_only_rejected', todayCoreBuildPacketFromRowsV2([todayCoreFixturePageV2({show_in_today:false})], fixtureOptions).core_state === 'empty');
+  check('show_in_today_only_rejected', todayCoreBuildPacketFromRowsV2([todayCoreFixturePageV2({active_queue:false})], fixtureOptions).core_state === 'empty');
+  check('today_destination_mapped', todayCoreDestinationKindV2(todayCoreFixturePageV2({app_surface:'Today'}).properties) === 'intel_today');
+  check('manager_destination_rejected_until_routable', todayCoreDestinationKindV2(todayCoreFixturePageV2({app_surface:'Manager'}).properties) === '');
+  check('empty_packet', todayCoreBuildPacketFromRowsV2([todayCoreFixturePageV2({done:true})], fixtureOptions).core_state === 'empty');
+  check('unavailable_packet', todayCoreBuildPacketFromRowsV2([], {source_mode:'local_fixture_read_only', source_state:'unavailable'}).core_state === 'unavailable');
+  check('stale_packet', todayCoreBuildPacketFromRowsV2([], {source_mode:'local_fixture_read_only', source_state:'stale'}).core_state === 'stale');
+  check('conflict_packet', todayCoreBuildPacketFromRowsV2([todayCoreFixturePageV2({app_surface:'Unmapped Surface'})], fixtureOptions).core_state === 'conflict');
+  check('placeholder_packet', todayCoreBuildPacketFromRowsV2([], {source_mode:'local_fixture_read_only', source_state:'placeholder'}).core_state === 'placeholder');
+  return {suite:'today_core_packet_v2_local_fixture_checks', ok:checks.every(function(checkResult){ return checkResult.passed; }), checks:checks, write_blocked:todayCoreWriteBlockedV2()};
 }
 
 // Milestone 02 Phase 6: narrow, read-only agency projection for the existing
