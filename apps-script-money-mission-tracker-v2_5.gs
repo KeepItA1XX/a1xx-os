@@ -615,6 +615,7 @@ function doGet(e) {
     if (e.parameter.action === 'search_resources')    return searchResources(e);
     if (e.parameter.action === 'live_read_packet_v1') return getLiveReadPacketV1(e);
     if (e.parameter.action === 'planning_live_context_v1') return getPlanningLiveContextV1(e);
+    if (e.parameter.action === 'morning_content_move_v1') return getMissionMorningContentMoveV1(e);
     if (e.parameter.action === 'project_desk_core_context_v1') return getProjectDeskCoreContextV1(e);
     if (e.parameter.action === 'project_desk_task_context_v1') return getProjectDeskTaskContextV1(e);
     if (e.parameter.action === 'project_desk_artifacts_context_v1') return getProjectDeskArtifactsContextV1(e);
@@ -752,6 +753,91 @@ function getPlanningLiveContextV1(e) {
   packet.freshness.state = available === 2 ? 'fresh' : (available === 1 ? 'partial' : 'unavailable');
   packet.freshness.last_verified_at = available ? now : '';
   if (available === 1) packet.warnings.push('one_planning_source_unavailable');
+  return jsonResponseV20(packet);
+}
+
+// Milestone 04: one bounded, read-only Daily Playbooks projection for the
+// existing Mission Command content prompt. It makes exactly one Notion query
+// per request, returns no draft row, and never writes, schedules, or dispatches.
+var M04_MORNING_CONTENT_MOVE_SOURCE_ID_V1 = 'f83f767b-6354-42ba-a53c-0ae673469c12';
+
+function missionMorningContentMoveDateKeyV1() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+function emptyMissionMorningContentMovePacketV1(now, dateKey) {
+  return {
+    packet: 'mission_morning_content_move_v1',
+    ok: false,
+    source_mode: 'live_read_only',
+    generated_at: now,
+    date: dateKey,
+    freshness: { state: 'unavailable', max_age_ms: 300000, last_verified_at: '', sources: { daily_playbooks: 'unavailable' } },
+    daily_playbook: null,
+    warnings: [],
+    errors: [],
+    write_blocked: {
+      writes_enabled: false,
+      notion_write: false,
+      app_write: false,
+      reminder_dispatch: false,
+      webhook_dispatch: false,
+      agent_execution: false
+    }
+  };
+}
+
+function normalizeMissionMorningContentMoveV1(page, dateKey) {
+  var props = page && page.properties || {};
+  var date = String(readNotionDate(props.Date) || '').slice(0, 10);
+  var first = readNotionText(props['Do This First']);
+  var pageUrl = String(page && page.url || '');
+  var readyToUse = readNotionCheckbox(props['Ready To Use']);
+  if (date !== dateKey || !readyToUse || !first || !/^https:\/\/(?:www\.)?(?:notion\.so|app\.notion\.com)\//i.test(pageUrl)) return null;
+  return {
+    source: 'Daily Playbooks',
+    date: date,
+    status: readNotionSelect(props.Status) || 'Ready To Use',
+    ready_to_use: true,
+    do_this_first: first,
+    then_do_this: readNotionText(props['Then Do This']),
+    approval_needed: readNotionCheckbox(props['Approval Needed']) ? 'A1XX approval required' : '',
+    page_url: pageUrl,
+    read_only_verified: true
+  };
+}
+
+function getMissionMorningContentMoveV1(e) {
+  var now = new Date().toISOString();
+  var dateKey = missionMorningContentMoveDateKeyV1();
+  var packet = emptyMissionMorningContentMovePacketV1(now, dateKey);
+  var secret = PropertiesService.getScriptProperties().getProperty('NOTION_SECRET');
+  if (!secret) {
+    packet.errors.push('notion_read_unavailable');
+    return jsonResponseV20(packet);
+  }
+  try {
+    var response = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + M04_MORNING_CONTENT_MOVE_SOURCE_ID_V1 + '/query', {
+      method: 'post',
+      headers: { Authorization: 'Bearer ' + secret, 'Notion-Version': '2025-09-03', 'Content-Type': 'application/json' },
+      payload: JSON.stringify({ page_size: 2, filter: { property: 'Date', date: { equals: dateKey } } }),
+      muteHttpExceptions: true
+    });
+    if (response.getResponseCode() >= 400) throw new Error('daily_playbooks_read_failed');
+    var rows = (JSON.parse(response.getContentText() || '{}').results || []).slice(0, 2);
+    packet.ok = true;
+    packet.freshness = { state: 'fresh', max_age_ms: 300000, last_verified_at: now, sources: { daily_playbooks: 'fresh' } };
+    if (rows.length === 0) {
+      packet.warnings.push('no_daily_playbook_for_today');
+    } else if (rows.length !== 1) {
+      packet.warnings.push('multiple_daily_playbooks_for_today');
+    } else {
+      packet.daily_playbook = normalizeMissionMorningContentMoveV1(rows[0], dateKey);
+      if (!packet.daily_playbook) packet.warnings.push('daily_playbook_not_eligible');
+    }
+  } catch (err) {
+    packet.errors.push(String(err && err.message || 'daily_playbooks_read_failed'));
+  }
   return jsonResponseV20(packet);
 }
 
