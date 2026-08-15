@@ -212,6 +212,85 @@ function getMoneyMissionSpreadsheet() {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
+var A10242_IDENTITY_ROUTE = 'intel_identity_proof_v1';
+var A10242_IDENTITY_KEY_PROPERTY = 'A1XX_IDENTITY_PROOF_KEY';
+var A10242_TARGET_PROPERTY = 'A1XX_SPREADSHEET_ID';
+var A10242_EXPECTED_PROPERTY = 'A1XX_IDENTITY_EXPECTED_SPREADSHEET_ID';
+var A10242_RELEASE_MARKER = 'agents-identity-proof-a10.2.4.4-v1';
+
+function getA10242RedactedIdentityProof() {
+  var properties = PropertiesService.getScriptProperties();
+  var proofKey = String(properties.getProperty(A10242_IDENTITY_KEY_PROPERTY) || '').trim();
+  var targetId = String(properties.getProperty(A10242_TARGET_PROPERTY) || '').trim();
+  var expectedId = String(properties.getProperty(A10242_EXPECTED_PROPERTY) || '').trim();
+  var noWrite = getA10242NoWriteEnvelope_();
+
+  if (!proofKey) {
+    return {
+      status: 'blocked',
+      route: A10242_IDENTITY_ROUTE,
+      error: 'identity_proof_key_unavailable',
+      proof: null,
+      no_write: noWrite
+    };
+  }
+
+  if (!expectedId) {
+    return {
+      status: 'blocked',
+      route: A10242_IDENTITY_ROUTE,
+      error: 'expected_workbook_unavailable',
+      proof: null,
+      no_write: noWrite
+    };
+  }
+
+  var spreadsheet = targetId
+    ? SpreadsheetApp.openById(targetId)
+    : SpreadsheetApp.getActiveSpreadsheet();
+
+  if (!spreadsheet) {
+    return {
+      status: 'blocked',
+      route: A10242_IDENTITY_ROUTE,
+      error: 'spreadsheet_unavailable',
+      proof: null,
+      no_write: noWrite
+    };
+  }
+
+  return {
+    status: 'ok',
+    route: A10242_IDENTITY_ROUTE,
+    proof: {
+      workbook_fingerprint: getA10242HmacFingerprint_(proofKey, 'workbook:' + spreadsheet.getId()),
+      resolution_source: targetId ? 'script_property' : 'active_bound',
+      expected_workbook_configured: true,
+      workbook_match: spreadsheet.getId() === expectedId,
+      release_marker: A10242_RELEASE_MARKER
+    },
+    no_write: noWrite
+  };
+}
+
+function getA10242HmacFingerprint_(key, value) {
+  var bytes = Utilities.computeHmacSha256Signature(value, key);
+  return bytes.map(function(byte) {
+    return ('0' + ((byte + 256) % 256).toString(16)).slice(-2);
+  }).join('').slice(0, 16);
+}
+
+function getA10242NoWriteEnvelope_() {
+  return {
+    sheets_write: false,
+    script_property_write: false,
+    source_write: false,
+    deployment_write: false,
+    provider_write: false,
+    external_effects: 0
+  };
+}
+
 // ── MAIN HANDLERS ────────────────────────────────────────────
 function doPost(e) {
   try {
@@ -543,6 +622,313 @@ function getMissionCommandChatCompletionsAdvisorV1(data, config) {
   return missionLlmContractV1({ok:true,status:'ready',provider:config.provider,model:config.model,mode:'advisor_only',answerText:answer,latencyMs:Date.now()-started});
 }
 
+var CALENDAR_COMMITMENTS_REGISTRY_KEY_V1 = 'A1XX_CALENDAR_COMMITMENTS_V1_REGISTRY';
+
+// A10.2.5: read-only Agency Activity packet. This is deliberately source-unavailable
+// until a separately approved ledger reader exists; it never turns fixtures into live work.
+var A1025_ACTIVITY_ROUTE = 'intel_agency_activity_context_v1';
+var A1025_ACTIVITY_SCHEMA_VERSION = '1.0.0';
+var A1025_SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+var A1025_MAX_EVENT_CAP = 50;
+var A1025_DEPARTMENTS = [
+  { id: 'leadership', captain: 'Kruger' },
+  { id: 'content', captain: 'Jean' },
+  { id: 'sales', captain: 'Falco' },
+  { id: 'advertising', captain: 'Erwin' },
+  { id: 'networking', captain: 'Sasha' },
+  { id: 'production', captain: 'Zeke' },
+  { id: 'fulfillment', captain: 'Levi' },
+  { id: 'operations', captain: 'Theo' }
+];
+var A1025_ACTORS = ['a1xx', 'kruger', 'jean', 'falco', 'erwin', 'sasha', 'zeke', 'levi', 'theo', 'system'];
+var A1025_EVENT_TYPES = ['started', 'updated', 'waiting', 'needs_review', 'blocked', 'parked', 'completed'];
+var A1025_SOURCE_KINDS = ['fixture', 'sheet', 'notion', 'drive'];
+var A1025_FRESHNESS_STATES = ['live', 'local_static', 'stale', 'unknown', 'unavailable'];
+var A1025_SAFE_DESTINATION_KINDS = ['project', 'output', 'job'];
+var A1025_SAFE_NEXT_ACTIONS = ['open', 'review'];
+var A1025_REQUIRED_ACTIVITY_FIELDS = [
+  'event_id', 'event_version', 'occurred_at', 'observed_at', 'actor_id', 'actor_name',
+  'department_id', 'event_type', 'summary', 'source_kind', 'source_record_key', 'freshness_state'
+];
+var A1025_OPTIONAL_ACTIVITY_FIELDS = [
+  'project_id', 'milestone_id', 'output_id', 'job_id', 'progress_current', 'progress_total',
+  'source_updated_at', 'next_action', 'destination_kind', 'destination_key', 'approval_receipt_key'
+];
+
+function a1025HasOwn_(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function a1025Includes_(values, value) {
+  return values.indexOf(value) !== -1;
+}
+
+function a1025ParseTimestamp_(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return null;
+  var time = Date.parse(value);
+  return isNaN(time) ? null : time;
+}
+
+function a1025Identifier_(value) {
+  return /^[a-z][a-z0-9_-]{2,79}$/.test(String(value || ''));
+}
+
+function a1025SafeSummary_(value) {
+  return typeof value === 'string' && /^[A-Za-z0-9 ,.'()&!?:;_-]{1,180}$/.test(value) && !/(?:https?:\/\/|www\.)/i.test(value);
+}
+
+function a1025DepartmentKnown_(departmentId) {
+  for (var index = 0; index < A1025_DEPARTMENTS.length; index += 1) {
+    if (A1025_DEPARTMENTS[index].id === departmentId) return true;
+  }
+  return false;
+}
+
+function a1025ValidateLedgerRow_(row, asOf) {
+  var errors = [];
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return { valid: false, errors: ['row_object_required'] };
+
+  var index;
+  for (index = 0; index < A1025_REQUIRED_ACTIVITY_FIELDS.length; index += 1) {
+    if (!a1025HasOwn_(row, A1025_REQUIRED_ACTIVITY_FIELDS[index])) errors.push('missing_' + A1025_REQUIRED_ACTIVITY_FIELDS[index]);
+  }
+  for (var key in row) {
+    if (!a1025HasOwn_(row, key)) continue;
+    if (!a1025Includes_(A1025_REQUIRED_ACTIVITY_FIELDS, key) && !a1025Includes_(A1025_OPTIONAL_ACTIVITY_FIELDS, key)) errors.push('unexpected_field_' + key);
+    if (/(secret|token|password|authorization|api[_-]?key|raw[_-]?(url|body|payload)|credential)/i.test(key)) errors.push('unsafe_field_' + key);
+  }
+
+  var asOfMs = a1025ParseTimestamp_(asOf);
+  var occurredMs = a1025ParseTimestamp_(row.occurred_at);
+  var observedMs = a1025ParseTimestamp_(row.observed_at);
+  var sourceUpdatedMs = row.source_updated_at == null ? null : a1025ParseTimestamp_(row.source_updated_at);
+  if (!a1025Identifier_(row.event_id)) errors.push('invalid_event_id');
+  if (!Number.isInteger(row.event_version) || row.event_version < 1) errors.push('invalid_event_version');
+  if (occurredMs == null) errors.push('invalid_occurred_at');
+  if (observedMs == null) errors.push('invalid_observed_at');
+  if (row.source_updated_at != null && sourceUpdatedMs == null) errors.push('invalid_source_updated_at');
+  if (occurredMs != null && asOfMs != null && occurredMs > asOfMs) errors.push('future_occurred_at');
+  if (observedMs != null && asOfMs != null && observedMs > asOfMs) errors.push('future_observed_at');
+  if (occurredMs != null && observedMs != null && observedMs < occurredMs) errors.push('observed_before_occurred');
+  if (!a1025Includes_(A1025_ACTORS, row.actor_id)) errors.push('unknown_actor');
+  if (!a1025SafeSummary_(row.actor_name)) errors.push('invalid_actor_name');
+  if (!a1025DepartmentKnown_(row.department_id)) errors.push('invalid_department');
+  if (!a1025Includes_(A1025_EVENT_TYPES, row.event_type)) errors.push('invalid_event_type');
+  if (!a1025SafeSummary_(row.summary)) errors.push('unsafe_summary');
+  if (!a1025Includes_(A1025_SOURCE_KINDS, row.source_kind)) errors.push('invalid_source_kind');
+  if (!a1025Identifier_(row.source_record_key)) errors.push('invalid_source_record_key');
+  if (!a1025Includes_(A1025_FRESHNESS_STATES, row.freshness_state)) errors.push('invalid_freshness_state');
+  if (row.source_kind === 'fixture' && row.freshness_state !== 'local_static') errors.push('fixture_freshness_must_be_local_static');
+
+  var progressCurrentPresent = row.progress_current != null;
+  var progressTotalPresent = row.progress_total != null;
+  if (progressCurrentPresent !== progressTotalPresent) errors.push('partial_progress_pair');
+  if (progressCurrentPresent) {
+    if (!Number.isInteger(row.progress_current) || !Number.isInteger(row.progress_total) || row.progress_current < 0 || row.progress_total <= 0) errors.push('invalid_progress_pair');
+    if (row.progress_current > row.progress_total) errors.push('progress_exceeds_total');
+    if (!a1025Identifier_(row.job_id)) errors.push('progress_requires_job_id');
+  }
+
+  var routeFields = ['next_action', 'destination_kind', 'destination_key'];
+  var routeFieldCount = 0;
+  for (index = 0; index < routeFields.length; index += 1) if (row[routeFields[index]] != null) routeFieldCount += 1;
+  if (routeFieldCount > 0 && routeFieldCount !== routeFields.length) errors.push('partial_destination');
+  if (routeFieldCount === routeFields.length) {
+    if (!a1025Includes_(A1025_SAFE_NEXT_ACTIONS, row.next_action)) errors.push('unsafe_next_action');
+    if (!a1025Includes_(A1025_SAFE_DESTINATION_KINDS, row.destination_kind)) errors.push('unsafe_destination_kind');
+    if (!a1025Identifier_(row.destination_key) || /(?:https?:\/\/|www\.)/i.test(String(row.destination_key))) errors.push('unsafe_destination_key');
+  }
+  if ((row.event_type === 'needs_review' || row.event_type === 'completed') && !a1025Identifier_(row.approval_receipt_key)) errors.push('missing_approval_receipt');
+  return { valid: errors.length === 0, errors: errors };
+}
+
+function a1025CanonicalRow_(row) {
+  var keys = Object.keys(row).sort();
+  var canonical = {};
+  for (var index = 0; index < keys.length; index += 1) canonical[keys[index]] = row[keys[index]];
+  return JSON.stringify(canonical);
+}
+
+function a1025CompareEntries_(left, right) {
+  var occurred = a1025ParseTimestamp_(right.row.occurred_at) - a1025ParseTimestamp_(left.row.occurred_at);
+  if (occurred) return occurred;
+  var observed = a1025ParseTimestamp_(right.row.observed_at) - a1025ParseTimestamp_(left.row.observed_at);
+  if (observed) return observed;
+  var identity = (left.row.event_id + '|' + left.row.event_version).localeCompare(right.row.event_id + '|' + right.row.event_version);
+  if (identity) return identity;
+  return a1025CanonicalRow_(left.row).localeCompare(a1025CanonicalRow_(right.row));
+}
+
+function a1025NormalizeLedgerRows_(rows, asOf) {
+  if (!Array.isArray(rows)) throw new TypeError('rows_must_be_array');
+  var earliest = a1025ParseTimestamp_(asOf) - A1025_SEVEN_DAYS_MS;
+  var accepted = [];
+  var rejected = [];
+  for (var index = 0; index < rows.length; index += 1) {
+    var result = a1025ValidateLedgerRow_(rows[index], asOf);
+    if (!result.valid) {
+      rejected.push({ index: index, errors: result.errors });
+      continue;
+    }
+    if (a1025ParseTimestamp_(rows[index].occurred_at) < earliest) continue;
+    accepted.push({ row: rows[index], index: index });
+  }
+  var preferred = {};
+  for (index = 0; index < accepted.length; index += 1) {
+    var entry = accepted[index];
+    var entryKey = entry.row.event_id + '|' + entry.row.event_version;
+    if (!a1025HasOwn_(preferred, entryKey) || a1025CompareEntries_(entry, preferred[entryKey]) < 0) preferred[entryKey] = entry;
+  }
+  var entries = [];
+  for (var preferredKey in preferred) if (a1025HasOwn_(preferred, preferredKey)) entries.push(preferred[preferredKey]);
+  entries.sort(a1025CompareEntries_);
+  return {
+    events: entries.map(function(entry) { return entry.row; }),
+    rejected: rejected
+  };
+}
+
+function a1025ProjectLedger_(events) {
+  var byEventType = {};
+  var byDepartment = {};
+  var departmentProgress = {};
+  var index;
+  for (index = 0; index < A1025_EVENT_TYPES.length; index += 1) byEventType[A1025_EVENT_TYPES[index]] = 0;
+  for (index = 0; index < A1025_DEPARTMENTS.length; index += 1) {
+    var departmentId = A1025_DEPARTMENTS[index].id;
+    byDepartment[departmentId] = 0;
+    departmentProgress[departmentId] = { current: null, total: null, status: 'unknown' };
+  }
+  var progressReceipts = {};
+  for (index = 0; index < events.length; index += 1) {
+    var event = events[index];
+    byEventType[event.event_type] += 1;
+    byDepartment[event.department_id] += 1;
+    if (event.progress_current != null && event.progress_total != null && event.job_id) {
+      var progressKey = event.department_id + '|' + event.job_id;
+      if (!a1025HasOwn_(progressReceipts, progressKey)) progressReceipts[progressKey] = event;
+    }
+  }
+  for (var receiptKey in progressReceipts) {
+    if (!a1025HasOwn_(progressReceipts, receiptKey)) continue;
+    var receipt = progressReceipts[receiptKey];
+    var progress = departmentProgress[receipt.department_id];
+    progress.current = (progress.current || 0) + receipt.progress_current;
+    progress.total = (progress.total || 0) + receipt.progress_total;
+    progress.status = 'reported';
+  }
+  return { byEventType: byEventType, byDepartment: byDepartment, departmentProgress: departmentProgress };
+}
+
+function a1025SafeRoute_(event) {
+  if (event.next_action == null || event.destination_kind == null || event.destination_key == null) return null;
+  return { action: event.next_action, kind: event.destination_kind, key: event.destination_key };
+}
+
+function a1025ProjectSafeEvent_(event) {
+  return {
+    event_id: event.event_id,
+    event_version: event.event_version,
+    occurred_at: event.occurred_at,
+    actor_id: event.actor_id,
+    actor_name: event.actor_name,
+    department_id: event.department_id,
+    event_type: event.event_type,
+    summary: event.summary,
+    freshness_state: event.freshness_state,
+    route: a1025SafeRoute_(event)
+  };
+}
+
+function a1025NoWriteEnvelope_() {
+  return { authorized: false, provider_invocations: 0, network_calls: 0, external_effects: 0, route_writes: 0 };
+}
+
+function a1025StateDetails_(sourceState, events) {
+  if (sourceState === 'stale') return {
+    status: 'stale', source_health: 'activity_source_unavailable', freshness_state: 'stale',
+    warnings: ['Activity source unavailable; showing last-known activity.'], errors: []
+  };
+  if (sourceState === 'unavailable') return {
+    status: 'unavailable', source_health: 'activity_source_unavailable', freshness_state: 'unavailable',
+    warnings: ['Activity source unavailable; no prior activity is shown.'], errors: ['activity_source_unavailable']
+  };
+  if (events.length === 0) return {
+    status: 'empty', source_health: 'activity_source_ok', freshness_state: 'local_static',
+    warnings: ['No new agency activity since the last refresh.'], errors: []
+  };
+  return { status: 'ok', source_health: 'activity_source_ok', freshness_state: 'local_static', warnings: [], errors: [] };
+}
+
+function a1025ReportedProgress_(progress) {
+  var reported = {};
+  for (var departmentId in progress) {
+    if (a1025HasOwn_(progress, departmentId) && progress[departmentId].status === 'reported') reported[departmentId] = progress[departmentId];
+  }
+  return reported;
+}
+
+function a1025CreateIntelAgencyActivityContext_(input) {
+  input = input || {};
+  var sourceState = input.source_state || 'unavailable';
+  var rows = input.rows == null ? [] : input.rows;
+  var lastKnownRows = input.last_known_rows == null ? [] : input.last_known_rows;
+  var asOf = input.as_of;
+  var maxEvents = input.max_events == null ? A1025_MAX_EVENT_CAP : input.max_events;
+  var generatedAt = input.generated_at == null ? asOf : input.generated_at;
+  var lastSuccessfulRefresh = input.last_successful_refresh == null ? null : input.last_successful_refresh;
+  if (!a1025Includes_(['local_static', 'stale', 'unavailable'], sourceState)) throw new TypeError('invalid_source_state');
+  if (!Array.isArray(rows)) throw new TypeError('rows_must_be_array');
+  if (!Array.isArray(lastKnownRows)) throw new TypeError('last_known_rows_must_be_array');
+  if (!Number.isInteger(maxEvents) || maxEvents < 1 || maxEvents > A1025_MAX_EVENT_CAP) throw new RangeError('invalid_max_events');
+  if (a1025ParseTimestamp_(asOf) == null) throw new TypeError('invalid_as_of');
+  if (a1025ParseTimestamp_(generatedAt) == null) throw new TypeError('invalid_generated_at');
+  if (lastSuccessfulRefresh != null && a1025ParseTimestamp_(lastSuccessfulRefresh) == null) throw new TypeError('invalid_last_successful_refresh');
+  if (lastSuccessfulRefresh != null && a1025ParseTimestamp_(lastSuccessfulRefresh) > a1025ParseTimestamp_(generatedAt)) throw new TypeError('future_last_successful_refresh');
+
+  var rawRows = sourceState === 'local_static' ? rows : sourceState === 'stale' ? lastKnownRows : [];
+  var normalized = a1025NormalizeLedgerRows_(rawRows, asOf);
+  var selectedEvents = normalized.events.slice(0, maxEvents).map(function(event) {
+    if (sourceState !== 'stale') return event;
+    var staleEvent = {};
+    for (var key in event) if (a1025HasOwn_(event, key)) staleEvent[key] = event[key];
+    staleEvent.freshness_state = 'stale';
+    return staleEvent;
+  });
+  var details = a1025StateDetails_(sourceState, selectedEvents);
+  var counts = a1025ProjectLedger_(selectedEvents);
+  var errors = details.errors.slice();
+  for (var index = 0; index < normalized.rejected.length; index += 1) errors.push('activity_row_' + normalized.rejected[index].index + '_rejected');
+  return {
+    route: A1025_ACTIVITY_ROUTE,
+    schema_version: A1025_ACTIVITY_SCHEMA_VERSION,
+    fixture_only: false,
+    runtime_authorized: false,
+    status: details.status,
+    generated_at: generatedAt,
+    last_successful_refresh: sourceState === 'unavailable' ? null : lastSuccessfulRefresh,
+    source_health: details.source_health,
+    freshness_state: details.freshness_state,
+    events: selectedEvents.map(a1025ProjectSafeEvent_),
+    counts_by_event_type: counts.byEventType,
+    counts_by_department: counts.byDepartment,
+    department_progress: a1025ReportedProgress_(counts.departmentProgress),
+    warnings: details.warnings,
+    errors: errors,
+    no_write: a1025NoWriteEnvelope_(),
+    no_change: details.status === 'empty'
+  };
+}
+
+function getIntelAgencyActivityContextV1() {
+  var generatedAt = new Date().toISOString();
+  var packet = a1025CreateIntelAgencyActivityContext_({
+    source_state: 'unavailable', rows: [], last_known_rows: [], as_of: generatedAt,
+    generated_at: generatedAt, last_successful_refresh: null, max_events: A1025_MAX_EVENT_CAP
+  });
+  return ContentService.createTextOutput(JSON.stringify(packet)).setMimeType(ContentService.MimeType.JSON);
+}
+
 function doGet(e) {
   try {
     if (e.parameter.action === 'content')             return getNotionContent(e);
@@ -551,6 +937,7 @@ function doGet(e) {
     if (e.parameter.action === 'resources')           return getResources(e);
     if (e.parameter.action === 'crm_leads')           return getCRMLeads(e);
     if (e.parameter.action === 'calendar')            return getCalendarEvents(e);
+    if (e.parameter.action === 'calendar_commitments_v1') return getCalendarCommitmentsV1(e);
     if (e.parameter.action === 'live_events')         return getLiveEvents(e);
     if (e.parameter.action === 'rolodex_search')      return searchRolodex(e);
     if (e.parameter.action === 'skool_community')     return getSkoolCommunity(e);
@@ -620,6 +1007,11 @@ function doGet(e) {
     if (e.parameter.action === 'project_desk_task_context_v1') return getProjectDeskTaskContextV1(e);
     if (e.parameter.action === 'project_desk_artifacts_context_v1') return getProjectDeskArtifactsContextV1(e);
     if (e.parameter.action === 'project_desk_schedule_context_v1') return getProjectDeskScheduleContextV1(e);
+    if (e.parameter.action === 'intel_identity_proof_v1') {
+      var identityProofPacket = getA10242RedactedIdentityProof();
+      return ContentService.createTextOutput(JSON.stringify(identityProofPacket)).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (e.parameter.action === 'intel_agency_activity_context_v1') return getIntelAgencyActivityContextV1(e);
     if (e.parameter.action === 'intel_today_context_v1') {
       var intelTodayPacket = getIntelTodayContextV1(e);
       var intelTodayCallback = String(e.parameter.callback || '').match(/^[A-Za-z_$][0-9A-Za-z_$\.]*$/);
@@ -21776,3 +22168,179 @@ function readMissionCommandStage4ProductionBridge(targetRef, adapters) {
   var result = adapters.bridge.readFoldedTarget(targetRef);
   return { ok: true, mode: 'folded_read_only', target: result };
 }
+
+/* CALENDAR_COMMITMENTS_V1_SERVER_BLOCK_START */
+function getCalendarCommitmentsRegistryV1_() {
+  var raw = PropertiesService.getScriptProperties().getProperty(CALENDAR_COMMITMENTS_REGISTRY_KEY_V1);
+  if (!raw) return { ok: false, code: 'unconfigured' };
+  var registry;
+  try { registry = JSON.parse(raw); } catch (err) { return { ok: false, code: 'unconfigured' }; }
+  if (!registry || registry.registry_version !== '1.0' || !Array.isArray(registry.calendars) || registry.calendars.length > 8) return { ok: false, code: 'unconfigured' };
+  var safe = [];
+  for (var i = 0; i < registry.calendars.length; i++) {
+    var entry = registry.calendars[i] || {};
+    if (entry.permission_mode !== 'read_only' || ['approved', 'disabled'].indexOf(entry.active_state) < 0 || !String(entry.calendar_id || '').trim() || !String(entry.safe_label || '').trim()) return { ok: false, code: 'unconfigured' };
+    safe.push({
+      calendar_id: String(entry.calendar_id),
+      safe_label: String(entry.safe_label).slice(0, 160),
+      purpose: String(entry.purpose || 'private_commitment').slice(0, 80),
+      allowed_commitment_types: Array.isArray(entry.allowed_commitment_types) ? entry.allowed_commitment_types.slice(0, 12).map(function(value) { return String(value).slice(0, 48); }) : [],
+      privacy_default: String(entry.privacy_default || 'generic').slice(0, 32),
+      active_state: entry.active_state
+    });
+  }
+  return { ok: true, source_alias: String(registry.source_alias || 'calendar_commitments').slice(0, 160), deployment_alias: String(registry.deployment_alias || 'default').slice(0, 160), calendars: safe };
+}
+
+function validateCalendarCommitmentsRequestV1_(e, now) {
+  var parameter = e && e.parameter ? e.parameter : {};
+  var requestId = String(parameter.request_id || '');
+  var mode = String(parameter.mode || '');
+  if (String(parameter.action || '') !== 'calendar_commitments_v1' || ['morning', 'replan'].indexOf(mode) < 0 || !/^[A-Za-z0-9_.-]{8,96}$/.test(requestId)) return { ok: false, code: 'invalid_request', request_id: '' };
+  return { ok: true, request_id: requestId, mode: mode, requested_at: new Date(now || new Date()).toISOString() };
+}
+
+function getCalendarCommitmentsWindowV1_(mode, now, timezone) {
+  var base = new Date(now || new Date());
+  var start = new Date(base);
+  var end = new Date(base);
+  if (mode === 'morning') {
+    start.setHours(0, 0, 0, 0);
+    end = new Date(start.getTime() + 36 * 60 * 60 * 1000);
+  } else {
+    end = new Date(base.getTime() + 24 * 60 * 60 * 1000);
+  }
+  return { start: start, end: end, timezone: String(timezone || Session.getScriptTimeZone() || 'Etc/UTC') };
+}
+
+function getCalendarCommitmentsV1(e) {
+  var now = new Date();
+  var request = validateCalendarCommitmentsRequestV1_(e, now);
+  if (!request.ok) return calendarCommitmentsJsonOutputV1_(buildCalendarCommitmentsErrorPacketV1_(request.code, { phase: 'request' }, request));
+  var registry = getCalendarCommitmentsRegistryV1_();
+  if (!registry.ok) return calendarCommitmentsJsonOutputV1_(buildCalendarCommitmentsErrorPacketV1_(registry.code, { phase: 'registry' }, request));
+  var windowSpec = getCalendarCommitmentsWindowV1_(request.mode, now, Session.getScriptTimeZone());
+  try {
+    var source = readCalendarCommitmentsSourceV1_(registry, windowSpec, now);
+    var packet = buildCalendarCommitmentsPacketV1_({ registry: registry, request: request, window: windowSpec, source: source, observed_at: new Date().toISOString() });
+    if (!validateCalendarCommitmentsPacketServerV1_(packet)) return calendarCommitmentsJsonOutputV1_(buildCalendarCommitmentsErrorPacketV1_('invalid_packet', { phase: 'packet' }, request));
+    return calendarCommitmentsJsonOutputV1_(packet);
+  } catch (err) {
+    return calendarCommitmentsJsonOutputV1_(buildCalendarCommitmentsErrorPacketV1_('unavailable', { phase: 'read' }, request));
+  }
+}
+
+function readCalendarCommitmentsSourceV1_(registry, windowSpec, now) {
+  var events = [], exclusions = [], warnings = [], sourceHealth = [];
+  for (var i = 0; i < registry.calendars.length; i++) {
+    var entry = registry.calendars[i];
+    var sourceHash = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, entry.calendar_id)).replace(/=+$/g, '').slice(0, 43);
+    if (entry.active_state !== 'approved') {
+      sourceHealth.push({ calendar_id_hash: sourceHash, calendar_safe_label: entry.safe_label, status: 'disabled', count: 0 });
+      continue;
+    }
+    var calendar;
+    try { calendar = CalendarApp.getCalendarById(entry.calendar_id); } catch (err) { calendar = null; }
+    if (!calendar) {
+      sourceHealth.push({ calendar_id_hash: sourceHash, calendar_safe_label: entry.safe_label, status: 'identity_drift', count: 0 });
+      continue;
+    }
+    try {
+      var rows = calendar.getEvents(windowSpec.start, windowSpec.end) || [];
+      var count = 0;
+      for (var j = 0; j < rows.length; j++) {
+        var normalized = normalizeCalendarCommitmentEventV1_(rows[j], entry, windowSpec, now);
+        if (normalized.ok) { events.push(normalized.event); count++; }
+        else exclusions.push({ calendar_safe_label: entry.safe_label, reason: normalized.code });
+      }
+      sourceHealth.push({ calendar_id_hash: sourceHash, calendar_safe_label: entry.safe_label, status: 'current', count: count });
+    } catch (readErr) {
+      sourceHealth.push({ calendar_id_hash: sourceHash, calendar_safe_label: entry.safe_label, status: 'unavailable', count: 0 });
+    }
+  }
+  return { events: events, exclusions: exclusions.slice(0, 100), warnings: warnings.slice(0, 50), source_health: sourceHealth };
+}
+
+function normalizeCalendarCommitmentEventV1_(event, calendarEntry, windowSpec, observedAt) {
+  if (!event || !calendarEntry) return { ok: false, code: 'invalid_packet' };
+  var recurring = false;
+  try { recurring = !!event.isRecurringEvent(); } catch (err) { recurring = true; }
+  if (recurring) return { ok: false, code: 'unsupported_recurring_occurrence_identity' };
+  var start, end, allDay, eventId;
+  try {
+    start = event.getStartTime(); end = event.getEndTime(); allDay = !!event.isAllDayEvent(); eventId = String(event.getId() || '');
+  } catch (readErr) { return { ok: false, code: 'invalid_packet' }; }
+  if (!start || !end || !eventId || isNaN(start.getTime()) || isNaN(end.getTime())) return { ok: false, code: 'invalid_packet' };
+  var calendarHash = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, calendarEntry.calendar_id)).replace(/=+$/g, '').slice(0, 43);
+  var eventHash = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, calendarEntry.calendar_id + '|' + eventId)).replace(/=+$/g, '').slice(0, 43);
+  var classification = classifyCalendarCommitmentV1_(event, calendarEntry);
+  return { ok: true, event: {
+    event_id: eventHash,
+    calendar_id_hash: calendarHash,
+    calendar_safe_label: String(calendarEntry.safe_label).slice(0, 160),
+    safe_title_label: getCalendarCommitmentSafeTitleV1_(event, calendarEntry, classification),
+    start_iso: start.toISOString(), end_iso: end.toISOString(), timezone: String(windowSpec.timezone), all_day: allDay,
+    status: 'active', cancelled: false, updated_at: null, observed_at: new Date(observedAt || new Date()).toISOString(),
+    commitment_type: classification.commitment_type, location_required: !!classification.location_required,
+    location_privacy_class: 'safe_alias_only', safe_location_label: getCalendarCommitmentSafeLocationV1_(event, calendarEntry),
+    sensitive: classification.sensitive === true, source_health: 'current'
+  } };
+}
+
+function classifyCalendarCommitmentV1_(event, calendarEntry) {
+  var allowed = Array.isArray(calendarEntry.allowed_commitment_types) ? calendarEntry.allowed_commitment_types : [];
+  var purpose = String(calendarEntry.purpose || '').toLowerCase();
+  var type = allowed.indexOf('booked_call') >= 0 && purpose === 'booked_call' ? 'booked_call' : (allowed.indexOf('a1xx_self_meeting') >= 0 && purpose === 'a1xx_self_meeting' ? 'a1xx_self_meeting' : (allowed.indexOf('focus_block') >= 0 && purpose === 'focus_block' ? 'focus_block' : 'private_commitment'));
+  return { commitment_type: type, location_required: type === 'booked_call', sensitive: String(calendarEntry.privacy_default || '').toLowerCase() !== 'safe_label' };
+}
+
+function getCalendarCommitmentSafeTitleV1_(event, calendarEntry, classification) {
+  if (String(calendarEntry.privacy_default || '').toLowerCase() === 'safe_label' && calendarEntry.safe_label) return String(calendarEntry.safe_label).slice(0, 160);
+  if (classification.commitment_type === 'booked_call') return 'Booked call';
+  if (classification.commitment_type === 'a1xx_self_meeting') return 'A1XX meeting';
+  if (classification.commitment_type === 'focus_block') return 'Focus block';
+  return 'Private commitment';
+}
+
+function getCalendarCommitmentSafeLocationV1_(event, calendarEntry) {
+  return calendarEntry && calendarEntry.safe_location_label ? String(calendarEntry.safe_location_label).slice(0, 160) : '';
+}
+
+function buildCalendarCommitmentsPacketV1_(input) {
+  var source = input.source || {};
+  var health = source.source_health || [];
+  var failures = health.filter(function(row) { return row.status !== 'current' && row.status !== 'disabled'; });
+  var exclusions = source.exclusions || [];
+  var status = failures.length ? (health.every(function(row) { return row.status === 'unavailable' || row.status === 'identity_drift'; }) ? 'unavailable' : 'partial') : 'current';
+  if (exclusions.some(function(row) { return row.reason === 'unsupported_recurring_occurrence_identity'; })) status = 'partial';
+  return {
+    packet: 'calendar_commitments_v1', schema_version: '1.0', status: status, source_mode: 'read_only',
+    source_alias: input.registry.source_alias, deployment_alias: input.registry.deployment_alias, request_id: input.request.request_id,
+    requested_at: input.request.requested_at, observed_at: input.observed_at,
+    window: { start: input.window.start.toISOString(), end: input.window.end.toISOString(), timezone: input.window.timezone },
+    source_health: health, events: (source.events || []).sort(function(a, b) { return String(a.start_iso).localeCompare(String(b.start_iso)) || String(a.event_id).localeCompare(String(b.event_id)); }),
+    exclusions: exclusions, warnings: source.warnings || [], errors: failures.map(function(row) { return { code: row.status, safe_alias: row.calendar_safe_label, count: 0, phase: 'read' }; }), write_blocked: true
+  };
+}
+
+function buildCalendarCommitmentsErrorPacketV1_(code, safeDetails, requestMeta) {
+  var allowed = ['unconfigured', 'invalid_request', 'unauthorized', 'unavailable', 'partial', 'identity_drift', 'invalid_packet', 'deployment_mismatch', 'unsupported_recurring_occurrence_identity'];
+  var safeCode = allowed.indexOf(code) >= 0 ? code : 'unavailable';
+  return { packet: 'calendar_commitments_v1', schema_version: '1.0', status: safeCode === 'invalid_request' ? 'unknown' : 'unavailable', source_mode: 'read_only', source_alias: '', deployment_alias: '', request_id: String(requestMeta && requestMeta.request_id || ''), requested_at: new Date().toISOString(), observed_at: new Date().toISOString(), window: { start: '', end: '', timezone: '' }, source_health: [], events: [], exclusions: [], warnings: [], errors: [{ code: safeCode, phase: String(safeDetails && safeDetails.phase || 'route').slice(0, 48) }], write_blocked: true };
+}
+
+function validateCalendarCommitmentsPacketServerV1_(packet) {
+  var statuses = ['current', 'aging', 'stale', 'partial', 'unavailable', 'unknown'];
+  if (!packet || packet.packet !== 'calendar_commitments_v1' || packet.schema_version !== '1.0' || statuses.indexOf(packet.status) < 0 || packet.source_mode !== 'read_only' || packet.write_blocked !== true) return false;
+  if (!Array.isArray(packet.source_health) || !Array.isArray(packet.events) || !Array.isArray(packet.exclusions) || !Array.isArray(packet.warnings) || !Array.isArray(packet.errors) || packet.source_health.length > 8 || packet.events.length > 100 || packet.exclusions.length > 100 || packet.warnings.length > 50 || packet.errors.length > 50) return false;
+  for (var i = 0; i < packet.events.length; i++) {
+    var event = packet.events[i] || {};
+    if (!event.event_id || !event.calendar_id_hash || !event.safe_title_label || !event.start_iso || !event.end_iso || !event.timezone || String(event.safe_title_label).length > 160) return false;
+  }
+  return true;
+}
+
+function calendarCommitmentsJsonOutputV1_(packet) {
+  return ContentService.createTextOutput(JSON.stringify(packet)).setMimeType(ContentService.MimeType.JSON);
+}
+/* CALENDAR_COMMITMENTS_V1_SERVER_BLOCK_END */
