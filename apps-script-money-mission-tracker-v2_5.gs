@@ -1139,6 +1139,7 @@ function a1025ProjectSafeEvent_(event) {
     event_id: event.event_id,
     event_version: event.event_version,
     occurred_at: event.occurred_at,
+    observed_at: event.observed_at,
     actor_id: event.actor_id,
     actor_name: event.actor_name,
     department_id: event.department_id,
@@ -1494,6 +1495,7 @@ function runIntelTodayBusinessContextV1FixtureChecks() {
   var packet = t44BuildIntelTodayBusinessContext_({today_core:core, agency_activity:activity, generated_at:generatedAt});
   check('route_and_read_only_envelope', packet.route === T44_TODAY_BUSINESS_ROUTE && packet.fixture_only === false && packet.runtime_authorized === false && JSON.stringify(packet.no_write) === JSON.stringify(noWrite));
   check('today_core_is_sole_priority', packet.priority && packet.priority.priority_id === core.action.route_key && packet.priority.deadline_evidence_state === 'unknown');
+  check('agency_projection_preserves_observed_at', a1025ProjectSafeEvent_(event).observed_at === event.observed_at);
   check('highest_version_and_newest_order', packet.events.length === 1 && packet.events[0].event_version === 2 && packet.events[0].actor_type === 'captain');
   check('partial_core_preserves_activity', t44BuildIntelTodayBusinessContext_({today_core:null, agency_activity:activity, generated_at:generatedAt}).status === 'partial');
   check('partial_activity_preserves_priority', t44BuildIntelTodayBusinessContext_({today_core:core, agency_activity:null, generated_at:generatedAt}).priority !== null);
