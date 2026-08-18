@@ -963,6 +963,8 @@ var A1025_OPTIONAL_ACTIVITY_FIELDS = [
   'project_id', 'milestone_id', 'output_id', 'job_id', 'progress_current', 'progress_total',
   'source_updated_at', 'next_action', 'destination_kind', 'destination_key', 'approval_receipt_key'
 ];
+var A10253_JOB_PROGRESS_SCHEMA_VERSION = '1.0.0';
+var A10253_ACCEPTED_RECEIPT_SOURCES = ['sheet', 'command_hub'];
 
 function a1025HasOwn_(object, key) {
   return Object.prototype.hasOwnProperty.call(object, key);
@@ -1129,6 +1131,145 @@ function a1025ProjectLedger_(events) {
   return { byEventType: byEventType, byDepartment: byDepartment, departmentProgress: departmentProgress };
 }
 
+// T5.3.3 keeps Job receipts inside the established ledger contract. The
+// generic event projection remains unchanged; this strictly derived section
+// only accepts rows that carry the complete Job-instance receipt shape.
+function a10253CaptainForDepartment_(departmentId) {
+  for (var index = 0; index < A1025_DEPARTMENTS.length; index += 1) {
+    if (A1025_DEPARTMENTS[index].id === departmentId) return String(A1025_DEPARTMENTS[index].captain || '').toLowerCase();
+  }
+  return '';
+}
+
+function a10253PlanVersion_(value) {
+  var match = /^plan_v([1-9][0-9]*)$/.exec(String(value || ''));
+  return match ? Number(match[1]) : null;
+}
+
+function a10253JobStateFromEvent_(eventType) {
+  return ({ started: 'active', updated: 'active', waiting: 'waiting', needs_review: 'needs_review', blocked: 'blocked', parked: 'parked', completed: 'completed' })[eventType] || null;
+}
+
+function a10253StatePriority_(state) {
+  return ({ blocked: 6, failed: 5, needs_review: 4, waiting: 3, parked: 2, stale: 2, active: 1 })[state] || 0;
+}
+
+function a10253EmptyCaptainProgress_(departmentId, sourceState) {
+  var captainId = a10253CaptainForDepartment_(departmentId);
+  return {
+    captain_id: captainId,
+    department_id: departmentId,
+    active_jobs: 0,
+    reported_active_jobs: 0,
+    progress: null,
+    progress_coverage: 'none',
+    state: sourceState === 'unavailable' ? 'unknown' : 'idle',
+    freshness_state: sourceState === 'unavailable' ? 'unavailable' : 'unknown',
+    last_verified_at: null,
+    waiting_owner: null
+  };
+}
+
+function a10253ValidateReceipt_(event, asOf, sourceState) {
+  var errors = [];
+  var captainId = a10253CaptainForDepartment_(event && event.department_id);
+  var state = a10253JobStateFromEvent_(event && event.event_type);
+  var planVersion = a10253PlanVersion_(event && event.milestone_id);
+  if (!captainId || event.actor_id !== captainId) errors.push('captain_department_mismatch');
+  if (!a1025Identifier_(event.job_id) || !a1025Identifier_(event.source_record_key) || event.job_id === event.source_record_key) errors.push('job_instance_catalog_identity_required');
+  if (planVersion == null) errors.push('locked_plan_version_required');
+  if (event.progress_current == null || event.progress_total == null) errors.push('paired_progress_required');
+  if (!a1025Identifier_(event.approval_receipt_key)) errors.push('approval_evidence_required');
+  if (A10253_ACCEPTED_RECEIPT_SOURCES.indexOf(event.source_kind) < 0 || (event.freshness_state !== 'local_static' && !(sourceState === 'stale' && event.freshness_state === 'stale'))) errors.push('unaccepted_progress_source');
+  if (!state) errors.push('job_state_required');
+  if (a1025ParseTimestamp_(event.observed_at) == null || a1025ParseTimestamp_(event.observed_at) > a1025ParseTimestamp_(asOf)) errors.push('invalid_or_future_last_verified');
+  return { valid: errors.length === 0, errors: errors, state: state, plan_version: planVersion };
+}
+
+function a10253CaptainProgress_(events, asOf, sourceState) {
+  var rows = {};
+  var invalidJobs = {};
+  for (var index = 0; index < events.length; index += 1) {
+    var event = events[index];
+    var receipt = a10253ValidateReceipt_(event, asOf, sourceState);
+    if (!receipt.valid) continue;
+    var jobKey = event.department_id + '|' + event.job_id;
+    var versionKey = jobKey + '|' + event.event_version;
+    var canonical = a1025CanonicalRow_(event);
+    if (a1025HasOwn_(rows, versionKey) && rows[versionKey].canonical !== canonical) {
+      invalidJobs[jobKey] = true;
+      continue;
+    }
+    rows[versionKey] = { event: event, canonical: canonical, state: receipt.state, plan_version: receipt.plan_version };
+  }
+
+  var histories = {};
+  for (var key in rows) {
+    if (!a1025HasOwn_(rows, key)) continue;
+    var item = rows[key];
+    var historyKey = item.event.department_id + '|' + item.event.job_id;
+    if (!histories[historyKey]) histories[historyKey] = [];
+    histories[historyKey].push(item);
+  }
+
+  var accepted = [];
+  for (var historyKey in histories) {
+    if (!a1025HasOwn_(histories, historyKey) || invalidJobs[historyKey]) continue;
+    var history = histories[historyKey].sort(function(left, right) { return left.event.event_version - right.event.event_version; });
+    var valid = true;
+    var prior = null;
+    for (index = 0; index < history.length; index += 1) {
+      var current = history[index];
+      if (prior) {
+        if (current.plan_version === prior.plan_version) {
+          if (current.event.progress_total !== prior.event.progress_total || current.event.progress_current < prior.event.progress_current) valid = false;
+        } else if (current.plan_version <= prior.plan_version) {
+          valid = false;
+        }
+      }
+      prior = current;
+    }
+    if (valid && prior) accepted.push(prior);
+  }
+
+  var output = {};
+  for (index = 0; index < A1025_DEPARTMENTS.length; index += 1) output[A1025_DEPARTMENTS[index].id] = a10253EmptyCaptainProgress_(A1025_DEPARTMENTS[index].id, sourceState);
+  var grouped = {};
+  accepted.forEach(function(item) {
+    var departmentId = item.event.department_id;
+    if (!grouped[departmentId]) grouped[departmentId] = [];
+    grouped[departmentId].push(item);
+  });
+  for (var departmentId in grouped) {
+    if (!a1025HasOwn_(grouped, departmentId)) continue;
+    var jobs = grouped[departmentId];
+    var active = jobs.filter(function(item) { return ['completed', 'failed'].indexOf(item.state) < 0; });
+    var reported = active.filter(function(item) { return item.event.progress_current != null && item.event.progress_total != null; });
+    var completed = reported.reduce(function(total, item) { return total + item.event.progress_current; }, 0);
+    var total = reported.reduce(function(sum, item) { return sum + item.event.progress_total; }, 0);
+    var strongest = active.reduce(function(current, item) {
+      return a10253StatePriority_(item.state) > a10253StatePriority_(current) ? item.state : current;
+    }, active.length ? 'active' : 'idle');
+    var latest = reported.reduce(function(value, item) {
+      return value == null || a1025ParseTimestamp_(item.event.observed_at) > a1025ParseTimestamp_(value) ? item.event.observed_at : value;
+    }, null);
+    var waiting = active.filter(function(item) { return item.state === 'waiting'; })[0];
+    output[departmentId] = {
+      captain_id: a10253CaptainForDepartment_(departmentId),
+      department_id: departmentId,
+      active_jobs: active.length,
+      reported_active_jobs: reported.length,
+      progress: total > 0 ? { current: completed, total: total, percent: Math.round((completed / total) * 100) } : null,
+      progress_coverage: active.length === 0 || reported.length === 0 ? 'none' : reported.length === active.length ? 'full' : 'partial',
+      state: sourceState === 'stale' ? 'stale' : strongest,
+      freshness_state: sourceState === 'stale' ? 'stale' : active.length ? 'fresh' : 'unknown',
+      last_verified_at: latest,
+      waiting_owner: null
+    };
+  }
+  return A1025_DEPARTMENTS.map(function(department) { return output[department.id]; });
+}
+
 function a1025SafeRoute_(event) {
   if (event.next_action == null || event.destination_kind == null || event.destination_key == null) return null;
   return { action: event.next_action, kind: event.destination_kind, key: event.destination_key };
@@ -1207,6 +1348,7 @@ function a1025CreateIntelAgencyActivityContext_(input) {
   });
   var details = a1025StateDetails_(sourceState, selectedEvents);
   var counts = a1025ProjectLedger_(selectedEvents);
+  var captainJobProgress = a10253CaptainProgress_(selectedEvents, asOf, sourceState);
   var errors = details.errors.slice();
   for (var index = 0; index < normalized.rejected.length; index += 1) errors.push('activity_row_' + normalized.rejected[index].index + '_rejected');
   return {
@@ -1223,6 +1365,8 @@ function a1025CreateIntelAgencyActivityContext_(input) {
     counts_by_event_type: counts.byEventType,
     counts_by_department: counts.byDepartment,
     department_progress: a1025ReportedProgress_(counts.departmentProgress),
+    captain_job_progress_schema_version: A10253_JOB_PROGRESS_SCHEMA_VERSION,
+    captain_job_progress: captainJobProgress,
     warnings: details.warnings,
     errors: errors,
     no_write: a1025NoWriteEnvelope_(),
@@ -1238,6 +1382,46 @@ function getIntelAgencyActivityContextV1() {
     generated_at: generatedAt, last_successful_refresh: source.last_successful_refresh, max_events: A1025_MAX_EVENT_CAP
   });
   return ContentService.createTextOutput(JSON.stringify(packet)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function runT53VerifiedJobProgressQACheckV1() {
+  var asOf = '2026-08-18T15:00:00.000Z';
+  function event(overrides) {
+    var base = {
+      event_id: 'evt_content_progress_receipt', event_version: 1,
+      occurred_at: '2026-08-18T14:00:00.000Z', observed_at: '2026-08-18T14:30:00.000Z',
+      actor_id: 'jean', actor_name: 'Jean', department_id: 'content', event_type: 'waiting',
+      summary: 'Recording readiness is waiting for review.', source_kind: 'sheet',
+      source_record_key: 'catalog_content_recording', freshness_state: 'local_static',
+      milestone_id: 'plan_v1', job_id: 'job_content_recording_instance',
+      progress_current: 4, progress_total: 6, approval_receipt_key: 'receipt_content_progress'
+    };
+    for (var key in overrides) if (a1025HasOwn_(overrides, key)) base[key] = overrides[key];
+    return base;
+  }
+  function card(packet) {
+    return (packet.captain_job_progress || []).filter(function(item) { return item.department_id === 'content'; })[0] || {};
+  }
+  function packet(rows, state, lastKnown) {
+    return a1025CreateIntelAgencyActivityContext_({
+      source_state: state || 'local_static', rows: rows || [], last_known_rows: lastKnown || [], as_of: asOf,
+      generated_at: asOf, last_successful_refresh: '2026-08-18T14:30:00.000Z', max_events: 50
+    });
+  }
+  var checks = [];
+  function check(name, passed) { checks.push({ name: name, passed: passed === true }); }
+  var accepted = card(packet([event()]));
+  check('accepted_pair_projects_active_progress', accepted.active_jobs === 1 && accepted.progress && accepted.progress.percent === 67 && accepted.progress_coverage === 'full' && accepted.state === 'waiting');
+  check('job_instance_and_catalog_remain_distinct', accepted.captain_id === 'jean' && event().job_id !== event().source_record_key);
+  check('partial_pair_fails_closed', card(packet([event({ progress_total: null })])).active_jobs === 0);
+  check('fixture_source_fails_closed', card(packet([event({ source_kind: 'fixture' })])).active_jobs === 0);
+  check('captain_mismatch_fails_closed', card(packet([event({ actor_id: 'falco' })])).active_jobs === 0);
+  check('future_timestamp_fails_closed', card(packet([event({ observed_at: '2026-08-18T15:30:00.000Z' })])).active_jobs === 0);
+  check('same_plan_regression_fails_closed', card(packet([event(), event({ event_id: 'evt_content_progress_later', event_version: 2, progress_current: 3 })])).active_jobs === 0);
+  check('same_plan_total_change_fails_closed', card(packet([event(), event({ event_id: 'evt_content_progress_total_change', event_version: 2, progress_total: 7 })])).active_jobs === 0);
+  check('stale_retains_last_known_progress', (function() { var stale = card(packet([], 'stale', [event()])); return stale.active_jobs === 1 && stale.progress && stale.progress.percent === 67 && stale.state === 'stale' && stale.freshness_state === 'stale'; })());
+  check('empty_stays_unknown_not_zero', (function() { var empty = card(packet([])); return empty.active_jobs === 0 && empty.progress === null && empty.progress_coverage === 'none'; })());
+  return { passed: checks.every(function(item) { return item.passed; }), checks: checks, count: checks.length, failures: checks.filter(function(item) { return !item.passed; }).map(function(item) { return item.name; }) };
 }
 
 // Intel Today T4.4: a read-only projection of the existing Today Core V2
