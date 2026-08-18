@@ -1316,6 +1316,28 @@ function t44PriorityUrgency_(value) {
   return 'low';
 }
 
+function t44TodayCoreFixtureClassification_(packet, action) {
+  var fields = ['fixture_only', 'fixture', 'dry_run', 'dryRun', 'test', 'preview', 'synthetic', 'source_kind', 'sourceKind'];
+  var sourceModes = ['source_mode', 'sourceMode'];
+  var fixtureKinds = ['fixture', 'dry_run', 'dry-run', 'test', 'preview', 'synthetic', 'local_fixture', 'local_fixture_read_only'];
+  var explicit = false;
+  var excluded = false;
+  [packet || {}, action || {}].forEach(function(source) {
+    fields.forEach(function(field) {
+      if (!Object.prototype.hasOwnProperty.call(source, field)) return;
+      explicit = true;
+      var value = source[field];
+      if (value === true) excluded = true;
+      if ((field === 'source_kind' || field === 'sourceKind') && fixtureKinds.indexOf(String(value || '').toLowerCase()) !== -1) excluded = true;
+    });
+    sourceModes.forEach(function(field) {
+      if (fixtureKinds.indexOf(String(source[field] || '').toLowerCase()) !== -1) excluded = true;
+    });
+  });
+  if (!explicit && /^\s*dry\s+run(?:\s*[-:])?\b/i.test(String(action && action.title || ''))) excluded = true;
+  return {explicit:explicit, excluded:excluded};
+}
+
 function t44NormalizeTodayCore_(packet, generatedAt) {
   if (!packet || packet.packet !== 'today_core_packet_v2' || !t44TodayCoreNoWrite_(packet)) throw new TypeError('today_core_invalid');
   var state = String(packet.core_state || '');
@@ -1326,6 +1348,8 @@ function t44NormalizeTodayCore_(packet, generatedAt) {
   if (state === 'empty') return {usable:true, empty:true, stale:false, health:t44SourceHealth_('today_core', 'empty', 'fresh', last), priority:null};
   var action = packet.action || {};
   if (!t44Identifier_(action.route_key) || !t44SafeText_(action.title, 180) || !t44SafeText_(action.summary, 240) || !t44SafeText_(action.decision_state, 80) || !t44SafeText_(action.priority, 40)) throw new TypeError('today_core_action_invalid');
+  var classification = t44TodayCoreFixtureClassification_(packet, action);
+  if (classification.excluded) return {usable:true, empty:true, stale:false, health:t44SourceHealth_('today_core', 'empty', 'fresh', last), priority:null, warning:'today_core_fixture_candidate_excluded'};
   var actor = t44PriorityActor_(action.owner_label);
   var route = t44PriorityRoute_(action);
   return {
@@ -1431,15 +1455,19 @@ function t44BuildIntelTodayBusinessContext_(input) {
   var status = usable === 0 ? 'unavailable' : degraded ? 'partial' : (core.empty && activity.empty ? 'empty' : 'ok');
   var refreshes = [core.health.last_successful_refresh, activity.health.last_successful_refresh].filter(Boolean).sort();
   var errors = [];
+  var warnings = [];
   if (coreResult.error) errors.push(coreResult.error);
   if (activityResult.error) errors.push(activityResult.error);
+  if (core.warning) warnings.push(core.warning);
+  if (activity.warning) warnings.push(activity.warning);
   if (usable === 0) errors.push('today_business_sources_unavailable');
+  if (degraded) warnings.unshift('One or more sources are stale or unavailable.');
   return {
     route:T44_TODAY_BUSINESS_ROUTE, schema_version:T44_TODAY_BUSINESS_SCHEMA_VERSION,
     fixture_only:false, runtime_authorized:false, status:status, generated_at:generatedAt,
     last_successful_refresh:refreshes.length ? refreshes[refreshes.length - 1] : null,
     source_health:[core.health, activity.health], priority:core.priority, signals:t44Signals_(activity.events), events:activity.events,
-    warnings:degraded ? ['One or more sources are stale or unavailable.'] : [], errors:errors,
+    warnings:warnings, errors:errors,
     no_write:t44NoWriteEnvelope_()
   };
 }
@@ -1469,6 +1497,15 @@ function runIntelTodayBusinessContextV1FixtureChecks() {
   check('highest_version_and_newest_order', packet.events.length === 1 && packet.events[0].event_version === 2 && packet.events[0].actor_type === 'captain');
   check('partial_core_preserves_activity', t44BuildIntelTodayBusinessContext_({today_core:null, agency_activity:activity, generated_at:generatedAt}).status === 'partial');
   check('partial_activity_preserves_priority', t44BuildIntelTodayBusinessContext_({today_core:core, agency_activity:null, generated_at:generatedAt}).priority !== null);
+  var explicitFixture = t44BuildIntelTodayBusinessContext_({today_core:Object.assign({}, core, {fixture_only:true}), agency_activity:activity, generated_at:generatedAt});
+  var actionFixture = t44BuildIntelTodayBusinessContext_({today_core:Object.assign({}, core, {action:Object.assign({}, core.action, {dry_run:true})}), agency_activity:activity, generated_at:generatedAt});
+  var markedFixture = t44BuildIntelTodayBusinessContext_({today_core:Object.assign({}, core, {source_mode:'direct_notion_read_only', action:Object.assign({}, core.action, {title:'DRY RUN - Review launch package'})}), agency_activity:activity, generated_at:generatedAt});
+  var unclassifiedReal = t44BuildIntelTodayBusinessContext_({today_core:Object.assign({}, core, {action:Object.assign({}, core.action, {source_kind:'unclassified'})}), agency_activity:activity, generated_at:generatedAt});
+  check('explicit_fixture_priority_rejected', explicitFixture.priority === null && explicitFixture.source_health[0].status === 'empty' && explicitFixture.warnings.indexOf('today_core_fixture_candidate_excluded') !== -1);
+  check('explicit_action_dry_run_rejected', actionFixture.priority === null && actionFixture.warnings.indexOf('today_core_fixture_candidate_excluded') !== -1);
+  check('reserved_dry_run_marker_rejected', markedFixture.priority === null && markedFixture.events.length === 1 && markedFixture.status === 'ok');
+  check('unclassified_real_priority_retained', unclassifiedReal.priority && unclassifiedReal.priority.title === core.action.title);
+  check('fixture_rejection_preserves_activity', explicitFixture.events.length === 1 && explicitFixture.events[0].event_version === 2);
   check('unavailable_sources_do_not_fabricate', t44BuildIntelTodayBusinessContext_({today_core:null, agency_activity:null, generated_at:generatedAt}).status === 'unavailable');
   check('unsafe_route_rejected', t44BuildIntelTodayBusinessContext_({today_core:core, agency_activity:Object.assign({}, activity, {events:[Object.assign({}, event, {route:{action:'send', kind:'external', key:'unsafe-target'}})]}), generated_at:generatedAt}).events.length === 0);
   check('malformed_deadline_not_promoted', packet.priority && packet.priority.due_at === null && packet.priority.source_timezone === null);
