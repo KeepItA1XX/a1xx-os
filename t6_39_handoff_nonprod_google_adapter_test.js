@@ -13,6 +13,6 @@ test('idempotency and readback',()=>{for(const token of ['identical_replay','ide
 test('recipient message reads and lifecycle isolation',()=>{assert.match(block,/recipient_principal_id:'prn_a1xx-nonprod'/);assert.match(block,/read_does_not_move_lifecycle/);});
 test('audit and production routes remain off',()=>{assert.match(block,/audit_emission_enabled:false/);assert.match(block,/production_route_enabled:false/);assert.doesNotMatch(block,/doGet\s*\(|doPost\s*\(/);});
 test('accepted service boundary is internally bound',()=>{assert.match(block,/function coordinateT639HandoffNonprodServiceV1/);for(const route of ['read_current','list_messages','read_historical','read_commit','execute_command'])assert.ok(source.includes(route));});
-test('temporary admin route and credential removed',()=>{assert.doesNotMatch(source,/t639_nonprod_admin_candidate|7d13a0ef98914c92/);});
+test('temporary admin routes and credentials removed',()=>{assert.doesNotMatch(source,/t639_nonprod_(?:admin|final)|7d13a0ef98914c92|eb32fe9f4bdd4a4a/);});
 test('no provider model agent or activity promotion',()=>{for(const re of [/UrlFetchApp/,/openai/i,/model_calls\s*:\s*[1-9]/,/agent_runs\s*:\s*[1-9]/,/activity_ledger_promoted\s*:\s*true/])assert.doesNotMatch(block,re);});
 console.log('RESULT '+passed+'/'+passed+' PASS');
