@@ -23124,3 +23124,93 @@ function calendarCommitmentsJsonOutputV1_(packet) {
   return ContentService.createTextOutput(JSON.stringify(packet)).setMimeType(ContentService.MimeType.JSON);
 }
 /* CALENDAR_COMMITMENTS_V1_SERVER_BLOCK_END */
+
+/* T635_CANONICAL_HANDOFF_DURABLE_SERVICE_V1_START */
+// Dormant production interface only. No route, trigger, wrapper, Sheet, Drive,
+// audit, provider, model, Job, Output, or UI consumer is enabled by this block.
+var T635_HANDOFF_SERVICE_BUILD_V1 = 'mmos-20260821-t635-handoff-service-default-off';
+var T635_HANDOFF_SERVICE_ENABLED_PROPERTY_V1 = 'MMOS_HANDOFF_NONPROD_SERVICE_ENABLED';
+var T635_HANDOFF_WRITES_ENABLED_PROPERTY_V1 = 'MMOS_HANDOFF_NONPROD_WRITES_ENABLED';
+var T635_HANDOFF_AUDIT_EMISSION_PROPERTY_V1 = 'MMOS_HANDOFF_AUDIT_NONPROD_EMISSION_ENABLED';
+var T635_HANDOFF_OPERATIONS_WORKBOOK_PROPERTY_V1 = 'MMOS_HANDOFF_NONPROD_SPREADSHEET_ID';
+var T635_HANDOFF_EXPECTED_WORKBOOK_PROPERTY_V1 = 'MMOS_HANDOFF_NONPROD_EXPECTED_SPREADSHEET_ID';
+var T635_HANDOFF_AUDIT_WORKBOOK_PROPERTY_V1 = 'MMOS_HANDOFF_AUDIT_NONPROD_SPREADSHEET_ID';
+var T635_HANDOFF_EXPECTED_AUDIT_WORKBOOK_PROPERTY_V1 = 'MMOS_HANDOFF_AUDIT_NONPROD_EXPECTED_SPREADSHEET_ID';
+var T635_HANDOFF_VAULT_ROOT_PROPERTY_V1 = 'MMOS_HANDOFF_NONPROD_VAULT_ROOT_FOLDER_ID';
+var T635_HANDOFF_EXPECTED_VAULT_PROPERTY_V1 = 'MMOS_HANDOFF_NONPROD_VAULT_EXPECTED_ROOT_FOLDER_ID';
+var T635_HANDOFF_QUARANTINE_PROPERTY_V1 = 'MMOS_HANDOFF_NONPROD_QUARANTINE_FOLDER_ID';
+var T635_HANDOFF_TABS_V1 = Object.freeze(['Handoffs','Handoff Versions','Inbox Messages','Message Reads','Attachments Index','Reply Contexts','Transition Receipts','Idempotency Registry','Job Instances','Outputs Index','Outbox','Dead Letter','Commit Journal']);
+var T635_HANDOFF_ZERO_EFFECTS_V1 = Object.freeze({writes:0,network_calls:0,provider_calls:0,model_calls:0,agent_runs:0,audit_emissions:0,external_actions:0});
+
+function makeT635HandoffSafeResultV1(code, extra) {
+  var result = {ok:false, code:String(code || 'unavailable').slice(0,80), service_enabled:false, writes_enabled:false, audit_emission_enabled:false, effects:Object.assign({},T635_HANDOFF_ZERO_EFFECTS_V1)};
+  ['handoff_id','commit_id','current_state','current_version','current_row_version','current_etag','retry_later','read_only'].forEach(function(key){if(extra && Object.prototype.hasOwnProperty.call(extra,key)) result[key]=extra[key];});
+  return result;
+}
+
+function createT635HandoffProductionAdaptersV1(handles) {
+  handles = handles || {};
+  function unavailable(name){return function(){throw new Error('adapter_unavailable:'+name);};}
+  return {
+    config: handles.config || {read:unavailable('config.read')},
+    auth: handles.auth || {resolve:unavailable('auth.resolve')},
+    clock: handles.clock || {nowIso:unavailable('clock.nowIso')},
+    lock: handles.lock || {tryLock:unavailable('lock.tryLock'),releaseLock:unavailable('lock.releaseLock')},
+    sheets: handles.sheets || {readExact:unavailable('sheets.readExact'),appendExact:unavailable('sheets.appendExact'),replaceCas:unavailable('sheets.replaceCas'),listExact:unavailable('sheets.listExact')},
+    drive: handles.drive || {stage:unavailable('drive.stage'),canonicalize:unavailable('drive.canonicalize'),quarantine:unavailable('drive.quarantine'),readDigest:unavailable('drive.readDigest')},
+    crypto: handles.crypto || {sha256:unavailable('crypto.sha256')}
+  };
+}
+
+function t635HandoffExactKeysV1(value, allowed, required) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  var keys = Object.keys(value);
+  for (var i=0;i<keys.length;i++) if (allowed.indexOf(keys[i])<0) return false;
+  for (var j=0;j<required.length;j++) if (!Object.prototype.hasOwnProperty.call(value,required[j])) return false;
+  return true;
+}
+
+function t635HandoffStableIdV1(value,prefix){return new RegExp('^'+prefix+'[a-z0-9-]{4,100}$').test(String(value||''));}
+function t635HandoffStrictUtcV1(value){return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(value||''))&&!isNaN(new Date(value).getTime())&&new Date(value).toISOString()===value;}
+
+function validateT635HandoffConfigV1(config) {
+  var required=['service_enabled','writes_enabled','audit_emission_enabled','operations_workbook_id','expected_operations_workbook_id','audit_workbook_id','expected_audit_workbook_id','vault_root_id','expected_vault_root_id','quarantine_root_id','sheet_ids'];
+  if(!t635HandoffExactKeysV1(config,required,required))return {ok:false,code:'config_not_closed'};
+  if(config.service_enabled!==true)return {ok:false,code:'service_disabled'};
+  if(config.writes_enabled!==true)return {ok:false,code:'writes_disabled'};
+  if(config.audit_emission_enabled!==false)return {ok:false,code:'audit_emission_enabled'};
+  if(!config.operations_workbook_id||config.operations_workbook_id!==config.expected_operations_workbook_id)return {ok:false,code:'operations_workbook_identity_mismatch'};
+  if(!config.audit_workbook_id||config.audit_workbook_id!==config.expected_audit_workbook_id)return {ok:false,code:'audit_workbook_identity_mismatch'};
+  if(!config.vault_root_id||config.vault_root_id!==config.expected_vault_root_id||!config.quarantine_root_id)return {ok:false,code:'vault_identity_mismatch'};
+  if(!config.sheet_ids||typeof config.sheet_ids!=='object'||Array.isArray(config.sheet_ids)||Object.keys(config.sheet_ids).length!==T635_HANDOFF_TABS_V1.length)return {ok:false,code:'sheet_identity_mismatch'};
+  var ids=[];for(var i=0;i<T635_HANDOFF_TABS_V1.length;i++){var tab=T635_HANDOFF_TABS_V1[i],id=Number(config.sheet_ids[tab]);if(!Number.isInteger(id)||id<1)return {ok:false,code:'sheet_identity_mismatch'};ids.push(id);}
+  if((new Set(ids)).size!==ids.length)return {ok:false,code:'sheet_identity_duplicate'};
+  return {ok:true};
+}
+
+function validateT635HandoffEnvelopeV1(input) {
+  var readBase=['route','assertion_ref','handoff_id'];
+  if(!input||typeof input!=='object'||Array.isArray(input))return {ok:false,code:'invalid_request'};
+  if(input.route==='read_current'||input.route==='list_messages')return t635HandoffExactKeysV1(input,readBase,readBase)&&t635HandoffStableIdV1(input.assertion_ref,'assert_')&&t635HandoffStableIdV1(input.handoff_id,'hof_')?{ok:true}:{ok:false,code:'invalid_request'};
+  if(input.route==='read_historical'){var historical=readBase.concat(['handoff_version']);return t635HandoffExactKeysV1(input,historical,historical)&&Number.isInteger(input.handoff_version)&&input.handoff_version>0?{ok:true}:{ok:false,code:'invalid_request'};}
+  if(input.route==='read_commit'){var commit=readBase.concat(['commit_id']);return t635HandoffExactKeysV1(input,commit,commit)&&t635HandoffStableIdV1(input.commit_id,'cmt_')?{ok:true}:{ok:false,code:'invalid_request'};}
+  if(input.route==='execute_command'){var command=['route','command','request_id','idempotency_key','assertion_ref','handoff_id','expected_state','expected_handoff_version','expected_row_version','expected_etag','input'];if(!t635HandoffExactKeysV1(input,command,command)||['confirm_routing','mark_message_read'].indexOf(input.command)<0||!t635HandoffStableIdV1(input.request_id,'req_')||!t635HandoffStableIdV1(input.idempotency_key,'idem_')||!Number.isInteger(input.expected_handoff_version)||input.expected_handoff_version<1||!Number.isInteger(input.expected_row_version)||input.expected_row_version<1)return {ok:false,code:'invalid_request'};return {ok:true};}
+  return {ok:false,code:'route_unavailable'};
+}
+
+function coordinateT635HandoffServiceV1(input, adapters) {
+  var envelope=validateT635HandoffEnvelopeV1(input);if(!envelope.ok)return makeT635HandoffSafeResultV1(envelope.code);
+  adapters=adapters||createT635HandoffProductionAdaptersV1();
+  var config;try{config=adapters.config.read();}catch(err){return makeT635HandoffSafeResultV1('adapter_unavailable');}
+  var configResult=validateT635HandoffConfigV1(config);if(!configResult.ok)return makeT635HandoffSafeResultV1(configResult.code);
+  var principal;try{principal=adapters.auth.resolve(input.assertion_ref);}catch(authErr){return makeT635HandoffSafeResultV1('auth_unavailable');}
+  if(!principal||principal.active!==true||!t635HandoffStableIdV1(principal.principal_id,'prn_')||!Array.isArray(principal.capabilities))return makeT635HandoffSafeResultV1('auth_invalid');
+  var nowIso;try{nowIso=adapters.clock.nowIso();}catch(clockErr){return makeT635HandoffSafeResultV1('clock_unavailable');}
+  if(!t635HandoffStrictUtcV1(nowIso))return makeT635HandoffSafeResultV1('server_clock_invalid');
+  // Adapter execution remains intentionally unbound until a separately reviewed
+  // nonproduction store implementation supplies exact read/commit/recovery handles.
+  return makeT635HandoffSafeResultV1('store_adapter_unbound',{handoff_id:input.handoff_id,read_only:input.route!=='execute_command'});
+}
+
+function getT635HandoffSourceStateV1(){return {build:T635_HANDOFF_SERVICE_BUILD_V1,route_exposed:false,wrapper_exposed:false,service_property:T635_HANDOFF_SERVICE_ENABLED_PROPERTY_V1,writes_property:T635_HANDOFF_WRITES_ENABLED_PROPERTY_V1,audit_emission_property:T635_HANDOFF_AUDIT_EMISSION_PROPERTY_V1,tabs:T635_HANDOFF_TABS_V1.slice(),effects:Object.assign({},T635_HANDOFF_ZERO_EFFECTS_V1)};}
+/* T635_CANONICAL_HANDOFF_DURABLE_SERVICE_V1_END */
