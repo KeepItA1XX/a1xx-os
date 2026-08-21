@@ -347,7 +347,31 @@ expect(/ui_state:'legacy_local',projection:Object\.freeze\(\{messages:Object\.fr
 expect(/MISSION_T662_BROKER_ENDPOINT_V25='https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec'/.test(t644), 'T6.62 broker endpoint is one exact immutable Apps Script deployment URL');
 expect(/function missionT662RequestValidV25/.test(t644) && /inbox:\['route'\]/.test(t644) && /historical:\['route','handoff_id','handoff_version'\]/.test(t644), 'T6.62 closes all four token-free request shapes before opening');
 expect(/crypto\.getRandomValues\(bytes\)/.test(t644) && /'nce_'\+Array\.prototype\.map/.test(t644), 'T6.62 creates a one-use browser-memory correlation nonce');
-expect(/url\.protocol==='https:'/.test(t644) && /endsWith\('\.script\.googleusercontent\.com'\)/.test(t644), 'T6.62 accepts only HTTPS Googleusercontent iframe subdomains');
+expect(/url\.protocol==='https:'/.test(t644) && /suffix='\.googleusercontent\.com'/.test(t644) && /-script\$/.test(t644), 'T6.80.1 accepts only the exact HTTPS Apps Script Googleusercontent host form');
+{
+  const originSource = t644.match(/function missionT662IframeOriginV25\(value\)\{[^\n]+\}/);
+  expect(originSource, 'T6.80.1 origin predicate is extractable for executable regression');
+  if (originSource) {
+    const validOrigin = Function(`${originSource[0]}; return missionT662IframeOriginV25;`)();
+    const observed = 'https://n-zmpsukezdbinnehssttl2l6m7lll32idrbfzk2i-0lu-script.googleusercontent.com';
+    expect(validOrigin(observed), 'T6.80.1 accepts the exact observed Version-6 Googleusercontent iframe origin');
+    for (const invalid of [
+      observed.replace('https:', 'http:'),
+      'https://googleusercontent.com',
+      'https://script.googleusercontent.com',
+      'https://x.script.googleusercontent.com',
+      'https://x-script.googleusercontent.com.evil.test',
+      'https://x-script.evil.googleusercontent.com',
+      'https://x-script.googleusercontent.com:444',
+      'https://x-script.googleusercontent.com/',
+      'https://x-script.googleusercontent.com/path',
+      'https://x-script.googleusercontent.com?query=1',
+      'https://x-script.googleusercontent.com#fragment',
+      'https://user@x-script.googleusercontent.com',
+      'not-an-origin'
+    ]) expect(!validOrigin(invalid), `T6.80.1 rejects invalid iframe origin: ${invalid}`);
+  }
+}
 expect(/event\.source===popup\|\|event\.source===window/.test(t644) && /source\.postMessage\(\{type:'t652_broker_request'/.test(t644), 'T6.62 captures the iframe source instead of trusting the popup top window');
 expect(/event\.source!==source\|\|event\.origin!==origin/.test(t644), 'T6.62 pins responses to the captured iframe source and origin');
 expect(/async function missionT662ResultValidV25/.test(t644) && /await missionT644ValidatePacketV25\(value\.packet,request\.route,value\.ownership\.principal_id\)/.test(t644), 'T6.62 lexically awaits the canonical packet validator');
