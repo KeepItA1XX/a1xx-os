@@ -1,4 +1,5 @@
 const fs = require('fs');
+const child = require('child_process');
 
 const html = fs.readFileSync('money-mission-tracker-v2_5.html', 'utf8');
 const failures = [];
@@ -180,6 +181,15 @@ expect(/MISSION_T616_CONVERSATIONS_V25\[message\.source_inbox_message_id\]/.test
 expect(/prior&&prior\.fingerprint!==fingerprint/.test(t616) && /conflict:true/.test(t616), 'changed safe inputs produce an explicit fingerprint conflict');
 expect(/Object\.freeze\(\{workspace:'Mission Command'/.test(t616) && /captain_thread:false,permanent_agent_thread:false/.test(t616), 'safe context envelope is closed and not a Captain or permanent thread');
 expect(/setMissionCommandModeV25\('chat'\)/.test(t616) && /document\.getElementById\('mission-command-thread'\)/.test(t616), 'Reply reuses the existing Mission Command card and thread');
+expect(/var company=document\.getElementById\('company-panel'\);if\(company&&!company\.classList\.contains\('open'\)&&typeof toggleCompanyPanel==='function'\)toggleCompanyPanel\(\)/.test(t616), 'local reply reveals Mission Command only when the existing card is closed');
+try {
+  const replySource = t616.match(/function replyMissionT616InMissionCommandV25\(id\)\{[^\n]+\}/)[0];
+  const probe = `'use strict';const assert=require('assert');${replySource};function run(open){let toggles=0,focuses=0;const panel={classList:{contains(){return open;}}},thread={innerHTML:'prior',scrollTop:0,scrollHeight:4},input={value:'prior',placeholder:'prior',readOnly:false,focus(){focuses++;}};global.document={getElementById(id){return id==='company-panel'?panel:id==='mission-command-thread'?thread:input;}};global.toggleCompanyPanel=()=>{toggles++;};global.missionT616ContractItemV25=()=>({id:'msg'});global.missionT616OpenConversationV25=()=>({ok:true,envelope:{source_inbox_message_id:'msg_source',safe_summary:'Safe'}});global.MISSION_T616_INBOX_VIEW_V25={selectedMessageId:''};global.closeMissionAgentInboxV25=()=>{};global.setMissionCommandModeV25=()=>{};global.MISSION_T616_CHAT_VIEW_V25={active:false,sourceMessageId:'',priorThreadHtml:'',priorThreadScroll:0,priorInputValue:'',priorInputPlaceholder:'',priorInputReadOnly:false};global.missionPhase1EscapeV25=v=>v;const result=replyMissionT616InMissionCommandV25('msg');return {result,toggles,focuses,readOnly:input.readOnly};}const closed=run(false),opened=run(true);assert.equal(closed.result.ok,true);assert.equal(closed.toggles,1);assert.equal(closed.focuses,1);assert.equal(closed.readOnly,true);assert.equal(opened.result.ok,true);assert.equal(opened.toggles,0);assert.equal(opened.focuses,1);assert.equal(opened.readOnly,true);`;
+  child.execFileSync(process.execPath, ['-e', probe], {stdio:'pipe'});
+  expect(true, 'executable reply regression opens a closed card and preserves an already-open card');
+} catch (error) {
+  expect(false, 'executable reply regression opens a closed card and preserves an already-open card');
+}
 expect(!/startMissionNewChat|setActiveMissionSession|saveMissionChat|saveMissionChatSession|postMissionChatLog|_askMissionCommandPhase1BaseV25|fetch\s*\(|XMLHttpRequest|google\.script\.run|localStorage|sessionStorage|indexedDB|WebSocket|new Worker|dispatchAgent|emitAudit|auditEvent|activityLedger/i.test(t616), 'T6.16 fixture avoids persistent chat, provider, network, worker, dispatch, and audit paths');
 expect(/input\.readOnly=true/.test(t616) && /MISSION_T616_CHAT_VIEW_V25\.active\)\{continueMissionT616ConversationV25\(\)/.test(html), 'contextual fixture cannot fall through to the normal send path');
 expect(/item\.unread=false;renderMissionAgentInboxV25\(\)/.test(t616), 'opening message acknowledges unread without another effect');
@@ -334,7 +344,30 @@ expect(/company&&!company\.classList\.contains\('open'\)&&typeof toggleCompanyPa
 expect(/setTimeout\(function\(\)\{input\.focus\(\{preventScroll:true\}\);\},0\)/.test(t644), 'safe reply focuses the read-only Mission Command input after the card is revealed');
 expect(/packet&&missionT644ExactV25\(packet,\['ok','code','fixture_only','title'\]\)&&packet\.ok===false&&packet\.code==='legacy_local'&&packet\.fixture_only===true/.test(t644), 'fake-only legacy packet has an executable closed adapter path');
 expect(/ui_state:'legacy_local',projection:Object\.freeze\(\{messages:Object\.freeze\(\[\]\),title:packet\.title,read_only:true,history_available:false\}\)/.test(t644), 'legacy projection is read-only, empty, and does not invent durable history');
+expect(/MISSION_T662_BROKER_ENDPOINT_V25='https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec'/.test(t644), 'T6.62 broker endpoint is one exact immutable Apps Script deployment URL');
+expect(/function missionT662RequestValidV25/.test(t644) && /inbox:\['route'\]/.test(t644) && /historical:\['route','handoff_id','handoff_version'\]/.test(t644), 'T6.62 closes all four token-free request shapes before opening');
+expect(/crypto\.getRandomValues\(bytes\)/.test(t644) && /'nce_'\+Array\.prototype\.map/.test(t644), 'T6.62 creates a one-use browser-memory correlation nonce');
+expect(/url\.protocol==='https:'/.test(t644) && /endsWith\('\.script\.googleusercontent\.com'\)/.test(t644), 'T6.62 accepts only HTTPS Googleusercontent iframe subdomains');
+expect(/event\.source===popup\|\|event\.source===window/.test(t644) && /source\.postMessage\(\{type:'t652_broker_request'/.test(t644), 'T6.62 captures the iframe source instead of trusting the popup top window');
+expect(/event\.source!==source\|\|event\.origin!==origin/.test(t644), 'T6.62 pins responses to the captured iframe source and origin');
+expect(/async function missionT662ResultValidV25/.test(t644) && /await missionT644ValidatePacketV25\(value\.packet,request\.route,value\.ownership\.principal_id\)/.test(t644), 'T6.62 lexically awaits the canonical packet validator');
+expect(!/missionT662ResultValidV25\([^)]*validate/.test(t644) && !/validate_packet/.test(t644), 'released T6.62 integration exposes no arbitrary packet-validator injection');
+expect(/missionT644ZeroV25\(value\.effects\)/.test(t644) && /value\.ownership\.handoff_id!==\(request\.handoff_id\|\|null\)/.test(t644), 'T6.62 requires exact zero effects and ownership-coordinate parity');
+expect(/MISSION_T662_ACTIVE_BROKER_V25=\{nonce:nonce,cancel:function/.test(t644) && /MISSION_T662_ACTIVE_BROKER_V25\.cancel\(\)/.test(t644), 'disable cancels and closes the active broker exchange');
+expect(/if\(MISSION_T662_ACTIVE_BROKER_V25\)return Promise\.resolve\(\{ok:false,code:'broker_busy'\}\)/.test(t644), 'a second broker read fails closed before nonce generation or popup open');
+expect(/async function message\(event\)\{if\(finished\)return;/.test(t644), 'late queued broker events cannot revive a finished exchange');
+expect(/code:'popup_blocked'/.test(t644) && /code:'timeout'/.test(t644) && /code:'closed'/.test(t644) && /code:'response_invalid'/.test(t644), 'popup, timeout, close, and invalid-response states fail closed');
+expect(/if\(!MISSION_T644_DURABLE_READ_MASTER_ENABLED_V25\)return \{ok:false,ui_state:'feature_off'/.test(t644) && /missionT662InstallBrokerAdapterV25/.test(t644), 'T6.62 adapter installation remains unreachable while the literal master flag is false');
 expect(!/(fetch\s*\(|XMLHttpRequest|google\.script\.run|localStorage|sessionStorage|indexedDB|WebSocket|new Worker|EventSource|emitAudit|auditEvent|postMissionChatLog|saveMissionChatTurn|saveMissionChatSessionTurn)/i.test(t644), 'T6.44 helper slice adds no network, storage, provider, worker, audit, or persistent chat capability');
+try {
+  const brokerSource = t644.slice(t644.indexOf("var MISSION_T662_BROKER_ENDPOINT_V25="), t644.indexOf('function missionT644NormalizeBundleV25'));
+  const disableSource = t644.match(/function missionT644DisableV25\(\)\{[^\n]+\}/)[0];
+  const probe = `'use strict';const assert=require('assert');let listener=null,openCount=0,focusCount=0;const popup={closed:false,close(){this.closed=true;}};const window={addEventListener(type,fn){listener=fn;},removeEventListener(type,fn){if(listener===fn)listener=null;},open(){openCount++;return popup;},focus(){focusCount++;}};const crypto={getRandomValues(bytes){bytes.fill(7);return bytes;}};const setTimeout=()=>1,clearTimeout=()=>{},setInterval=()=>2,clearInterval=()=>{};var MISSION_T644_ROUTES_V25=['inbox','current_bundle','historical','commit'],MISSION_T644_DURABLE_READ_MASTER_ENABLED_V25=false,MISSION_T644_ZERO_EFFECTS_V25={},MISSION_T644_CONTROLLER_V25={requestToken:0,adapter:{},ui_state:'x',cached:true,projection:{},packet:{},selectedMessageId:'msg_x',cache:new Map([['x',1]])};function missionT644ExactV25(v,k){return !!v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).sort().join('|')===k.slice().sort().join('|');}function missionT644IdV25(v,p){return typeof v==='string'&&v.indexOf(p)===0;}function missionT644ZeroV25(){return true;}async function missionT644ValidatePacketV25(){return {ok:true};}function renderMissionAgentInboxV25(){}${brokerSource}${disableSource}(async()=>{const first=missionT662OpenBrokerV25({route:'inbox'}),late=listener;assert.equal(openCount,1);const second=await missionT662OpenBrokerV25({route:'inbox'});assert.equal(second.code,'broker_busy');assert.equal(openCount,1);missionT644DisableV25();const stopped=await first;assert.equal(stopped.code,'cancelled');assert.equal(popup.closed,true);assert.equal(MISSION_T662_ACTIVE_BROKER_V25,null);assert.equal(MISSION_T644_CONTROLLER_V25.cache.size,0);assert.equal(focusCount,1);await late({origin:'https://x.script.googleusercontent.com',source:{postMessage(){throw new Error('late post');}},data:{type:'t652_broker_ready',source_version:MISSION_T662_BROKER_SOURCE_VERSION_V25,broker_nonce:'nce_late'}});assert.equal(openCount,1);})().catch(error=>{console.error(error);process.exit(1);});`;
+  child.execFileSync(process.execPath, ['-e', probe], {stdio:'pipe'});
+  expect(true, 'executable broker lifecycle rejects concurrency and contains disable/late response');
+} catch (error) {
+  expect(false, 'executable broker lifecycle rejects concurrency and contains disable/late response');
+}
 expect(t644End < html.indexOf('var _renderMissionAgentInboxStage4BaseV25=renderMissionAgentInboxV25'), 'Stage4 captures the completed default-off T6.44 wrapper without changing its own seam');
 
 const t644CssStart = html.indexOf('#mc-agent-inbox .mc-t644-state');
