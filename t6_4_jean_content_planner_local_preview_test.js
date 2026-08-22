@@ -334,8 +334,8 @@ expect(/missionT644ExactV25\(read,\['message_read_id','message_id','recipient_pr
 expect(/missionT644ExactV25\(data,\['handoff_id','commit_id','commit_state','readback_digest','verified_at'\]\)/.test(t644), 'standalone commit packet data is closed');
 expect(/missionT644ExactV25\(data,\['recipient_principal_id','handoff','versions','messages','reads','attachments','reply_contexts','receipts','commit_health'\]\)/.test(t644), 'current bundle outer data is closed');
 expect(/attachment\.handoff_version!==ownerVersions\.get\(attachment\.message_id\)/.test(t644), 'current attachment version must equal its owning message version');
-expect(/missionT644OpenHandoffV25\(false/.test(t644) && /Current verified fixture handoff/.test(t644), 'current links resolve the latest verified fixture bundle');
-expect(/missionT644TabsV25\(projection,false,projection\.handoff\.handoff_version\)/.test(t644) && !/missionT644TabsV25\(projection,true,projection\.handoff\.handoff_version\)/.test(t644), 'current handoff renders current labeling instead of historical read-only labeling');
+expect(/missionT644OpenHandoffV25\(false/.test(t644) && /missionT6119NormalizeReviewPacketV25\(controller\.packet,controller\.recipient\)/.test(t644), 'current links resolve the latest fully validated review packet');
+expect(/body=missionT644TabsV25\(normalized\)/.test(t644) && !/missionT644TabsV25\(projection,true,projection\.handoff\.handoff_version\)/.test(t644), 'current handoff renders normalized current review instead of historical labeling');
 expect(/missionT644JourneyMarkupV25/.test(t644) && /missionT644HistoryMarkupV25/.test(t644) && />Journey<\/button>/.test(t644) && />History<\/button>/.test(t644), 'Review Journey History tabs render from normalized receipts');
 expect(/controller\.scrollTop/.test(t644) && /outerLauncher/.test(t644) && /focus\(\{preventScroll:true\}\)/.test(t644), 'focus and scroll view model survive list, modal, and source return paths');
 expect(/missionT644ReplyV25/.test(t644) && /Verified injected context · no send, model call, write, or execution/.test(t644), 'Mission Command reply maps safe context with truthful zero-effect copy');
